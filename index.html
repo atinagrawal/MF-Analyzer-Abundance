@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -424,7 +425,8 @@ async function doSearch(q){
     const r=await fetch(`https://api.mfapi.in/mf/search?q=${encodeURIComponent(q)}`);
     const data=await r.json();
     if(!data.length){dd.innerHTML='<div class="dropdown-loading">No results found</div>';return;}
-    const results=data.slice(0,25);
+    const filtered=data.filter(f=>!/direct/i.test(f.schemeName));
+    const results=filtered.slice(0,25);
     const ql=q.toLowerCase();
     // Highlight matched portion in fund name
     function highlight(name){
@@ -433,7 +435,7 @@ async function doSearch(q){
       return name.slice(0,i)+'<mark style="background:rgba(67,160,71,.18);color:var(--g1);border-radius:2px;padding:0 1px">'+name.slice(i,i+q.length)+'</mark>'+name.slice(i+q.length);
     }
     dd.innerHTML=
-      `<div class="dd-count">${results.length} of ${data.length} results</div>`+
+      `<div class="dd-count">${results.length} of ${filtered.length} results</div>`+
       results.map(f=>`<div class="dropdown-item" onclick="addFund(${f.schemeCode})">
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${highlight(f.schemeName)}</span>
         <span class="di-code">${f.schemeCode}</span>
