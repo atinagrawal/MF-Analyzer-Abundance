@@ -4,7 +4,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MF Risk & Return Analyzer | Abundance Financial Services</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js">
+/* ════════════════════════════════════════
+   MAIN TAB CONTROLLER
+════════════════════════════════════════ */
+const _tabInited={fund:true,sip:false,goal:false,swp:false};
+function switchMainTab(name,btn){
+  document.querySelectorAll('.main-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mpanel-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(!_tabInited[name]){
+    _tabInited[name]=true;
+    if(name==='sip')  calcSIP();
+    if(name==='goal') calcGoal();
+    if(name==='swp')  calcSWP();
+  }
+  const wrap=document.getElementById('mainTabsWrap');
+  if(wrap) window.scrollTo({top:wrap.offsetTop,behavior:'smooth'});
+}
+
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -209,21 +229,341 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes slide{0%{transform:translateX(-200%)}100%{transform:translateX(500%)}}
 
-@media(max-width:640px){
-  .page{padding:0 14px 44px}.hero{padding:22px 20px}.chart-container{height:250px}
-  .search-card,.footer,.sip-card-body{padding:16px}
-  .hero-stats{display:none}.tab-btn{font-size:.68rem;padding:8px 10px}
-  .sip-sum-item{min-width:80px;padding:10px 10px}
-  /* Risk table → card layout on mobile */
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE — MOBILE FIRST  (≤ 640px)
+   Strategy:
+   • Phase journey strip → vertical stepper w/ animated line
+   • SWP header → stacked layout, mode tabs go full-width  
+   • Fuel stats → 2×3 grid
+   • Stat grids → 2-col
+   • Section dividers → compact pill
+   • SIP sum items → scroll row
+   • Goal preset buttons → horizontal scroll
+   • Typography scale-down
+   • Touch-friendly tap targets ≥ 44px
+══════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+
+  /* ══════════════════════════════════
+     BASE PAGE & LAYOUT
+  ══════════════════════════════════ */
+  .page{padding:0 10px 48px}
+  .hero{padding:16px 14px}
+  .hero-stats{display:none}
+  .chart-container{height:200px}
+
+  /* Tabs: horizontally scrollable pill row */
+  .tab-btn{font-size:.64rem;padding:8px 10px}
+
+  /* ══════════════════════════════════
+     SECTION DIVIDERS → floating pill
+  ══════════════════════════════════ */
+  .section-divider{margin:28px 0 18px}
+  .section-divider-line{display:none}
+  .section-divider-label{
+    width:100%;text-align:center;
+    background:linear-gradient(135deg,var(--g-xlight),#fff);
+    border:1.5px solid var(--g-light);
+    border-radius:20px;padding:8px 18px;
+    font-size:.6rem;letter-spacing:1.5px;
+    box-shadow:0 2px 8px rgba(46,125,50,.1);
+  }
+
+  /* ══════════════════════════════════
+     SEARCH & CARDS
+  ══════════════════════════════════ */
+  .search-card,.footer,.sip-card-body{padding:12px}
+
+  /* ══════════════════════════════════
+     RISK TABLE → stacked card layout
+  ══════════════════════════════════ */
   .risk-table,.risk-table thead,.risk-table tbody,.risk-table tr{display:block;width:100%}
   .risk-table thead{display:none}
   .risk-table tr{margin-bottom:12px;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;background:#fff}
   .risk-table tr:last-child{margin-bottom:0}
-  .risk-table td{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border-bottom:1px solid var(--surface2);font-size:.8rem}
+  .risk-table td{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--surface2);font-size:.78rem;word-break:break-word}
   .risk-table td:last-child{border-bottom:none}
-  .risk-table td:first-child{background:var(--surface2);padding:10px 14px;font-weight:700}
-  .risk-table td[data-label]:before{content:attr(data-label);font-size:.58rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:"JetBrains Mono",monospace;flex-shrink:0;margin-right:8px}
+  .risk-table td:first-child{background:var(--surface2);padding:9px 12px;font-weight:700}
+  .risk-table td[data-label]:before{content:attr(data-label);font-size:.56rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:"JetBrains Mono",monospace;flex-shrink:0;margin-right:8px}
+
+  /* ══════════════════════════════════
+     SIP CALCULATOR
+  ══════════════════════════════════ */
+  .sip-card-body{padding:12px}
+  .sip-params{grid-template-columns:1fr 1fr!important}
+  .sip-sum-row{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap!important}
+  .sip-sum-row::-webkit-scrollbar{display:none}
+  .sip-sum-item{min-width:88px;flex-shrink:0;padding:10px 8px}
+  .sip-summary{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .sip-summary::-webkit-scrollbar{display:none}
+  .sip-results-grid{grid-template-columns:1fr!important}
+
+  /* Period bar: swipe row */
+  .period-bar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+  .period-bar::-webkit-scrollbar{display:none}
+  .period-btn{flex-shrink:0}
+
+  /* ══════════════════════════════════
+     GOAL PLANNER
+  ══════════════════════════════════ */
+  /* Preset buttons → horizontal pill scroll */
+  .goal-preset-btns-wrap{
+    display:flex;gap:8px;overflow-x:auto;
+    padding-bottom:6px;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .goal-preset-btns-wrap::-webkit-scrollbar{display:none}
+  .goal-preset-btn{white-space:nowrap;flex-shrink:0;min-height:36px;font-size:.66rem}
+  .gp-cards-grid{grid-template-columns:1fr!important}
+  .goal-summary-banner{flex-direction:column!important;gap:8px!important;padding:12px 14px!important}
+  .banner-val{font-size:clamp(.82rem,3.5vw,1rem)!important}
+  .goal-timeline-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .cm-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;justify-items:center}
+  .cm-stat-val{font-size:.76rem}
+  .cm-stat-label{font-size:.48rem}
+
+  /* ══════════════════════════════════
+     SWP CALCULATOR — CREATIVE MOBILE
+  ══════════════════════════════════ */
+
+  /* Header: clean stack */
+  .swp-hdr{padding:14px 14px 0}
+  .swp-hdr-top{flex-direction:column;align-items:flex-start;gap:8px;padding-bottom:12px}
+  .swp-hdr-title{gap:8px;flex-wrap:wrap}
+  .swp-hdr-icon{width:28px;height:28px;font-size:.8rem;flex-shrink:0;border-radius:8px}
+  .swp-hdr-name{font-size:.58rem;letter-spacing:1.5px}
+  .swp-hdr-sub{display:none}
+  .swp-hdr-badge{font-size:.52rem;padding:2px 8px}
+  .swp-hdr-btn{width:100%;justify-content:center;padding:9px 14px;font-size:.68rem}
+
+  /* Mode row: compact tabs flush to bottom of header */
+  .swp-mode-row{padding-top:10px;flex-direction:column;gap:0}
+  .swp-mode-desc{display:none}
+  .swp-mode-tabs{
+    width:100%;border-radius:0;border:none;
+    border-top:1px solid rgba(255,255,255,.12);
+    margin:0;
+  }
+  .swp-mode-tab{flex:1;padding:10px 6px;font-size:.64rem;letter-spacing:0}
+
+  /* Body padding */
+  .swp-body{padding:14px 12px 20px}
+
+  /* ── Phase Journey Strip → Compact Step Cards ──
+     No absolute positioning, no overflow issues.
+     Left-border accent + icon pill layout.
+  ── */
+  .swp-journey{
+    display:flex;flex-direction:column;
+    gap:6px;
+    background:transparent;border:none;
+    border-radius:0;overflow:visible;
+    padding:0;margin-bottom:18px;
+    position:static;
+  }
+  /* Vertical progress line: inset inside each card via box-shadow stack */
+  .swp-journey::before{display:none}
+
+  /* Each phase → left-accented step card */
+  .swp-journey-phase{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 14px;
+    border-radius:10px;
+    border:1.5px solid rgba(255,255,255,.18);
+    border-left-width:4px;
+    background:rgba(255,255,255,.09);
+    position:relative;
+    text-align:left;
+    min-width:0;
+    overflow:hidden;
+  }
+  .swp-journey-phase::before{display:none}
+  .swp-journey-phase:last-child{margin-bottom:0}
+  /* Color-coded left accent per phase type */
+  .swp-journey-phase.phase-corpus{border-left-color:var(--g3)}
+  .swp-journey-phase.phase-delay{border-left-color:#42a5f5}
+  .swp-journey-phase.phase-withdraw{border-left-color:#ef5350}
+
+  /* Step number badge — top-right */
+  .swp-journey-phase.phase-corpus::after{content:"1";position:absolute;top:6px;right:8px;font-size:.52rem;font-weight:900;opacity:.35;font-family:'JetBrains Mono',monospace}
+  .swp-journey-phase.phase-delay::after{content:"2";position:absolute;top:6px;right:8px;font-size:.52rem;font-weight:900;opacity:.35;font-family:'JetBrains Mono',monospace}
+  .swp-journey-phase.phase-withdraw::after{content:"3";position:absolute;top:6px;right:8px;font-size:.52rem;font-weight:900;opacity:.35;font-family:'JetBrains Mono',monospace}
+
+  /* Connector arrow between steps */
+  .swp-journey-arrow{
+    display:flex!important;
+    align-items:center;justify-content:center;
+    height:14px;color:rgba(255,255,255,.35);
+    font-size:.7rem;background:none;padding:0;
+    margin:-2px 0;position:static;
+  }
+  .swp-journey-arrow.delay-arrow{display:none!important}
+  .swp-journey-arrow.delay-arrow.shown{display:flex!important}
+  .swp-journey-phase.phase-delay.shown{display:flex!important}
+
+  /* Icon pill */
+  .swp-journey-phase-icon{
+    font-size:.9rem;
+    width:26px;height:26px;min-width:26px;
+    border-radius:7px;
+    background:rgba(255,255,255,.14);
+    display:flex;align-items:center;justify-content:center;
+  }
+  /* Body: truncate long values */
+  .swp-journey-phase-body{flex:1;min-width:0;overflow:hidden}
+  .swp-journey-lbl{font-size:.5rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.7;margin-bottom:1px}
+  .swp-journey-val{
+    font-family:'JetBrains Mono',monospace;
+    font-size:.8rem;font-weight:800;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    max-width:100%;display:block;
+  }
+  .swp-journey-note{font-size:.52rem;opacity:.62;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+
+  /* Params grids → 2-col */
+  .swp-params,.sip-params{grid-template-columns:1fr 1fr!important}
+
+  /* Delay box */
+  .swp-delay-box{padding:12px 14px}
+  .swp-delay-fields.shown{grid-template-columns:1fr!important}
+
+  /* ── Fuel gauge → dark compact strip ── */
+  .swp-fuel{padding:14px 12px}
+  .swp-fuel-label{font-size:.54rem;margin-bottom:10px}
+  .swp-fuel-stats{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:6px;
+  }
+  .swp-fuel-stat{
+    background:rgba(255,255,255,.04);
+    border-radius:7px;padding:6px 8px;
+  }
+  .swp-fuel-stat-val{font-size:.72rem}
+  .swp-fuel-stat-lbl{font-size:.45rem;letter-spacing:.5px}
+
+  /* ── Stat grid → 2-col ── */
+  .swp-stat-grid{grid-template-columns:1fr 1fr!important}
+  .swp-stat{padding:10px 11px}
+  .swp-stat-val{font-size:.85rem}
+  .swp-stat-label{font-size:.48rem}
+  .swp-stat-sub{font-size:.5rem}
+
+  /* ── Result cards → 1-col ── */
+  .swp-result-grid{grid-template-columns:1fr!important}
+  .swp-rcard{padding:14px}
+  .swp-rc-val{font-size:1.25rem!important}
+  .swp-rc-sub{font-size:.58rem!important}
+
+  /* ── Longevity runway →
+     Creative: label above bar, full-width
+  ── */
+  .swp-runway-row{
+    display:grid!important;
+    grid-template-columns:1fr auto!important;
+    grid-template-rows:auto auto!important;
+    gap:2px 8px!important;
+    margin-bottom:10px!important;
+  }
+  .swp-runway-label{
+    grid-column:1;grid-row:1;
+    font-size:.62rem!important;
+    min-width:unset!important;
+    white-space:normal!important;
+    word-break:break-word;
+  }
+  .swp-runway-bar-wrap{
+    grid-column:1;grid-row:2;
+    height:10px!important;
+  }
+  .swp-runway-val{
+    grid-column:2;grid-row:1/3;
+    min-width:52px!important;
+    font-size:.7rem!important;
+    display:flex;align-items:center;justify-content:flex-end;
+  }
+
+  /* ── Insight cards → 1-col ── */
+  .swp-insight-cards{grid-template-columns:1fr 1fr!important}
+  .swp-insight{padding:12px}
+  .swp-insight-icon{font-size:1.1rem}
+  .swp-insight-val{font-size:.9rem}
+  .swp-insight-desc{font-size:.6rem}
+
+  /* ── Chart tabs → compact ── */
+  .swp-chart-tab{padding:6px 10px;font-size:.62rem}
+
+  /* ══════════════════════════════════
+     TYPOGRAPHY CLAMPS
+  ══════════════════════════════════ */
+  .hero-title{font-size:clamp(1.05rem,5vw,1.55rem)}
+  .section-label,.swp-section-head{font-size:.54rem;letter-spacing:1.5px}
+
 }
+
+/* ══════════════════════════════════
+   480px: Extra-tight phones
+══════════════════════════════════ */
+@media (max-width:480px){
+  .page{padding:0 8px 40px}
+  .sip-card-body{padding:10px}
+  .swp-body{padding:12px 10px 18px}
+
+  /* SWP params → 1-col */
+  .swp-params,.sip-params{grid-template-columns:1fr!important}
+
+  /* Fuel → 2-col */
+  .swp-fuel-stats{grid-template-columns:1fr 1fr!important}
+  .swp-fuel-stat-val{font-size:.68rem}
+
+  /* Stats → 1-col */
+  .swp-stat-grid{grid-template-columns:1fr!important}
+  .swp-stat-val{font-size:.82rem}
+
+  /* Insights → 1-col */
+  .swp-insight-cards{grid-template-columns:1fr!important}
+
+  /* Goal corpus meter → 2-col */
+  .cm-stats{grid-template-columns:1fr 1fr!important;gap:6px}
+
+  /* Journey: tighter indent */
+  .swp-journey{gap:4px;margin-bottom:14px}
+  .swp-journey-phase{padding:8px 10px;border-radius:8px;gap:8px}
+  .swp-journey-phase-icon{width:22px;height:22px;min-width:22px;font-size:.8rem;border-radius:6px}
+  .swp-journey-val{font-size:.74rem}
+  .swp-journey-arrow{height:10px;font-size:.6rem}
+
+  /* Tab buttons */
+  .tab-btn{padding:7px 8px;font-size:.6rem}
+  .swp-mode-tab{font-size:.6rem;padding:9px 5px}
+
+  /* Header */
+  .swp-hdr-name{font-size:.54rem}
+  .swp-hdr-badge{display:none}
+}
+
+/* ══════════════════════════════════
+   Tablet 641–900px: partial tweaks
+══════════════════════════════════ */
+@media (min-width:641px) and (max-width:900px){
+  /* Journey: 3-col condensed grid */
+  .swp-journey{grid-template-columns:1fr 18px 1fr 18px 1fr}
+  .swp-journey-val{font-size:.76rem}
+  .swp-journey-lbl{font-size:.48rem}
+  .swp-journey-arrow{font-size:.8rem}
+  .swp-journey-phase{padding:12px 12px}
+
+  /* Params: 3-col */
+  .swp-params{grid-template-columns:repeat(3,1fr)!important}
+
+  /* Stats: 4-col */
+  .swp-stat-grid{grid-template-columns:repeat(4,1fr)!important}
+
+  /* Goal preset: allow wrap */
+  .goal-preset-btns-wrap{flex-wrap:wrap}
+}
+
 
 /* GOAL PLANNER */
 .goal-preset-btn{padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-family:"Raleway",sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
@@ -247,6 +587,259 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .tl-fill{height:100%;border-radius:4px;transition:width .6s ease;background:linear-gradient(90deg,var(--g2),var(--g4))}
 .tl-milestones{display:flex;justify-content:space-between;margin-top:8px}
 .tl-m{font-size:.6rem;color:var(--muted);font-family:"JetBrains Mono",monospace;text-align:center;flex:1}
+
+/* SWP CALCULATOR — INCOME ENGINE */
+.swp-card{background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-lg,0 4px 24px rgba(0,0,0,.10));animation:fadeUp .4s .2s ease both;border:none;position:relative}
+
+/* ── Animated dark header ── */
+.swp-hdr{background:linear-gradient(135deg,#004d40 0%,#00695c 50%,#00796b 100%);padding:22px 26px 0;position:relative;overflow:hidden}
+.swp-hdr-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:32px 32px;pointer-events:none;animation:gridDrift 20s linear infinite}
+@keyframes gridDrift{0%{background-position:0 0}100%{background-position:32px 32px}}
+.swp-hdr-orb{position:absolute;border-radius:50%;pointer-events:none}
+.swp-hdr-orb1{width:220px;height:220px;top:-80px;right:-60px;background:radial-gradient(circle,rgba(128,203,196,.15) 0%,transparent 70%)}
+.swp-hdr-orb2{width:120px;height:120px;bottom:-40px;left:20%;background:radial-gradient(circle,rgba(255,255,255,.05) 0%,transparent 70%)}
+.swp-hdr-top{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.12)}
+.swp-hdr-title{display:flex;align-items:center;gap:10px}
+.swp-hdr-icon{width:36px;height:36px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.swp-hdr-name{font-size:.65rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#fff}
+.swp-hdr-sub{font-size:.6rem;color:rgba(255,255,255,.55);margin-top:1px;font-family:'JetBrains Mono',monospace}
+.swp-hdr-badge{font-size:.58rem;font-weight:800;letter-spacing:1px;padding:4px 12px;background:rgba(255,236,153,.18);border:1px solid rgba(255,236,153,.35);border-radius:20px;color:#ffe082;text-transform:uppercase;animation:pulse 2.5s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+.swp-hdr-btn{display:flex;align-items:center;gap:7px;padding:7px 16px;border:1.5px solid rgba(255,255,255,.25);border-radius:9px;background:rgba(255,255,255,.1);color:#fff;font-family:'Raleway',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;transition:all .18s;letter-spacing:.3px;white-space:nowrap}
+.swp-hdr-btn:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.4);transform:translateY(-1px)}
+
+/* ── Mode tabs inside header ── */
+.swp-mode-row{position:relative;z-index:2;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:10px;padding-top:14px}
+.swp-mode-desc{font-size:.68rem;color:rgba(255,255,255,.6);font-weight:600;max-width:420px;padding-bottom:14px;line-height:1.6}
+.swp-mode-tabs{display:flex;background:rgba(0,0,0,.2);border-radius:10px 10px 0 0;overflow:hidden;border:1px solid rgba(255,255,255,.12);border-bottom:none;margin-bottom:0;align-self:flex-end}
+.swp-mode-tab{padding:9px 20px;font-family:'Raleway',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer;border:none;background:transparent;color:rgba(255,255,255,.5);letter-spacing:.5px;transition:all .18s;position:relative}
+.swp-mode-tab::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:2px;background:transparent;transition:background .18s}
+.swp-mode-tab.active{background:rgba(255,255,255,.12);color:#fff}
+.swp-mode-tab.active::after{background:#80cbc4}
+
+/* ── Body ── */
+.swp-body{padding:22px 26px 28px;background:var(--surface)}
+
+/* ── Phase journey strip ── */
+.swp-journey{display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr;gap:0;margin-bottom:24px;border-radius:10px;overflow:hidden;border:1.5px solid var(--border);background:var(--surface2);min-width:0}
+.swp-journey-phase{padding:14px 16px;text-align:center;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.swp-journey-phase-icon{font-size:1.1rem;margin-bottom:4px}
+.swp-journey-phase-body{width:100%;text-align:center}
+.swp-journey-phase.phase-corpus{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff}
+.swp-journey-phase.phase-delay{background:linear-gradient(135deg,#1565c0,#1976d2);color:#fff;display:none}
+.swp-journey-phase.phase-delay.shown{display:block}
+.swp-journey-phase.phase-withdraw{background:linear-gradient(135deg,#bf360c,#d84315);color:#fff}
+.swp-journey-arrow{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.9rem;background:var(--surface2);font-weight:700}
+.swp-journey-arrow.delay-arrow{display:none}
+.swp-journey-arrow.delay-arrow.shown{display:flex}
+.swp-journey-lbl{font-size:.56rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.75;margin-bottom:4px}
+.swp-journey-val{font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:800;line-height:1.2}
+.swp-journey-note{font-size:.58rem;opacity:.7;margin-top:3px}
+
+/* ── Section heading ── */
+.swp-section-head{font-size:.6rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.swp-section-head::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Params grid ── */
+.swp-params{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:18px}
+
+/* ── Delay box ── */
+.swp-delay-box{border-radius:12px;padding:16px 20px;margin-bottom:20px;border:1.5px solid;transition:all .3s}
+.swp-delay-box.off{background:var(--surface2);border-color:var(--border)}
+.swp-delay-box.on{background:linear-gradient(135deg,#e3f2fd,#e0f2f1);border-color:#90caf9}
+.swp-delay-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.swp-delay-label{font-size:.62rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);display:flex;align-items:center;gap:8px}
+.swp-delay-toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.swp-delay-toggle input{opacity:0;width:0;height:0}
+.swp-delay-slider{position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.3s}
+.swp-delay-slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.swp-delay-toggle input:checked + .swp-delay-slider{background:linear-gradient(135deg,#1565c0,#1976d2)}
+.swp-delay-toggle input:checked + .swp-delay-slider::before{transform:translateX(20px)}
+.swp-delay-hint{font-size:.68rem;color:var(--muted);line-height:1.6}
+.swp-delay-fields{display:none;margin-top:12px}
+.swp-delay-fields.shown{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+
+/* ── Fuel gauge / corpus health ── */
+.swp-fuel{background:linear-gradient(135deg,#1a3a2a,#1e4530);border-radius:14px;padding:20px 24px;margin-bottom:22px;position:relative;overflow:hidden}
+.swp-fuel::before{content:'';position:absolute;top:-30px;right:-30px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(128,203,196,.12) 0%,transparent 70%)}
+.swp-fuel-label{font-size:.58rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#80cbc4;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.swp-fuel-track{height:16px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden;margin-bottom:10px;position:relative;border:1px solid rgba(255,255,255,.06)}
+.swp-fuel-fill{height:100%;border-radius:8px;transition:width 1s cubic-bezier(.4,0,.2,1);position:relative}
+.swp-fuel-fill::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.25) 50%,transparent 100%);animation:fuelShimmer 2.5s ease infinite}
+@keyframes fuelShimmer{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+.swp-fuel-pct{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:800;color:#fff;mix-blend-mode:difference}
+.swp-fuel-stats{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.swp-fuel-stat{text-align:center}
+.swp-fuel-stat-val{font-family:'JetBrains Mono',monospace;font-size:.9rem;font-weight:700;color:#e0f2f1}
+.swp-fuel-stat-lbl{font-size:.54rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:rgba(128,203,196,.7);margin-top:2px}
+
+/* ── Result cards ── */
+.swp-result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:22px}
+.swp-rcard{border-radius:12px;padding:18px;position:relative;overflow:hidden;transition:all .22s;border:1.5px solid}
+.swp-rcard:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,.12)}
+.swp-rcard-accent{position:absolute;top:0;left:0;width:3px;bottom:0;border-radius:3px 0 0 3px}
+.swp-rc-label{font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.swp-rc-val{font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:800;line-height:1.1;margin-bottom:3px}
+.swp-rc-sub{font-size:.62rem;font-family:'JetBrains Mono',monospace;margin-bottom:12px;opacity:.8}
+.swp-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.055)}
+.swp-row:last-child{border-bottom:none}
+.swp-row-key{font-size:.67rem}
+.swp-row-val{font-family:'JetBrains Mono',monospace;font-size:.74rem;font-weight:600}
+
+/* ── Stat grid ── */
+.swp-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:22px}
+.swp-stat{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:13px 15px;text-align:center;position:relative;overflow:hidden;transition:all .2s}
+.swp-stat:hover{border-color:var(--g3);transform:translateY(-1px)}
+.swp-stat::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:transparent;transition:background .2s}
+.swp-stat:hover::after{background:linear-gradient(90deg,var(--g2),var(--g4))}
+.swp-stat-label{font-size:.55rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:5px}
+.swp-stat-val{font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--text);line-height:1.1}
+.swp-stat-sub{font-size:.57rem;color:var(--muted);margin-top:3px}
+.swp-stat.highlight{background:linear-gradient(135deg,var(--g-xlight),var(--surface2));border-color:var(--g-light)}
+.swp-stat.highlight .swp-stat-val{color:var(--g1)}
+.swp-stat.warn{background:linear-gradient(135deg,#fff8e1,#fffde7);border-color:#ffe082}
+.swp-stat.warn .swp-stat-val{color:#e65100}
+.swp-stat.danger{background:linear-gradient(135deg,#ffebee,#fff);border-color:#ef9a9a}
+.swp-stat.danger .swp-stat-val{color:#b71c1c}
+
+/* ── Longevity bars ── */
+.swp-runway{margin-bottom:22px}
+.swp-runway-bar{height:12px;background:var(--border);border-radius:6px;overflow:hidden;margin:8px 0;position:relative}
+.swp-runway-fill{height:100%;border-radius:6px;transition:width .8s cubic-bezier(.34,1.56,.64,1)}
+.swp-insight-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:22px}
+.swp-insight{background:var(--surface2);border:1.5px solid var(--border);border-radius:11px;padding:14px;transition:all .2s;position:relative;overflow:hidden}
+.swp-insight:hover{border-color:var(--g3);transform:translateY(-1px)}
+.swp-insight::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--g2),var(--g4))}
+.swp-insight-icon{font-size:1.4rem;margin-bottom:6px}
+.swp-insight-title{font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px}
+.swp-insight-val{font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;color:var(--text);margin-bottom:3px}
+.swp-insight-desc{font-size:.63rem;color:var(--muted);line-height:1.5}
+.swp-phase-panel{display:none}.swp-phase-panel.active{display:block}
+/* END SWP */
+/* ── Global overflow safety ── */
+.swp-journey-val, .swp-fuel-stat-val, .swp-rc-val, .swp-stat-val,
+.cm-stat-val, .banner-val, .goal-summary-banner *{
+  max-width:100%;
+  overflow-wrap:break-word;
+  word-break:break-word;
+}
+/* Prevent any single wide element from causing horizontal scroll */
+.sip-card-body{
+  overflow-x:hidden;
+}
+.swp-body{
+  overflow-x:clip;
+}
+/* SWP card: allow journey stepper to overflow on mobile */
+@media (max-width:640px){
+  .swp-card{overflow:visible}
+  .swp-hdr{overflow:hidden;border-radius:0}
+  .swp-body{overflow:visible;overflow-x:hidden}
+  .swp-journey{overflow:visible}
+}
+
+
+/* ════════════════════════════════════════
+   MAIN NAVIGATION TABS
+════════════════════════════════════════ */
+.main-tabs-wrap{
+  position:sticky;top:0;z-index:100;
+  background:rgba(255,255,255,.97);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1.5px solid var(--border);
+  margin:0 -24px 28px;
+  padding:0 24px;
+  box-shadow:0 2px 16px rgba(46,125,50,.07);
+}
+.main-tabs-bar{
+  display:flex;gap:0;
+  max-width:1160px;margin:0 auto;
+  overflow-x:auto;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+.main-tabs-bar::-webkit-scrollbar{display:none}
+.main-tab{
+  display:flex;align-items:center;gap:7px;
+  padding:15px 22px;
+  border:none;background:transparent;
+  color:var(--muted);
+  font-family:'Raleway',sans-serif;font-size:.78rem;font-weight:700;
+  cursor:pointer;white-space:nowrap;
+  border-bottom:2.5px solid transparent;
+  margin-bottom:-1.5px;
+  transition:color .18s,background .18s,border-color .18s;
+  flex-shrink:0;
+}
+.main-tab:hover{color:var(--g2);background:rgba(46,125,50,.04)}
+.main-tab.active{
+  color:var(--g1);
+  border-bottom-color:var(--g2);
+  background:rgba(46,125,50,.05);
+}
+.main-tab-icon{font-size:.95rem;line-height:1}
+.main-tab-label{letter-spacing:.3px}
+
+/* Panel visibility */
+.main-panel{display:none}
+.main-panel.active{display:block;animation:fadeUp .22s ease both}
+
+/* Navbar: seamlessly connect to tab bar */
+.navbar{margin-bottom:0!important;border-bottom:none!important;padding-bottom:14px}
+
+/* Mobile */
+@media(max-width:640px){
+  .main-tabs-wrap{margin:0 -10px 18px;padding:0 10px}
+  .main-tab{padding:12px 13px;font-size:.7rem;gap:5px}
+  .main-tab-icon{font-size:.88rem}
+}
+/* Very small phones: icon only */
+@media(max-width:360px){
+  .main-tab-label{display:none}
+  .main-tab{padding:12px 18px}
+}
+
+
+/* ════════════════════════════════════════
+   MAIN TOP-LEVEL TABS
+════════════════════════════════════════ */
+.main-tabs-wrap{
+  position:sticky;top:0;z-index:100;
+  background:var(--bg);
+  border-bottom:1.5px solid var(--border);
+  margin:0 -24px 28px;padding:0 24px;
+  box-shadow:0 2px 12px rgba(0,0,0,.07);
+}
+.main-tabs-bar{
+  display:flex;gap:0;max-width:1160px;margin:0 auto;
+  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+.main-tabs-bar::-webkit-scrollbar{display:none}
+.main-tab{
+  display:flex;align-items:center;gap:7px;padding:14px 22px;
+  border:none;background:transparent;color:var(--muted);
+  font-family:"Raleway",sans-serif;font-size:.78rem;font-weight:700;
+  cursor:pointer;white-space:nowrap;flex-shrink:0;
+  border-bottom:2.5px solid transparent;margin-bottom:-1.5px;
+  transition:color .18s,background .18s,border-color .18s;
+}
+.main-tab:hover{color:var(--g2);background:rgba(46,125,50,.05)}
+.main-tab.active{color:var(--g1);border-bottom-color:var(--g2);background:rgba(46,125,50,.06)}
+.main-tab-icon{font-size:1rem;line-height:1}
+.main-tab-label{letter-spacing:.3px}
+.main-panel{display:none}
+.main-panel.active{display:block;animation:fadeUp .22s ease both}
+.page{padding-top:0}
+@media(max-width:640px){
+  .main-tabs-wrap{margin:0 -10px 18px;padding:0 10px}
+  .main-tab{padding:11px 13px;font-size:.7rem;gap:5px}
+  .main-tab-icon{font-size:.9rem}
+}
+@media(max-width:480px){
+  .main-tab-label{display:none}
+  .main-tab{padding:12px 16px;justify-content:center}
+  .main-tab-icon{font-size:1.15rem}
+}
+
 </style>
 </head>
 <body>
@@ -268,6 +861,27 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </nav>
 
+
+<!-- ═══ MAIN NAVIGATION TABS ═══ -->
+<div class="main-tabs-wrap" id="mainTabsWrap">
+  <nav class="main-tabs-bar" role="tablist">
+    <button class="main-tab active" id="mtab-fund" onclick="switchMainTab('fund',this)">
+      <span class="main-tab-icon">📈</span><span class="main-tab-label">Fund Compare</span>
+    </button>
+    <button class="main-tab" id="mtab-sip" onclick="switchMainTab('sip',this)">
+      <span class="main-tab-icon">🧮</span><span class="main-tab-label">SIP Calculator</span>
+    </button>
+    <button class="main-tab" id="mtab-goal" onclick="switchMainTab('goal',this)">
+      <span class="main-tab-icon">🎯</span><span class="main-tab-label">Goal Planner</span>
+    </button>
+    <button class="main-tab" id="mtab-swp" onclick="switchMainTab('swp',this)">
+      <span class="main-tab-icon">💸</span><span class="main-tab-label">SWP</span>
+    </button>
+  </nav>
+</div>
+
+<!-- PANEL: FUND COMPARE -->
+<div class="main-panel active" id="mpanel-fund">
 <!-- HERO -->
 <div class="hero">
   <div class="hero-grid"></div>
@@ -334,13 +948,11 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 
-<!-- DIVIDER -->
-<div class="section-divider">
-  <div class="section-divider-line"></div>
-  <div class="section-divider-label">💰 SIP Returns Calculator</div>
-  <div class="section-divider-line"></div>
+
 </div>
 
+<!-- PANEL: SIP CALCULATOR -->
+<div class="main-panel" id="mpanel-sip">
 <!-- SIP CALCULATOR -->
 <div class="sip-card">
   <div class="sip-card-header">
@@ -404,13 +1016,11 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 
-<!-- GOAL PLANNER DIVIDER -->
-<div class="section-divider">
-  <div class="section-divider-line"></div>
-  <div class="section-divider-label">🎯 Investment Goal Planner</div>
-  <div class="section-divider-line"></div>
+
 </div>
 
+<!-- PANEL: GOAL PLANNER -->
+<div class="main-panel" id="mpanel-goal">
 <!-- GOAL PLANNER -->
 <div class="sip-card" id="goalPlannerCard">
   <div class="sip-card-header">
@@ -429,7 +1039,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
     <!-- Goal Presets -->
     <div style="margin-bottom:20px">
       <div class="section-label" style="margin-bottom:10px">🏷️ Quick Goal Presets</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px" id="goalPresets">
+      <div style="display:flex;flex-wrap:wrap;gap:8px" id="goalPresets" class="goal-preset-btns-wrap">
         <button class="goal-preset-btn active" onclick="applyGoalPreset(this,'child_edu')">🎓 Child Education</button>
         <button class="goal-preset-btn" onclick="applyGoalPreset(this,'retirement')">🏖️ Retirement</button>
         <button class="goal-preset-btn" onclick="applyGoalPreset(this,'home')">🏠 Home Purchase</button>
@@ -504,12 +1114,246 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
     <div id="goalSummaryBanner" style="margin-bottom:20px"></div>
     <!-- Three Plan Cards -->
     <div class="section-label" style="margin-bottom:12px">📋 Your Investment Roadmap</div>
-    <div id="goalPlanCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:26px"></div>
+    <div id="goalPlanCards" class="gp-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:26px"></div>
     <!-- Progress Timeline -->
-    <div id="goalTimeline" style="margin-bottom:24px"></div>
+    <div class="goal-timeline-wrap"><div id="goalTimeline" style="margin-bottom:24px"></div></div
     <!-- Projection Chart -->
     <div class="sip-chart-wrap" style="height:320px"><canvas id="goalChart"></canvas></div>
   </div>
+</div>
+
+
+</div>
+
+<!-- PANEL: SWP CALCULATOR -->
+<div class="main-panel" id="mpanel-swp">
+<!-- SWP CARD -->
+<div class="swp-card" id="swpCard">
+
+  <!-- ═══ DARK HEADER ═══ -->
+  <div class="swp-hdr">
+    <div class="swp-hdr-grid"></div>
+    <div class="swp-hdr-orb swp-hdr-orb1"></div>
+    <div class="swp-hdr-orb swp-hdr-orb2"></div>
+    <div class="swp-hdr-top">
+      <div class="swp-hdr-title">
+        <div class="swp-hdr-icon">💸</div>
+        <div>
+          <div class="swp-hdr-name">Systematic Withdrawal Plan</div>
+          <div class="swp-hdr-sub">Income Engine · Retirement Payout Modeller</div>
+        </div>
+        <div class="swp-hdr-badge">Live Calculator</div>
+      </div>
+      <button class="swp-hdr-btn" onclick="printSWP()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print / PDF
+      </button>
+    </div>
+    <div class="swp-mode-row">
+      <div class="swp-mode-desc">Plan your retirement income — model how long your corpus lasts, or find how much corpus you need for a target payout. Add a delay period to let your corpus keep compounding before withdrawals begin.</div>
+      <div class="swp-mode-tabs">
+        <button class="swp-mode-tab active" onclick="setSWPMode('haveCorpus',this)">I Have a Corpus</button>
+        <button class="swp-mode-tab" onclick="setSWPMode('needIncome',this)">I Need ₹X/Month</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BODY ═══ -->
+  <div class="swp-body">
+
+    <!-- Phase Journey Strip -->
+    <div class="swp-journey" id="swpJourney">
+      <div class="swp-journey-phase phase-corpus">
+        <div class="swp-journey-phase-icon">📈</div>
+        <div class="swp-journey-phase-body">
+          <div class="swp-journey-lbl">Starting Corpus</div>
+          <div class="swp-journey-val" id="swpJourneyCorpus">₹50,00,000</div>
+          <div class="swp-journey-note" id="swpJourneyCorpusNote">Initial investment</div>
+        </div>
+      </div>
+      <div class="swp-journey-arrow delay-arrow" id="swpJourneyArrow1">→</div>
+      <div class="swp-journey-phase phase-delay" id="swpJourneyDelay">
+        <div class="swp-journey-phase-icon">⏳</div>
+        <div class="swp-journey-phase-body">
+          <div class="swp-journey-lbl">After Delay</div>
+          <div class="swp-journey-val" id="swpJourneyDelayVal">—</div>
+          <div class="swp-journey-note" id="swpJourneyDelayNote">Corpus grows</div>
+        </div>
+      </div>
+      <div class="swp-journey-arrow">→</div>
+      <div class="swp-journey-phase phase-withdraw">
+        <div class="swp-journey-phase-icon">💸</div>
+        <div class="swp-journey-phase-body">
+          <div class="swp-journey-lbl">Withdrawal</div>
+          <div class="swp-journey-val" id="swpJourneyWithdraw">—</div>
+          <div class="swp-journey-note" id="swpJourneyWithdrawNote">Monthly payout</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── MODE A: Have a Corpus ─── -->
+    <div id="swpPanelCorpus" class="swp-phase-panel active">
+      <div class="swp-section-head">⚙️ Corpus & Withdrawal Settings</div>
+      <div class="swp-params">
+        <div class="sip-field">
+          <label>Initial Corpus (₹)</label>
+          <input class="sip-input" id="swpCorpus" type="number" value="5000000" min="10000" step="10000" oninput="calcSWP()">
+        </div>
+        <div class="sip-field">
+          <label>Monthly Withdrawal (₹)</label>
+          <input class="sip-input" id="swpWithdrawal" type="number" value="30000" min="100" step="500" oninput="calcSWP()">
+        </div>
+        <div class="sip-field">
+          <label>Expected Return (% p.a.)</label>
+          <input class="sip-input" id="swpRate" type="number" value="10" min="0.1" max="50" step="0.5" oninput="calcSWP()">
+        </div>
+        <div class="sip-field">
+          <label>Withdrawal Duration</label>
+          <div class="dur-row">
+            <input class="sip-input" id="swpDuration" type="number" value="20" min="1" step="1" oninput="calcSWP()">
+            <select class="sip-select" id="swpDurationUnit" onchange="calcSWP()">
+              <option value="years" selected>Years</option>
+              <option value="months">Months</option>
+            </select>
+          </div>
+        </div>
+        <div class="sip-field">
+          <label>Withdrawal Frequency</label>
+          <select class="sip-select" id="swpFreq" onchange="calcSWP()">
+            <option value="monthly" selected>Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="annually">Annually</option>
+          </select>
+        </div>
+        <div class="sip-field">
+          <label>Annual Step-up (%)</label>
+          <input class="sip-input" id="swpStepup" type="number" value="0" min="0" max="20" step="1" oninput="calcSWP()" title="Annual increase in withdrawal to beat inflation">
+        </div>
+        <div class="sip-field">
+          <label>Inflation (% p.a.)</label>
+          <input class="sip-input" id="swpInflation" type="number" value="6" min="0" max="20" step="0.5" oninput="calcSWP()">
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── MODE B: Need X/Month ─── -->
+    <div id="swpPanelIncome" class="swp-phase-panel">
+      <div class="swp-section-head">🎯 Target Income Settings</div>
+      <div class="swp-params">
+        <div class="sip-field">
+          <label>Desired Monthly Income (₹)</label>
+          <input class="sip-input" id="swpTargetIncome" type="number" value="50000" min="100" step="1000" oninput="calcSWP()">
+        </div>
+        <div class="sip-field">
+          <label>Income Duration</label>
+          <div class="dur-row">
+            <input class="sip-input" id="swpTargetDuration" type="number" value="25" min="1" step="1" oninput="calcSWP()">
+            <select class="sip-select" id="swpTargetDurationUnit" onchange="calcSWP()">
+              <option value="years" selected>Years</option>
+              <option value="months">Months</option>
+            </select>
+          </div>
+        </div>
+        <div class="sip-field">
+          <label>Expected Return (% p.a.)</label>
+          <input class="sip-input" id="swpTargetRate" type="number" value="10" min="0.1" max="50" step="0.5" oninput="calcSWP()">
+        </div>
+        <div class="sip-field">
+          <label>Withdrawal Frequency</label>
+          <select class="sip-select" id="swpTargetFreq" onchange="calcSWP()">
+            <option value="monthly" selected>Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="annually">Annually</option>
+          </select>
+        </div>
+        <div class="sip-field">
+          <label>Annual Step-up (%)</label>
+          <input class="sip-input" id="swpTargetStepup" type="number" value="0" min="0" max="20" step="1" oninput="calcSWP()">
+        </div>
+        <div class="sip-field">
+          <label>Inflation (% p.a.)</label>
+          <input class="sip-input" id="swpTargetInflation" type="number" value="6" min="0" max="20" step="0.5" oninput="calcSWP()">
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── DELAY PERIOD BOX (shared) ─── -->
+    <div class="swp-delay-box off" id="swpDelayBox">
+      <div class="swp-delay-top">
+        <div class="swp-delay-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          ⏳ Delay Period — Corpus Keeps Growing
+        </div>
+        <label class="swp-delay-toggle">
+          <input type="checkbox" id="swpDelayToggle" onchange="toggleSWPDelay()">
+          <span class="swp-delay-slider"></span>
+        </label>
+      </div>
+      <div class="swp-delay-hint" id="swpDelayHint">Enable to defer withdrawals — your corpus compounds at a (possibly higher) pre-withdrawal return before payouts begin. Enter delay in months or years.</div>
+      <div class="swp-delay-fields" id="swpDelayFields">
+        <div class="sip-field">
+          <label>Delay Duration</label>
+          <div class="dur-row">
+            <input class="sip-input" id="swpDelay" type="number" value="5" min="1" step="1" oninput="calcSWP()">
+            <select class="sip-select" id="swpDelayUnit" onchange="calcSWP()">
+              <option value="years" selected>Years</option>
+              <option value="months">Months</option>
+            </select>
+          </div>
+        </div>
+        <div class="sip-field">
+          <label>Pre-withdrawal Return (% p.a.)</label>
+          <input class="sip-input" id="swpDelayRate" type="number" value="12" min="0.1" max="50" step="0.5" oninput="calcSWP()">
+        </div>
+        <div class="sip-field">
+          <label>Corpus After Delay</label>
+          <div id="swpCorpusAfterDelay" style="font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:800;color:var(--g1);padding:11px 14px;background:var(--g-xlight);border:1.5px solid var(--g-light);border-radius:9px">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── FUEL GAUGE ─── -->
+    <div class="swp-fuel" id="swpFuel" style="display:none">
+      <div class="swp-fuel-label">🔋 Corpus Health Monitor</div>
+      <div class="swp-fuel-track">
+        <div class="swp-fuel-fill" id="swpFuelFill" style="width:100%"></div>
+        <div class="swp-fuel-pct" id="swpFuelPct">100%</div>
+      </div>
+      <div class="swp-fuel-stats" id="swpFuelStats"></div>
+    </div>
+
+    <!-- ─── STAT GRID ─── -->
+    <div class="swp-stat-grid" id="swpStatGrid" style="display:none"></div>
+
+    <!-- ─── RESULT CARDS ─── -->
+    <div class="swp-result-grid" id="swpResultCards" style="display:none"></div>
+
+    <!-- ─── LONGEVITY / RUNWAY ─── -->
+    <div id="swpRunwaySection" style="display:none">
+      <div class="swp-section-head" style="margin-bottom:14px">⏱️ Corpus Longevity at Different Withdrawal Rates</div>
+      <div id="swpRunwayBars"></div>
+    </div>
+
+    <!-- ─── SMART INSIGHTS ─── -->
+    <div class="swp-insight-cards" id="swpInsights" style="display:none"></div>
+
+    <!-- ─── CHART TABS ─── -->
+    <div id="swpChartSection" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div class="swp-section-head" style="margin-bottom:0;flex:1">📊 Projection Chart</div>
+        <div style="display:flex;gap:4px">
+          <button class="swp-chart-tab active" id="swpChartTabCorpus" onclick="setSWPChartView('corpus',this)">Corpus</button>
+          <button class="swp-chart-tab" id="swpChartTabWithdrawn" onclick="setSWPChartView('withdrawn',this)">Withdrawn</button>
+          <button class="swp-chart-tab" id="swpChartTabBoth" onclick="setSWPChartView('both',this)">Both</button>
+        </div>
+      </div>
+      <div style="height:320px;position:relative"><canvas id="swpChart"></canvas></div>
+    </div>
+
+  </div>
+</div>
+
+
 </div>
 
 <!-- FOOTER -->
@@ -520,7 +1364,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
       <div class="footer-arn">ARN-251838 · AMFI Registered Mutual Funds Distributor & SIF Distributor</div>
       <p>Atin Kumar Agrawal<br>
         📞 <a href="tel:+919808105923">+91 98081 05923</a> &nbsp;|&nbsp;
-        ✉️ <a href="mailto:contact@getabundance.in">contact@getabundance.in</a><br>
+        ✉️ <a href="/cdn-cgi/l/email-protection#85e6eaebf1e4e6f1c5e2e0f1e4e7f0ebe1e4ebe6e0abeceb"><span class="__cf_email__" data-cfemail="54373b3a20353720143331203536213a30353a37317a3d3a">[email&#160;protected]</span></a><br>
         🏢 <a href="https://maps.app.goo.gl/TgQSLRDo3UBKR77g7" target="_blank" style="color:inherit;text-decoration:underline dotted;text-underline-offset:3px">1st Floor, Kapil Complex, Mukhani, Haldwani (Nainital) — 263139, Uttarakhand</a><br>
         🌐 <a href="https://www.getabundance.in" target="_blank">www.getabundance.in</a>
       </p>
@@ -544,7 +1388,29 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 </div>
 
 </div>
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+
+/* ════════════════════════════════════════
+   MAIN TAB SWITCHING — lazy init per tab
+════════════════════════════════════════ */
+const _tabInited = {fund:true, sip:false, goal:false, swp:false};
+
+function switchMainTab(id, btn) {
+  document.querySelectorAll('.main-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('mpanel-' + id).classList.add('active');
+  btn.classList.add('active');
+  // Lazy init: only compute on first visit
+  if (!_tabInited[id]) {
+    _tabInited[id] = true;
+    if (id === 'sip')  calcSIP();
+    if (id === 'goal') calcGoal();
+    if (id === 'swp')  calcSWP();
+  }
+  // Scroll sticky tabs into view
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
 /* ════════════════════════════════════════
    FUND COMPARISON
 ════════════════════════════════════════ */
@@ -1308,7 +2174,7 @@ function fmtINR(n){
   return n.toLocaleString("en-IN");
 }
 
-calcSIP();
+// calcSIP();  // lazy-init via tab
 
 /* ════════════════════════════════════════
    GOAL PLANNER
@@ -1408,7 +2274,7 @@ function calcGoal(){
         <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:800">₹${fmtINR(p.goalAmt)}</div>
         <div style="font-size:.72rem;opacity:.8;margin-top:2px">in ${fmtY} · ${p.rate}% expected return</div>
       </div>
-      ${p.inflation > 0 ? `<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:10px 14px;min-width:160px">
+      ${p.inflation > 0 ? `<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:10px 14px;min-width:0;flex-shrink:1">
         <div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;opacity:.7;margin-bottom:3px">Inflation-Adjusted Target</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:700">₹${fmtINR(p.realTarget)}</div>
         <div style="font-size:.62rem;opacity:.7">at ${p.inflation}% inflation p.a.</div>
@@ -1623,8 +2489,472 @@ ${chartImg?`<div class="sec">Growth Projection</div><div class="chart-section"><
   setTimeout(()=>{try{win.focus();win.print();}catch(e){}},1200);
 }
 
-calcGoal();
+// calcGoal();  // lazy-init via tab
 
+/* ════════════════════════════════════════
+   SWP CALCULATOR — INCOME ENGINE
+════════════════════════════════════════ */
+let swpChartInst = null, swpChartView = 'both', swpCurrentMode = 'haveCorpus';
+
+const SWPFREQ = {
+  monthly:   {n:12,  lbl:'Month',   plbl:'Monthly',   months:1},
+  quarterly: {n:4,   lbl:'Quarter', plbl:'Quarterly',  months:3},
+  annually:  {n:1,   lbl:'Year',    plbl:'Annual',     months:12},
+};
+
+function setSWPMode(mode, btn){
+  swpCurrentMode = mode;
+  document.querySelectorAll('.swp-mode-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('swpPanelCorpus').classList.toggle('active', mode==='haveCorpus');
+  document.getElementById('swpPanelIncome').classList.toggle('active', mode==='needIncome');
+  calcSWP();
+}
+
+function toggleSWPDelay(){
+  const cb = document.getElementById('swpDelayToggle');
+  const fields = document.getElementById('swpDelayFields');
+  const box    = document.getElementById('swpDelayBox');
+  const hint   = document.getElementById('swpDelayHint');
+  fields.classList.toggle('shown', cb.checked);
+  box.classList.toggle('on', cb.checked);
+  box.classList.toggle('off', !cb.checked);
+  hint.style.display = cb.checked ? 'none' : 'block';
+  calcSWP();
+}
+
+function setSWPChartView(view, btn){
+  swpChartView = view;
+  document.querySelectorAll('.swp-chart-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  drawSWPChart(window._swpLastSim);
+}
+
+function getSWPParams(){
+  const delayOn   = document.getElementById('swpDelayToggle').checked;
+  const delayVal  = delayOn ? Math.max(1, parseFloat(document.getElementById('swpDelay').value)||5) : 0;
+  const delayUnit = delayOn ? document.getElementById('swpDelayUnit').value : 'years';
+  const delayMonths = delayOn ? (delayUnit==='months' ? delayVal : delayVal*12) : 0;
+  const delayRate = delayOn ? (parseFloat(document.getElementById('swpDelayRate').value)||12) : 0;
+
+  if(swpCurrentMode === 'haveCorpus'){
+    return {
+      mode:'haveCorpus',
+      corpus     : Math.max(1000, parseFloat(document.getElementById('swpCorpus').value)||5000000),
+      withdrawal : Math.max(1,    parseFloat(document.getElementById('swpWithdrawal').value)||30000),
+      rate       : Math.max(0.01, parseFloat(document.getElementById('swpRate').value)||10),
+      durationVal: Math.max(1,    parseFloat(document.getElementById('swpDuration').value)||20),
+      durationUnit: document.getElementById('swpDurationUnit').value,
+      freq       : document.getElementById('swpFreq').value,
+      stepup     : Math.max(0,    parseFloat(document.getElementById('swpStepup').value)||0),
+      inflation  : Math.max(0,    parseFloat(document.getElementById('swpInflation').value)||6),
+      delayOn, delayMonths, delayRate,
+    };
+  } else {
+    return {
+      mode:'needIncome',
+      targetIncome: Math.max(1, parseFloat(document.getElementById('swpTargetIncome').value)||50000),
+      durationVal : Math.max(1, parseFloat(document.getElementById('swpTargetDuration').value)||25),
+      durationUnit: document.getElementById('swpTargetDurationUnit').value,
+      rate        : Math.max(0.01, parseFloat(document.getElementById('swpTargetRate').value)||10),
+      freq        : document.getElementById('swpTargetFreq').value,
+      stepup      : Math.max(0, parseFloat(document.getElementById('swpTargetStepup').value)||0),
+      inflation   : Math.max(0, parseFloat(document.getElementById('swpTargetInflation').value)||6),
+      delayOn, delayMonths, delayRate,
+    };
+  }
+}
+
+// Core simulation: step through each period
+function runSWPSim(startCorpus, annRate, freqN, withdrawalPerPeriod, stepupPct, totalPeriods){
+  const rpp = Math.pow(1 + annRate/100, 1/freqN) - 1;
+  let corpus = startCorpus, totalW = 0, amt = withdrawalPerPeriod;
+  let depleted = -1;
+  const snaps = [{period:0, corpus:Math.round(startCorpus), totalWithdrawn:0, payout:Math.round(amt)}];
+  for(let i=1; i<=totalPeriods; i++){
+    corpus *= (1+rpp);
+    const w = Math.min(corpus, amt);
+    corpus -= w; totalW += w;
+    if(i % freqN === 0 || i === totalPeriods)
+      snaps.push({period:i/freqN, corpus:Math.round(corpus), totalWithdrawn:Math.round(totalW), payout:Math.round(w)});
+    if(corpus <= 0 && depleted < 0){ depleted = i/freqN; corpus = 0; }
+    if(corpus <= 0) break;
+    if(stepupPct > 0 && i % freqN === 0) amt *= (1+stepupPct/100);
+  }
+  return {snaps, depleted, totalWithdrawn:Math.round(totalW), finalCorpus:Math.round(corpus)};
+}
+
+// PV of growing annuity
+function pvGrowingAnnuity(pmt, r, g, n){
+  if(Math.abs(r-g) < 1e-9) return pmt * n / (1+r);
+  return pmt * (1 - Math.pow((1+g)/(1+r), n)) / (r-g);
+}
+
+function calcSWP(){
+  const p = getSWPParams();
+  const cfg = SWPFREQ[p.freq || (p.mode==='needIncome' ? (SWPFREQ[p.freq]?p.freq:'monthly') : 'monthly')];
+  const freqCfg = SWPFREQ[p.mode==='haveCorpus' ? p.freq : p.freq] || SWPFREQ.monthly;
+  const durationMonths = p.durationUnit==='months' ? p.durationVal : p.durationVal*12;
+  const totalPeriods = Math.round(durationMonths / (12/freqCfg.n));
+
+  // Corpus after delay
+  const corpusBeforeDelay = p.mode==='haveCorpus' ? p.corpus : null;
+  let startCorpus;
+
+  if(p.mode === 'haveCorpus'){
+    startCorpus = p.delayOn && p.delayMonths > 0
+      ? p.corpus * Math.pow(1+p.delayRate/100, p.delayMonths/12)
+      : p.corpus;
+    if(p.delayOn) document.getElementById('swpCorpusAfterDelay').textContent = '₹'+fmtINR(Math.round(startCorpus));
+    const withdrawalPerPeriod = p.withdrawal * (12/freqCfg.n);
+    const sim = runSWPSim(startCorpus, p.rate, freqCfg.n, withdrawalPerPeriod, p.stepup, totalPeriods);
+    window._swpLastSim = {sim, p, freqCfg, startCorpus, totalPeriods};
+    renderSWPCorpusMode(p, sim, freqCfg, startCorpus, totalPeriods);
+  } else {
+    const incomePerPeriod = p.targetIncome * (12/freqCfg.n);
+    const rpp = Math.pow(1+p.rate/100, 1/freqCfg.n) - 1;
+    const gpp = p.stepup > 0 ? Math.pow(1+p.stepup/100, 1/freqCfg.n) - 1 : 0;
+    const corpusNeeded = p.stepup > 0
+      ? pvGrowingAnnuity(incomePerPeriod, rpp, gpp, totalPeriods)
+      : (rpp > 0 ? incomePerPeriod * (1-Math.pow(1+rpp,-totalPeriods))/rpp : incomePerPeriod*totalPeriods);
+    startCorpus = p.delayOn && p.delayMonths > 0
+      ? corpusNeeded / Math.pow(1+p.delayRate/100, p.delayMonths/12)
+      : corpusNeeded;
+    if(p.delayOn) document.getElementById('swpCorpusAfterDelay').textContent = '₹'+fmtINR(Math.round(corpusNeeded));
+    const sim = runSWPSim(Math.round(corpusNeeded), p.rate, freqCfg.n, incomePerPeriod, p.stepup, totalPeriods);
+    window._swpLastSim = {sim, p, freqCfg, startCorpus:Math.round(corpusNeeded), totalPeriods, corpusNow:Math.round(startCorpus)};
+    renderSWPIncomeMode(p, sim, freqCfg, Math.round(corpusNeeded), Math.round(startCorpus), totalPeriods);
+  }
+  updateJourneyStrip(p, freqCfg);
+}
+
+function updateJourneyStrip(p, freqCfg){
+  const delayEl = document.getElementById('swpJourneyDelay');
+  const arrowEl = document.getElementById('swpJourneyArrow1');
+  const corpusEl = document.getElementById('swpJourneyCorpus');
+  const noteEl = document.getElementById('swpJourneyCorpusNote');
+  if(p.mode==='haveCorpus'){
+    corpusEl.textContent = '₹'+fmtINR(p.corpus);
+    noteEl.textContent   = 'Initial corpus';
+  } else {
+    corpusEl.textContent = '₹'+fmtINR(Math.round(p.targetIncome))+'/mo';
+    noteEl.textContent   = 'Target income';
+  }
+  if(p.delayOn && p.delayMonths > 0){
+    delayEl.classList.add('shown'); arrowEl.classList.add('shown');
+    const yrs = p.delayMonths/12;
+    const corpus2 = p.mode==='haveCorpus'
+      ? p.corpus * Math.pow(1+p.delayRate/100, yrs)
+      : null;
+    document.getElementById('swpJourneyDelayVal').textContent = corpus2 ? '₹'+fmtINR(Math.round(corpus2)) : p.delayMonths+'mo';
+    document.getElementById('swpJourneyDelayNote').textContent = yrs.toFixed(1)+' yr delay @ '+p.delayRate+'%';
+  } else {
+    delayEl.classList.remove('shown'); arrowEl.classList.remove('shown');
+  }
+  const wdVal = p.mode==='haveCorpus' ? '₹'+fmtINR(p.withdrawal)+'/mo' : '₹'+fmtINR(p.targetIncome)+'/mo';
+  document.getElementById('swpJourneyWithdraw').textContent = wdVal;
+  const dMonths = p.durationUnit==='months' ? p.durationVal : p.durationVal*12;
+  document.getElementById('swpJourneyWithdrawNote').textContent = (dMonths/12).toFixed(1)+' yr payout via '+freqCfg.plbl.toLowerCase();
+}
+
+function renderSWPCorpusMode(p, sim, freqCfg, startCorpus, totalPeriods){
+  const {snaps, depleted, totalWithdrawn, finalCorpus} = sim;
+  const survives = depleted < 0;
+  const annualIncome = p.withdrawal * 12;
+  const yieldPct = (annualIncome/startCorpus*100).toFixed(2);
+  const durationYrs = p.durationUnit==='months' ? p.durationVal/12 : p.durationVal;
+
+  // Fuel gauge
+  const healthPct = survives ? Math.min(100, finalCorpus/startCorpus*100) : Math.max(0, (depleted||0)/durationYrs*100);
+  const fuelColor = survives ? 'linear-gradient(90deg,#00897b,#26a69a,#4db6ac)' : healthPct>60 ? 'linear-gradient(90deg,#f57f17,#fb8c00,#ffa726)' : 'linear-gradient(90deg,#b71c1c,#e53935,#ef5350)';
+  document.getElementById('swpFuel').style.display = 'block';
+  document.getElementById('swpFuelFill').style.width = Math.max(2, healthPct)+'%';
+  document.getElementById('swpFuelFill').style.background = fuelColor;
+  document.getElementById('swpFuelPct').textContent = Math.round(healthPct)+'%';
+  document.getElementById('swpFuelStats').innerHTML = [
+    {v:'₹'+fmtINR(startCorpus), l:'Starting Corpus'},
+    {v:'₹'+fmtINR(Math.round(p.withdrawal*(12/freqCfg.n)))+'/'+freqCfg.lbl, l:'Per '+freqCfg.plbl+' Payout'},
+    {v:survives?'✅ Outlasts '+durationYrs.toFixed(0)+'Y':'⚠️ Yr '+(depleted).toFixed(1), l:'Status'},
+    {v:'₹'+fmtINR(totalWithdrawn), l:'Total Withdrawn'},
+    {v:survives?'₹'+fmtINR(finalCorpus):'₹0', l:'Remaining'},
+  ].map(s=>`<div class="swp-fuel-stat"><div class="swp-fuel-stat-val">${s.v}</div><div class="swp-fuel-stat-lbl">${s.l}</div></div>`).join('');
+
+  // Real value (inflation adjusted)
+  const realPct = (annualIncome / Math.pow(1+p.inflation/100, durationYrs/2) / startCorpus * 100).toFixed(2);
+  const sustWithdrawal = startCorpus * p.rate/100 / 12;
+  const perpetualW = startCorpus * (p.rate/100) / freqCfg.n;
+
+  // Stat grid
+  document.getElementById('swpStatGrid').style.display = 'grid';
+  document.getElementById('swpStatGrid').innerHTML = [
+    {l:'Annual Income',v:'₹'+fmtINR(annualIncome),s:yieldPct+'% of corpus',c:'highlight'},
+    {l:'Corpus Yield',v:yieldPct+'% p.a.',s:'withdrawal / corpus',c:''},
+    {l:'Sustainable Withdrawal',v:'₹'+fmtINR(Math.round(sustWithdrawal))+'/mo',s:'corpus never depletes',c:''},
+    {l:'Inflation Adj. Yield',v:realPct+'% p.a.',s:'real return at '+p.inflation+'% inflation',c:''},
+    {l:survives?'Surplus Corpus':'Depletion Year',v:survives?'₹'+fmtINR(finalCorpus):'Year '+(depleted).toFixed(1),s:survives?'after '+durationYrs.toFixed(0)+' years':'corpus hits ₹0',c:survives?'highlight':'danger'},
+    {l:'Total Withdrawn',v:'₹'+fmtINR(totalWithdrawn),s:'over '+durationYrs.toFixed(0)+' years',c:''},
+    {l:'Wealth Multiple',v:((totalWithdrawn+finalCorpus)/startCorpus).toFixed(2)+'x',s:'(withdrawn+remaining)/corpus',c:''},
+    {l:'Perpetual Payout',v:'₹'+fmtINR(Math.round(perpetualW))+'/'+freqCfg.lbl,s:'withdraw only returns',c:'warn'},
+  ].map(s=>`<div class="swp-stat ${s.c}"><div class="swp-stat-label">${s.l}</div><div class="swp-stat-val">${s.v}</div><div class="swp-stat-sub">${s.s}</div></div>`).join('');
+
+  // Result cards
+  document.getElementById('swpResultCards').style.display = 'grid';
+  const cards = [
+    {bg:'#e0f2f1',border:'#80cbc4',accent:'#00695c',tc:'#004d40',icon:'💰',lbl:'Monthly Payout',
+     val:'₹'+fmtINR(p.withdrawal),sub:'per month · '+freqCfg.plbl+' withdrawals',
+     rows:[['Annual Income','₹'+fmtINR(annualIncome)],[p.stepup>0?'Annual Step-up':'No Step-up',p.stepup>0?p.stepup+'% p.a.':'Fixed withdrawal'],['Frequency',freqCfg.plbl]]},
+    {bg:survives?'#e8f5e9':'#fbe9e7',border:survives?'#a5d6a7':'#ffab91',accent:survives?'#2e7d32':'#bf360c',tc:survives?'#1b5e20':'#b71c1c',
+     icon:survives?'🏆':'⚠️',lbl:survives?'Corpus Health: Strong':'Corpus Alert',
+     val:survives?'₹'+fmtINR(finalCorpus):'Year '+(depleted).toFixed(1),
+     sub:survives?'remaining after '+durationYrs.toFixed(0)+' yrs':'depletes at this point',
+     rows:[['Total Withdrawn','₹'+fmtINR(totalWithdrawn)],['Starting Corpus','₹'+fmtINR(startCorpus)],['Wealth Multiple',((totalWithdrawn+finalCorpus)/startCorpus).toFixed(2)+'x']]},
+    {bg:'#fff8e1',border:'#ffe082',accent:'#f57f17',tc:'#e65100',icon:'📊',lbl:'Break-even Analysis',
+     val:yieldPct+'% p.a.',sub:'your annual withdrawal yield',
+     rows:[['Your Return',p.rate+'% p.a.'],['Perpetual Payout','₹'+fmtINR(Math.round(perpetualW))+'/'+freqCfg.lbl],['Surplus Return',Math.max(0,p.rate-parseFloat(yieldPct)).toFixed(2)+'% p.a.']]},
+  ];
+  document.getElementById('swpResultCards').innerHTML = cards.map(c=>`
+    <div class="swp-rcard" style="background:${c.bg};border-color:${c.border}">
+      <div class="swp-rcard-accent" style="background:${c.accent}"></div>
+      <div class="swp-rc-label" style="color:${c.accent}">${c.icon} ${c.lbl}</div>
+      <div class="swp-rc-val" style="color:${c.tc};font-size:${c.val.length>14?'1.1rem':'1.5rem'}">${c.val}</div>
+      <div class="swp-rc-sub" style="color:${c.accent}">${c.sub}</div>
+      ${c.rows.map(([k,v])=>`<div class="swp-row"><span class="swp-row-key" style="color:${c.tc};opacity:.75">${k}</span><span class="swp-row-val" style="color:${c.tc}">${v}</span></div>`).join('')}
+    </div>`).join('');
+
+  // Longevity bars (different withdrawal rates)
+  document.getElementById('swpRunwaySection').style.display = 'block';
+  const multiples = [{m:.5,tag:'50%'},{m:.75,tag:'75%'},{m:1,tag:'Current'},{m:1.25,tag:'125%'},{m:1.5,tag:'150%'},{m:2,tag:'200%'}];
+  const wPerPeriod = p.withdrawal * (12/freqCfg.n);
+  document.getElementById('swpRunwayBars').innerHTML = multiples.map(({m,tag})=>{
+    const w = wPerPeriod * m;
+    const {depleted:d} = runSWPSim(startCorpus, p.rate, freqCfg.n, w, p.stepup, 80*freqCfg.n);
+    const durNum = d > 0 ? d : 80;
+    const durStr = d > 0 ? d.toFixed(1)+' yrs' : '80+ yrs';
+    const pct = Math.min(100, durNum/80*100);
+    const col = durNum>=40?'#2e7d32':durNum>=20?'#f57f17':'#b71c1c';
+    const isCurrent = m === 1;
+    return `<div class="swp-runway-row" style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div class="swp-runway-label" style="font-size:.64rem;font-weight:${isCurrent?800:600};min-width:160px;color:${isCurrent?'var(--g1)':'var(--text2)'};flex-shrink:0">${tag}: ₹${fmtINR(Math.round(w))}/mo</div>
+      <div class="swp-runway-bar-wrap swp-runway-bar" style="flex:1"><div class="swp-runway-fill" style="width:${pct}%;background:${col}"></div></div>
+      <div class="swp-runway-val" style="font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;min-width:65px;text-align:right;color:${col}">${durStr}</div>
+    </div>`;
+  }).join('');
+
+  // Smart insights
+  document.getElementById('swpInsights').style.display = 'grid';
+  const insights = [
+    {icon:'🎯',title:'Withdrawal Rate',val:yieldPct+'%',desc:parseFloat(yieldPct)<4?'Conservative — corpus likely to grow':'Above 4% safe withdrawal rate threshold'},
+    {icon:'🔮',title:'Real Corpus @ Midpoint',val:'₹'+fmtINR(Math.round(startCorpus/Math.pow(1+p.inflation/100,durationYrs/2))),desc:'Inflation-adjusted corpus value at '+Math.round(durationYrs/2)+' years'},
+    {icon:p.stepup>0?'📈':'➡️',title:p.stepup>0?'Step-up Strategy':'Tip: Add Step-up',val:p.stepup>0?p.stepup+'% p.a. step-up':'Enable for inflation hedge',desc:p.stepup>0?'Your payout increases annually — protecting real income':'Set annual step-up to protect purchasing power over time'},
+  ];
+  document.getElementById('swpInsights').innerHTML = insights.map(s=>`
+    <div class="swp-insight">
+      <div class="swp-insight-icon">${s.icon}</div>
+      <div class="swp-insight-title">${s.title}</div>
+      <div class="swp-insight-val">${s.val}</div>
+      <div class="swp-insight-desc">${s.desc}</div>
+    </div>`).join('');
+
+  document.getElementById('swpChartSection').style.display = 'block';
+  drawSWPChart({sim, p, freqCfg, startCorpus, totalPeriods});
+}
+
+function renderSWPIncomeMode(p, sim, freqCfg, corpusNeeded, corpusNow, totalPeriods){
+  const annualIncome = p.targetIncome * 12;
+  const durationYrs  = (p.durationUnit==='months' ? p.durationVal : p.durationVal*12) / 12;
+  const totalIncome  = sim.totalWithdrawn;
+  const yieldPct     = (annualIncome/corpusNeeded*100).toFixed(2);
+
+  document.getElementById('swpFuel').style.display = 'block';
+  document.getElementById('swpFuelFill').style.width = '100%';
+  document.getElementById('swpFuelFill').style.background = 'linear-gradient(90deg,#00897b,#26a69a,#4db6ac)';
+  document.getElementById('swpFuelPct').textContent = '100%';
+  document.getElementById('swpFuelStats').innerHTML = [
+    {v:'₹'+fmtINR(corpusNow), l:p.delayOn?'Invest Today':'Corpus Needed'},
+    {v:'₹'+fmtINR(corpusNeeded), l:p.delayOn?'Corpus at Withdrawal Start':'Required Corpus'},
+    {v:'₹'+fmtINR(Math.round(annualIncome))+'/yr', l:'Annual Income'},
+    {v:durationYrs.toFixed(0)+' years', l:'Income Duration'},
+    {v:'₹'+fmtINR(Math.round(totalIncome)), l:'Total Payout'},
+  ].map(s=>`<div class="swp-fuel-stat"><div class="swp-fuel-stat-val">${s.v}</div><div class="swp-fuel-stat-lbl">${s.l}</div></div>`).join('');
+
+  document.getElementById('swpStatGrid').style.display = 'grid';
+  document.getElementById('swpStatGrid').innerHTML = [
+    {l:p.delayOn?'Invest Now':'Corpus Required',v:'₹'+fmtINR(corpusNow),s:p.delayOn?'grows to ₹'+fmtINR(corpusNeeded)+' in '+p.delayMonths/12+'Y':'lumpsum to deploy',c:'highlight'},
+    {l:'Corpus at Withdrawal Start',v:'₹'+fmtINR(corpusNeeded),s:'after '+(p.delayOn?(p.delayMonths/12).toFixed(1)+'Y delay':'no delay'),c:''},
+    {l:'Monthly Payout',v:'₹'+fmtINR(p.targetIncome),s:freqCfg.plbl+' withdrawals',c:'highlight'},
+    {l:'Corpus Yield',v:yieldPct+'% p.a.',s:'annual withdrawal rate',c:''},
+    {l:'Total Income',v:'₹'+fmtINR(Math.round(totalIncome)),s:'over '+durationYrs.toFixed(0)+' years',c:''},
+    {l:'Wealth Multiple',v:(totalIncome/corpusNeeded).toFixed(2)+'x',s:'income / corpus',c:'warn'},
+    {l:'Surplus Return',v:Math.max(0,p.rate-parseFloat(yieldPct)).toFixed(2)+'% p.a.',s:'corpus growth buffer',c:''},
+    {l:p.stepup>0?'Final Monthly Payout':'Income Type',v:p.stepup>0?'₹'+fmtINR(Math.round(p.targetIncome*Math.pow(1+p.stepup/100,durationYrs)))+'/mo':'Fixed income',s:p.stepup>0?'after '+p.stepup+'% step-up for '+durationYrs.toFixed(0)+'Y':'no annual increase',c:''},
+  ].map(s=>`<div class="swp-stat ${s.c}"><div class="swp-stat-label">${s.l}</div><div class="swp-stat-val">${s.v}</div><div class="swp-stat-sub">${s.s}</div></div>`).join('');
+
+  document.getElementById('swpResultCards').style.display = 'grid';
+  const cards = [
+    {bg:'#e0f2f1',border:'#80cbc4',accent:'#00695c',tc:'#004d40',icon:'🎯',lbl:p.delayOn?'Invest Today':'Corpus Required',
+     val:'₹'+fmtINR(corpusNow),sub:p.delayOn?'lumpsum → grows to ₹'+fmtINR(corpusNeeded):'deploy as lumpsum',
+     rows:[['Annual Withdrawal','₹'+fmtINR(Math.round(annualIncome))],['Corpus Yield',yieldPct+'% p.a.'],[p.delayOn?'Delay':'Duration',p.delayOn?(p.delayMonths/12).toFixed(1)+' years':durationYrs.toFixed(0)+' years']]},
+    {bg:'#e8f5e9',border:'#a5d6a7',accent:'#2e7d32',tc:'#1b5e20',icon:'💸',lbl:'Total Income Generated',
+     val:'₹'+fmtINR(Math.round(totalIncome)),sub:'₹'+fmtINR(p.targetIncome)+'/month for '+durationYrs.toFixed(0)+' years',
+     rows:[['Per '+freqCfg.lbl,'₹'+fmtINR(Math.round(p.targetIncome*(12/freqCfg.n)))],[p.stepup>0?'Step-up':'Fixed Income',p.stepup>0?p.stepup+'% p.a.':'No annual increase'],['Wealth Multiple',(totalIncome/corpusNeeded).toFixed(2)+'x']]},
+    {bg:'#fff8e1',border:'#ffe082',accent:'#f57f17',tc:'#e65100',icon:'📊',lbl:'Yield & Return',
+     val:yieldPct+'%',sub:'annual withdrawal yield on corpus',
+     rows:[['Expected Return',p.rate+'% p.a.'],['Surplus',Math.max(0,p.rate-parseFloat(yieldPct)).toFixed(2)+'% growth buffer'],['Inflation',p.inflation+'% p.a.']]},
+  ];
+  document.getElementById('swpResultCards').innerHTML = cards.map(c=>`
+    <div class="swp-rcard" style="background:${c.bg};border-color:${c.border}">
+      <div class="swp-rcard-accent" style="background:${c.accent}"></div>
+      <div class="swp-rc-label" style="color:${c.accent}">${c.icon} ${c.lbl}</div>
+      <div class="swp-rc-val" style="color:${c.tc};font-size:${c.val.length>14?'1.1rem':'1.5rem'}">${c.val}</div>
+      <div class="swp-rc-sub" style="color:${c.accent}">${c.sub}</div>
+      ${c.rows.map(([k,v])=>`<div class="swp-row"><span class="swp-row-key" style="color:${c.tc};opacity:.75">${k}</span><span class="swp-row-val" style="color:${c.tc}">${v}</span></div>`).join('')}
+    </div>`).join('');
+
+  document.getElementById('swpRunwaySection').style.display = 'none';
+
+  document.getElementById('swpInsights').style.display = 'grid';
+  document.getElementById('swpInsights').innerHTML = [
+    {icon:'🎯',title:'Required Corpus',val:'₹'+fmtINR(corpusNow),desc:p.delayOn?'Invest this now — it compounds to the full amount before withdrawals begin':'Deploy this as a lumpsum to fund your income plan'},
+    {icon:'📈',title:'Effective Yield',val:yieldPct+'%',desc:parseFloat(yieldPct)<4?'Conservative plan — low depletion risk':'Ensure returns consistently exceed this yield'},
+    {icon:'💡',title:p.stepup>0?'Step-up Enabled':'Inflation Risk',val:p.stepup>0?p.stepup+'% / yr':'Enable step-up',desc:p.stepup>0?'Your real income stays protected over time':'Without step-up, ₹'+fmtINR(p.targetIncome)+' today = ₹'+fmtINR(Math.round(p.targetIncome/Math.pow(1+p.inflation/100,durationYrs)))+' real value in '+durationYrs.toFixed(0)+' yrs'},
+  ].map(s=>`<div class="swp-insight"><div class="swp-insight-icon">${s.icon}</div><div class="swp-insight-title">${s.title}</div><div class="swp-insight-val">${s.val}</div><div class="swp-insight-desc">${s.desc}</div></div>`).join('');
+
+  document.getElementById('swpChartSection').style.display = 'block';
+  drawSWPChart({sim, p, freqCfg, startCorpus:corpusNeeded, totalPeriods});
+}
+
+function drawSWPChart(bundle){
+  if(!bundle) return;
+  if(swpChartInst){ swpChartInst.destroy(); swpChartInst=null; }
+  const {sim:{snaps}, p, freqCfg, startCorpus} = bundle;
+
+  // Build delay arc
+  const delaySnaps = [];
+  if(p.delayOn && p.delayMonths > 0){
+    const steps = Math.min(p.delayMonths, 24);
+    const baseC = p.mode==='haveCorpus' ? p.corpus : (bundle.corpusNow||startCorpus);
+    for(let i=0; i<=steps; i++){
+      const months = p.delayMonths * i/steps;
+      delaySnaps.push({label:'D+'+months.toFixed(0)+'M', val:Math.round(baseC*Math.pow(1+p.delayRate/100,months/12))});
+    }
+  }
+  const wLabels = snaps.map(s=>s.period===0?(p.delayOn?'W-Start':'Now'):'Y'+s.period);
+  const allLabels = p.delayOn&&delaySnaps.length ? [...delaySnaps.slice(0,-1).map(d=>d.label), ...wLabels] : wLabels;
+  const off = p.delayOn&&delaySnaps.length ? delaySnaps.length-1 : 0;
+  const pad = arr => [...Array(off).fill(null), ...arr];
+
+  const delayDs = p.delayOn&&delaySnaps.length ? [{
+    label:'⏳ Delay Growth', data:[...delaySnaps.slice(0,-1).map(d=>d.val), ...Array(wLabels.length).fill(null)],
+    borderColor:'#42a5f5', backgroundColor:'rgba(66,165,245,.07)',
+    borderWidth:2, borderDash:[6,4], pointRadius:0, tension:.4, fill:true, order:4
+  }] : [];
+
+  const showCorpus    = swpChartView !== 'withdrawn';
+  const showWithdrawn = swpChartView !== 'corpus';
+
+  const datasets = [
+    ...delayDs,
+    showCorpus && {
+      label:'💰 Remaining Corpus', data:pad(snaps.map(s=>s.corpus)),
+      borderColor:'#00897b', backgroundColor:'rgba(0,137,123,.1)',
+      borderWidth:2.5, pointRadius:0, pointHoverRadius:5, tension:.3, fill:true, order:1
+    },
+    showWithdrawn && {
+      label:'💸 Total Withdrawn', data:pad(snaps.map(s=>s.totalWithdrawn)),
+      borderColor:'#ef5350', backgroundColor:'rgba(239,83,80,.06)',
+      borderWidth:1.8, pointRadius:0, pointHoverRadius:4, tension:.3, fill:false, order:2
+    },
+    {
+      label:'— Starting Corpus', data:Array(allLabels.length).fill(Math.round(startCorpus)),
+      borderColor:'rgba(150,150,150,.3)', backgroundColor:'transparent',
+      borderWidth:1, borderDash:[4,4], pointRadius:0, tension:0, order:5
+    },
+  ].filter(Boolean);
+
+  swpChartInst = new Chart(document.getElementById('swpChart').getContext('2d'), {
+    type:'line', data:{labels:allLabels, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{
+        legend:{position:'top',labels:{color:'#2e4d2e',font:{family:'Raleway',weight:'700',size:11},usePointStyle:true,padding:20,boxWidth:8}},
+        tooltip:{backgroundColor:'#162616',borderColor:'#00695c',borderWidth:1,
+          titleFont:{family:'JetBrains Mono',size:11},bodyFont:{family:'JetBrains Mono',size:12},
+          padding:13,cornerRadius:8,callbacks:{label:c=>`  ${c.dataset.label}: ₹${fmtINR(c.parsed.y)}`}}
+      },
+      scales:{
+        x:{grid:{display:false},border:{color:'#80cbc4'},ticks:{font:{family:'JetBrains Mono',size:10},color:'#00695c',maxTicksLimit:10}},
+        y:{grid:{color:'rgba(128,203,196,.25)'},border:{color:'#80cbc4'},ticks:{font:{family:'JetBrains Mono',size:10},color:'#00695c',callback:v=>'₹'+fmtINR(v)}}
+      }
+    }
+  });
+}
+
+function printSWP(){
+  const fuelHTML   = document.getElementById('swpFuel').outerHTML;
+  const statsHTML  = document.getElementById('swpStatGrid').outerHTML;
+  const cardsHTML  = document.getElementById('swpResultCards').outerHTML;
+  const chartImg   = document.getElementById('swpChart')?document.getElementById('swpChart').toDataURL('image/png'):'';
+  const runwayEl   = document.getElementById('swpRunwaySection');
+  const runwayHTML = runwayEl&&runwayEl.style.display!=='none'?runwayEl.outerHTML:'';
+  const insightEl  = document.getElementById('swpInsights');
+  const insightHTML= insightEl&&insightEl.style.display!=='none'?insightEl.outerHTML:'';
+
+  const win = window.open('','_blank','width=940,height=720');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SWP Plan — Abundance</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px 36px}
+.ph{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:2.5px solid #00695c;margin-bottom:18px}
+.pt{font-size:1.05rem;font-weight:800;color:#00695c}.pa{font-size:.6rem;color:#00695c;font-family:"JetBrains Mono",monospace;margin-top:2px}
+.logo{height:44px;object-fit:contain;mix-blend-mode:multiply}
+.sec{font-size:.56rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#00695c;margin:12px 0 7px;display:flex;align-items:center;gap:7px}
+.sec::after{content:'';flex:1;height:1px;background:#80cbc4}
+.swp-fuel{background:linear-gradient(135deg,#1a3a2a,#1e4530);border-radius:12px;padding:16px 20px;margin-bottom:12px}
+.swp-fuel-label{font-size:.55rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#80cbc4;margin-bottom:10px}
+.swp-fuel-track{height:12px;background:rgba(255,255,255,.1);border-radius:6px;overflow:hidden;margin-bottom:8px}.swp-fuel-fill{height:100%;border-radius:6px}
+.swp-fuel-stats{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}.swp-fuel-stat{text-align:center}
+.swp-fuel-stat-val{font-family:"JetBrains Mono",monospace;font-size:.82rem;font-weight:700;color:#e0f2f1}.swp-fuel-stat-lbl{font-size:.52rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:rgba(128,203,196,.7);margin-top:1px}
+.swp-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.swp-stat{background:#f5f5f5;border:1.5px solid #e0e0e0;border-radius:9px;padding:10px 12px;text-align:center}
+.swp-stat.highlight{background:#e0f2f1;border-color:#80cbc4}.swp-stat.highlight .swp-stat-val{color:#00695c}
+.swp-stat.warn{background:#fff8e1;border-color:#ffe082}.swp-stat.warn .swp-stat-val{color:#e65100}
+.swp-stat.danger{background:#ffebee;border-color:#ef9a9a}.swp-stat.danger .swp-stat-val{color:#b71c1c}
+.swp-stat-label{font-size:.52rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#888;margin-bottom:4px}
+.swp-stat-val{font-family:"JetBrains Mono",monospace;font-size:.9rem;font-weight:700;line-height:1.1}
+.swp-stat-sub{font-size:.54rem;color:#999;margin-top:2px}
+.swp-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.swp-rcard{border-radius:10px;padding:14px;position:relative;overflow:hidden;border:1.5px solid}
+.swp-rcard-accent{position:absolute;top:0;left:0;width:3px;bottom:0}
+.swp-rc-label{font-size:.54rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;display:flex;align-items:center;gap:6px}
+.swp-rc-val{font-family:"JetBrains Mono",monospace;font-size:.95rem;font-weight:800;line-height:1.1;margin-bottom:2px}
+.swp-rc-sub{font-size:.56rem;font-family:"JetBrains Mono",monospace;margin-bottom:9px}
+.swp-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:.6rem}.swp-row:last-child{border-bottom:none}
+.swp-row-key{opacity:.75}.swp-row-val{font-family:"JetBrains Mono",monospace;font-weight:600}
+.swp-runway-bar{height:9px;background:#e0f2f1;border-radius:5px;overflow:hidden;margin:5px 0}
+.swp-runway-fill{height:100%;border-radius:5px}
+.swp-insight-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.swp-insight{background:#f5f5f5;border:1.5px solid #e0e0e0;border-radius:9px;padding:12px}
+.swp-insight-icon{font-size:1.2rem;margin-bottom:4px}.swp-insight-title{font-size:.54rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#888;margin-bottom:3px}
+.swp-insight-val{font-family:"JetBrains Mono",monospace;font-size:.9rem;font-weight:700;margin-bottom:3px}.swp-insight-desc{font-size:.6rem;color:#666;line-height:1.5}
+.ci img{width:100%;border-radius:8px;border:1px solid #80cbc4}
+.dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:12px}
+@media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}
+</style></head><body>
+<div class="ph"><div><div class="pt">SWP — Systematic Withdrawal Plan</div><div class="pa">Abundance Financial Services · ARN-251838 · AMFI Registered MF Distributor &amp; SIF Distributor</div></div><img class="logo" src="https://www.getabundance.in/images/logo.png" onerror="this.style.display='none'"></div>
+<div class="sec">Corpus Health</div>${fuelHTML}
+<div class="sec">Statistics</div>${statsHTML}
+<div class="sec">Analysis</div>${cardsHTML}
+${runwayHTML?`<div class="sec">Longevity Comparison</div>${runwayHTML}`:''}
+${insightHTML?`<div class="sec">Smart Insights</div>${insightHTML}`:''}
+${chartImg?`<div class="sec">Projection</div><div class="ci"><img src="${chartImg}"></div>`:''}
+<div class="dis">⚠️ <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. Projections are illustrative only and do not constitute financial advice. Consult your financial advisor before investing. | ARN-251838`);
+  win.document.close();
+  win.onload = ()=>setTimeout(()=>{win.focus();win.print();},600);
+  setTimeout(()=>{try{win.focus();win.print();}catch(e){}},1200);
+}
+
+calcSWP();
 </script>
 </body>
 </html>
