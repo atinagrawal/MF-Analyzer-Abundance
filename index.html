@@ -173,7 +173,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .src-header{display:flex;align-items:center;gap:8px;margin-bottom:14px}
 .src-dot{width:10px;height:10px;border-radius:50%}
 .src-name{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
-.src-corpus{font-family:"JetBrains Mono",monospace;font-size:1.55rem;font-weight:600;color:var(--text);line-height:1.1;margin-bottom:2px}
+.src-corpus{font-family:"JetBrains Mono",monospace;font-size:1.9rem;font-weight:800;color:var(--g1);line-height:1.1;margin-bottom:2px}
 .src-corpus-label{font-size:.63rem;color:var(--muted);margin-bottom:14px;font-family:"JetBrains Mono",monospace}
 .src-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
 .src-row:last-child{border-bottom:none}
@@ -322,7 +322,14 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 <div class="sip-card">
   <div class="sip-card-header">
     <div class="sip-card-title" style="justify-content:space-between">
-      <span>SIP Returns Calculator</span>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span id="calcModeTitle">SIP Returns Calculator</span>
+        <div style="display:flex;border:1.5px solid var(--border2);border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;font-family:'Raleway',sans-serif">
+          <button id="modeSIP" onclick="setCalcMode('sip')" style="padding:5px 14px;background:var(--g1);color:#fff;border:none;cursor:pointer;letter-spacing:.3px">SIP</button>
+          <button id="modeLump" onclick="setCalcMode('lump')" style="padding:5px 14px;background:#fff;color:var(--g2);border:none;border-left:1px solid var(--border2);cursor:pointer;letter-spacing:.3px">Lumpsum</button>
+          <button id="modeBoth" onclick="setCalcMode('both')" style="padding:5px 14px;background:#fff;color:var(--g2);border:none;border-left:1px solid var(--border2);cursor:pointer;letter-spacing:.3px">SIP + Lumpsum</button>
+        </div>
+      </div>
       <button onclick="printCalc()" style="display:flex;align-items:center;gap:6px;padding:6px 14px;border:1.5px solid var(--border2);border-radius:8px;background:#fff;color:var(--g2);font-family:'Raleway',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.3px;text-transform:none" onmouseover="this.style.background='var(--g-xlight)'" onmouseout="this.style.background='#fff'">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         Print / PDF
@@ -331,7 +338,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   </div>
   <div class="sip-card-body">
     <div class="sip-params">
-      <div class="sip-field">
+      <div class="sip-field sip-only">
         <label>SIP Frequency</label>
         <select class="sip-select" id="sipFreq" onchange="calcSIP()">
           <option value="daily">Daily</option>
@@ -341,9 +348,13 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
           <option value="annually">Annually</option>
         </select>
       </div>
-      <div class="sip-field">
+      <div class="sip-field sip-only">
         <label>SIP Amount (₹)</label>
         <input class="sip-input" id="sipAmount" type="number" value="10000" min="1" step="100" oninput="calcSIP()">
+      </div>
+      <div class="sip-field lump-only" style="display:none">
+        <label>Lumpsum Amount (₹)</label>
+        <input class="sip-input" id="lumpAmount" type="number" value="100000" min="1" step="1000" oninput="calcSIP()">
       </div>
       <div class="sip-field">
         <label>Duration</label>
@@ -359,7 +370,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
         <label>Expected Return (% p.a.)</label>
         <input class="sip-input" id="sipRate" type="number" value="12" min="0.1" max="100" step="0.1" oninput="calcSIP()">
       </div>
-      <div class="sip-field">
+      <div class="sip-field sip-only">
         <label>Annual Step-up (%)</label>
         <input class="sip-input" id="sipStepup" type="number" value="0" min="0" max="50" step="1" oninput="calcSIP()">
       </div>
@@ -378,7 +389,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
       <div class="footer-arn">ARN-251838 · AMFI Registered Mutual Funds Distributor & SIF Distributor</div>
       <p>Atin Kumar Agrawal<br>
         📞 <a href="tel:+919808105923">+91 98081 05923</a> &nbsp;|&nbsp;
-        ✉️ <a href="mailto:contact@getabundance.in">contact@getabundance.in</a><br>
+        ✉️ <a href="/cdn-cgi/l/email-protection#f794989983969483b7909283969582999396999492d99e99"><span class="__cf_email__" data-cfemail="88ebe7e6fce9ebfcc8efedfce9eafde6ece9e6ebeda6e1e6">[email&#160;protected]</span></a><br>
         🏢 <a href="https://maps.app.goo.gl/TgQSLRDo3UBKR77g7" target="_blank" style="color:inherit;text-decoration:underline dotted;text-underline-offset:3px">1st Floor, Kapil Complex, Mukhani, Haldwani (Nainital) — 263139, Uttarakhand</a><br>
         🌐 <a href="https://www.getabundance.in" target="_blank">www.getabundance.in</a>
       </p>
@@ -397,7 +408,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   </div>
   <hr class="footer-divider">
   <div class="disclaimer">
-    ⚠️ <strong>Disclaimer:</strong> Mutual fund investments are subject to market risks. Read all scheme-related documents carefully before investing. Past performance is not indicative of future returns. This tool is for informational and educational purposes only and does not constitute financial advice. Please consult your AMFI-registered financial advisor before making investment decisions. Data sourced from AMFI via mfapi.in. | ARN-251838
+    ⚠️ <strong>Disclaimer:</strong> Mutual fund investments are subject to market risks. Read all scheme-related documents carefully before investing. Past performance is not indicative of future returns. This tool is for informational and educational purposes only and does not constitute financial advice. Please consult your financial advisor before making investment decisions. Data sourced from AMFI via mfapi.in. | ARN-251838
   </div>
 </div>
 
@@ -965,7 +976,22 @@ ${chartImg?`<div class="section-title" style="margin-top:4px">Growth Projection<
 /* ════════════════════════════════════════
    SIP CALCULATOR
 ════════════════════════════════════════ */
-let sipChartInst=null;
+let sipChartInst=null, calcMode='sip';
+
+function setCalcMode(mode){
+  calcMode=mode;
+  ['modeSIP','modeLump','modeBoth'].forEach(id=>{
+    const btn=document.getElementById(id); if(!btn) return;
+    const active=(id==='modeSIP'&&mode==='sip')||(id==='modeLump'&&mode==='lump')||(id==='modeBoth'&&mode==='both');
+    btn.style.background=active?'var(--g1)':'#fff';
+    btn.style.color=active?'#fff':'var(--g2)';
+  });
+  document.querySelectorAll('.sip-only').forEach(el=>el.style.display=(mode==='sip'||mode==='both')?'':'none');
+  document.querySelectorAll('.lump-only').forEach(el=>el.style.display=(mode==='lump'||mode==='both')?'':'none');
+  const titles={sip:'SIP Returns Calculator',lump:'Lumpsum Returns Calculator',both:'SIP + Lumpsum Calculator'};
+  document.getElementById('calcModeTitle').textContent=titles[mode]||titles.sip;
+  calcSIP();
+}
 
 const FREQ={
   daily:    {perYear:252, label:"Daily"},
@@ -976,62 +1002,90 @@ const FREQ={
 };
 
 function getSIPParams(){
-  const freq     = document.getElementById("sipFreq").value;
-  const amount   = Math.max(1, parseFloat(document.getElementById("sipAmount").value)||10000);
-  const durVal   = Math.max(1, parseFloat(document.getElementById("sipDuration").value)||10);
-  const durUnit  = document.getElementById("sipDurationUnit").value;
-  const annRate  = Math.max(0.01, parseFloat(document.getElementById("sipRate").value)||12);
-  const stepupPct= Math.max(0, parseFloat(document.getElementById("sipStepup").value)||0);
-  const cfg = FREQ[freq];
+  const freq      = document.getElementById("sipFreq").value;
+  const sipAmt    = Math.max(1, parseFloat(document.getElementById("sipAmount").value)||10000);
+  const lumpAmt   = Math.max(0, parseFloat(document.getElementById("lumpAmount").value)||0);
+  const durVal    = Math.max(1, parseFloat(document.getElementById("sipDuration").value)||10);
+  const durUnit   = document.getElementById("sipDurationUnit").value;
+  const annRate   = Math.max(0.01, parseFloat(document.getElementById("sipRate").value)||12);
+  const stepupPct = (calcMode==='lump') ? 0 : Math.max(0, parseFloat(document.getElementById("sipStepup").value)||0);
+  const cfg       = FREQ[freq];
   const totalYears = durUnit==="months" ? durVal/12 : durVal;
   const totalInstallments = Math.round(totalYears * cfg.perYear);
   const ratePerPeriod = Math.pow(1 + annRate/100, 1/cfg.perYear) - 1;
-  return{freq,amount,durVal,durUnit,totalYears,totalInstallments,annualRate:annRate,ratePerPeriod,stepupPct,cfg};
+  return{freq, sipAmt, lumpAmt, durVal, durUnit, totalYears, totalInstallments,
+         annualRate:annRate, ratePerPeriod, stepupPct, cfg,
+         isLump:calcMode==='lump', isBoth:calcMode==='both'};
 }
 
 function simulate(p){
-  const snapshots=[{label:"Start",corpus:0,invested:0}];
-  let corpus=0, invested=0, amt=p.amount;
+  if(p.isLump){
+    // Pure lumpsum compounding
+    const snaps=[{label:"Start",corpus:p.lumpAmt,invested:p.lumpAmt}];
+    for(let y=1;y<=Math.ceil(p.totalYears);y++){
+      const yr=Math.min(y,p.totalYears);
+      snaps.push({label:yr+"Y",
+        corpus:Math.round(p.lumpAmt*Math.pow(1+p.annualRate/100,yr)),
+        invested:p.lumpAmt});
+    }
+    return snaps;
+  }
+  // SIP (with optional lump top-up at start)
+  const lumpStart = p.isBoth ? p.lumpAmt : 0;
+  const snaps=[{label:"Start",corpus:lumpStart,invested:lumpStart}];
+  let corpus=lumpStart, invested=0, amt=p.sipAmt;
   const ipy=p.cfg.perYear;
   for(let i=1;i<=p.totalInstallments;i++){
     corpus=(corpus+amt)*(1+p.ratePerPeriod);
     invested+=amt;
-    if(p.stepupPct>0 && i%ipy===0){
-      amt=amt*(1+p.stepupPct/100);
-    }
-    if(i%ipy===0){
-      snapshots.push({label:(i/ipy)+"Y",corpus:Math.round(corpus),invested:Math.round(invested)});
-    }
+    if(p.stepupPct>0 && i%ipy===0) amt*=(1+p.stepupPct/100);
+    if(i%ipy===0)
+      snaps.push({label:(i/ipy)+"Y",corpus:Math.round(corpus),invested:Math.round(invested+lumpStart)});
   }
-  if(p.totalInstallments%ipy!==0){
-    snapshots.push({label:p.totalYears.toFixed(1)+"Y",corpus:Math.round(corpus),invested:Math.round(invested)});
-  }
-  return snapshots;
+  if(p.totalInstallments%ipy!==0)
+    snaps.push({label:p.totalYears.toFixed(1)+"Y",corpus:Math.round(corpus),invested:Math.round(invested+lumpStart)});
+  return snaps;
 }
 
 function calcSIP(){
   const p=getSIPParams();
-  if(p.totalInstallments<1)return;
+  if(!p.isLump && p.totalInstallments<1) return;
   const base=simulate(p);
   const finalCorpus=base[base.length-1].corpus;
   const totalInvested=base[base.length-1].invested;
   const totalGain=finalCorpus-totalInvested;
   const wealthGain=totalInvested>0?((totalGain/totalInvested)*100).toFixed(1):0;
 
-  document.getElementById("sipSummary").innerHTML=[
-    ["Frequency",           p.cfg.label],
-    ["Per Installment",     "₹"+fmtINR(p.amount)],
-    ["# Installments",      p.totalInstallments.toLocaleString("en-IN")],
-    ["Total Invested",      "₹"+fmtINR(totalInvested)],
-    ["Estimated Corpus",    "₹"+fmtINR(finalCorpus)],
-    ["Wealth Gain",         (totalGain>=0?"▲ ":"▼ ")+"₹"+fmtINR(Math.abs(totalGain))+" ("+wealthGain+"%)"],
-  ].map(([lbl,val],i)=>`<div class="sip-sum-item"><div class="sip-sum-label">${lbl}</div>
+  const summaryRows=p.isLump?[
+    ["Lumpsum",         "₹"+fmtINR(p.lumpAmt)],
+    ["Duration",        p.durVal+" "+p.durUnit],
+    ["Return (p.a.)",   p.annualRate+"%"],
+    ["Total Invested",  "₹"+fmtINR(totalInvested)],
+    ["Est. Corpus",     "₹"+fmtINR(finalCorpus)],
+    ["Wealth Gain",     (totalGain>=0?"▲ ":"▼ ")+"₹"+fmtINR(Math.abs(totalGain))+" ("+wealthGain+"%)"],
+  ]:p.isBoth?[
+    ["SIP Amount",      "₹"+fmtINR(p.sipAmt)],
+    ["SIP Frequency",   p.cfg.label],
+    ["Lumpsum",         "₹"+fmtINR(p.lumpAmt)],
+    ["Total Invested",  "₹"+fmtINR(totalInvested)],
+    ["Est. Corpus",     "₹"+fmtINR(finalCorpus)],
+    ["Wealth Gain",     (totalGain>=0?"▲ ":"▼ ")+"₹"+fmtINR(Math.abs(totalGain))+" ("+wealthGain+"%)"],
+  ]:[
+    ["Frequency",       p.cfg.label],
+    ["Per Instalment",  "₹"+fmtINR(p.sipAmt)],
+    ["# Instalments",   p.totalInstallments.toLocaleString("en-IN")],
+    ["Total Invested",  "₹"+fmtINR(totalInvested)],
+    ["Est. Corpus",     "₹"+fmtINR(finalCorpus)],
+    ["Wealth Gain",     (totalGain>=0?"▲ ":"▼ ")+"₹"+fmtINR(Math.abs(totalGain))+" ("+wealthGain+"%)"],
+  ];
+  document.getElementById("sipSummary").innerHTML=summaryRows.map(([lbl,val],i)=>
+    `<div class="sip-sum-item"><div class="sip-sum-label">${lbl}</div>
     <div class="sip-sum-val" style="${i>=4?"color:var(--pos)":""}">${val}</div></div>`).join("");
 
   const scenarios=[
-    {label:"Conservative", rate:Math.max(1,p.annualRate-4), color:"#1565c0"},
-    {label:"Base Case",    rate:p.annualRate,                color:"#2e7d32"},
-    {label:"Optimistic",   rate:Math.min(50,p.annualRate+4),color:"#e65100"},
+    {label:"Conservative", rate:Math.max(1,p.annualRate-4),  color:"#1565c0"},
+    {label:"Base Case",    rate:p.annualRate,                 color:"#2e7d32"},
+    {label:"Optimistic",   rate:Math.min(50,p.annualRate+4), color:"#e65100"},
   ];
 
   document.getElementById("sipResultCards").innerHTML=scenarios.map(s=>{
@@ -1041,15 +1095,36 @@ function calcSIP(){
     const inv=sd[sd.length-1].invested;
     const gain=corp-inv;
     const wg=inv>0?((gain/inv)*100).toFixed(1):0;
+    // For both mode: calculate lump gain and SIP gain separately
+    let sipGainHtml='', lumpGainHtml='';
+    if(p.isBoth){
+      const lumpCorpus=Math.round(sp.lumpAmt*Math.pow(1+s.rate/100,sp.totalYears));
+      const lumpGain=lumpCorpus-sp.lumpAmt;
+      // SIP corpus = total corpus - lump corpus
+      const sipCorpus=corp-lumpCorpus;
+      const sipInv=inv-sp.lumpAmt;
+      const sipGain=sipCorpus-sipInv;
+      sipGainHtml=`<div class="src-row" style="opacity:.65;font-size:.9em"><span class="src-key">SIP Gain</span><span class="src-val" style="color:${sipGain>=0?'var(--pos)':'var(--neg)'}">₹${fmtINR(Math.abs(sipGain))}</span></div>`;
+      lumpGainHtml=`<div class="src-row" style="opacity:.65;font-size:.9em"><span class="src-key">Lumpsum Gain</span><span class="src-val" style="color:${lumpGain>=0?'var(--pos)':'var(--neg)'}">₹${fmtINR(Math.abs(lumpGain))}</span></div>`;
+    }
     return`<div class="sip-result-card">
       <div class="src-accent" style="background:${s.color}"></div>
       <div class="src-header"><span class="src-dot" style="background:${s.color}"></span><span class="src-name">${s.label} · ${s.rate}% p.a.</span></div>
-      <div class="src-corpus">₹${fmtINR(corp)}</div>
-      <div class="src-corpus-label">Estimated Corpus</div>
+      <div style="background:var(--g-xlight);border:1.5px solid var(--g-light);border-radius:8px;padding:10px 12px;margin-bottom:10px;text-align:center">
+        <div class="src-corpus-label" style="margin-bottom:4px">Estimated Corpus</div>
+        <div class="src-corpus">₹${fmtINR(corp)}</div>
+      </div>
       ${sr("Total Invested","₹"+fmtINR(inv),"#2e4d2e")}
-      ${sr("Total Gain","₹"+fmtINR(Math.abs(gain)),gain>=0?"var(--pos)":"var(--neg)")}
+      ${sipGainHtml}
+      ${lumpGainHtml}
+      <div style="margin:8px 0 4px;padding:7px 10px;border-radius:7px;background:${gain>=0?'rgba(46,125,50,.1)':'rgba(183,28,28,.08)'}">
+        <div class="src-row" style="border-bottom:none">
+          <span class="src-key" style="font-weight:800;font-size:.75rem;color:#2e4d2e">Total Gain</span>
+          <span class="src-val" style="color:${gain>=0?'var(--pos)':'var(--neg)'};font-size:1rem;font-weight:800">₹${fmtINR(Math.abs(gain))}</span>
+        </div>
+      </div>
       ${sr("Wealth Gain",wg+"%",gain>=0?"var(--pos)":"var(--neg)")}
-      ${p.stepupPct>0?sr("Step-up",p.stepupPct+"% p.a.","#6a1b9a"):""}
+      ${(!p.isLump&&p.stepupPct>0)?sr("Step-up",p.stepupPct+"% p.a.","#6a1b9a"):""}
     </div>`;
   }).join("");
 
@@ -1092,13 +1167,14 @@ function drawSIPChart(p,scenarios){
   }});
 }
 
+
 function sr(key,val,col="#2e4d2e"){
   return`<div class="src-row"><span class="src-key">${key}</span><span class="src-val" style="color:${col}">${val}</span></div>`;
 }
 function fmtINR(n){
   n=Math.round(n);
-  if(n>=1e7)return(n/1e7).toFixed(2)+" Cr";
-  if(n>=1e5)return(n/1e5).toFixed(2)+" L";
+  if(n>=1e7) return(n/1e7).toFixed(2)+" Cr";
+  if(n>=1e5) return(n/1e5).toFixed(2)+" L";
   return n.toLocaleString("en-IN");
 }
 
