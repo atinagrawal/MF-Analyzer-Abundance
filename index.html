@@ -65,7 +65,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .search-hint{font-size:.71rem;color:var(--muted);margin-top:8px}
 .dropdown{position:absolute;top:calc(100% + 7px);left:0;right:0;background:#fff;border:1.5px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lg);z-index:1000;display:none;max-height:420px;overflow-y:auto;scroll-behavior:smooth}
 .dropdown.open{display:block}
-.dropdown-item{padding:9px 16px;cursor:pointer;font-size:.82rem;font-weight:600;border-bottom:1px solid var(--surface2);display:flex;align-items:center;gap:10px;transition:background .12s;color:var(--text2);line-height:1.35}
+.dropdown-item{padding:9px 16px;cursor:pointer;font-size:.82rem;font-weight:600;border-bottom:1px solid var(--surface2);display:flex;align-items:flex-start;gap:10px;transition:background .12s;color:var(--text2);line-height:1.4}
 .dropdown-item:last-child{border-bottom:none}
 .dropdown-item:hover{background:var(--g-xlight);color:var(--g2)}
 .di-code{font-family:"JetBrains Mono",monospace;font-size:.68rem;color:var(--muted);background:var(--surface2);padding:2px 7px;border-radius:4px;flex-shrink:0}
@@ -448,7 +448,7 @@ async function doSearch(q){
     dd.innerHTML=
       `<div class="dd-count">${results.length} of ${filtered.length} results</div>`+
       results.map(f=>`<div class="dropdown-item" onclick="addFund(${f.schemeCode})">
-        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${highlight(f.schemeName)}</span>
+        <span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${highlight(f.schemeName)}</span>
         <span class="di-code">${f.schemeCode}</span>
       </div>`).join("");
   }catch(e){dd.innerHTML='<div class="dropdown-loading">⚠️ Search failed. Check connection.</div>';}
@@ -965,7 +965,7 @@ ${cardsHTML}
 ${chartImg?`<div class="section-title" style="margin-top:4px">Growth Projection</div>
 <div class="chart-section"><img src="${chartImg}" alt="SIP Growth Chart"></div>`:""}
 
-<div class="disclaimer">⚠️ <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. This projection is for illustrative purposes only and does not constitute financial advice. Consult your AMFI-registered advisor before investing. | ARN-251838 | Abundance Financial Services</div>
+<div class="disclaimer">⚠️ <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. This projection is for illustrative purposes only and does not constitute financial advice. Consult your financial advisor before investing. | ARN-251838 | Abundance Financial Services</div>
 </body></html>`);
   win.document.close();
   // Wait for fonts/images to load then print
