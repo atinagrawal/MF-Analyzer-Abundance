@@ -224,6 +224,29 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   .risk-table td:first-child{background:var(--surface2);padding:10px 14px;font-weight:700}
   .risk-table td[data-label]:before{content:attr(data-label);font-size:.58rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:"JetBrains Mono",monospace;flex-shrink:0;margin-right:8px}
 }
+
+/* GOAL PLANNER */
+.goal-preset-btn{padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-family:"Raleway",sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
+.goal-preset-btn:hover{border-color:var(--g3);color:var(--g2);background:var(--g-xlight)}
+.goal-preset-btn.active{background:var(--g2);border-color:var(--g2);color:#fff}
+.gp-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;transition:all .2s}
+.gp-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--border2)}
+.gp-card-accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:2px 2px 0 0}
+.gp-card-type{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.gp-card-icon{font-size:1.1rem}
+.gp-highlight-box{background:var(--g-xlight);border:1.5px solid var(--g-light);border-radius:8px;padding:10px 14px;margin:10px 0;text-align:center}
+.gp-main-val{font-family:"JetBrains Mono",monospace;font-size:1.6rem;font-weight:800;color:var(--g1);line-height:1.1}
+.gp-main-label{font-size:.6rem;color:var(--muted);margin-top:2px;font-family:"JetBrains Mono",monospace}
+.gp-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
+.gp-row:last-child{border-bottom:none}
+.gp-key{font-size:.7rem;color:var(--text2)}
+.gp-val{font-family:"JetBrains Mono",monospace;font-size:.78rem;font-weight:600;color:var(--text)}
+.gp-badge{display:inline-flex;align-items:center;gap:4px;font-size:.6rem;font-weight:800;letter-spacing:.5px;padding:3px 9px;border-radius:20px;text-transform:uppercase}
+.timeline-bar{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px}
+.tl-track{height:8px;background:var(--border);border-radius:4px;margin:10px 0;position:relative;overflow:hidden}
+.tl-fill{height:100%;border-radius:4px;transition:width .6s ease;background:linear-gradient(90deg,var(--g2),var(--g4))}
+.tl-milestones{display:flex;justify-content:space-between;margin-top:8px}
+.tl-m{font-size:.6rem;color:var(--muted);font-family:"JetBrains Mono",monospace;text-align:center;flex:1}
 </style>
 </head>
 <body>
@@ -381,6 +404,114 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 
+<!-- GOAL PLANNER DIVIDER -->
+<div class="section-divider">
+  <div class="section-divider-line"></div>
+  <div class="section-divider-label">🎯 Investment Goal Planner</div>
+  <div class="section-divider-line"></div>
+</div>
+
+<!-- GOAL PLANNER -->
+<div class="sip-card" id="goalPlannerCard">
+  <div class="sip-card-header">
+    <div class="sip-card-title" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span>Investment Goal Planner</span>
+        <span style="font-size:.6rem;font-weight:700;letter-spacing:1px;padding:3px 10px;background:var(--g-xlight);border:1px solid var(--g-light);border-radius:20px;color:var(--g2);text-transform:uppercase">Reverse Calculator</span>
+      </div>
+      <button onclick="printGoalPlan()" style="display:flex;align-items:center;gap:6px;padding:6px 14px;border:1.5px solid var(--border2);border-radius:8px;background:#fff;color:var(--g2);font-family:'Raleway',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.3px" onmouseover="this.style.background='var(--g-xlight)'" onmouseout="this.style.background='#fff'">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print / PDF
+      </button>
+    </div>
+  </div>
+  <div class="sip-card-body">
+    <!-- Goal Presets -->
+    <div style="margin-bottom:20px">
+      <div class="section-label" style="margin-bottom:10px">🏷️ Quick Goal Presets</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px" id="goalPresets">
+        <button class="goal-preset-btn active" onclick="applyGoalPreset(this,'child_edu')">🎓 Child Education</button>
+        <button class="goal-preset-btn" onclick="applyGoalPreset(this,'retirement')">🏖️ Retirement</button>
+        <button class="goal-preset-btn" onclick="applyGoalPreset(this,'home')">🏠 Home Purchase</button>
+        <button class="goal-preset-btn" onclick="applyGoalPreset(this,'emergency')">🛡️ Emergency Fund</button>
+        <button class="goal-preset-btn" onclick="applyGoalPreset(this,'travel')">✈️ Dream Vacation</button>
+        <button class="goal-preset-btn" onclick="applyGoalPreset(this,'car')">🚗 Car Purchase</button>
+        <button class="goal-preset-btn" onclick="applyGoalPreset(this,'custom')">✏️ Custom Goal</button>
+      </div>
+    </div>
+    <!-- Inputs Grid -->
+    <div class="sip-params" style="margin-bottom:20px">
+      <div class="sip-field">
+        <label>Goal Name</label>
+        <input class="sip-input" id="goalName" type="text" value="Child Education Fund" oninput="calcGoal()" style="font-family:'Raleway',sans-serif;font-size:.85rem">
+      </div>
+      <div class="sip-field">
+        <label>Target Amount (₹)</label>
+        <input class="sip-input" id="goalAmount" type="number" value="2000000" min="1000" step="10000" oninput="calcGoal()">
+      </div>
+      <div class="sip-field">
+        <label>Time Horizon</label>
+        <div class="dur-row">
+          <input class="sip-input" id="goalDuration" type="number" value="15" min="1" step="1" oninput="calcGoal()">
+          <select class="sip-select" id="goalDurationUnit" onchange="calcGoal()">
+            <option value="years" selected>Years</option>
+            <option value="months">Months</option>
+          </select>
+        </div>
+      </div>
+      <div class="sip-field">
+        <label>Expected Return (% p.a.)</label>
+        <input class="sip-input" id="goalRate" type="number" value="12" min="1" max="100" step="0.5" oninput="calcGoal()">
+      </div>
+      <div class="sip-field">
+        <label>Existing Investments (₹)</label>
+        <input class="sip-input" id="goalExisting" type="number" value="0" min="0" step="1000" oninput="calcGoal()" placeholder="0">
+      </div>
+      <div class="sip-field">
+        <label>Inflation Adjustment (% p.a.)</label>
+        <input class="sip-input" id="goalInflation" type="number" value="6" min="0" max="30" step="0.5" oninput="calcGoal()">
+      </div>
+    </div>
+    <!-- Advanced Toggle -->
+    <div style="margin-bottom:18px">
+      <button onclick="toggleGoalAdvanced()" id="goalAdvToggle" style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--muted);font-family:'Raleway',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--g3)';this.style.color='var(--g2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+        <svg id="goalAdvArrow" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
+        Advanced Options
+      </button>
+      <div id="goalAdvanced" style="display:none;margin-top:14px">
+        <div class="sip-params">
+          <div class="sip-field">
+            <label>SIP Frequency</label>
+            <select class="sip-select" id="goalFreq" onchange="calcGoal()">
+              <option value="monthly" selected>Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="weekly">Weekly</option>
+              <option value="annually">Annually</option>
+            </select>
+          </div>
+          <div class="sip-field">
+            <label>Annual SIP Step-up (%)</label>
+            <input class="sip-input" id="goalStepup" type="number" value="10" min="0" max="50" step="1" oninput="calcGoal()">
+          </div>
+          <div class="sip-field">
+            <label>Lumpsum % in Hybrid Plan</label>
+            <input class="sip-input" id="goalLumpsumPct" type="number" value="30" min="0" max="100" step="5" oninput="calcGoal()">
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Goal Summary Banner -->
+    <div id="goalSummaryBanner" style="margin-bottom:20px"></div>
+    <!-- Three Plan Cards -->
+    <div class="section-label" style="margin-bottom:12px">📋 Your Investment Roadmap</div>
+    <div id="goalPlanCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:26px"></div>
+    <!-- Progress Timeline -->
+    <div id="goalTimeline" style="margin-bottom:24px"></div>
+    <!-- Projection Chart -->
+    <div class="sip-chart-wrap" style="height:320px"><canvas id="goalChart"></canvas></div>
+  </div>
+</div>
+
 <!-- FOOTER -->
 <div class="footer">
   <div class="footer-main">
@@ -413,7 +544,6 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 </div>
 
 </div>
-
 <script>
 /* ════════════════════════════════════════
    FUND COMPARISON
@@ -1179,6 +1309,322 @@ function fmtINR(n){
 }
 
 calcSIP();
+
+/* ════════════════════════════════════════
+   GOAL PLANNER
+════════════════════════════════════════ */
+let goalChartInst = null;
+
+const GOAL_PRESETS = {
+  retirement:  {name:"Retirement Corpus",    amount:50000000, dur:20, unit:"years"},
+  child_edu:   {name:"Child Education Fund", amount:2000000,  dur:15, unit:"years"},
+  home:        {name:"Home Down Payment",    amount:8000000,  dur:10, unit:"years"},
+  emergency:   {name:"Emergency Fund",       amount:500000,   dur:3,  unit:"years"},
+  travel:      {name:"Dream Vacation Fund",  amount:300000,   dur:2,  unit:"years"},
+  car:         {name:"Car Purchase Fund",    amount:1500000,  dur:5,  unit:"years"},
+  custom:      {name:"My Financial Goal",    amount:1000000,  dur:10, unit:"years"},
+};
+
+function applyGoalPreset(btn, key){
+  document.querySelectorAll('.goal-preset-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const p = GOAL_PRESETS[key];
+  document.getElementById('goalName').value = p.name;
+  document.getElementById('goalAmount').value = p.amount;
+  document.getElementById('goalDuration').value = p.dur;
+  document.getElementById('goalDurationUnit').value = p.unit;
+  calcGoal();
+}
+
+function toggleGoalAdvanced(){
+  const el = document.getElementById('goalAdvanced');
+  const arrow = document.getElementById('goalAdvArrow');
+  const open = el.style.display === 'none';
+  el.style.display = open ? 'block' : 'none';
+  arrow.style.transform = open ? 'rotate(180deg)' : '';
+}
+
+function getGoalParams(){
+  const goalAmt    = Math.max(1000, parseFloat(document.getElementById('goalAmount').value)||1000000);
+  const dur        = Math.max(1, parseFloat(document.getElementById('goalDuration').value)||10);
+  const unit       = document.getElementById('goalDurationUnit').value;
+  const rate       = Math.max(1, parseFloat(document.getElementById('goalRate').value)||12);
+  const existing   = Math.max(0, parseFloat(document.getElementById('goalExisting').value)||0);
+  const inflation  = Math.max(0, parseFloat(document.getElementById('goalInflation').value)||6);
+  const freq       = document.getElementById('goalFreq').value;
+  const stepup     = Math.max(0, parseFloat(document.getElementById('goalStepup').value)||0);
+  const lumpsumPct = Math.min(100, Math.max(0, parseFloat(document.getElementById('goalLumpsumPct').value)||30));
+  const goalName   = document.getElementById('goalName').value || 'My Goal';
+  const totalYears = unit === 'months' ? dur/12 : dur;
+  const cfg        = FREQ[freq];
+  const totalInst  = Math.round(totalYears * cfg.perYear);
+  const rpp        = Math.pow(1 + rate/100, 1/cfg.perYear) - 1;
+  const realTarget = Math.round(goalAmt * Math.pow(1 + inflation/100, totalYears));
+  const existingGrowth = existing > 0 ? Math.round(existing * Math.pow(1 + rate/100, totalYears)) : 0;
+  const netTarget  = Math.max(0, realTarget - existingGrowth);
+  return { goalAmt, dur, unit, rate, existing, inflation, freq, stepup, lumpsumPct,
+           goalName, totalYears, cfg, totalInst, rpp, realTarget, existingGrowth, netTarget };
+}
+
+function calcRequiredSIP(target, rpp, n, stepupPct, ipy){
+  if(n <= 0) return 0;
+  if(stepupPct === 0){
+    if(rpp === 0) return target / n;
+    return (target * rpp) / (Math.pow(1 + rpp, n) - 1);
+  }
+  // Binary search for stepped SIP
+  let lo = 1, hi = target * 10, mid, corpus;
+  for(let iter = 0; iter < 60; iter++){
+    mid = (lo + hi) / 2;
+    corpus = 0; let amt = mid;
+    for(let i = 1; i <= n; i++){
+      corpus = (corpus + amt) * (1 + rpp);
+      if(stepupPct > 0 && i % ipy === 0) amt *= (1 + stepupPct/100);
+    }
+    if(corpus < target) lo = mid; else hi = mid;
+  }
+  return Math.ceil(mid);
+}
+
+function calcRequiredLump(target, rate, years){
+  return Math.round(target / Math.pow(1 + rate/100, years));
+}
+
+function gpr(key, val, col){
+  return `<div class="gp-row"><span class="gp-key">${key}</span><span class="gp-val" style="${col?'color:'+col:''}">${val}</span></div>`;
+}
+
+function calcGoal(){
+  const p = getGoalParams();
+  if(p.totalInst < 1) return;
+
+  const fmtY = p.unit === 'months' ? `${p.dur} months` : `${p.dur} year${p.dur>1?'s':''}`;
+
+  // ── Summary Banner ──
+  document.getElementById('goalSummaryBanner').innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:10px;padding:14px 18px;background:linear-gradient(135deg,var(--g1),var(--g2));border-radius:10px;color:#fff;align-items:center">
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:.6rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.75;margin-bottom:4px">Your Goal: ${p.goalName}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:800">₹${fmtINR(p.goalAmt)}</div>
+        <div style="font-size:.72rem;opacity:.8;margin-top:2px">in ${fmtY} · ${p.rate}% expected return</div>
+      </div>
+      ${p.inflation > 0 ? `<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:10px 14px;min-width:160px">
+        <div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;opacity:.7;margin-bottom:3px">Inflation-Adjusted Target</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:700">₹${fmtINR(p.realTarget)}</div>
+        <div style="font-size:.62rem;opacity:.7">at ${p.inflation}% inflation p.a.</div>
+      </div>` : ''}
+      ${p.existing > 0 ? `<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:10px 14px;min-width:160px">
+        <div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;opacity:.7;margin-bottom:3px">Existing Investments Grow to</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:700">₹${fmtINR(p.existingGrowth)}</div>
+        <div style="font-size:.62rem;opacity:.7">Still need ₹${fmtINR(p.netTarget)}</div>
+      </div>` : ''}
+    </div>`;
+
+  const target = p.netTarget;
+  const freqLabel = {monthly:'month',quarterly:'quarter',weekly:'week',annually:'year'}[p.freq];
+
+  // ── Plan A: Pure SIP ──
+  const sipOnly = calcRequiredSIP(target, p.rpp, p.totalInst, p.stepup, p.cfg.perYear);
+  let sipTotalInvested = 0;
+  {let amt = sipOnly, ipy = p.cfg.perYear;
+   for(let i=1;i<=p.totalInst;i++){sipTotalInvested+=amt; if(p.stepup>0&&i%ipy===0) amt*=(1+p.stepup/100);}}
+
+  // ── Plan B: Pure Lumpsum ──
+  const lumpOnly = calcRequiredLump(target, p.rate, p.totalYears);
+
+  // ── Plan C: Hybrid ──
+  const lumpShare = p.lumpsumPct / 100;
+  const hybridLump = calcRequiredLump(target * lumpShare, p.rate, p.totalYears);
+  const hybridSIPTarget = target * (1 - lumpShare);
+  const hybridSIP = calcRequiredSIP(hybridSIPTarget, p.rpp, p.totalInst, p.stepup, p.cfg.perYear);
+  let hybridSIPInvested = 0;
+  {let amt = hybridSIP, ipy = p.cfg.perYear;
+   for(let i=1;i<=p.totalInst;i++){hybridSIPInvested+=amt; if(p.stepup>0&&i%ipy===0) amt*=(1+p.stepup/100);}}
+
+  const cards = [
+    {
+      color:'#1565c0', icon:'📈', type:'Plan A — Pure SIP',
+      mainVal:'₹'+fmtINR(Math.round(sipOnly)),
+      mainLabel:`Per ${freqLabel} · ${p.cfg.label}`,
+      rows:[
+        ['Total SIP Outflow', '₹'+fmtINR(Math.round(sipTotalInvested)), ''],
+        ['Wealth Created', '₹'+fmtINR(Math.round(target - sipTotalInvested)), 'var(--pos)'],
+        p.stepup>0 ? ['Annual Step-up', p.stepup+'% p.a.','#6a1b9a'] : null,
+        ['No. of Instalments', p.totalInst.toLocaleString('en-IN'),''],
+        ['Upfront Capital', 'None needed', 'var(--g2)'],
+      ].filter(Boolean),
+      badge:{text:'No Upfront Capital', bg:'rgba(21,101,192,.1)', col:'#1565c0'}
+    },
+    {
+      color:'#e65100', icon:'💰', type:'Plan B — Pure Lumpsum',
+      mainVal:'₹'+fmtINR(lumpOnly),
+      mainLabel:'One-time investment today',
+      rows:[
+        ['Grows to Target', '₹'+fmtINR(target), 'var(--pos)'],
+        ['Wealth Created', '₹'+fmtINR(target - lumpOnly), 'var(--pos)'],
+        ['Return Rate', p.rate+'% p.a.', ''],
+        ['Time to Grow', p.totalYears.toFixed(1)+' years', ''],
+        ['No Monthly Commitment', 'Zero SIP needed', 'var(--g2)'],
+      ],
+      badge:{text:'One-time Payment', bg:'rgba(230,81,0,.1)', col:'#e65100'}
+    },
+    {
+      color:'#2e7d32', icon:'⚖️', type:`Plan C — Hybrid (${p.lumpsumPct}% Lump + ${100-p.lumpsumPct}% SIP)`,
+      mainVal:'₹'+fmtINR(hybridLump)+' now',
+      mainLabel:'+ ₹'+fmtINR(Math.round(hybridSIP))+'/'+freqLabel+' SIP',
+      rows:[
+        ['Lumpsum Today', '₹'+fmtINR(hybridLump), ''],
+        ['Monthly SIP', '₹'+fmtINR(Math.round(hybridSIP))+'/'+freqLabel, 'var(--g2)'],
+        ['Total Outflow', '₹'+fmtINR(hybridLump + Math.round(hybridSIPInvested)), ''],
+        ['Wealth Created', '₹'+fmtINR(Math.round(target - hybridLump - hybridSIPInvested)), 'var(--pos)'],
+        p.stepup>0 ? ['SIP Step-up', p.stepup+'% p.a.','#6a1b9a'] : null,
+      ].filter(Boolean),
+      badge:{text:'Balanced Approach', bg:'rgba(46,125,50,.1)', col:'var(--g2)'}
+    },
+  ];
+
+  document.getElementById('goalPlanCards').innerHTML = cards.map(c => `
+    <div class="gp-card">
+      <div class="gp-card-accent" style="background:${c.color}"></div>
+      <div class="gp-card-type"><span class="gp-card-icon">${c.icon}</span>${c.type}</div>
+      <div class="gp-highlight-box">
+        <div class="gp-main-label" style="margin-bottom:4px">Required Investment</div>
+        <div class="gp-main-val" style="font-size:${c.mainVal.length>14?'1.1rem':'1.6rem'}">${c.mainVal}</div>
+        <div class="gp-main-label" style="margin-top:3px">${c.mainLabel}</div>
+      </div>
+      ${c.rows.map(([k,v,col])=>gpr(k,v,col)).join('')}
+      <div style="margin-top:10px"><span class="gp-badge" style="background:${c.badge.bg};color:${c.badge.col}">${c.badge.text}</span></div>
+    </div>`).join('');
+
+  // ── Timeline ──
+  const milestones = [0.25, 0.5, 0.75, 1.0].map(pct => {
+    const yr = p.totalYears * pct;
+    const n = Math.round(yr * p.cfg.perYear);
+    let corpus = p.existing, amt = sipOnly;
+    for(let i=1;i<=n;i++){corpus=(corpus+amt)*(1+p.rpp);if(p.stepup>0&&i%p.cfg.perYear===0)amt*=(1+p.stepup/100);}
+    const prog = Math.min(100, corpus / p.realTarget * 100).toFixed(0);
+    return {yr: yr.toFixed(1), corpus: Math.round(corpus), prog};
+  });
+  document.getElementById('goalTimeline').innerHTML = `
+    <div class="timeline-bar">
+      <div style="font-size:.62rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">📊 SIP Plan — Corpus at Key Milestones</div>
+      <div class="tl-track"><div class="tl-fill" style="width:100%"></div></div>
+      <div class="tl-milestones">
+        ${milestones.map(m=>`<div class="tl-m">
+          <div style="font-weight:800;color:var(--g2);font-size:.68rem">${m.prog}%</div>
+          <div>Yr ${m.yr}</div>
+          <div style="color:var(--text2);font-size:.65rem">₹${fmtINR(m.corpus)}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+
+  drawGoalChart(p, sipOnly, lumpOnly, hybridLump, hybridSIP);
+}
+
+function drawGoalChart(p, sipOnly, lumpOnly, hybridLump, hybridSIP){
+  if(goalChartInst){goalChartInst.destroy(); goalChartInst=null;}
+  const ctx = document.getElementById('goalChart').getContext('2d');
+  const years = Math.ceil(p.totalYears);
+  const labels = Array.from({length:years+1}, (_,i) => i===0?'Now':i+'Y');
+
+  function sipGrowthArr(sip, lump=0){
+    return labels.map((_,y) => {
+      const n = Math.round(Math.min(y, p.totalYears) * p.cfg.perYear);
+      let corpus = lump + p.existing, amt = sip;
+      for(let i=1;i<=n;i++){corpus=(corpus+amt)*(1+p.rpp);if(p.stepup>0&&i%p.cfg.perYear===0)amt*=(1+p.stepup/100);}
+      return Math.round(corpus);
+    });
+  }
+  function lumpGrowthArr(lump){
+    return labels.map((_,y)=>Math.round((lump+p.existing)*Math.pow(1+p.rate/100,Math.min(y,p.totalYears))));
+  }
+
+  goalChartInst = new Chart(ctx, {type:'line', data:{
+    labels,
+    datasets:[
+      {label:'Target (Inflation-adj.)', data:Array(years+1).fill(p.realTarget),
+        borderColor:'#ef5350',backgroundColor:'transparent',borderWidth:1.5,borderDash:[5,4],pointRadius:0,tension:0,order:0},
+      {label:'Plan A — Pure SIP', data:sipGrowthArr(sipOnly),
+        borderColor:'#1565c0',backgroundColor:'rgba(21,101,192,.07)',borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.3,fill:false},
+      {label:'Plan B — Pure Lumpsum', data:lumpGrowthArr(lumpOnly),
+        borderColor:'#e65100',backgroundColor:'rgba(230,81,0,.06)',borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.3,fill:false},
+      {label:'Plan C — Hybrid', data:sipGrowthArr(hybridSIP, hybridLump),
+        borderColor:'#2e7d32',backgroundColor:'rgba(46,125,50,.08)',borderWidth:2.5,pointRadius:0,pointHoverRadius:5,tension:.3,fill:true},
+    ]
+  }, options:{
+    responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+    plugins:{
+      legend:{position:'top',labels:{color:'#2e4d2e',font:{family:'Raleway',weight:'700',size:11},usePointStyle:true,padding:20,boxWidth:8}},
+      tooltip:{backgroundColor:'#162616',borderColor:'#2e7d32',borderWidth:1,
+        titleFont:{family:'JetBrains Mono',size:11},bodyFont:{family:'JetBrains Mono',size:12},padding:13,cornerRadius:8,
+        callbacks:{label:c=>`  ${c.dataset.label}: ₹${fmtINR(c.parsed.y)}`}}
+    },
+    scales:{
+      x:{grid:{display:false},border:{color:'#c2dfc2'},ticks:{font:{family:'JetBrains Mono',size:10},color:'#5e8a5e'}},
+      y:{grid:{color:'rgba(194,223,194,.5)'},border:{color:'#c2dfc2'},
+        ticks:{font:{family:'JetBrains Mono',size:10},color:'#5e8a5e',callback:v=>'₹'+fmtINR(v)}}
+    }
+  }});
+}
+
+function printGoalPlan(){
+  const p = getGoalParams();
+  const bannerHTML = document.getElementById('goalSummaryBanner').outerHTML;
+  const cardsHTML  = document.getElementById('goalPlanCards').outerHTML;
+  const tlHTML     = document.getElementById('goalTimeline').outerHTML;
+  const chartImg   = document.getElementById('goalChart') ? document.getElementById('goalChart').toDataURL('image/png') : '';
+  const win = window.open('','_blank','width=900,height=700');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Goal Plan — ${p.goalName} — Abundance</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:32px 40px}
+  .print-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:2px solid #2e7d32;margin-bottom:24px}
+  .print-logo{height:48px;object-fit:contain;mix-blend-mode:multiply}
+  .print-title{font-size:1.1rem;font-weight:800;color:#2e7d32}
+  .print-arn{font-size:.62rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:3px}
+  .sec{font-size:.58rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#5e8a5e;margin:16px 0 8px;display:flex;align-items:center;gap:8px}
+  .sec::after{content:"";flex:1;height:1px;background:#c2dfc2}
+  #goalPlanCards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  .gp-card{background:#edf6ed;border:1.5px solid #c2dfc2;border-radius:10px;padding:14px;position:relative;overflow:hidden}
+  .gp-card-accent{position:absolute;top:0;left:0;right:0;height:3px}
+  .gp-card-type{font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#5e8a5e;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+  .gp-card-icon{font-size:.9rem}
+  .gp-highlight-box{background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:7px;padding:8px 12px;margin:7px 0;text-align:center}
+  .gp-main-val{font-family:"JetBrains Mono",monospace;font-size:1rem;font-weight:800;color:#1b5e20;line-height:1.2}
+  .gp-main-label{font-size:.57rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:2px}
+  .gp-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #c2dfc2;font-size:.66rem}
+  .gp-row:last-child{border-bottom:none}
+  .gp-key{color:#2e4d2e}.gp-val{font-family:"JetBrains Mono",monospace;font-weight:600}
+  .gp-badge{display:inline-flex;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:6px}
+  .timeline-bar{background:#edf6ed;border:1.5px solid #c2dfc2;border-radius:8px;padding:12px 16px;margin-bottom:14px}
+  .tl-track{height:6px;background:#c2dfc2;border-radius:4px;margin:7px 0;overflow:hidden}
+  .tl-fill{height:100%;background:linear-gradient(90deg,#2e7d32,#66bb6a);border-radius:4px;width:100%}
+  .tl-milestones{display:flex;justify-content:space-between}
+  .tl-m{font-size:.58rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;text-align:center;flex:1}
+  .chart-section img{width:100%;border-radius:8px;border:1px solid #c2dfc2;margin-bottom:14px}
+  .disclaimer{padding:10px 14px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.62rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:16px}
+  @media print{body{padding:18px 22px}@page{margin:1cm;size:A4 portrait}}
+</style></head><body>
+<div class="print-header">
+  <div><div class="print-title">Investment Goal Planner — ${p.goalName}</div>
+  <div class="print-arn">Abundance Financial Services · ARN-251838 · AMFI Registered MF Distributor &amp; SIF Distributor</div></div>
+  <img class="print-logo" src="https://www.getabundance.in/images/logo.png" onerror="this.style.display='none'">
+</div>
+<div class="sec">Goal Summary</div>${bannerHTML}
+<div class="sec">Investment Plans</div>${cardsHTML}
+<div class="sec">Progress Milestones</div>${tlHTML}
+${chartImg?`<div class="sec">Growth Projection</div><div class="chart-section"><img src="${chartImg}"></div>`:''}
+<div class="disclaimer">⚠️ <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. These projections are for illustrative purposes only and do not constitute financial advice. Consult your financial advisor before investing. | ARN-251838 | Abundance Financial Services</div>
+</body></html>`);
+  win.document.close();
+  win.onload = ()=>setTimeout(()=>{win.focus();win.print();},600);
+  setTimeout(()=>{try{win.focus();win.print();}catch(e){}},1200);
+}
+
+calcGoal();
+
 </script>
 </body>
 </html>
