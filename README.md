@@ -3,7 +3,7 @@
 
 A free, browser-based tool to compare up to 5 mutual funds side-by-side using **live AMFI data** — no login, no app, no cost.
 
-🔗 **Live Tool:** [atinagrawal.github.io/MF-Analyzer-Abundance](https://atinagrawal.github.io/MF-Analyzer-Abundance/)
+🔗 **Live Tool:** [MF-Analyzer-Abundance](https://mfcalc.getabundance.in/)
 
 ---
 
