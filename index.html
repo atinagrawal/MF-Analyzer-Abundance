@@ -12,6 +12,7 @@
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#2e7d32">
 <link rel="canonical" href="https://mfcalc.getabundance.in/">
+<link rel="sitemap" type="application/xml" href="https://mfcalc.getabundance.in/sitemap.xml">
 <link rel="alternate" hreflang="en-IN" href="https://mfcalc.getabundance.in/">
 <link rel="alternate" hreflang="x-default" href="https://mfcalc.getabundance.in/">
 
@@ -35,7 +36,9 @@
 <meta property="og:description" content="Compare mutual funds, calculate SIP &amp; lumpsum returns, plan goals, model SWP withdrawals, and analyse EMI with prepayment savings. Live AMFI data. Free tool by Abundance Financial Services, Haldwani.">
 <meta property="og:url" content="https://mfcalc.getabundance.in/">
 <meta property="og:image" content="https://www.getabundance.in/images/logo.png">
-<meta property="og:image:alt" content="Abundance Financial Services — Mutual Fund Analyzer">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Abundance Financial Services — MF & Loan Calculator Suite">
 <meta property="og:locale" content="en_IN">
 
 <!-- ═══ Twitter / X Card ═══ -->
@@ -217,7 +220,7 @@ function switchMainTab(name,btn){
 }
 
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- html2canvas loaded lazily on first export -->
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -384,6 +387,15 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .search-wrap{position:relative}
 .search-input{width:100%;padding:13px 20px;font-family:"Raleway",sans-serif;font-size:.92rem;font-weight:600;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text);outline:none;transition:all .2s}
 .search-input:focus{border-color:var(--g3);background:#fff;box-shadow:0 0 0 4px rgba(67,160,71,.1)}
+
+/* ── Accessibility: respect reduced-motion preference ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 
 /* ── Accessibility: skip to main content ── */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
@@ -1529,6 +1541,35 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .emi-prepay-fields .stp-input-wrap{flex:1;min-width:0}
 .emi-prepay-fields .stp-input{width:100%;min-width:0;box-sizing:border-box}
 
+/* ── Balance Transfer ── */
+.emi-bt-box{border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:12px;background:linear-gradient(135deg,rgba(21,101,192,.04),rgba(13,71,161,.02));border-color:rgba(21,101,192,.2)}
+.emi-bt-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.emi-bt-label{display:flex;align-items:center;gap:7px;font-size:.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1565c0}
+.emi-bt-fields{display:none;margin-top:12px;flex-direction:column;gap:10px}
+.emi-bt-fields.shown{display:flex}
+.emi-bt-fields .sip-stepper{width:100%;box-sizing:border-box}
+.emi-bt-fields .stp-input-wrap{flex:1;min-width:0}
+.emi-bt-fields .stp-input{width:100%;min-width:0;box-sizing:border-box}
+.emi-bt-result{margin-top:14px;display:none}
+.emi-bt-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.emi-bt-col{border-radius:10px;padding:12px 13px;border:1.5px solid var(--border)}
+.emi-bt-col.current{background:rgba(183,28,28,.05);border-color:rgba(183,28,28,.2)}
+.emi-bt-col.transfer{background:rgba(21,101,192,.05);border-color:rgba(21,101,192,.2)}
+.emi-bt-col.saving{background:rgba(46,125,50,.07);border-color:rgba(46,125,50,.3)}
+.emi-bt-col-head{font-size:.5rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.emi-bt-col.current  .emi-bt-col-head{color:#b71c1c}
+.emi-bt-col.transfer .emi-bt-col-head{color:#1565c0}
+.emi-bt-col.saving   .emi-bt-col-head{color:#2e7d32}
+.emi-bt-row{display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;border-bottom:1px solid rgba(0,0,0,.05);font-size:.6rem}
+.emi-bt-row:last-child{border-bottom:none}
+.emi-bt-row-key{color:var(--muted)}
+.emi-bt-row-val{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:.65rem}
+.emi-bt-verdict{padding:11px 14px;border-radius:10px;font-size:.7rem;font-weight:700;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;line-height:1.5}
+.emi-bt-verdict.good{background:#e8f5e9;border:1.5px solid #a5d6a7;color:#1b5e20}
+.emi-bt-verdict.bad{background:#fff8e1;border:1.5px solid #ffe082;color:#e65100}
+.emi-bt-verdict.neutral{background:#e3f2fd;border:1.5px solid #90caf9;color:#1565c0}
+@media(max-width:640px){.emi-bt-cols{grid-template-columns:1fr}}
+
 /* ── Summary grid ── */
 .emi-summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .emi-sum-card{border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden;background:var(--surface2)}
@@ -1606,7 +1647,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .swp-hdr-name{font-size:.65rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#fff}
 .swp-hdr-sub{font-size:.6rem;color:rgba(255,255,255,.55);margin-top:1px;font-family:'JetBrains Mono',monospace}
 .swp-hdr-badge{font-size:.58rem;font-weight:800;letter-spacing:1px;padding:4px 12px;background:rgba(255,236,153,.18);border:1px solid rgba(255,236,153,.35);border-radius:20px;color:#ffe082;text-transform:uppercase;animation:pulse 2.5s ease infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
 .swp-hdr-btn{display:flex;align-items:center;gap:7px;padding:7px 16px;border:1.5px solid rgba(255,255,255,.25);border-radius:9px;background:rgba(255,255,255,.1);color:#fff;font-family:'Raleway',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;transition:all .18s;letter-spacing:.3px;white-space:nowrap}
 .swp-hdr-btn:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.4);transform:translateY(-1px)}
 
@@ -2179,7 +2219,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
           <button class="stp-btn" onclick="stepField('sipAmount',-500,1,999999);calcSIP()" aria-label="Decrease SIP amount by 500">−</button>
           <div class="stp-input-wrap">
             <span class="stp-prefix">₹</span>
-            <input class="stp-input" id="sipAmount" type="number" value="10000" min="1" step="100" oninput="calcSIP()">
+            <input class="stp-input" id="sipAmount" type="number" value="10000" min="1" step="100" oninput="dCalcSIP()">
           </div>
           <button class="stp-btn" onclick="stepField('sipAmount',500,1,999999);calcSIP()" aria-label="Increase SIP amount by 500">+</button>
         </div>
@@ -2199,7 +2239,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
           <button class="stp-btn" onclick="stepField('lumpAmount',-10000,0,99999999);calcSIP()" aria-label="Decrease lumpsum by 10000">−</button>
           <div class="stp-input-wrap">
             <span class="stp-prefix">₹</span>
-            <input class="stp-input" id="lumpAmount" type="number" value="100000" min="0" step="1000" oninput="calcSIP()">
+            <input class="stp-input" id="lumpAmount" type="number" value="100000" min="0" step="1000" oninput="dCalcSIP()">
           </div>
           <button class="stp-btn" onclick="stepField('lumpAmount',10000,0,99999999);calcSIP()" aria-label="Increase lumpsum by 10000">+</button>
         </div>
@@ -2229,7 +2269,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         <div class="sip-stepper">
           <button class="stp-btn" onclick="stepField('sipDuration',-1,1,99);calcSIP()" aria-label="Decrease duration by 1">−</button>
           <div class="stp-input-wrap">
-            <input class="stp-input" id="sipDuration" type="number" value="10" min="1" step="1" oninput="calcSIP()" style="text-align:center">
+            <input class="stp-input" id="sipDuration" type="number" value="10" min="1" step="1" oninput="dCalcSIP()" style="text-align:center">
             <select class="stp-unit-select" id="sipDurationUnit" onchange="calcSIP()">
               <option value="years" selected>Yrs</option>
               <option value="months">Mo</option>
@@ -2252,7 +2292,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         <div class="sip-stepper">
           <button class="stp-btn" onclick="stepField('sipRate',-0.5,1,50);calcSIP()" aria-label="Decrease return rate by 0.5%">−</button>
           <div class="stp-input-wrap">
-            <input class="stp-input" id="sipRate" type="number" value="12" min="0.1" max="100" step="0.1" oninput="calcSIP()" style="text-align:center">
+            <input class="stp-input" id="sipRate" type="number" value="12" min="0.1" max="100" step="0.1" oninput="dCalcSIP()" style="text-align:center">
             <span class="stp-suffix">%</span>
           </div>
           <button class="stp-btn" onclick="stepField('sipRate',0.5,1,50);calcSIP()" aria-label="Increase return rate by 0.5%">+</button>
@@ -2271,7 +2311,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         <div class="sip-stepper">
           <button class="stp-btn" onclick="stepField('sipStepup',-1,0,30);calcSIP()" aria-label="Decrease step-up by 1%">−</button>
           <div class="stp-input-wrap">
-            <input class="stp-input" id="sipStepup" type="number" value="0" min="0" max="50" step="1" oninput="calcSIP()" style="text-align:center">
+            <input class="stp-input" id="sipStepup" type="number" value="0" min="0" max="50" step="1" oninput="dCalcSIP()" style="text-align:center">
             <span class="stp-suffix">%</span>
           </div>
           <button class="stp-btn" onclick="stepField('sipStepup',1,0,30);calcSIP()" aria-label="Increase step-up by 1%">+</button>
@@ -2437,16 +2477,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
     <div class="sip-params" style="margin-bottom:20px">
       <div class="sip-field">
         <label>Goal Name</label>
-        <input class="sip-input" id="goalName" type="text" value="Child Education Fund" oninput="calcGoal()" style="font-family:'Raleway',sans-serif;font-size:.85rem">
+        <input class="sip-input" id="goalName" type="text" value="Child Education Fund" oninput="dCalcGoal()" style="font-family:'Raleway',sans-serif;font-size:.85rem">
       </div>
       <div class="sip-field">
         <label>Target Amount (₹)</label>
-        <input class="sip-input" id="goalAmount" type="number" value="2000000" min="1000" step="10000" oninput="calcGoal()">
+        <input class="sip-input" id="goalAmount" type="number" value="2000000" min="1000" step="10000" oninput="dCalcGoal()">
       </div>
       <div class="sip-field">
         <label>Time Horizon</label>
         <div class="dur-row">
-          <input class="sip-input" id="goalDuration" type="number" value="15" min="1" step="1" oninput="calcGoal()">
+          <input class="sip-input" id="goalDuration" type="number" value="15" min="1" step="1" oninput="dCalcGoal()">
           <select class="sip-select" id="goalDurationUnit" onchange="calcGoal()">
             <option value="years" selected>Years</option>
             <option value="months">Months</option>
@@ -2455,15 +2495,15 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
       </div>
       <div class="sip-field">
         <label>Expected Return (% p.a.)</label>
-        <input class="sip-input" id="goalRate" type="number" value="12" min="1" max="100" step="0.5" oninput="calcGoal()">
+        <input class="sip-input" id="goalRate" type="number" value="12" min="1" max="100" step="0.5" oninput="dCalcGoal()">
       </div>
       <div class="sip-field">
         <label>Existing Investments (₹)</label>
-        <input class="sip-input" id="goalExisting" type="number" value="0" min="0" step="1000" oninput="calcGoal()" placeholder="0">
+        <input class="sip-input" id="goalExisting" type="number" value="0" min="0" step="1000" oninput="dCalcGoal()" placeholder="0">
       </div>
       <div class="sip-field">
         <label>Inflation Adjustment (% p.a.)</label>
-        <input class="sip-input" id="goalInflation" type="number" value="6" min="0" max="30" step="0.5" oninput="calcGoal()">
+        <input class="sip-input" id="goalInflation" type="number" value="6" min="0" max="30" step="0.5" oninput="dCalcGoal()">
       </div>
     </div>
     <!-- Advanced Toggle -->
@@ -2485,11 +2525,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
           </div>
           <div class="sip-field">
             <label>Annual SIP Step-up (%)</label>
-            <input class="sip-input" id="goalStepup" type="number" value="10" min="0" max="50" step="1" oninput="calcGoal()">
+            <input class="sip-input" id="goalStepup" type="number" value="10" min="0" max="50" step="1" oninput="dCalcGoal()">
           </div>
           <div class="sip-field">
             <label>Lumpsum % in Hybrid Plan</label>
-            <input class="sip-input" id="goalLumpsumPct" type="number" value="30" min="0" max="100" step="5" oninput="calcGoal()">
+            <input class="sip-input" id="goalLumpsumPct" type="number" value="30" min="0" max="100" step="5" oninput="dCalcGoal()">
           </div>
         </div>
       </div>
@@ -2582,20 +2622,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
       <div class="swp-params">
         <div class="sip-field">
           <label>Initial Corpus (₹)</label>
-          <input class="sip-input" id="swpCorpus" type="number" value="5000000" min="10000" step="10000" oninput="calcSWP()">
+          <input class="sip-input" id="swpCorpus" type="number" value="5000000" min="10000" step="10000" oninput="dCalcSWP()">
         </div>
         <div class="sip-field">
           <label>Monthly Withdrawal (₹)</label>
-          <input class="sip-input" id="swpWithdrawal" type="number" value="30000" min="100" step="500" oninput="calcSWP()">
+          <input class="sip-input" id="swpWithdrawal" type="number" value="30000" min="100" step="500" oninput="dCalcSWP()">
         </div>
         <div class="sip-field">
           <label>Expected Return (% p.a.)</label>
-          <input class="sip-input" id="swpRate" type="number" value="10" min="0.1" max="50" step="0.5" oninput="calcSWP()">
+          <input class="sip-input" id="swpRate" type="number" value="10" min="0.1" max="50" step="0.5" oninput="dCalcSWP()">
         </div>
         <div class="sip-field">
           <label>Withdrawal Duration</label>
           <div class="dur-row">
-            <input class="sip-input" id="swpDuration" type="number" value="20" min="1" step="1" oninput="calcSWP()">
+            <input class="sip-input" id="swpDuration" type="number" value="20" min="1" step="1" oninput="dCalcSWP()">
             <select class="sip-select" id="swpDurationUnit" onchange="calcSWP()">
               <option value="years" selected>Years</option>
               <option value="months">Months</option>
@@ -2612,11 +2652,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         </div>
         <div class="sip-field">
           <label>Annual Step-up (%)</label>
-          <input class="sip-input" id="swpStepup" type="number" value="0" min="0" max="20" step="1" oninput="calcSWP()" title="Annual increase in withdrawal to beat inflation">
+          <input class="sip-input" id="swpStepup" type="number" value="0" min="0" max="20" step="1" oninput="dCalcSWP()" title="Annual increase in withdrawal to beat inflation">
         </div>
         <div class="sip-field">
           <label>Inflation (% p.a.)</label>
-          <input class="sip-input" id="swpInflation" type="number" value="6" min="0" max="20" step="0.5" oninput="calcSWP()">
+          <input class="sip-input" id="swpInflation" type="number" value="6" min="0" max="20" step="0.5" oninput="dCalcSWP()">
         </div>
       </div>
     </div>
@@ -2627,12 +2667,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
       <div class="swp-params">
         <div class="sip-field">
           <label>Desired Monthly Income (₹)</label>
-          <input class="sip-input" id="swpTargetIncome" type="number" value="50000" min="100" step="1000" oninput="calcSWP()">
+          <input class="sip-input" id="swpTargetIncome" type="number" value="50000" min="100" step="1000" oninput="dCalcSWP()">
         </div>
         <div class="sip-field">
           <label>Income Duration</label>
           <div class="dur-row">
-            <input class="sip-input" id="swpTargetDuration" type="number" value="25" min="1" step="1" oninput="calcSWP()">
+            <input class="sip-input" id="swpTargetDuration" type="number" value="25" min="1" step="1" oninput="dCalcSWP()">
             <select class="sip-select" id="swpTargetDurationUnit" onchange="calcSWP()">
               <option value="years" selected>Years</option>
               <option value="months">Months</option>
@@ -2641,7 +2681,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         </div>
         <div class="sip-field">
           <label>Expected Return (% p.a.)</label>
-          <input class="sip-input" id="swpTargetRate" type="number" value="10" min="0.1" max="50" step="0.5" oninput="calcSWP()">
+          <input class="sip-input" id="swpTargetRate" type="number" value="10" min="0.1" max="50" step="0.5" oninput="dCalcSWP()">
         </div>
         <div class="sip-field">
           <label>Withdrawal Frequency</label>
@@ -2653,11 +2693,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         </div>
         <div class="sip-field">
           <label>Annual Step-up (%)</label>
-          <input class="sip-input" id="swpTargetStepup" type="number" value="0" min="0" max="20" step="1" oninput="calcSWP()">
+          <input class="sip-input" id="swpTargetStepup" type="number" value="0" min="0" max="20" step="1" oninput="dCalcSWP()">
         </div>
         <div class="sip-field">
           <label>Inflation (% p.a.)</label>
-          <input class="sip-input" id="swpTargetInflation" type="number" value="6" min="0" max="20" step="0.5" oninput="calcSWP()">
+          <input class="sip-input" id="swpTargetInflation" type="number" value="6" min="0" max="20" step="0.5" oninput="dCalcSWP()">
         </div>
       </div>
     </div>
@@ -2679,7 +2719,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         <div class="sip-field">
           <label>Delay Duration</label>
           <div class="dur-row">
-            <input class="sip-input" id="swpDelay" type="number" value="5" min="1" step="1" oninput="calcSWP()">
+            <input class="sip-input" id="swpDelay" type="number" value="5" min="1" step="1" oninput="dCalcSWP()">
             <select class="sip-select" id="swpDelayUnit" onchange="calcSWP()">
               <option value="years" selected>Years</option>
               <option value="months">Months</option>
@@ -2688,7 +2728,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         </div>
         <div class="sip-field">
           <label>Pre-withdrawal Return (% p.a.)</label>
-          <input class="sip-input" id="swpDelayRate" type="number" value="12" min="0.1" max="50" step="0.5" oninput="calcSWP()">
+          <input class="sip-input" id="swpDelayRate" type="number" value="12" min="0.1" max="50" step="0.5" oninput="dCalcSWP()">
         </div>
         <div class="sip-field">
           <label>Corpus After Delay</label>
@@ -2758,7 +2798,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
       <!-- Left: title + mode selector -->
       <div class="emi-hdr-left">
         <div class="emi-eyebrow">
-          <span class="emi-live-dot"></span>EMI Calculator · Prepayment Analyser · Amortisation Schedule
+          <span class="emi-live-dot"></span>EMI Calculator · Prepayment · Balance Transfer · Amortisation
         </div>
         <div class="emi-title-row">
           <span class="emi-icon">🏦</span>
@@ -2876,7 +2916,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
             <button class="stp-btn" onclick="stepEMI('emiLoanAmt',-100000,10000,999999999)" aria-label="Decrease loan amount">−</button>
             <div class="stp-input-wrap">
               <span class="stp-prefix">₹</span>
-              <input class="stp-input" id="emiLoanAmt" type="number" value="5000000" min="10000" step="50000" oninput="calcEMI()" aria-label="Loan amount in rupees">
+              <input class="stp-input" id="emiLoanAmt" type="number" value="5000000" min="10000" step="50000" oninput="dCalcEMI()" aria-label="Loan amount in rupees">
             </div>
             <button class="stp-btn" onclick="stepEMI('emiLoanAmt',100000,10000,999999999)" aria-label="Increase loan amount">+</button>
           </div>
@@ -2895,7 +2935,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
           <div class="sip-stepper">
             <button class="stp-btn" onclick="stepEMI('emiRate',-0.25,1,36)" aria-label="Decrease interest rate">−</button>
             <div class="stp-input-wrap">
-              <input class="stp-input" id="emiRate" type="number" value="8.5" min="1" max="36" step="0.1" oninput="calcEMI()" style="text-align:center" aria-label="Annual interest rate in percent">
+              <input class="stp-input" id="emiRate" type="number" value="8.5" min="1" max="36" step="0.1" oninput="dCalcEMI()" style="text-align:center" aria-label="Annual interest rate in percent">
               <span class="stp-suffix">%</span>
             </div>
             <button class="stp-btn" onclick="stepEMI('emiRate',0.25,1,36)" aria-label="Increase interest rate">+</button>
@@ -2914,7 +2954,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
           <div class="sip-stepper">
             <button class="stp-btn" onclick="stepEMI('emiTenure',-1,1,30)" aria-label="Decrease tenure">−</button>
             <div class="stp-input-wrap">
-              <input class="stp-input" id="emiTenure" type="number" value="20" min="1" max="30" step="1" oninput="calcEMI()" style="text-align:center" aria-label="Loan tenure in years">
+              <input class="stp-input" id="emiTenure" type="number" value="20" min="1" max="30" step="1" oninput="dCalcEMI()" style="text-align:center" aria-label="Loan tenure in years">
               <select class="stp-unit-select" id="emiTenureUnit" onchange="calcEMI()" aria-label="Tenure unit">
                 <option value="years" selected>Yrs</option>
                 <option value="months">Mo</option>
@@ -2938,7 +2978,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
             <button class="stp-btn" onclick="stepEMI('emiAmount',-500,1000,9999999)" aria-label="Decrease EMI">−</button>
             <div class="stp-input-wrap">
               <span class="stp-prefix">₹</span>
-              <input class="stp-input" id="emiAmount" type="number" value="40000" min="1000" step="500" oninput="calcEMI()" aria-label="Monthly EMI amount">
+              <input class="stp-input" id="emiAmount" type="number" value="40000" min="1000" step="500" oninput="dCalcEMI()" aria-label="Monthly EMI amount">
             </div>
             <button class="stp-btn" onclick="stepEMI('emiAmount',500,1000,9999999)" aria-label="Increase EMI">+</button>
           </div>
@@ -2969,7 +3009,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
                 <button class="stp-btn" onclick="stepEMI('emiPrepayAmt',-10000,0,99999999)" aria-label="Decrease prepayment">−</button>
                 <div class="stp-input-wrap">
                   <span class="stp-prefix">₹</span>
-                  <input class="stp-input" id="emiPrepayAmt" type="number" value="100000" min="0" step="10000" oninput="calcEMI()" aria-label="Annual prepayment amount">
+                  <input class="stp-input" id="emiPrepayAmt" type="number" value="100000" min="0" step="10000" oninput="dCalcEMI()" aria-label="Annual prepayment amount">
                 </div>
                 <button class="stp-btn" onclick="stepEMI('emiPrepayAmt',10000,0,99999999)" aria-label="Increase prepayment">+</button>
               </div>
@@ -2979,11 +3019,82 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
               <div class="sip-stepper">
                 <button class="stp-btn" onclick="stepEMI('emiPrepayFrom',-1,1,29)" aria-label="Decrease prepayment start year">−</button>
                 <div class="stp-input-wrap">
-                  <input class="stp-input" id="emiPrepayFrom" type="number" value="1" min="1" step="1" oninput="calcEMI()" style="text-align:center" aria-label="Prepayment start year">
+                  <input class="stp-input" id="emiPrepayFrom" type="number" value="1" min="1" step="1" oninput="dCalcEMI()" style="text-align:center" aria-label="Prepayment start year">
                 </div>
                 <button class="stp-btn" onclick="stepEMI('emiPrepayFrom',1,1,29)" aria-label="Increase prepayment start year">+</button>
               </div>
             </div>
+          </div>
+        </div>
+
+
+        <!-- Balance Transfer section -->
+        <div class="emi-bt-box" id="emiBTBox">
+          <div class="emi-bt-top">
+            <div class="emi-bt-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+              Balance Transfer / Refinance
+            </div>
+            <label class="swp-delay-toggle" aria-label="Toggle balance transfer analysis">
+              <input type="checkbox" id="emiBTToggle" onchange="toggleBT()">
+              <span class="swp-delay-slider"></span>
+            </label>
+          </div>
+          <div class="emi-bt-fields" id="emiBTFields">
+
+            <div class="sip-field" style="margin:0">
+              <label class="sif-solo-label" for="emiBTRate" style="font-size:.6rem">New Interest Rate (% p.a.)</label>
+              <div class="sip-stepper">
+                <button class="stp-btn" onclick="stepEMI('emiBTRate',-0.25,1,36)" aria-label="Decrease new rate">−</button>
+                <div class="stp-input-wrap">
+                  <input class="stp-input" id="emiBTRate" type="number" value="7.5" min="1" max="36" step="0.25" oninput="dCalcEMI()" style="text-align:center" aria-label="New interest rate after transfer">
+                  <span class="stp-suffix">%</span>
+                </div>
+                <button class="stp-btn" onclick="stepEMI('emiBTRate',0.25,1,36)" aria-label="Increase new rate">+</button>
+              </div>
+              <div class="stp-hints">
+                <button class="stp-hint" onclick="setEMIField('emiBTRate',7);dCalcEMI()">7%</button>
+                <button class="stp-hint" onclick="setEMIField('emiBTRate',7.5);dCalcEMI()">7.5%</button>
+                <button class="stp-hint" onclick="setEMIField('emiBTRate',8);dCalcEMI()">8%</button>
+                <button class="stp-hint" onclick="setEMIField('emiBTRate',8.5);dCalcEMI()">8.5%</button>
+              </div>
+            </div>
+
+            <div class="sip-field" style="margin:0">
+              <label class="sif-solo-label" for="emiBTFee" style="font-size:.6rem">Transfer Fee (% of outstanding)</label>
+              <div class="sip-stepper">
+                <button class="stp-btn" onclick="stepEMI('emiBTFee',-0.25,0,5)" aria-label="Decrease transfer fee">−</button>
+                <div class="stp-input-wrap">
+                  <input class="stp-input" id="emiBTFee" type="number" value="0.5" min="0" max="5" step="0.25" oninput="dCalcEMI()" style="text-align:center" aria-label="Balance transfer fee as percentage">
+                  <span class="stp-suffix">%</span>
+                </div>
+                <button class="stp-btn" onclick="stepEMI('emiBTFee',0.25,0,5)" aria-label="Increase transfer fee">+</button>
+              </div>
+              <div class="stp-hints">
+                <button class="stp-hint" onclick="setEMIField('emiBTFee',0);dCalcEMI()">0%</button>
+                <button class="stp-hint" onclick="setEMIField('emiBTFee',0.5);dCalcEMI()">0.5%</button>
+                <button class="stp-hint" onclick="setEMIField('emiBTFee',1);dCalcEMI()">1%</button>
+                <button class="stp-hint" onclick="setEMIField('emiBTFee',1.5);dCalcEMI()">1.5%</button>
+              </div>
+            </div>
+
+            <div class="sip-field" style="margin:0">
+              <label class="sif-solo-label" for="emiBTElapsed" style="font-size:.6rem">Months already paid</label>
+              <div class="sip-stepper">
+                <button class="stp-btn" onclick="stepEMI('emiBTElapsed',-6,0,360)" aria-label="Decrease months paid">−</button>
+                <div class="stp-input-wrap">
+                  <input class="stp-input" id="emiBTElapsed" type="number" value="24" min="0" step="1" oninput="dCalcEMI()" style="text-align:center" aria-label="Number of EMIs already paid">
+                </div>
+                <button class="stp-btn" onclick="stepEMI('emiBTElapsed',6,0,360)" aria-label="Increase months paid">+</button>
+              </div>
+              <div class="stp-hints">
+                <button class="stp-hint" onclick="setEMIField('emiBTElapsed',12);dCalcEMI()">1Y</button>
+                <button class="stp-hint" onclick="setEMIField('emiBTElapsed',24);dCalcEMI()">2Y</button>
+                <button class="stp-hint" onclick="setEMIField('emiBTElapsed',36);dCalcEMI()">3Y</button>
+                <button class="stp-hint" onclick="setEMIField('emiBTElapsed',60);dCalcEMI()">5Y</button>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -3008,6 +3119,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         <div class="emi-prepay-result" id="emiPrepayResult" style="display:none">
           <div class="emi-section-head" style="margin-bottom:12px">⚡ Prepayment Impact</div>
           <div class="emi-prepay-compare" id="emiPrepayCompare"></div>
+        </div>
+
+        <!-- Balance Transfer result -->
+        <div class="emi-bt-result" id="emiBTResult">
+          <div class="emi-section-head" style="margin-bottom:10px">🔄 Balance Transfer Analysis</div>
+          <div class="emi-bt-cols" id="emiBTCols"></div>
+          <div class="emi-bt-verdict" id="emiBTVerdict"></div>
         </div>
 
         <!-- Chart -->
@@ -3819,7 +3937,17 @@ function chartOpts(){
     }};
 }
 
-async function exportPNG(){
+function exportPNG(){
+  if (typeof html2canvas === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload = () => _doExportPNG();
+    document.head.appendChild(s);
+    return;
+  }
+  _doExportPNG();
+}
+async function _doExportPNG(){
   const btn=document.querySelector(".export-btn"),orig=btn.innerHTML;
   btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Exporting…';
   btn.disabled=true;
@@ -5129,6 +5257,16 @@ calcSIP();
 _tabInited['sip'] = true;
 
 document.getElementById('footerYear').textContent = new Date().getFullYear();
+
+// ── Debounce utility ──
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+const dCalcSIP  = debounce(calcSIP,  120);
+const dCalcGoal = debounce(calcGoal, 120);
+const dCalcSWP  = debounce(calcSWP,  120);
+const dCalcEMI  = debounce(calcEMI,  120);
 // Load dynamic quick picks from AMFI API
 
 /* ════════════════════════════════════════
@@ -5145,6 +5283,7 @@ const EMI_PRESETS = {
 
 let emiMode = 'emi';       // 'emi' | 'loan' | 'tenure'
 let emiPrepayOn = false;
+let emiBTOn = false;
 let emiChartInst = null;
 let emiTableOpen = false;
 
@@ -5220,6 +5359,108 @@ function toggleEMITable() {
   if (arrow) arrow.classList.toggle('open', emiTableOpen);
   if (btn)   btn.setAttribute('aria-expanded', emiTableOpen ? 'true' : 'false');
   if (btn)   btn.querySelector('span:not(.emi-toggle-arrow)') && (btn.childNodes[2].textContent = emiTableOpen ? ' Hide Year-by-Year Schedule' : ' Show Year-by-Year Schedule');
+}
+
+function toggleBT() {
+  emiBTOn = document.getElementById('emiBTToggle').checked;
+  const fields = document.getElementById('emiBTFields');
+  if (fields) fields.classList.toggle('shown', emiBTOn);
+  if (!emiBTOn) {
+    const r = document.getElementById('emiBTResult');
+    if (r) r.style.display = 'none';
+  }
+  calcEMI();
+}
+
+function calcBT(loanAmt, currentRate, currentEMI, remainingMonths, newRate, feePct) {
+  // Outstanding principal after elapsed months (already computed by caller)
+  const outstanding = loanAmt; // caller passes remaining balance directly
+  const fee = outstanding * feePct / 100;
+
+  // Current loan: remaining cost
+  const currentRemaining = currentEMI * remainingMonths;
+  const currentIntRemaining = currentRemaining - outstanding;
+
+  // New loan at newRate for same remaining tenure
+  const newEMI = calcEMIValue(outstanding, newRate, remainingMonths);
+  const newTotal = newEMI * remainingMonths;
+  const newInt = newTotal - outstanding;
+
+  // Net saving = interest saved minus transfer fee
+  const grossSaving = currentIntRemaining - newInt;
+  const netSaving = grossSaving - fee;
+
+  // Break-even month: when cumulative monthly saving exceeds fee
+  const monthlySaving = currentEMI - newEMI;
+  const breakEvenMonth = monthlySaving > 0 ? Math.ceil(fee / monthlySaving) : Infinity;
+
+  return {
+    outstanding,
+    fee,
+    currentEMI,
+    newEMI,
+    currentIntRemaining,
+    newInt,
+    currentRemaining,
+    newTotal,
+    grossSaving,
+    netSaving,
+    breakEvenMonth,
+    monthlySaving,
+    remainingMonths,
+  };
+}
+
+function renderBTResult(bt, newRate) {
+  const result = document.getElementById('emiBTResult');
+  const cols   = document.getElementById('emiBTCols');
+  const verdict = document.getElementById('emiBTVerdict');
+  if (!result || !cols || !verdict) return;
+
+  result.style.display = 'block';
+
+  const remYrs = Math.floor(bt.remainingMonths / 12);
+  const remMo  = bt.remainingMonths % 12;
+  const remStr = remYrs > 0 ? remYrs + 'Y' + (remMo > 0 ? ' ' + remMo + 'M' : '') : remMo + 'M';
+
+  cols.innerHTML = `
+    <div class="emi-bt-col current">
+      <div class="emi-bt-col-head">🏦 Current Loan</div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">Outstanding</span><span class="emi-bt-row-val">₹${fmtINR(Math.round(bt.outstanding))}</span></div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">Monthly EMI</span><span class="emi-bt-row-val">₹${fmtINR(Math.round(bt.currentEMI))}</span></div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">Remaining tenure</span><span class="emi-bt-row-val">${remStr}</span></div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">Interest left</span><span class="emi-bt-row-val" style="color:#b71c1c">₹${fmtINR(Math.round(bt.currentIntRemaining))}</span></div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">Total outflow left</span><span class="emi-bt-row-val">₹${fmtINR(Math.round(bt.currentRemaining))}</span></div>
+    </div>
+    <div class="emi-bt-col transfer">
+      <div class="emi-bt-col-head">🔄 After Transfer (${newRate}%)</div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">Transfer fee</span><span class="emi-bt-row-val" style="color:#e65100">₹${fmtINR(Math.round(bt.fee))}</span></div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">New monthly EMI</span><span class="emi-bt-row-val">₹${fmtINR(Math.round(bt.newEMI))}</span></div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">Remaining tenure</span><span class="emi-bt-row-val">${remStr}</span></div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">Interest left</span><span class="emi-bt-row-val" style="color:#1565c0">₹${fmtINR(Math.round(bt.newInt))}</span></div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">Total outflow left</span><span class="emi-bt-row-val">₹${fmtINR(Math.round(bt.newTotal + bt.fee))}</span></div>
+    </div>
+    <div class="emi-bt-col saving">
+      <div class="emi-bt-col-head">💰 Net Benefit</div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">Interest saved</span><span class="emi-bt-row-val" style="color:#2e7d32">₹${fmtINR(Math.round(bt.grossSaving))}</span></div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">Less transfer fee</span><span class="emi-bt-row-val" style="color:#e65100">−₹${fmtINR(Math.round(bt.fee))}</span></div>
+      <div class="emi-bt-row" style="border-top:1.5px solid rgba(46,125,50,.2);margin-top:3px;padding-top:5px"><span class="emi-bt-row-key" style="font-weight:800;color:var(--text)">Net saving</span><span class="emi-bt-row-val" style="color:${bt.netSaving > 0 ? '#2e7d32' : '#b71c1c'};font-size:.75rem">₹${fmtINR(Math.round(Math.abs(bt.netSaving)))} ${bt.netSaving > 0 ? '✅' : '⚠️'}</span></div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">EMI reduction</span><span class="emi-bt-row-val" style="color:#2e7d32">₹${fmtINR(Math.round(bt.monthlySaving))}/mo</span></div>
+      <div class="emi-bt-row"><span class="emi-bt-row-key">Break-even</span><span class="emi-bt-row-val">${bt.breakEvenMonth === Infinity ? 'Never' : bt.breakEvenMonth <= bt.remainingMonths ? 'Month ' + bt.breakEvenMonth : 'After loan ends'}</span></div>
+    </div>`;
+
+  // Verdict
+  if (bt.netSaving > 0 && bt.breakEvenMonth <= bt.remainingMonths) {
+    const beYr = Math.ceil(bt.breakEvenMonth / 12);
+    verdict.className = 'emi-bt-verdict good';
+    verdict.innerHTML = `✅ <span>Transfer is <strong>worth it</strong>. You save ₹${fmtINR(Math.round(bt.netSaving))} net. Break-even in <strong>month ${bt.breakEvenMonth}</strong> (~${beYr} yr${beYr!==1?'s':''}). EMI drops by ₹${fmtINR(Math.round(bt.monthlySaving))}/month.</span>`;
+  } else if (bt.netSaving > 0 && bt.breakEvenMonth > bt.remainingMonths) {
+    verdict.className = 'emi-bt-verdict neutral';
+    verdict.innerHTML = `⏱ <span>Savings exist but break-even (month ${bt.breakEvenMonth}) is beyond your remaining tenure. Consider only if you plan to extend.</span>`;
+  } else {
+    verdict.className = 'emi-bt-verdict bad';
+    verdict.innerHTML = `⚠️ <span>Transfer <strong>not recommended</strong>. Transfer fee (₹${fmtINR(Math.round(bt.fee))}) exceeds interest savings (₹${fmtINR(Math.round(bt.grossSaving))}). The rate difference is too small to justify the switch.</span>`;
+  }
 }
 
 function getEMIParams() {
@@ -5398,6 +5639,28 @@ function calcEMI() {
     }
   } else if (prepayResult) {
     prepayResult.style.display = 'none';
+  }
+
+  // ── Balance Transfer ──
+  const btResult = document.getElementById('emiBTResult');
+  if (emiBTOn && emiMode === 'emi') {
+    const btRate    = parseFloat(document.getElementById('emiBTRate')?.value)    || 7.5;
+    const btFeePct  = parseFloat(document.getElementById('emiBTFee')?.value)     || 0.5;
+    const btElapsed = parseInt(document.getElementById('emiBTElapsed')?.value)   || 0;
+
+    // Compute outstanding principal after btElapsed months
+    const r0 = p.rate / 100 / 12;
+    const outstanding = loanAmt * Math.pow(1 + r0, btElapsed) - emiAmt * (Math.pow(1 + r0, btElapsed) - 1) / r0;
+    const remainingMonths = Math.max(1, tenureMonths - btElapsed);
+
+    if (outstanding > 0 && btElapsed < tenureMonths) {
+      const bt = calcBT(Math.round(outstanding), p.rate, emiAmt, remainingMonths, btRate, btFeePct);
+      renderBTResult(bt, btRate);
+    } else if (btResult) {
+      btResult.style.display = 'none';
+    }
+  } else if (btResult) {
+    btResult.style.display = 'none';
   }
 
   // ── Chart ──
@@ -5588,6 +5851,18 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#1a0a0a;padding:30px
 .esi-body{font-size:.7rem;color:#1b5e20;line-height:1.6;font-weight:600}
 /* Chart */
 .ci img{width:100%;border-radius:8px;border:1px solid #ffcdd2;margin-bottom:12px}
+/* Balance transfer cols */
+.emi-bt-col{border-radius:9px;padding:11px 13px;border:1.5px solid #e0e0e0}
+.emi-bt-col.current{background:#fff5f5;border-color:#ffcdd2}
+.emi-bt-col.transfer{background:#e3f2fd;border-color:#90caf9}
+.emi-bt-col.saving{background:#e8f5e9;border-color:#a5d6a7}
+.emi-bt-col-head{font-size:.5rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.emi-bt-col.current .emi-bt-col-head{color:#b71c1c}
+.emi-bt-col.transfer .emi-bt-col-head{color:#1565c0}
+.emi-bt-col.saving .emi-bt-col-head{color:#2e7d32}
+.emi-bt-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:.6rem}
+.emi-bt-row:last-child{border-bottom:none}
+.emi-bt-row-key{opacity:.7}.emi-bt-row-val{font-family:"JetBrains Mono",monospace;font-weight:700}
 /* Amortisation table */
 .emi-table{width:100%;border-collapse:collapse;font-size:.68rem}
 .emi-table th{padding:8px 12px;background:#b71c1c;color:#fff;font-size:.54rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;text-align:right;white-space:nowrap}
@@ -5606,6 +5881,12 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#1a0a0a;padding:30px
 .sum-label{font-size:.5rem;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:#888;margin-bottom:5px}
 .sum-val{font-family:"JetBrains Mono",monospace;font-size:.95rem;font-weight:800;margin-bottom:2px;line-height:1.2}
 .sum-sub{font-size:.56rem;font-family:"JetBrains Mono",monospace;color:#999}
+/* Prepayment compare columns */
+.emi-prepay-compare{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.epc-col{background:#fff;border:1.5px solid #e0e0e0;border-radius:9px;padding:11px 13px}
+.epc-col.with{border-color:#a5d6a7;background:#f1f8e9}
+.epc-col.without{border-color:#ef9a9a;background:#fff5f5}
+.epc-label{font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;color:#555}
 /* SIP insight */
 .sip-insight{background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:10px;padding:12px 15px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px}
 .si-icon{font-size:1.4rem;flex-shrink:0}
@@ -5688,6 +5969,18 @@ ${(()=>{
     </div>`;
   })()}
 ${prepayHTML  ? `<div class="sec">Prepayment Analysis</div>${prepayHTML}` : ''}
+${(()=>{
+    if (!emiBTOn || emiMode !== 'emi') return '';
+    const btColsEl = document.getElementById('emiBTCols');
+    const btVerdEl = document.getElementById('emiBTVerdict');
+    const btRate   = parseFloat(document.getElementById('emiBTRate')?.value) || 7.5;
+    const feePct   = parseFloat(document.getElementById('emiBTFee')?.value) || 0.5;
+    const elapsed  = parseInt(document.getElementById('emiBTElapsed')?.value) || 0;
+    if (!btColsEl || btColsEl.innerHTML.trim()==='') return '';
+    return `<div class="sec">Balance Transfer Analysis (${p.rate}% → ${btRate}%, ${elapsed} months elapsed)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">${btColsEl.innerHTML}</div>
+    ${btVerdEl ? `<div style="padding:10px 14px;border-radius:9px;font-size:.68rem;font-weight:700;background:#e8f5e9;border:1.5px solid #a5d6a7;color:#1b5e20">${btVerdEl.innerHTML}</div>` : ''}`;
+  })()}
 ${chartImg    ? `<div class="sec">Year-by-Year Breakdown</div><div class="ci"><img src="${chartImg}"></div>` : ''}
 ${tableHTML   ? `<div class="sec">Amortisation Schedule</div><table class="emi-table">${tableHTML}</table>` : ''}
 
@@ -5700,6 +5993,119 @@ ${tableHTML   ? `<div class="sec">Amortisation Schedule</div><table class="emi-t
 }
 
 loadQuickPicks();
+
+// ══════════════════════════════════════════════
+// localStorage persistence — remember last inputs
+// ══════════════════════════════════════════════
+const LS_KEY = 'mfcalc_v1';
+
+function saveState() {
+  try {
+    const ids = [
+      'sipAmount','lumpAmount','sipDuration','sipDurationUnit','sipRate','sipStepup','sipFreq',
+      'emiLoanAmt','emiRate','emiTenure','emiTenureUnit',
+      'goalAmount','goalName','goalDuration','goalDurationUnit','goalRate','goalInflation',
+      'goalExisting','goalFreq','goalStepup','goalLumpsumPct',
+      'swpCorpus','swpWithdrawal','swpRate','swpDuration','swpDurationUnit'
+    ];
+    const state = {};
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) state[id] = el.value;
+    });
+    // Note: tab selection intentionally NOT saved — URL params handle sharing,
+    // and restoring tab on every reload is disorienting.
+    state._calcMode = document.querySelector('.smt-btn.active')?.id || 'modeSIP';
+    state._emiMode  = document.querySelector('.emt-btn.active')?.id  || 'emtEMI';
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+  } catch(e) {}
+}
+
+function restoreState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    const state = JSON.parse(raw);
+    Object.entries(state).forEach(([id, val]) => {
+      if (id.startsWith('_')) return;
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    });
+    // Restore calc mode
+    if (state._calcMode) {
+      const modeBtn = document.getElementById(state._calcMode);
+      if (modeBtn) modeBtn.click();
+    }
+    // Restore EMI mode
+    if (state._emiMode) {
+      const emiBtn = document.getElementById(state._emiMode);
+      if (emiBtn) emiBtn.click();
+    }
+  } catch(e) {}
+}
+
+// Save on any input/change event (debounced)
+const dSaveState = debounce(saveState, 600);
+document.addEventListener('input',  () => dSaveState());
+document.addEventListener('change', () => dSaveState());
+
+// ── URL params: read on load, write on calc ──
+function readURLParams() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    const tab = p.get('tab');
+    if (tab) {
+      const tabBtn = document.getElementById('mtab-'+tab);
+      if (tabBtn) switchMainTab(tab, tabBtn);
+    }
+    const map = {
+      loan:'emiLoanAmt', rate:'emiRate', tenure:'emiTenure',
+      sip:'sipAmount', years:'sipDuration', ret:'sipRate',
+      goal:'goalTarget', gyears:'goalYears',
+      corpus:'swpCorpus', withdraw:'swpMonthly'
+    };
+    let any = false;
+    Object.entries(map).forEach(([param, id]) => {
+      const val = p.get(param);
+      if (val) { const el = document.getElementById(id); if (el) { el.value = val; any = true; } }
+    });
+    if (any) { calcSIP(); calcGoal(); calcSWP(); calcEMI(); }
+  } catch(e) {}
+}
+
+function writeURLParams() {
+  try {
+    const activeTab = document.querySelector('.main-tab.active')?.id?.replace('mtab-','') || 'fund';
+    const p = new URLSearchParams();
+    p.set('tab', activeTab);
+    const getVal = id => document.getElementById(id)?.value || '';
+    if (activeTab === 'sip') {
+      p.set('sip', getVal('sipAmount'));
+      p.set('years', getVal('sipDuration'));
+      p.set('ret', getVal('sipRate'));
+    } else if (activeTab === 'emi') {
+      p.set('loan', getVal('emiLoanAmt'));
+      p.set('rate', getVal('emiRate'));
+      p.set('tenure', getVal('emiTenure'));
+    } else if (activeTab === 'goal') {
+      p.set('goal', getVal('goalTarget'));
+      p.set('gyears', getVal('goalYears'));
+    } else if (activeTab === 'swp') {
+      p.set('corpus', getVal('swpCorpus'));
+      p.set('withdraw', getVal('swpMonthly'));
+    }
+    const newURL = window.location.pathname + '?' + p.toString();
+    window.history.replaceState(null, '', newURL);
+  } catch(e) {}
+}
+
+const dWriteURL = debounce(writeURLParams, 800);
+document.addEventListener('input',  () => dWriteURL());
+document.addEventListener('change', () => dWriteURL());
+
+// Restore on load
+restoreState();
+readURLParams();
 
 
 </script>
