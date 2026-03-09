@@ -750,6 +750,25 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   ══════════════════════════════════ */
 
   /* Header: clean stack */
+  /* War Room mobile */
+  .wr-hdr{padding:14px 14px 12px}
+  .wr-hdr-inner{flex-direction:column;gap:10px}
+  .wr-stat-row{justify-content:flex-start}
+  .wr-radar{display:none}
+  .wr-hdr-name{font-size:.6rem}
+  /* Wealth Clock mobile */
+  .wc-hdr{padding:14px 14px 14px}
+  .wc-hdr-inner{flex-direction:row;gap:10px;flex-wrap:wrap}
+  .wc-ring-wrap{width:90px;height:90px}
+  .wc-ring-svg{width:90px;height:90px}
+  .wc-ring-pct{font-size:.85rem}
+  /* Mission Control mobile */
+  .mc-hdr{padding:14px 14px 12px}
+  .mc-hdr-inner{flex-direction:column;gap:10px}
+  .mc-hdr-right{align-items:flex-start;min-width:unset;width:100%}
+  .mc-result-box{min-width:unset;width:100%;text-align:left;padding:10px 14px}
+  .mc-orbit-svg{display:none}
+  .mc-name{font-size:.6rem}
   .swp-hdr{padding:14px 14px 0}
   .swp-hdr-top{flex-direction:column;align-items:flex-start;gap:8px;padding-bottom:12px}
   .swp-hdr-title{gap:8px;flex-wrap:wrap}
@@ -1141,6 +1160,88 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 /* SWP CALCULATOR — INCOME ENGINE */
 .swp-card{background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-lg,0 4px 24px rgba(0,0,0,.10));animation:fadeUp .4s .2s ease both;border:none;position:relative}
 
+
+/* ═══════════════════════════════════════════════════════
+   WAR ROOM HERO — Fund Compare dark header
+   ═══════════════════════════════════════════════════════ */
+.wr-hdr{background:linear-gradient(135deg,#1a2e1a 0%,#1b4332 50%,#2d6a4f 100%);padding:22px 26px 18px;position:relative;overflow:hidden;border-radius:16px 16px 0 0}
+.wr-hdr-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;animation:gridDrift 20s linear infinite}
+.wr-hdr-orb{position:absolute;border-radius:50%;pointer-events:none}
+.wr-hdr-orb1{width:260px;height:260px;top:-100px;right:-80px;background:radial-gradient(circle,rgba(102,187,106,.12) 0%,transparent 70%)}
+.wr-hdr-orb2{width:140px;height:140px;bottom:-60px;left:15%;background:radial-gradient(circle,rgba(255,255,255,.04) 0%,transparent 70%)}
+.wr-hdr-inner{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.wr-hdr-left{display:flex;flex-direction:column;gap:6px}
+.wr-hdr-eyebrow{display:flex;align-items:center;gap:7px;font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.5);font-family:'JetBrains Mono',monospace}
+.wr-live-dot{width:7px;height:7px;border-radius:50%;background:#66bb6a;box-shadow:0 0 0 0 rgba(102,187,106,.5);animation:livePulse 2s ease infinite;flex-shrink:0}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(102,187,106,.5)}70%{box-shadow:0 0 0 6px rgba(102,187,106,0)}100%{box-shadow:0 0 0 0 rgba(102,187,106,0)}}
+.wr-hdr-title{display:flex;align-items:center;gap:12px}
+.wr-hdr-icon{font-size:1.4rem;filter:drop-shadow(0 0 8px rgba(102,187,106,.4))}
+.wr-hdr-name{font-size:.72rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#fff}
+.wr-hdr-sub{font-size:.6rem;color:rgba(255,255,255,.5);margin-top:2px;font-family:'JetBrains Mono',monospace}
+.wr-stat-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1;justify-content:flex-end}
+.wr-empty-hint{display:flex;align-items:center;gap:10px;font-size:.65rem;font-weight:600;color:rgba(255,255,255,.4);font-style:italic}
+.wr-pulse-ring{width:28px;height:28px;border-radius:50%;border:2px solid rgba(102,187,106,.3);position:relative;flex-shrink:0;animation:ringPulse 2s ease infinite}
+@keyframes ringPulse{0%,100%{border-color:rgba(102,187,106,.3);transform:scale(1)}50%{border-color:rgba(102,187,106,.6);transform:scale(1.08)}}
+.wr-stats{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.wr-stat-chip{display:flex;flex-direction:column;align-items:center;padding:8px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:10px;min-width:70px;cursor:default;transition:background .18s}
+.wr-stat-chip:hover{background:rgba(255,255,255,.13)}
+.wr-stat-chip-label{font-size:.52rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:2px;font-family:'JetBrains Mono',monospace}
+.wr-stat-chip-val{font-size:.85rem;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace}
+.wr-stat-chip-val.pos{color:#a5d6a7}
+.wr-stat-chip-val.neg{color:#ef9a9a}
+.wr-radar{position:absolute;bottom:-10px;right:120px;width:130px;height:130px;opacity:.5;pointer-events:none;animation:radarSpin 18s linear infinite}
+@keyframes radarSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* ═══════════════════════════════════════════════════════
+   WEALTH CLOCK HERO — SIP Calculator dark header
+   ═══════════════════════════════════════════════════════ */
+.wc-hdr{background:linear-gradient(135deg,#0d2818 0%,#1b4332 45%,#155e38 100%);padding:22px 26px 20px;position:relative;overflow:hidden}
+.wc-hdr-grid{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.04) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;animation:dotDrift 25s linear infinite}
+@keyframes dotDrift{0%{background-position:0 0}100%{background-position:28px 28px}}
+.wc-hdr-orb{position:absolute;border-radius:50%;pointer-events:none}
+.wc-hdr-orb1{width:240px;height:240px;top:-100px;left:-60px;background:radial-gradient(circle,rgba(102,187,106,.1) 0%,transparent 70%)}
+.wc-hdr-orb2{width:160px;height:160px;bottom:-60px;right:15%;background:radial-gradient(circle,rgba(165,214,167,.06) 0%,transparent 70%)}
+.wc-hdr-inner{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.wc-hdr-left{display:flex;flex-direction:column;gap:8px;flex:1;min-width:220px}
+.wc-eyebrow{display:flex;align-items:center;gap:7px;font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.45);font-family:'JetBrains Mono',monospace}
+.wc-title-row{display:flex;align-items:center;gap:12px}
+.wc-icon{font-size:1.4rem;filter:drop-shadow(0 0 10px rgba(165,214,167,.4))}
+.wc-name{font-size:.72rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#fff}
+.wc-sub{font-size:.6rem;color:rgba(255,255,255,.45);margin-top:2px;font-family:'JetBrains Mono',monospace}
+.wc-mode-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
+.wc-ring-wrap{position:relative;width:120px;height:120px;flex-shrink:0}
+.wc-ring-svg{width:120px;height:120px;display:block}
+.wc-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.wc-ring-label{font-size:.52rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.45);font-family:'JetBrains Mono',monospace}
+.wc-ring-pct{font-size:1rem;font-weight:800;color:#a5d6a7;font-family:'JetBrains Mono',monospace;line-height:1.2}
+.wc-ring-sublabel{font-size:.5rem;color:rgba(255,255,255,.35);font-family:'JetBrains Mono',monospace}
+
+/* ═══════════════════════════════════════════════════════
+   MISSION CONTROL HERO — Goal Planner dark header
+   ═══════════════════════════════════════════════════════ */
+.mc-hdr{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:22px 26px 18px;position:relative;overflow:hidden}
+.mc-hdr-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:36px 36px;pointer-events:none;animation:gridDrift 22s linear infinite}
+.mc-hdr-orb{position:absolute;border-radius:50%;pointer-events:none}
+.mc-hdr-orb1{width:280px;height:280px;top:-120px;right:-80px;background:radial-gradient(circle,rgba(100,181,246,.1) 0%,transparent 70%)}
+.mc-hdr-orb2{width:150px;height:150px;bottom:-60px;left:10%;background:radial-gradient(circle,rgba(129,212,250,.06) 0%,transparent 70%)}
+.mc-hdr-inner{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.mc-hdr-left{display:flex;flex-direction:column;gap:8px;flex:1;min-width:220px}
+.mc-eyebrow{display:flex;align-items:center;gap:7px;font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.45);font-family:'JetBrains Mono',monospace}
+.mc-title-row{display:flex;align-items:center;gap:12px}
+.mc-icon{font-size:1.4rem;filter:drop-shadow(0 0 10px rgba(100,181,246,.5))}
+.mc-name{font-size:.72rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#fff}
+.mc-sub{font-size:.6rem;color:rgba(255,255,255,.45);margin-top:2px;font-family:'JetBrains Mono',monospace}
+.mc-hdr-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;min-width:220px}
+.mc-result-box{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 18px;text-align:center;min-width:200px}
+.mc-result-label{font-size:.52rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.4);font-family:'JetBrains Mono',monospace;margin-bottom:4px}
+.mc-result-val{font-size:1.15rem;font-weight:800;color:#81d4fa;font-family:'JetBrains Mono',monospace;line-height:1.2}
+.mc-result-sub{font-size:.58rem;color:rgba(255,255,255,.4);margin-top:3px;font-family:'JetBrains Mono',monospace}
+.mc-orbit-svg{position:absolute;bottom:-20px;right:16px;width:160px;height:110px;opacity:.25;pointer-events:none}
+.mc-stars{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.mc-star{position:absolute;width:2px;height:2px;background:#fff;border-radius:50%;animation:twinkle var(--d,3s) ease infinite}
+@keyframes twinkle{0%,100%{opacity:.1;transform:scale(1)}50%{opacity:.7;transform:scale(1.4)}}
+.mc-mode-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:2px}
+
 /* ── Animated dark header ── */
 .swp-hdr{background:linear-gradient(135deg,#004d40 0%,#00695c 50%,#00796b 100%);padding:22px 26px 0;position:relative;overflow:hidden}
 .swp-hdr-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:32px 32px;pointer-events:none;animation:gridDrift 20s linear infinite}
@@ -1502,6 +1603,48 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 
 <!-- PANEL: FUND COMPARE -->
 <div class="main-panel active" id="mpanel-fund">
+
+<!-- ═══ WAR ROOM HERO ═══ -->
+<div class="wr-hdr">
+  <div class="wr-hdr-grid"></div>
+  <div class="wr-hdr-orb wr-hdr-orb1"></div>
+  <div class="wr-hdr-orb wr-hdr-orb2"></div>
+  <div class="wr-hdr-inner">
+    <!-- Left: title -->
+    <div class="wr-hdr-left">
+      <div class="wr-hdr-eyebrow">
+        <span class="wr-live-dot"></span>Live AMFI Data · Real-time Analysis
+      </div>
+      <div class="wr-hdr-title">
+        <span class="wr-hdr-icon">⚔️</span>
+        <div>
+          <div class="wr-hdr-name">Fund Compare — War Room</div>
+          <div class="wr-hdr-sub">Side-by-side NAV · Risk · Return · Sharpe analysis</div>
+        </div>
+      </div>
+    </div>
+    <!-- Right: live stat chips — populate once funds added -->
+    <div class="wr-stat-row" id="wrStatRow">
+      <div class="wr-empty-hint" id="wrEmptyHint">
+        <span class="wr-pulse-ring"></span>
+        Add funds below to activate live battle stats
+      </div>
+      <div class="wr-stats" id="wrStats" style="display:none"></div>
+    </div>
+  </div>
+  <!-- Radar backdrop SVG -->
+  <svg class="wr-radar" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="100" cy="100" r="90" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+    <circle cx="100" cy="100" r="60" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+    <circle cx="100" cy="100" r="30" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+    <line x1="100" y1="10" x2="100" y2="190" stroke="rgba(255,255,255,.03)" stroke-width="1"/>
+    <line x1="10" y1="100" x2="190" y2="100" stroke="rgba(255,255,255,.03)" stroke-width="1"/>
+    <line x1="27" y1="27" x2="173" y2="173" stroke="rgba(255,255,255,.03)" stroke-width="1"/>
+    <line x1="173" y1="27" x2="27" y2="173" stroke="rgba(255,255,255,.03)" stroke-width="1"/>
+    <circle cx="100" cy="100" r="4" fill="rgba(102,187,106,.5)"/>
+  </svg>
+</div>
+
 <!-- SEARCH -->
 <div class="search-card">
   <div class="section-label">🔍 Search &amp; Add Funds <span style="font-weight:500;text-transform:none;letter-spacing:0;font-size:.65rem;color:var(--muted)">(up to 5)</span></div>
@@ -1580,21 +1723,67 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 <div class="main-panel" id="mpanel-sip">
 <div class="sip-card sip-split-card">
 
-  <!-- ── HEADER ── -->
-  <div class="sip-card-header">
-    <div class="sip-card-title" style="justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span id="calcModeTitle">SIP Returns Calculator</span>
-        <div class="sip-mode-toggle">
-          <button id="modeSIP"  onclick="setCalcMode('sip')"  class="smt-btn active">SIP</button>
-          <button id="modeLump" onclick="setCalcMode('lump')" class="smt-btn">Lumpsum</button>
-          <button id="modeBoth" onclick="setCalcMode('both')" class="smt-btn">SIP + Lumpsum</button>
+  <!-- ── WEALTH CLOCK HERO ── -->
+  <div class="wc-hdr">
+    <div class="wc-hdr-grid"></div>
+    <div class="wc-hdr-orb wc-hdr-orb1"></div>
+    <div class="wc-hdr-orb wc-hdr-orb2"></div>
+    <div class="wc-hdr-inner">
+
+      <!-- Left: title + mode toggle -->
+      <div class="wc-hdr-left">
+        <div class="wc-eyebrow">
+          <span class="wr-live-dot"></span>Compound Growth Engine
+        </div>
+        <div class="wc-title-row">
+          <span class="wc-icon">🕐</span>
+          <div>
+            <div class="wc-name" id="calcModeTitle">SIP Returns Calculator</div>
+            <div class="wc-sub">Model SIP · Lumpsum · Step-up growth scenarios</div>
+          </div>
+        </div>
+        <!-- Mode toggle in hero -->
+        <div class="wc-mode-row">
+          <div class="sip-mode-toggle">
+            <button id="modeSIP"  onclick="setCalcMode('sip')"  class="smt-btn active">SIP</button>
+            <button id="modeLump" onclick="setCalcMode('lump')" class="smt-btn">Lumpsum</button>
+            <button id="modeBoth" onclick="setCalcMode('both')" class="smt-btn">SIP + Lumpsum</button>
+          </div>
+          <button onclick="printCalc()" class="swp-hdr-btn" style="margin-left:auto">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print / PDF
+          </button>
         </div>
       </div>
-      <button onclick="printCalc()" class="sip-print-btn">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-        Print / PDF
-      </button>
+
+      <!-- Right: Wealth Clock ring -->
+      <div class="wc-ring-wrap">
+        <svg class="wc-ring-svg" viewBox="0 0 160 160">
+          <!-- Track -->
+          <circle cx="80" cy="80" r="66" stroke="rgba(255,255,255,.08)" stroke-width="12" fill="none"/>
+          <!-- Invested arc (grey) -->
+          <circle cx="80" cy="80" r="66" stroke="rgba(255,255,255,.18)" stroke-width="12" fill="none"
+            stroke-dasharray="414.69" stroke-dashoffset="0"
+            stroke-linecap="round" transform="rotate(-90 80 80)"
+            id="wcRingInvested"/>
+          <!-- Gain arc (green) -->
+          <circle cx="80" cy="80" r="66" stroke="#66bb6a" stroke-width="12" fill="none"
+            stroke-dasharray="414.69" stroke-dashoffset="414.69"
+            stroke-linecap="round" transform="rotate(-90 80 80)"
+            id="wcRingGain" style="transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1)"/>
+          <!-- Glow -->
+          <circle cx="80" cy="80" r="66" stroke="#a5d6a7" stroke-width="2" fill="none"
+            stroke-dasharray="414.69" stroke-dashoffset="414.69"
+            stroke-linecap="round" transform="rotate(-90 80 80)"
+            id="wcRingGlow" style="transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1);filter:blur(2px);opacity:.5"/>
+        </svg>
+        <div class="wc-ring-center">
+          <div class="wc-ring-label">Returns</div>
+          <div class="wc-ring-pct" id="wcRingPct">—%</div>
+          <div class="wc-ring-sublabel">of corpus</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1759,17 +1948,59 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 <div class="main-panel" id="mpanel-goal">
 <!-- GOAL PLANNER -->
 <div class="sip-card" id="goalPlannerCard">
-  <div class="sip-card-header">
-    <div class="sip-card-title" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span>Investment Goal Planner</span>
-        <span style="font-size:.6rem;font-weight:700;letter-spacing:1px;padding:3px 10px;background:var(--g-xlight);border:1px solid var(--g-light);border-radius:20px;color:var(--g2);text-transform:uppercase">Reverse Calculator</span>
+
+  <!-- ═══ MISSION CONTROL HERO ═══ -->
+  <div class="mc-hdr">
+    <div class="mc-hdr-grid"></div>
+    <div class="mc-hdr-orb mc-hdr-orb1"></div>
+    <div class="mc-hdr-orb mc-hdr-orb2"></div>
+    <!-- Starfield -->
+    <div class="mc-stars" id="mcStars"></div>
+
+    <div class="mc-hdr-inner">
+      <!-- Left: title + eyebrow + mode row -->
+      <div class="mc-hdr-left">
+        <div class="mc-eyebrow">
+          <span class="wr-live-dot" style="background:#81d4fa;box-shadow:none"></span>
+          Reverse Calculator · Mission Control
+        </div>
+        <div class="mc-title-row">
+          <span class="mc-icon">🚀</span>
+          <div>
+            <div class="mc-name" id="mcHdrTitle">Investment Goal Planner</div>
+            <div class="mc-sub">How much SIP · Lumpsum · Time needed to hit your target</div>
+          </div>
+        </div>
+        <div class="mc-mode-row">
+          <button onclick="printGoalPlan()" class="swp-hdr-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print / PDF
+          </button>
+        </div>
       </div>
-      <button onclick="printGoalPlan()" style="display:flex;align-items:center;gap:6px;padding:6px 14px;border:1.5px solid var(--border2);border-radius:8px;background:#fff;color:var(--g2);font-family:'Raleway',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.3px" onmouseover="this.style.background='var(--g-xlight)'" onmouseout="this.style.background='#fff'">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-        Print / PDF
-      </button>
+
+      <!-- Right: live result box -->
+      <div class="mc-hdr-right">
+        <div class="mc-result-box">
+          <div class="mc-result-label">Monthly SIP Required</div>
+          <div class="mc-result-val" id="mcHdrSIP">₹—</div>
+          <div class="mc-result-sub" id="mcHdrSub">Enter your goal to launch</div>
+        </div>
+      </div>
     </div>
+
+    <!-- Orbit trajectory SVG -->
+    <svg class="mc-orbit-svg" viewBox="0 0 160 110" fill="none">
+      <path d="M10,100 Q40,20 90,40 T150,10" stroke="rgba(100,181,246,.4)" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <circle cx="150" cy="10" r="5" fill="rgba(100,181,246,.6)"/>
+      <circle cx="90" cy="40" r="3" fill="rgba(100,181,246,.3)"/>
+      <circle cx="40" cy="66" r="2" fill="rgba(100,181,246,.2)"/>
+      <!-- Rocket dot -->
+      <circle cx="150" cy="10" r="8" fill="none" stroke="rgba(100,181,246,.25)" stroke-width="1">
+        <animate attributeName="r" values="8;14;8" dur="2.5s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="1;0;1" dur="2.5s" repeatCount="indefinite"/>
+      </circle>
+    </svg>
   </div>
   <div class="sip-card-body">
     <!-- Goal Preset Icon Cards -->
@@ -2528,6 +2759,17 @@ function updateBigResult(corpus, invested, gain, mult, wealthGainPct, p) {
     insightEl.textContent =
       `Your ${freq} ${grows} ₹${fmtINR(corpus)} in ${years} years — that's ${mult.toFixed(2)}× your money.`;
   }
+
+  // ── Wealth Clock ring update ──
+  const circumference = 414.69;
+  const gainFrac = corpus > 0 ? Math.min(gain / corpus, 1) : 0;
+  const gainOffset = circumference * (1 - gainFrac);
+  const ringGain = document.getElementById('wcRingGain');
+  const ringGlow = document.getElementById('wcRingGlow');
+  const ringPct  = document.getElementById('wcRingPct');
+  if (ringGain) ringGain.style.strokeDashoffset = gainOffset;
+  if (ringGlow) ringGlow.style.strokeDashoffset = gainOffset;
+  if (ringPct)  ringPct.textContent = Math.round(gainFrac * 100) + '%';
 }
 
 /* ════════════════════════════════════════
@@ -2544,7 +2786,7 @@ function switchMainTab(id, btn) {
   if (!_tabInited[id]) {
     _tabInited[id] = true;
     if (id === 'sip')  { initSIPSliders(); calcSIP(); }
-    if (id === 'goal') calcGoal();
+    if (id === 'goal') { initMCStars(); calcGoal(); }
     if (id === 'swp')  calcSWP();
   }
   // Scroll sticky tabs into view
@@ -2762,6 +3004,9 @@ function renderAll(){
   metrics._clipped=clipped; metrics._clipFunds=clipFunds; metrics._commonCutoff=commonCutoff;
   if(currentTab==="nav") renderNavTab(container,metrics);
   else if(currentTab==="metrics") renderMetricsTab(container,metrics);
+  // Store metrics on funds for War Room
+  metrics.forEach((m,i)=>{ if(selectedFunds[i]) selectedFunds[i].metrics = m; });
+  setTimeout(updateWarRoomStats, 80);
 }
 
 function buildBanner(metrics, actualStartDate, actualEndDate){
@@ -3426,6 +3671,70 @@ function gpr(key, val, col){
   return `<div class="gp-row"><span class="gp-key">${key}</span><span class="gp-val" style="${col?'color:'+col:''}">${val}</span></div>`;
 }
 
+/* ── War Room Hero: update stat chips ── */
+function updateWarRoomStats() {
+  const hint  = document.getElementById('wrEmptyHint');
+  const stats = document.getElementById('wrStats');
+  if (!hint || !stats) return;
+
+  if (!selectedFunds.length) {
+    hint.style.display = 'flex'; stats.style.display = 'none'; return;
+  }
+  hint.style.display = 'none'; stats.style.display = 'flex';
+
+  // Aggregate best CAGR, lowest vol, highest Sharpe across loaded funds
+  let bestCAGR = -Infinity, bestVol = Infinity, bestSharpe = -Infinity;
+  let bestCAGRName = '', bestVolName = '', bestSharpeName = '';
+
+  selectedFunds.forEach(f => {
+    const m = f.metrics;
+    if (!m || m.insufficient) return;
+    const cagr = parseFloat(m.annReturn);
+    const vol  = parseFloat(m.annVol);
+    const sh   = parseFloat(m.sharpe);
+    if (cagr > bestCAGR)   { bestCAGR = cagr; bestCAGRName = f.name.split(' ').slice(0,3).join(' '); }
+    if (vol  < bestVol)    { bestVol  = vol;  bestVolName  = f.name.split(' ').slice(0,3).join(' '); }
+    if (sh   > bestSharpe) { bestSharpe = sh; bestSharpeName = f.name.split(' ').slice(0,3).join(' '); }
+  });
+
+  const chips = [];
+  if (isFinite(bestCAGR)) chips.push({ label: 'Best CAGR', val: bestCAGR.toFixed(1)+'%', cls: bestCAGR >= 0 ? 'pos' : 'neg', tip: bestCAGRName });
+  if (isFinite(bestVol) && bestVol < 999) chips.push({ label: 'Lowest Vol', val: bestVol.toFixed(1)+'%', cls: '', tip: bestVolName });
+  if (isFinite(bestSharpe)) chips.push({ label: 'Best Sharpe', val: bestSharpe.toFixed(2), cls: bestSharpe >= 1 ? 'pos' : '', tip: bestSharpeName });
+  chips.push({ label: 'Funds', val: selectedFunds.length + '/5', cls: '' });
+
+  stats.innerHTML = chips.map(c => `
+    <div class="wr-stat-chip" title="${c.tip||''}">
+      <div class="wr-stat-chip-label">${c.label}</div>
+      <div class="wr-stat-chip-val ${c.cls}">${c.val}</div>
+    </div>`).join('');
+}
+
+/* ── Mission Control Hero: update live SIP display ── */
+function updateMCHero(sipOnly, p) {
+  const el  = document.getElementById('mcHdrSIP');
+  const sub = document.getElementById('mcHdrSub');
+  if (!el) return;
+  if (!sipOnly || isNaN(sipOnly)) { el.textContent = '₹—'; if(sub) sub.textContent='Enter your goal to launch'; return; }
+  el.textContent = '₹' + fmtINR(Math.round(sipOnly));
+  if (sub) {
+    const fmtY = p.unit === 'months' ? p.dur+' months' : p.dur+' year'+(p.dur>1?'s':'');
+    sub.textContent = 'to reach ₹'+fmtINR(p.goalAmt)+' in '+fmtY;
+  }
+}
+
+/* ── Mission Control: starfield ── */
+function initMCStars() {
+  const c = document.getElementById('mcStars');
+  if (!c || c.children.length) return;
+  for (let i = 0; i < 30; i++) {
+    const s = document.createElement('div');
+    s.className = 'mc-star';
+    s.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${(2+Math.random()*4).toFixed(1)}s;animation-delay:${(Math.random()*4).toFixed(1)}s`;
+    c.appendChild(s);
+  }
+}
+
 function calcGoal(){
   const p = getGoalParams();
   if(p.totalInst < 1) return;
@@ -3552,6 +3861,7 @@ function calcGoal(){
 
   drawGoalChart(p, sipOnly, lumpOnly, hybridLump, hybridSIP);
   updateGoalNorthStar();
+  updateMCHero(sipOnly, p);
 }
 
 function drawGoalChart(p, sipOnly, lumpOnly, hybridLump, hybridSIP){
