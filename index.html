@@ -45,7 +45,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   background-image:radial-gradient(ellipse 70% 40% at 50% -10%,rgba(46,125,50,.07) 0%,transparent 60%)}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 .accent-line{height:3px;background:linear-gradient(90deg,var(--g1),var(--g3),var(--g4),var(--g3),var(--g1))}
-.page{max-width:1160px;margin:0 auto;padding:0 24px 80px}
+.page{max-width:1160px;margin:0 auto;padding:0 24px 0}
 
 /* NAVBAR */
 .navbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0 18px;margin-bottom:32px;border-bottom:1.5px solid var(--border);gap:16px;flex-wrap:wrap;animation:fadeDown .5s ease both}
@@ -59,22 +59,90 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .nav-link:hover{color:var(--g2);border-color:var(--border2);background:var(--g-xlight)}
 .nav-tag{font-size:.64rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:7px 14px;border-radius:8px;background:var(--g-xlight);border:1.5px solid var(--g-light);color:var(--g2)}
 
-/* HERO */
-.hero{background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 55%,var(--g3) 100%);border-radius:var(--radius);padding:34px 40px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:28px;flex-wrap:wrap;box-shadow:var(--shadow-lg);position:relative;overflow:hidden;animation:fadeUp .5s .1s ease both}
-.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:36px 36px;pointer-events:none;mask-image:radial-gradient(ellipse 80% 100% at 0% 50%,black 30%,transparent 75%)}
-.hero::after{content:"";position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none}
-.hero-left{position:relative;z-index:1}
-.hero-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:.62rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.9);margin-bottom:13px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2)}
-.hero-eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:#a5d6a7;animation:pulse 2s ease infinite}
-.hero-text h1{font-size:clamp(1.5rem,3.2vw,2.2rem);font-weight:800;color:#fff;letter-spacing:-.4px;line-height:1.18}
-.hero-text p{margin-top:11px;color:rgba(255,255,255,.78);font-size:.86rem;line-height:1.72;max-width:500px}
-.hero-stats{display:flex;gap:10px;flex-wrap:wrap;position:relative;z-index:1}
-.hero-stat{background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.22);border-radius:10px;padding:16px 20px;text-align:center;min-width:110px;transition:background .2s}
-.hero-stat:hover{background:rgba(255,255,255,.18)}
-.hero-stat-val{font-family:"JetBrains Mono",monospace;font-size:clamp(1rem,2.5vw,1.45rem);font-weight:600;color:#fff}
-.hero-stat-label{font-size:.59rem;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:1.2px;margin-top:4px;font-weight:700}
+/* BRAND STRIP — slim persistent identity bar */
+.brand-strip{
+  background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);
+  margin:0 -24px 0;
+  padding:0 24px;
+  position:relative;
+  overflow:hidden;
+  border-bottom:1px solid rgba(255,255,255,.12);
+}
+/* Subtle grid texture */
+.brand-strip::before{
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+  background-size:28px 28px;
+  pointer-events:none;
+  mask-image:radial-gradient(ellipse 70% 100% at 0% 50%,black 20%,transparent 70%);
+}
+.brand-strip-inner{
+  max-width:1160px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;padding:10px 0;
+  position:relative;z-index:1;
+}
+.brand-strip-left{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand-strip-eyebrow{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:.58rem;font-weight:700;letter-spacing:1.8px;
+  text-transform:uppercase;color:rgba(255,255,255,.85);
+  padding:3px 10px;border-radius:20px;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  white-space:nowrap;flex-shrink:0;
+}
+.brand-strip-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:#a5d6a7;flex-shrink:0;
+  animation:pulse 2s ease infinite;
+}
+.brand-strip-title{
+  font-size:clamp(.88rem,2vw,1.05rem);font-weight:800;
+  color:#fff;letter-spacing:-.2px;line-height:1.2;margin:0;
+}
+.brand-strip-right{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;
+}
+.brand-strip-pill{
+  font-size:.62rem;font-weight:700;letter-spacing:.3px;
+  color:rgba(255,255,255,.75);
+  padding:4px 11px;border-radius:20px;
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.18);
+  white-space:nowrap;
+}
+
+/* Footer credential stats */
+.footer-stats{
+  display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;
+}
+.footer-stat-chip{
+  background:var(--g-xlight);border:1.5px solid var(--g-light);
+  border-radius:8px;padding:8px 14px;text-align:center;
+  min-width:90px;
+}
+.footer-stat-val{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.82rem;font-weight:700;color:var(--g1);line-height:1.1;
+}
+.footer-stat-lbl{
+  font-size:.52rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.6px;color:var(--muted);margin-top:2px;
+}
+
+/* Mobile brand strip */
+@media(max-width:640px){
+  .brand-strip{margin:0 -10px;padding:0 10px}
+  .brand-strip-inner{padding:9px 0;gap:10px}
+  .brand-strip-right{display:none}
+  .brand-strip-title{font-size:.88rem}
+  .brand-strip-eyebrow{font-size:.54rem;padding:2px 8px}
+}
 
 /* SEARCH */
+
 .search-card{background:var(--surface);border-radius:var(--radius);padding:24px 28px;box-shadow:var(--shadow);border:1.5px solid var(--border);margin-bottom:18px;animation:fadeUp .5s .15s ease both;position:relative;z-index:100}
 .section-label{font-size:.6rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:13px;display:flex;align-items:center;gap:9px}
 .section-label::after{content:"";flex:1;height:1px;background:var(--border)}
@@ -201,28 +269,218 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .src-val{font-family:"JetBrains Mono",monospace;font-size:.8rem;font-weight:600}
 .sip-chart-wrap{height:300px;position:relative}
 
-/* FOOTER */
-.footer{margin-top:52px;padding:30px 34px;background:var(--surface);border-radius:var(--radius);border:1.5px solid var(--border);box-shadow:var(--shadow)}
-.footer-main{display:flex;align-items:flex-start;justify-content:space-between;gap:26px;flex-wrap:wrap;margin-bottom:22px}
-.footer-info .footer-brand{font-size:1rem;font-weight:800;color:var(--g2);margin-bottom:5px}
-.footer-arn{font-size:.65rem;font-weight:800;color:var(--g2);margin-bottom:10px;letter-spacing:.5px;font-family:"JetBrains Mono",monospace;background:var(--g-xlight);display:inline-block;padding:3px 10px;border-radius:5px;border:1px solid var(--g-light)}
-.footer-info p{font-size:.78rem;color:var(--text2);line-height:1.95;margin-top:8px}
-.footer-info a{color:var(--g2);text-decoration:none;font-weight:700}
-.footer-info a:hover{text-decoration:underline}
-.social-row{display:flex;align-items:center;gap:8px;margin-top:14px}
-.social-label{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-right:4px}
-.social-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;background:var(--surface2);border:1.5px solid var(--border);text-decoration:none;transition:all .2s;color:var(--text2)}
-.social-btn:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
-.social-btn.instagram:hover{background:radial-gradient(circle at 30% 107%,#fdf497 0%,#fd5949 45%,#d6249f 60%,#285aeb 90%);border-color:#d6249f;color:#fff}
-.social-btn.facebook:hover{background:#1877f2;border-color:#1877f2;color:#fff}
-.social-btn.twitter:hover{background:#000;border-color:#000;color:#fff}
-.social-btn.whatsapp:hover{background:#25d366;border-color:#25d366;color:#fff}
-.footer-logo-wrap{display:flex;flex-direction:column;align-items:center;gap:7px}
-.footer-logo{height:80px;width:auto;max-width:180px;object-fit:contain;mix-blend-mode:multiply}
-.footer-logo-name{font-size:.6rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px}
-.footer-divider{border:none;border-top:1px solid var(--border);margin:0 0 16px}
-.disclaimer{padding:13px 17px;border-radius:8px;background:#fffde7;border-left:3px solid #f9a825;font-size:.7rem;color:#5d4037;line-height:1.75;font-family:"JetBrains Mono",monospace}
-.disclaimer strong{color:#e65100;font-weight:700}
+/* ════════════════════════════════════════
+   DARK FOOTER
+════════════════════════════════════════ */
+.dark-footer{
+  background:#0d1f10;
+  margin-top:60px;
+  position:relative;
+  font-family:'Raleway',sans-serif;
+}
+.dark-footer-edge{
+  height:4px;
+  background:linear-gradient(90deg,#1b5e20,#43a047,#a5d6a7,#43a047,#1b5e20);
+}
+.dark-footer-inner{
+  max-width:1160px;margin:0 auto;
+  padding:48px 24px 0;
+}
+
+/* ── Three columns ── */
+.dark-footer-cols{
+  display:grid;
+  grid-template-columns:1.1fr 1fr 1fr;
+  gap:48px;
+  padding-bottom:40px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.dfc{}
+
+/* Col 1 — Brand */
+.dfc-logo{
+  height:52px;width:auto;max-width:150px;
+  object-fit:contain;
+  filter:brightness(0) invert(1);
+  opacity:.9;
+  margin-bottom:14px;
+  display:block;
+}
+.dfc-name{
+  font-size:.95rem;font-weight:800;
+  color:#e8f5e9;letter-spacing:-.2px;
+  margin-bottom:4px;
+}
+.dfc-name span{font-size:.7em;vertical-align:super;opacity:.7}
+.dfc-tagline{
+  font-size:.64rem;font-weight:600;letter-spacing:.4px;
+  color:rgba(165,214,167,.7);
+  margin-bottom:8px;
+}
+.dfc-arn{
+  display:inline-block;
+  font-family:'JetBrains Mono',monospace;
+  font-size:.6rem;font-weight:700;letter-spacing:.8px;
+  color:#a5d6a7;
+  background:rgba(165,214,167,.1);
+  border:1px solid rgba(165,214,167,.25);
+  border-radius:4px;padding:3px 9px;
+  margin-bottom:20px;
+}
+.dfc-stats{
+  display:flex;gap:8px;flex-wrap:wrap;
+}
+.dfc-stat{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:8px;padding:10px 14px;
+  text-align:center;min-width:68px;
+  transition:background .2s;
+}
+.dfc-stat:hover{background:rgba(165,214,167,.1)}
+.dfc-stat-val{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.88rem;font-weight:700;
+  color:#e8f5e9;line-height:1.1;
+}
+.dfc-stat-lbl{
+  font-size:.5rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.7px;color:rgba(165,214,167,.6);
+  margin-top:3px;
+}
+
+/* Col 2 — Contact */
+.dfc-head{
+  font-size:.6rem;font-weight:800;text-transform:uppercase;
+  letter-spacing:2px;color:#66bb6a;
+  margin-bottom:16px;
+  display:flex;align-items:center;gap:8px;
+}
+.dfc-head::after{
+  content:'';flex:1;height:1px;
+  background:linear-gradient(90deg,rgba(102,187,106,.3),transparent);
+}
+.dfc-contact-list{
+  display:flex;flex-direction:column;gap:11px;
+  margin-bottom:20px;
+}
+.dfc-contact-item{
+  display:flex;align-items:flex-start;gap:10px;
+  font-size:.76rem;color:rgba(232,245,233,.75);
+  text-decoration:none;line-height:1.5;
+  transition:color .18s;
+}
+.dfc-contact-item:hover{color:#a5d6a7}
+.dfc-contact-icon{font-size:.9rem;flex-shrink:0;margin-top:.05em}
+.dfc-contact-addr a{
+  color:rgba(232,245,233,.75);text-decoration:none;
+  transition:color .18s;line-height:1.6;
+}
+.dfc-contact-addr a:hover{color:#a5d6a7}
+.dfc-social{display:flex;gap:8px;flex-wrap:wrap}
+.dfc-social-btn{
+  display:flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:8px;
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.12);
+  color:rgba(232,245,233,.7);
+  text-decoration:none;
+  transition:all .2s;
+}
+.dfc-social-btn:hover{transform:translateY(-2px);background:rgba(165,214,167,.15);border-color:rgba(165,214,167,.3);color:#e8f5e9}
+.dfc-social-btn.instagram:hover{background:radial-gradient(circle at 30% 107%,#fdf497,#fd5949 45%,#d6249f 60%,#285aeb 90%);border-color:#d6249f;color:#fff}
+.dfc-social-btn.facebook:hover{background:#1877f2;border-color:#1877f2;color:#fff}
+.dfc-social-btn.twitter:hover{background:#111;border-color:#555;color:#fff}
+.dfc-social-btn.whatsapp:hover{background:#25d366;border-color:#25d366;color:#fff}
+
+/* Col 3 — CTA */
+.dfc-cta-desc{
+  font-size:.78rem;color:rgba(232,245,233,.65);
+  line-height:1.72;margin-bottom:22px;
+}
+.dfc-cta-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,#2e7d32,#43a047);
+  color:#fff;font-weight:800;font-size:.78rem;letter-spacing:.3px;
+  padding:12px 22px;border-radius:10px;
+  text-decoration:none;
+  border:1.5px solid #66bb6a;
+  box-shadow:0 4px 20px rgba(46,125,50,.35);
+  transition:all .22s;
+  margin-bottom:12px;
+  width:100%;justify-content:center;
+}
+.dfc-cta-btn:hover{
+  background:linear-gradient(135deg,#1b5e20,#2e7d32);
+  box-shadow:0 6px 28px rgba(46,125,50,.5);
+  transform:translateY(-1px);
+}
+.dfc-cta-btn svg{flex-shrink:0;transition:transform .2s}
+.dfc-cta-btn:hover svg{transform:translateX(3px)}
+.dfc-cta-link{
+  display:block;text-align:center;
+  font-size:.7rem;font-weight:700;
+  color:rgba(165,214,167,.7);
+  text-decoration:none;letter-spacing:.3px;
+  margin-bottom:24px;
+  transition:color .18s;
+}
+.dfc-cta-link:hover{color:#a5d6a7}
+.dfc-tool-badge{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:.58rem;font-weight:700;letter-spacing:.5px;
+  color:rgba(165,214,167,.5);
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:6px;padding:6px 10px;
+  width:100%;
+}
+
+/* ── Disclaimer row ── */
+.dark-footer-disclaimer{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:22px 0;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.dfd-warn{
+  font-size:1rem;flex-shrink:0;
+  margin-top:.1em;opacity:.8;
+}
+.dark-footer-disclaimer p{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.62rem;color:rgba(232,245,233,.4);
+  line-height:1.8;margin:0;
+}
+.dark-footer-disclaimer strong{
+  color:rgba(255,183,77,.7);font-weight:700;
+}
+
+/* ── Bottom bar ── */
+.dark-footer-bottom{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:8px;
+  padding:14px 0 20px;
+  font-size:.62rem;color:rgba(165,214,167,.35);
+  font-family:'JetBrains Mono',monospace;
+  letter-spacing:.3px;
+}
+.dfb-arn{
+  color:rgba(165,214,167,.45);
+  font-weight:700;
+}
+
+/* ── Mobile ── */
+@media(max-width:768px){
+  .dark-footer-cols{
+    grid-template-columns:1fr;
+    gap:32px;
+  }
+  .dfc-cta-btn{width:auto}
+}
+@media(max-width:640px){
+  .dark-footer-inner{padding:36px 16px 0}
+  .dark-footer-bottom{flex-direction:column;align-items:flex-start;gap:4px}
+}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
@@ -784,7 +1042,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .main-panel.active{display:block;animation:fadeUp .22s ease both}
 
 /* Navbar: seamlessly connect to tab bar */
-.navbar{margin-bottom:0!important;border-bottom:none!important;padding-bottom:14px}
+.navbar{margin-bottom:0!important;border-bottom:none!important;padding-bottom:16px}
 
 /* Mobile */
 @media(max-width:640px){
@@ -862,6 +1120,22 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 </nav>
 
 
+<!-- BRAND STRIP -->
+<div class="brand-strip">
+  <div class="brand-strip-inner">
+    <div class="brand-strip-left">
+      <span class="brand-strip-eyebrow">
+        <span class="brand-strip-dot"></span>Live AMFI Data
+      </span>
+      <h1 class="brand-strip-title">Mutual Fund Risk &amp; Return Analyzer</h1>
+    </div>
+    <div class="brand-strip-right">
+      <span class="brand-strip-pill">📊 Fund Compare</span>
+      <span class="brand-strip-pill">🧮 SIP · 🎯 Goal · 💸 SWP</span>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MAIN NAVIGATION TABS ═══ -->
 <div class="main-tabs-wrap" id="mainTabsWrap">
   <nav class="main-tabs-bar" role="tablist">
@@ -882,23 +1156,6 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 
 <!-- PANEL: FUND COMPARE -->
 <div class="main-panel active" id="mpanel-fund">
-<!-- HERO -->
-<div class="hero">
-  <div class="hero-grid"></div>
-  <div class="hero-left">
-    <div class="hero-eyebrow">Live AMFI Data</div>
-    <div class="hero-text">
-      <h1>Mutual Fund Risk &amp;<br>Return Analyzer</h1>
-      <p>Compare up to 5 funds · NAV performance · Fund metrics · SIP calculator — powered by live AMFI data.</p>
-    </div>
-  </div>
-  <div class="hero-stats">
-    <div class="hero-stat"><div class="hero-stat-val">₹250Cr+</div><div class="hero-stat-label">Assets Under Mgmt.</div></div>
-    <div class="hero-stat"><div class="hero-stat-val">350+</div><div class="hero-stat-label">Happy Clients</div></div>
-    <div class="hero-stat"><div class="hero-stat-val">ARN-251838</div><div class="hero-stat-label">AMFI Regd. MF Distributor</div></div>
-  </div>
-</div>
-
 <!-- SEARCH -->
 <div class="search-card">
   <div class="section-label">🔍 Search &amp; Add Funds (up to 5)</div>
@@ -1357,37 +1614,96 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 </div>
 
 <!-- FOOTER -->
-<div class="footer">
-  <div class="footer-main">
-    <div class="footer-info">
-      <div class="footer-brand">Abundance Financial Services®</div>
-      <div class="footer-arn">ARN-251838 · AMFI Registered Mutual Funds Distributor & SIF Distributor</div>
-      <p>Atin Kumar Agrawal<br>
-        📞 <a href="tel:+919808105923">+91 98081 05923</a> &nbsp;|&nbsp;
-        ✉️ <a href="/cdn-cgi/l/email-protection#85e6eaebf1e4e6f1c5e2e0f1e4e7f0ebe1e4ebe6e0abeceb"><span class="__cf_email__" data-cfemail="54373b3a20353720143331203536213a30353a37317a3d3a">[email&#160;protected]</span></a><br>
-        🏢 <a href="https://maps.app.goo.gl/TgQSLRDo3UBKR77g7" target="_blank" style="color:inherit;text-decoration:underline dotted;text-underline-offset:3px">1st Floor, Kapil Complex, Mukhani, Haldwani (Nainital) — 263139, Uttarakhand</a><br>
-        🌐 <a href="https://www.getabundance.in" target="_blank">www.getabundance.in</a>
-      </p>
-      <div class="social-row">
-        <span class="social-label">Follow</span>
-        <a class="social-btn instagram" href="https://www.instagram.com/abundancefinancialservices/" target="_blank" title="Instagram"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>
-        <a class="social-btn facebook" href="https://www.facebook.com/abundancefinancialservices" target="_blank" title="Facebook"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
-        <a class="social-btn twitter" href="https://x.com/abundancefinsvs" target="_blank" title="X (Twitter)"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
-        <a class="social-btn whatsapp" href="https://wa.me/919808105923" target="_blank" title="WhatsApp"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>
-      </div>
-    </div>
-    <div class="footer-logo-wrap">
-      <img class="footer-logo" src="https://www.getabundance.in/images/logo.png" alt="Abundance Financial Services">
-      <div class="footer-logo-name">getabundance.in</div>
-    </div>
-  </div>
-  <hr class="footer-divider">
-  <div class="disclaimer">
-    ⚠️ <strong>Disclaimer:</strong> Mutual fund investments are subject to market risks. Read all scheme-related documents carefully before investing. Past performance is not indicative of future returns. This tool is for informational and educational purposes only and does not constitute financial advice. Please consult your financial advisor before making investment decisions. Data sourced from AMFI via mfapi.in. | ARN-251838
-  </div>
-</div>
+</div><!-- /.page -->
 
-</div>
+<!-- ═══ DARK FOOTER (full-bleed) ═══ -->
+<footer class="dark-footer">
+  <!-- Decorative top edge -->
+  <div class="dark-footer-edge"></div>
+
+  <div class="dark-footer-inner">
+
+    <!-- ── ROW 1: Three columns ── -->
+    <div class="dark-footer-cols">
+
+      <!-- Col 1: Brand + stats -->
+      <div class="dfc dfc-brand">
+        <img class="dfc-logo" src="https://www.getabundance.in/images/logo.png"
+             alt="Abundance Financial Services" onerror="this.style.display='none'">
+        <div class="dfc-name">Abundance Financial Services<span>®</span></div>
+        <div class="dfc-tagline">AMFI Registered MF &amp; SIF Distributor</div>
+        <div class="dfc-arn">ARN-251838</div>
+        <!-- Stat chips -->
+        <div class="dfc-stats">
+          <div class="dfc-stat"><div class="dfc-stat-val">₹250Cr+</div><div class="dfc-stat-lbl">AUM</div></div>
+          <div class="dfc-stat"><div class="dfc-stat-val">350+</div><div class="dfc-stat-lbl">Clients</div></div>
+          <div class="dfc-stat"><div class="dfc-stat-val">15+</div><div class="dfc-stat-lbl">Yrs Exp.</div></div>
+        </div>
+      </div>
+
+      <!-- Col 2: Contact -->
+      <div class="dfc dfc-contact">
+        <div class="dfc-head">Get in Touch</div>
+        <div class="dfc-contact-list">
+          <a href="tel:+919808105923" class="dfc-contact-item">
+            <span class="dfc-contact-icon">📞</span>
+            <span>+91 98081 05923</span>
+          </a>
+          <a href="https://www.getabundance.in" target="_blank" class="dfc-contact-item">
+            <span class="dfc-contact-icon">🌐</span>
+            <span>www.getabundance.in</span>
+          </a>
+          <div class="dfc-contact-item dfc-contact-addr">
+            <span class="dfc-contact-icon">🏢</span>
+            <a href="https://maps.app.goo.gl/TgQSLRDo3UBKR77g7" target="_blank">
+              1st Floor, Kapil Complex,<br>Mukhani, Haldwani — 263139<br>Uttarakhand
+            </a>
+          </div>
+        </div>
+        <!-- Social -->
+        <div class="dfc-social">
+          <a class="dfc-social-btn instagram" href="https://www.instagram.com/abundancefinancialservices/" target="_blank" title="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>
+          <a class="dfc-social-btn facebook" href="https://www.facebook.com/abundancefinancialservices" target="_blank" title="Facebook"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+          <a class="dfc-social-btn twitter" href="https://x.com/abundancefinsvs" target="_blank" title="X (Twitter)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+          <a class="dfc-social-btn whatsapp" href="https://wa.me/919808105923" target="_blank" title="WhatsApp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>
+        </div>
+      </div>
+
+      <!-- Col 3: CTA + About tool -->
+      <div class="dfc dfc-cta">
+        <div class="dfc-head">Start Your Journey</div>
+        <p class="dfc-cta-desc">Expert guidance on mutual funds, SIPs, and wealth planning — personalised for your goals.</p>
+        <a href="https://www.getabundance.in/contact-us" target="_blank" class="dfc-cta-btn">
+          📅 Book a Consultation
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="https://www.getabundance.in" target="_blank" class="dfc-cta-link">
+          Visit getabundance.in →
+        </a>
+        <div class="dfc-tool-badge">
+          <span>🛠</span>
+          <span>Powered by live AMFI data · mfapi.in</span>
+        </div>
+      </div>
+
+    </div><!-- /.dark-footer-cols -->
+
+    <!-- ── ROW 2: Disclaimer bar ── -->
+    <div class="dark-footer-disclaimer">
+      <span class="dfd-warn">⚠</span>
+      <p><strong>Disclaimer:</strong> Mutual fund investments are subject to market risks. Read all scheme-related documents carefully before investing. Past performance is not indicative of future returns. This tool is for informational and educational purposes only and does not constitute financial advice. Please consult your financial advisor before making investment decisions. Data sourced from AMFI via mfapi.in.</p>
+    </div>
+
+    <!-- ── ROW 3: Bottom bar ── -->
+    <div class="dark-footer-bottom">
+      <span>© <span id="footerYear"></span> Abundance Financial Services · Atin Kumar Agrawal</span>
+      <span class="dfb-arn">ARN-251838 · AMFI Registered MF &amp; SIF Distributor</span>
+      <span class="dfb-arn">GST: 05AXYPA6954G1Z3</span>
+    </div>
+
+  </div><!-- /.dark-footer-inner -->
+</footer>
+<div style="display:none"><!-- page div already closed above -->
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 
 /* ════════════════════════════════════════
@@ -2955,6 +3271,8 @@ ${chartImg?`<div class="sec">Projection</div><div class="ci"><img src="${chartIm
 }
 
 calcSWP();
+
+document.getElementById('footerYear').textContent = new Date().getFullYear();
 </script>
 </body>
 </html>
