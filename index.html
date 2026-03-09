@@ -59,23 +59,21 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .nav-link:hover{color:var(--g2);border-color:var(--border2);background:var(--g-xlight)}
 .nav-tag{font-size:.64rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:7px 14px;border-radius:8px;background:var(--g-xlight);border:1.5px solid var(--g-light);color:var(--g2)}
 
-/* BRAND STRIP — slim persistent identity bar */
+/* ════════════════════════════════════════
+   BRAND STRIP — live ticker + IST clock
+════════════════════════════════════════ */
 .brand-strip{
   background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);
-  margin:0 -24px 0;
-  padding:0 24px;
-  position:relative;
-  overflow:hidden;
+  margin:0 -24px 0;padding:0 24px;
+  position:relative;overflow:hidden;
   border-bottom:1px solid rgba(255,255,255,.12);
 }
-/* Subtle grid texture */
 .brand-strip::before{
   content:'';position:absolute;inset:0;
   background-image:
     linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),
     linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
-  background-size:28px 28px;
-  pointer-events:none;
+  background-size:28px 28px;pointer-events:none;
   mask-image:radial-gradient(ellipse 70% 100% at 0% 50%,black 20%,transparent 70%);
 }
 .brand-strip-inner{
@@ -84,7 +82,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   gap:16px;padding:10px 0;
   position:relative;z-index:1;
 }
-.brand-strip-left{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand-strip-left{display:flex;align-items:center;gap:14px;flex-shrink:0}
 .brand-strip-eyebrow{
   display:inline-flex;align-items:center;gap:6px;
   font-size:.58rem;font-weight:700;letter-spacing:1.8px;
@@ -101,17 +99,62 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .brand-strip-title{
   font-size:clamp(.88rem,2vw,1.05rem);font-weight:800;
   color:#fff;letter-spacing:-.2px;line-height:1.2;margin:0;
-}
-.brand-strip-right{
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;
-}
-.brand-strip-pill{
-  font-size:.62rem;font-weight:700;letter-spacing:.3px;
-  color:rgba(255,255,255,.75);
-  padding:4px 11px;border-radius:20px;
-  background:rgba(255,255,255,.1);
-  border:1px solid rgba(255,255,255,.18);
   white-space:nowrap;
+}
+/* Ticker */
+.brand-ticker-wrap{
+  flex:1;overflow:hidden;
+  mask-image:linear-gradient(90deg,transparent 0%,black 8%,black 92%,transparent 100%);
+  -webkit-mask-image:linear-gradient(90deg,transparent 0%,black 8%,black 92%,transparent 100%);
+  margin:0 16px;
+}
+.brand-ticker{
+  display:inline-flex;align-items:center;gap:12px;
+  white-space:nowrap;
+  animation:tickerScroll 30s linear infinite;
+}
+.brand-ticker:hover{animation-play-state:paused}
+@keyframes tickerScroll{
+  0%{transform:translateX(0)}
+  100%{transform:translateX(-50%)}
+}
+.bt-item{
+  font-size:.62rem;font-weight:700;letter-spacing:.5px;
+  color:rgba(255,255,255,.7);
+  padding:3px 10px;border-radius:20px;
+  background:rgba(255,255,255,.09);
+  border:1px solid rgba(255,255,255,.14);
+  white-space:nowrap;transition:all .2s;cursor:default;
+}
+.bt-item:hover{background:rgba(255,255,255,.18);color:#fff}
+.bt-sep{color:rgba(255,255,255,.3);font-size:.7rem;flex-shrink:0}
+/* IST Clock */
+.brand-strip-right{display:flex;align-items:center;flex-shrink:0}
+.brand-clock{
+  display:flex;align-items:baseline;gap:5px;
+  background:rgba(0,0,0,.2);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:8px;padding:5px 12px;
+}
+.brand-clock-time{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.78rem;font-weight:700;color:#a5d6a7;
+  letter-spacing:.5px;min-width:56px;
+}
+.brand-clock-label{
+  font-size:.5rem;font-weight:800;letter-spacing:1.5px;
+  color:rgba(255,255,255,.45);text-transform:uppercase;
+}
+/* Mobile */
+@media(max-width:768px){
+  .brand-ticker-wrap{display:none}
+}
+@media(max-width:640px){
+  .brand-strip{margin:0 -10px;padding:0 10px}
+  .brand-strip-inner{padding:9px 0;gap:10px}
+  .brand-strip-title{font-size:.88rem}
+  .brand-strip-eyebrow{font-size:.54rem;padding:2px 8px}
+  .brand-clock{display:none}
 }
 
 /* Footer credential stats */
@@ -235,39 +278,169 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .section-divider-label{font-size:.68rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);white-space:nowrap;padding:6px 18px;background:var(--surface2);border:1.5px solid var(--border);border-radius:20px}
 
 /* SIP CALCULATOR */
+.sip-split-card{background:var(--surface);border-radius:var(--radius);border:1.5px solid var(--border);box-shadow:var(--shadow);overflow:hidden;animation:fadeUp .4s .2s ease both}
 .sip-card{background:var(--surface);border-radius:var(--radius);border:1.5px solid var(--border);box-shadow:var(--shadow);overflow:hidden;animation:fadeUp .4s .2s ease both}
 .sip-card-header{padding:20px 24px 0}
 .sip-card-title{font-size:.6rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding-bottom:15px;border-bottom:1px solid var(--surface2);display:flex;align-items:center;gap:10px}
 .sip-card-title::before{content:"";width:3px;height:13px;background:var(--g3);border-radius:2px}
 .sip-card-body{padding:22px 24px 28px}
-.sip-params{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:24px}
+
+/* Mode toggle */
+.sip-mode-toggle{display:flex;border:1.5px solid var(--border2);border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;font-family:'Raleway',sans-serif}
+.smt-btn{padding:6px 16px;border:none;background:#fff;color:var(--g2);cursor:pointer;letter-spacing:.3px;transition:all .15s;font-family:'Raleway',sans-serif;font-size:.7rem;font-weight:700}
+.smt-btn+.smt-btn{border-left:1px solid var(--border2)}
+.smt-btn.active{background:var(--g1);color:#fff}
+
+/* Print btn */
+.sip-print-btn{display:flex;align-items:center;gap:6px;padding:6px 14px;border:1.5px solid var(--border2);border-radius:8px;background:#fff;color:var(--g2);font-family:'Raleway',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.3px}
+.sip-print-btn:hover{background:var(--g-xlight)}
+
+/* ── Split layout ── */
+.sip-split-body{display:grid;grid-template-columns:340px 1fr;gap:0;min-height:560px}
+.sip-left{padding:22px 24px 28px;border-right:1.5px solid var(--surface2);background:var(--surface2);display:flex;flex-direction:column;gap:18px}
+.sip-right{padding:22px 24px 28px;display:flex;flex-direction:column;gap:18px;overflow:hidden}
+
+/* Label + badge row */
+.sif-label-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.sif-label-row label{display:block;font-size:.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:0}
+.sif-val-badge{font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:700;color:var(--g1);background:var(--g-xlight);border:1px solid var(--g-light);border-radius:6px;padding:2px 9px;transition:all .15s}
 .sip-field label{display:block;font-size:.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.sif-solo-label{display:block;font-size:.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+
+/* ── Stepper inputs ── */
+.sip-stepper{
+  display:flex;align-items:stretch;gap:0;
+  border:1.5px solid var(--border2);border-radius:10px;
+  overflow:hidden;background:#fff;
+}
+.stp-btn{
+  width:40px;flex-shrink:0;
+  border:none;background:var(--g-xlight);
+  color:var(--g1);font-size:1.1rem;font-weight:700;
+  cursor:pointer;transition:background .15s;
+  display:flex;align-items:center;justify-content:center;
+  user-select:none;-webkit-user-select:none;
+  touch-action:manipulation;
+}
+.stp-btn:hover{background:var(--g-light)}
+.stp-btn:active{background:var(--g2);color:#fff}
+.stp-input-wrap{
+  flex:1;display:flex;align-items:center;
+  border-left:1px solid var(--border);
+  border-right:1px solid var(--border);
+  padding:0 8px;gap:3px;min-width:0;
+}
+.stp-prefix,.stp-suffix{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.72rem;font-weight:700;color:var(--muted);
+  flex-shrink:0;
+}
+.stp-input{
+  flex:1;min-width:0;
+  border:none;outline:none;background:transparent;
+  font-family:'JetBrains Mono',monospace;
+  font-size:.88rem;font-weight:700;color:var(--g1);
+  text-align:right;padding:10px 0;
+  -moz-appearance:textfield;
+}
+.stp-input::-webkit-outer-spin-button,
+.stp-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.stp-unit-select{
+  border:none;outline:none;background:transparent;
+  font-family:'Raleway',sans-serif;font-size:.7rem;font-weight:700;
+  color:var(--muted);cursor:pointer;padding:0 2px;
+  flex-shrink:0;
+}
+/* Quick-pick hint pills */
+.stp-hints{
+  display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;
+}
+.stp-hint{
+  padding:3px 9px;border-radius:20px;
+  border:1px solid var(--border);
+  background:#fff;
+  font-family:'JetBrains Mono',monospace;
+  font-size:.58rem;font-weight:700;color:var(--muted);
+  cursor:pointer;transition:all .15s;
+  touch-action:manipulation;
+}
+.stp-hint:hover{border-color:var(--g3);color:var(--g1);background:var(--g-xlight)}
+
+/* Hidden inputs (still in DOM for JS) */
 .sip-input{width:100%;padding:11px 14px;font-family:"JetBrains Mono",monospace;font-size:.9rem;font-weight:600;border:1.5px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);outline:none;transition:all .2s}
 .sip-input:focus{border-color:var(--g3);background:#fff;box-shadow:0 0 0 3px rgba(67,160,71,.1)}
-.sip-select{width:100%;padding:11px 14px;font-family:"Raleway",sans-serif;font-size:.84rem;font-weight:700;border:1.5px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);outline:none;cursor:pointer;transition:all .2s;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235e8a5e' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.sip-select{width:100%;padding:11px 14px;font-family:'Raleway',sans-serif;font-size:.84rem;font-weight:700;border:1.5px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);outline:none;cursor:pointer;transition:all .2s;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235e8a5e' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-color:var(--surface2)}
 .sip-select:focus{border-color:var(--g3);background-color:#fff;box-shadow:0 0 0 3px rgba(67,160,71,.1)}
 .dur-row{display:flex;gap:8px}
 .dur-row .sip-input{flex:1;min-width:0}
 .dur-row .sip-select{width:106px;flex-shrink:0}
-.sip-summary{display:flex;flex-wrap:wrap;border-radius:11px;border:1.5px solid var(--g-light);overflow:hidden;background:var(--g-xlight);margin-bottom:22px}
+
+/* ── Big result display ── */
+.sip-big-result{
+  background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 55%,#388e3c 100%);
+  border-radius:12px;padding:20px 22px;position:relative;overflow:hidden;
+}
+.sip-big-result::before{
+  content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+  background-size:22px 22px;pointer-events:none;
+}
+.sbr-eyebrow{font-size:.56rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.65);margin-bottom:6px;position:relative}
+.sbr-corpus{
+  font-family:'JetBrains Mono',monospace;
+  font-size:clamp(2rem,5vw,3rem);
+  font-weight:800;color:#fff;
+  line-height:1.1;margin-bottom:10px;
+  position:relative;
+  text-shadow:0 2px 12px rgba(0,0,0,.2);
+  transition:color .15s;
+}
+.sbr-corpus.animating{color:rgba(255,255,255,.6)}
+.sbr-sub-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;position:relative}
+.sbr-chip{font-size:.64rem;font-weight:700;padding:4px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace}
+.sbr-invested{background:rgba(255,255,255,.15);color:rgba(255,255,255,.85)}
+.sbr-gain{background:rgba(165,214,167,.25);color:#c8e6c9}
+.sbr-mult{background:rgba(255,255,255,.1);color:rgba(255,255,255,.7)}
+.sbr-insight{font-size:.72rem;color:rgba(255,255,255,.72);line-height:1.6;margin-bottom:14px;position:relative;font-style:italic}
+/* Stacked bar */
+.sbr-bar-wrap{display:flex;height:6px;border-radius:4px;overflow:hidden;margin-bottom:5px;position:relative;background:rgba(255,255,255,.1)}
+.sbr-bar-invested{background:rgba(255,255,255,.4);height:100%;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.sbr-bar-gain{background:#a5d6a7;height:100%;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.sbr-bar-labels{display:flex;justify-content:space-between;font-size:.52rem;color:rgba(255,255,255,.45);position:relative}
+
+/* Summary strip */
+.sip-summary{display:flex;flex-wrap:wrap;border-radius:11px;border:1.5px solid var(--g-light);overflow:hidden;background:var(--g-xlight)}
 .sip-sum-item{flex:1;min-width:100px;padding:14px 16px;border-right:1px solid var(--g-light);text-align:center}
 .sip-sum-item:last-child{border-right:none}
 .sip-sum-label{font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:5px}
-.sip-sum-val{font-family:"JetBrains Mono",monospace;font-size:.96rem;font-weight:700;color:var(--g1)}
-.sip-results-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:26px}
+.sip-sum-val{font-family:'JetBrains Mono',monospace;font-size:.96rem;font-weight:700;color:var(--g1)}
+
+/* Scenario cards */
+.sip-results-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
 .sip-result-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:11px;padding:20px;position:relative;overflow:hidden;transition:all .2s}
 .sip-result-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--border2)}
 .src-accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:2px 2px 0 0}
 .src-header{display:flex;align-items:center;gap:8px;margin-bottom:14px}
 .src-dot{width:10px;height:10px;border-radius:50%}
 .src-name{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
-.src-corpus{font-family:"JetBrains Mono",monospace;font-size:1.9rem;font-weight:800;color:var(--g1);line-height:1.1;margin-bottom:2px}
-.src-corpus-label{font-size:.63rem;color:var(--muted);margin-bottom:14px;font-family:"JetBrains Mono",monospace}
+.src-corpus{font-family:'JetBrains Mono',monospace;font-size:1.9rem;font-weight:800;color:var(--g1);line-height:1.1;margin-bottom:2px}
+.src-corpus-label{font-size:.63rem;color:var(--muted);margin-bottom:14px;font-family:'JetBrains Mono',monospace}
 .src-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
 .src-row:last-child{border-bottom:none}
 .src-key{font-size:.7rem;color:var(--text2)}
-.src-val{font-family:"JetBrains Mono",monospace;font-size:.8rem;font-weight:600}
+.src-val{font-family:'JetBrains Mono',monospace;font-size:.8rem;font-weight:600}
 .sip-chart-wrap{height:300px;position:relative}
+
+/* ── Mobile ── */
+@media(max-width:900px){
+  .sip-split-body{grid-template-columns:1fr;min-height:unset}
+  .sip-left{border-right:none;border-bottom:1.5px solid var(--border)}
+  .sbr-corpus{font-size:2rem}
+}
+@media(max-width:640px){
+  .sip-left,.sip-right{padding:16px}
+  .sbr-corpus{font-size:1.7rem}
+}
 
 /* ════════════════════════════════════════
    DARK FOOTER
@@ -531,7 +704,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   /* ══════════════════════════════════
      SEARCH & CARDS
   ══════════════════════════════════ */
-  .search-card,.footer,.sip-card-body{padding:12px}
+  .search-card{padding:12px}
 
   /* ══════════════════════════════════
      RISK TABLE → stacked card layout
@@ -545,16 +718,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   .risk-table td:first-child{background:var(--surface2);padding:9px 12px;font-weight:700}
   .risk-table td[data-label]:before{content:attr(data-label);font-size:.56rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:"JetBrains Mono",monospace;flex-shrink:0;margin-right:8px}
 
-  /* ══════════════════════════════════
-     SIP CALCULATOR
-  ══════════════════════════════════ */
-  .sip-card-body{padding:12px}
-  .sip-params{grid-template-columns:1fr 1fr!important}
-  .sip-sum-row{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap!important}
-  .sip-sum-row::-webkit-scrollbar{display:none}
-  .sip-sum-item{min-width:88px;flex-shrink:0;padding:10px 8px}
-  .sip-summary{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-  .sip-summary::-webkit-scrollbar{display:none}
+
   .sip-results-grid{grid-template-columns:1fr!important}
 
   /* Period bar: swipe row */
@@ -680,7 +844,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   .swp-journey-note{font-size:.52rem;opacity:.62;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 
   /* Params grids → 2-col */
-  .swp-params,.sip-params{grid-template-columns:1fr 1fr!important}
+  .swp-params{grid-template-columns:1fr 1fr!important}
 
   /* Delay box */
   .swp-delay-box{padding:12px 14px}
@@ -765,11 +929,10 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 ══════════════════════════════════ */
 @media (max-width:480px){
   .page{padding:0 8px 40px}
-  .sip-card-body{padding:10px}
   .swp-body{padding:12px 10px 18px}
 
   /* SWP params → 1-col */
-  .swp-params,.sip-params{grid-template-columns:1fr!important}
+  .swp-params{grid-template-columns:1fr!important}
 
   /* Fuel → 2-col */
   .swp-fuel-stats{grid-template-columns:1fr 1fr!important}
@@ -822,6 +985,135 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   .goal-preset-btns-wrap{flex-wrap:wrap}
 }
 
+
+/* ════════════════════════════════════════
+   FUND COMPARE — quick-add + empty state
+════════════════════════════════════════ */
+/* Quick-add row */
+.quick-add-wrap{margin-top:16px;padding-top:14px;border-top:1px dashed var(--border)}
+.qa-label{font-size:.56rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.qa-chips{display:flex;flex-wrap:wrap;gap:8px}
+.qa-skeleton{
+  display:inline-block;height:52px;width:130px;border-radius:10px;
+  background:linear-gradient(90deg,#d4ebd4 25%,#e8f5e9 50%,#d4ebd4 75%);
+  background-size:200% 100%;
+  animation:qaSkeleton 1.4s ease-in-out infinite;
+}
+@keyframes qaSkeleton{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.qa-chip{
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  padding:8px 14px;border-radius:10px;
+  border:1.5px solid var(--border);
+  background:var(--surface2);
+  cursor:pointer;transition:all .18s;text-align:left;
+  font-family:'Raleway',sans-serif;
+}
+.qa-chip:hover{border-color:var(--g3);background:var(--g-xlight);transform:translateY(-1px);box-shadow:var(--shadow)}
+.qa-chip.added{border-color:var(--g2);background:var(--g-xlight);opacity:.5;pointer-events:none}
+.qa-chip-cat{font-size:.5rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--g3)}
+.qa-chip-name{font-size:.72rem;font-weight:700;color:var(--text2)}
+
+/* Empty state upgrade */
+.empty-state{
+  text-align:center;padding:48px 24px 32px;
+  animation:fadeUp .4s ease both;
+}
+.es-chart{margin:0 auto 20px;width:min(280px,100%);position:relative}
+.es-svg{width:100%;display:block}
+.es-line{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.es-line-1{stroke:var(--g3);stroke-dasharray:400;stroke-dashoffset:400;animation:drawLine 1.8s .2s ease forwards}
+.es-line-2{stroke:var(--c1);opacity:.55;stroke-dasharray:400;stroke-dashoffset:400;animation:drawLine 1.8s .5s ease forwards}
+.es-line-3{stroke:var(--c2);opacity:.4;stroke-dasharray:400;stroke-dashoffset:400;animation:drawLine 1.8s .8s ease forwards}
+@keyframes drawLine{to{stroke-dashoffset:0}}
+.es-icon{font-size:2rem;margin-bottom:10px}
+.empty-title{font-size:1rem;font-weight:800;color:var(--text);margin-bottom:8px}
+.empty-p{font-size:.78rem;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.es-try-row{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.es-try-label{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);flex-shrink:0}
+.es-try-btn{
+  padding:8px 16px;border-radius:20px;border:1.5px solid var(--g-light);
+  background:var(--g-xlight);color:var(--g1);
+  font-family:'Raleway',sans-serif;font-size:.72rem;font-weight:700;
+  cursor:pointer;transition:all .18s;
+}
+.es-try-btn:hover{background:var(--g2);color:#fff;border-color:var(--g2);transform:translateY(-1px);box-shadow:var(--shadow)}
+
+/* ════════════════════════════════════════
+   GOAL PLANNER — icon preset cards + north star
+════════════════════════════════════════ */
+.gp-presets-section{margin-bottom:20px}
+.gp-preset-cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+  gap:10px;
+}
+.gp-preset-card{
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:14px 10px;border-radius:12px;
+  border:1.5px solid var(--border);
+  background:var(--surface2);
+  cursor:pointer;transition:all .18s;
+  font-family:'Raleway',sans-serif;
+  text-align:center;
+}
+.gp-preset-card:hover{
+  border-color:var(--g3);background:var(--g-xlight);
+  transform:translateY(-2px);box-shadow:var(--shadow);
+}
+.gp-preset-card.active{
+  border-color:var(--g2);background:linear-gradient(135deg,var(--g-xlight),#fff);
+  box-shadow:0 0 0 3px rgba(46,125,50,.1);
+}
+.gppc-icon{font-size:1.6rem;line-height:1;margin-bottom:2px}
+.gppc-name{font-size:.68rem;font-weight:800;color:var(--text2);line-height:1.3}
+.gppc-hint{font-size:.55rem;color:var(--muted);font-family:'JetBrains Mono',monospace;line-height:1.4}
+.gp-preset-card.active .gppc-name{color:var(--g1)}
+
+/* North star banner */
+.gp-north-star{
+  display:flex;align-items:center;gap:14px;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  border-radius:12px;padding:16px 20px;
+  margin-bottom:20px;
+  position:relative;overflow:hidden;
+}
+.gp-north-star::before{
+  content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);
+  background-size:20px 20px;pointer-events:none;
+}
+.gpns-icon{font-size:1.6rem;flex-shrink:0;position:relative}
+.gpns-text{position:relative;flex:1;min-width:0}
+.gpns-label{
+  font-size:.52rem;font-weight:800;letter-spacing:2px;
+  text-transform:uppercase;color:rgba(255,255,255,.6);
+  margin-bottom:4px;
+}
+.gpns-sentence{
+  font-size:.85rem;font-weight:700;color:#fff;
+  line-height:1.4;
+}
+
+/* Keep old goal-preset-btn for JS compat — hidden */
+.goal-preset-btn{display:none}
+
+/* Mobile */
+@media(max-width:640px){
+  .gp-preset-cards{grid-template-columns:repeat(4,1fr)}
+  .gppc-hint{display:none}
+  .qa-chip-cat{display:none}
+}
+@media(max-width:400px){
+  .gp-preset-cards{grid-template-columns:repeat(3,1fr)}
+}
+
+/* Goal planner inputs grid */
+.sip-card-body .sip-params{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:20px;margin-bottom:20px}
+.sip-card-body .sip-field{display:flex;flex-direction:column;gap:0}
+.sip-card-body .sip-field label{margin-top:0;margin-bottom:7px}
+.sip-card-body .sip-field .sip-input,
+.sip-card-body .sip-field .sip-select{margin-top:0}
 
 /* GOAL PLANNER */
 .goal-preset-btn{padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-family:"Raleway",sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
@@ -1123,16 +1415,70 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 <!-- BRAND STRIP -->
 <div class="brand-strip">
   <div class="brand-strip-inner">
+
+    <!-- Left: live badge + title -->
     <div class="brand-strip-left">
       <span class="brand-strip-eyebrow">
         <span class="brand-strip-dot"></span>Live AMFI Data
       </span>
       <h1 class="brand-strip-title">Mutual Fund Risk &amp; Return Analyzer</h1>
     </div>
-    <div class="brand-strip-right">
-      <span class="brand-strip-pill">📊 Fund Compare</span>
-      <span class="brand-strip-pill">🧮 SIP · 🎯 Goal · 💸 SWP</span>
+
+    <!-- Center: scrolling category ticker -->
+    <div class="brand-ticker-wrap">
+      <div class="brand-ticker" id="brandTicker">
+        <span class="bt-item">📈 Large Cap</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">🚀 Small Cap</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">⚡ Mid Cap</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">🌿 Flexi Cap</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">💰 ELSS</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">🏦 Debt</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">⚖️ Hybrid</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">🌍 International</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">📊 Index</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">💎 Multi Asset</span>
+        <span class="bt-sep">·</span>
+        <!-- duplicate for seamless loop -->
+        <span class="bt-item">📈 Large Cap</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">🚀 Small Cap</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">⚡ Mid Cap</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">🌿 Flexi Cap</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">💰 ELSS</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">🏦 Debt</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">⚖️ Hybrid</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">🌍 International</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">📊 Index</span>
+        <span class="bt-sep">·</span>
+        <span class="bt-item">💎 Multi Asset</span>
+        <span class="bt-sep">·</span>
+      </div>
     </div>
+
+    <!-- Right: IST clock -->
+    <div class="brand-strip-right">
+      <div class="brand-clock">
+        <span class="brand-clock-time" id="brandClockTime">--:--:--</span>
+        <span class="brand-clock-label">IST</span>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1158,16 +1504,28 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 <div class="main-panel active" id="mpanel-fund">
 <!-- SEARCH -->
 <div class="search-card">
-  <div class="section-label">🔍 Search &amp; Add Funds (up to 5)</div>
+  <div class="section-label">🔍 Search &amp; Add Funds <span style="font-weight:500;text-transform:none;letter-spacing:0;font-size:.65rem;color:var(--muted)">(up to 5)</span></div>
   <div class="search-wrap">
     <input class="search-input" type="text" id="mfInput"
-      placeholder="Type fund name e.g. 'Parag Parikh', 'Quant Small Cap', 'HDFC Flexi Cap'..."
+      placeholder="Search by fund name, AMC or category…"
       oninput="onSearch()" autocomplete="off">
     <div class="dropdown" id="dropdown"></div>
   </div>
-  <div class="search-hint">↳ Live search powered by mfapi.in · AMFI registered data</div>
+  <div class="search-hint">↳ Live search · AMFI registered data via mfapi.in</div>
   <div class="loading-bar" id="loadingBar"><div class="loading-bar-inner"></div></div>
   <div class="chips" id="chips"></div>
+
+  <!-- Quick-add popular funds — dynamically resolved -->
+  <div class="quick-add-wrap" id="quickAddWrap">
+    <div class="qa-label">⚡ Popular picks — click to add instantly</div>
+    <div class="qa-chips" id="qaChips">
+      <span class="qa-skeleton"></span>
+      <span class="qa-skeleton"></span>
+      <span class="qa-skeleton"></span>
+      <span class="qa-skeleton"></span>
+      <span class="qa-skeleton"></span>
+    </div>
+  </div>
 </div>
 
 <!-- TOOLBAR -->
@@ -1198,10 +1556,20 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 
 <!-- FUND CONTENT -->
 <div id="mainContent">
-  <div class="empty-state">
-    <div class="empty-icon">🌿</div>
-    <div class="empty-title">No funds selected</div>
-    <p class="empty-p">Search and add up to 5 funds above to begin your analysis</p>
+  <div class="empty-state" id="emptyState">
+    <!-- Animated chart lines -->
+    <div class="es-chart">
+      <svg viewBox="0 0 280 80" fill="none" xmlns="http://www.w3.org/2000/svg" class="es-svg">
+        <polyline class="es-line es-line-1" points="0,65 30,58 60,50 90,42 120,38 150,28 180,22 210,18 240,12 280,8"/>
+        <polyline class="es-line es-line-2" points="0,72 30,68 60,62 90,55 120,52 150,46 180,40 210,36 240,30 280,24"/>
+        <polyline class="es-line es-line-3" points="0,70 30,72 60,68 90,65 120,60 150,55 180,50 210,46 240,42 280,38"/>
+      </svg>
+    </div>
+    <div class="es-icon">📊</div>
+    <div class="empty-title">Compare up to 5 funds side-by-side</div>
+    <p class="empty-p">Search above or pick a popular fund below to get started</p>
+    <!-- Try-me shortcuts -->
+    <div class="es-try-row" id="esTryRow"><span class="es-try-label">Try:</span></div>
   </div>
 </div>
 
@@ -1210,28 +1578,74 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 
 <!-- PANEL: SIP CALCULATOR -->
 <div class="main-panel" id="mpanel-sip">
-<!-- SIP CALCULATOR -->
-<div class="sip-card">
+<div class="sip-card sip-split-card">
+
+  <!-- ── HEADER ── -->
   <div class="sip-card-header">
     <div class="sip-card-title" style="justify-content:space-between">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span id="calcModeTitle">SIP Returns Calculator</span>
-        <div style="display:flex;border:1.5px solid var(--border2);border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;font-family:'Raleway',sans-serif">
-          <button id="modeSIP" onclick="setCalcMode('sip')" style="padding:5px 14px;background:var(--g1);color:#fff;border:none;cursor:pointer;letter-spacing:.3px">SIP</button>
-          <button id="modeLump" onclick="setCalcMode('lump')" style="padding:5px 14px;background:#fff;color:var(--g2);border:none;border-left:1px solid var(--border2);cursor:pointer;letter-spacing:.3px">Lumpsum</button>
-          <button id="modeBoth" onclick="setCalcMode('both')" style="padding:5px 14px;background:#fff;color:var(--g2);border:none;border-left:1px solid var(--border2);cursor:pointer;letter-spacing:.3px">SIP + Lumpsum</button>
+        <div class="sip-mode-toggle">
+          <button id="modeSIP"  onclick="setCalcMode('sip')"  class="smt-btn active">SIP</button>
+          <button id="modeLump" onclick="setCalcMode('lump')" class="smt-btn">Lumpsum</button>
+          <button id="modeBoth" onclick="setCalcMode('both')" class="smt-btn">SIP + Lumpsum</button>
         </div>
       </div>
-      <button onclick="printCalc()" style="display:flex;align-items:center;gap:6px;padding:6px 14px;border:1.5px solid var(--border2);border-radius:8px;background:#fff;color:var(--g2);font-family:'Raleway',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.3px;text-transform:none" onmouseover="this.style.background='var(--g-xlight)'" onmouseout="this.style.background='#fff'">
+      <button onclick="printCalc()" class="sip-print-btn">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         Print / PDF
       </button>
     </div>
   </div>
-  <div class="sip-card-body">
-    <div class="sip-params">
+
+  <!-- ── SPLIT BODY ── -->
+  <div class="sip-split-body">
+
+    <!-- ══ LEFT: Inputs ══ -->
+    <div class="sip-left">
+
+      <!-- SIP Amount -->
       <div class="sip-field sip-only">
-        <label>SIP Frequency</label>
+        <label class="sif-solo-label">SIP Amount</label>
+        <div class="sip-stepper">
+          <button class="stp-btn" onclick="stepField('sipAmount',-500,1,999999);calcSIP()">−</button>
+          <div class="stp-input-wrap">
+            <span class="stp-prefix">₹</span>
+            <input class="stp-input" id="sipAmount" type="number" value="10000" min="1" step="100" oninput="calcSIP()">
+          </div>
+          <button class="stp-btn" onclick="stepField('sipAmount',500,1,999999);calcSIP()">+</button>
+        </div>
+        <div class="stp-hints">
+          <button class="stp-hint" onclick="setField('sipAmount',1000);calcSIP()">₹1K</button>
+          <button class="stp-hint" onclick="setField('sipAmount',5000);calcSIP()">₹5K</button>
+          <button class="stp-hint" onclick="setField('sipAmount',10000);calcSIP()">₹10K</button>
+          <button class="stp-hint" onclick="setField('sipAmount',25000);calcSIP()">₹25K</button>
+          <button class="stp-hint" onclick="setField('sipAmount',50000);calcSIP()">₹50K</button>
+        </div>
+      </div>
+
+      <!-- Lumpsum Amount -->
+      <div class="sip-field lump-only" style="display:none">
+        <label class="sif-solo-label">Lumpsum Amount</label>
+        <div class="sip-stepper">
+          <button class="stp-btn" onclick="stepField('lumpAmount',-10000,0,99999999);calcSIP()">−</button>
+          <div class="stp-input-wrap">
+            <span class="stp-prefix">₹</span>
+            <input class="stp-input" id="lumpAmount" type="number" value="100000" min="0" step="1000" oninput="calcSIP()">
+          </div>
+          <button class="stp-btn" onclick="stepField('lumpAmount',10000,0,99999999);calcSIP()">+</button>
+        </div>
+        <div class="stp-hints">
+          <button class="stp-hint" onclick="setField('lumpAmount',50000);calcSIP()">₹50K</button>
+          <button class="stp-hint" onclick="setField('lumpAmount',100000);calcSIP()">₹1L</button>
+          <button class="stp-hint" onclick="setField('lumpAmount',500000);calcSIP()">₹5L</button>
+          <button class="stp-hint" onclick="setField('lumpAmount',1000000);calcSIP()">₹10L</button>
+        </div>
+      </div>
+
+      <!-- SIP Frequency -->
+      <div class="sip-field sip-only">
+        <label class="sif-solo-label">SIP Frequency</label>
         <select class="sip-select" id="sipFreq" onchange="calcSIP()">
           <option value="daily">Daily</option>
           <option value="weekly">Weekly</option>
@@ -1240,42 +1654,107 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
           <option value="annually">Annually</option>
         </select>
       </div>
-      <div class="sip-field sip-only">
-        <label>SIP Amount (₹)</label>
-        <input class="sip-input" id="sipAmount" type="number" value="10000" min="1" step="100" oninput="calcSIP()">
-      </div>
-      <div class="sip-field lump-only" style="display:none">
-        <label>Lumpsum Amount (₹)</label>
-        <input class="sip-input" id="lumpAmount" type="number" value="100000" min="1" step="1000" oninput="calcSIP()">
-      </div>
+
+      <!-- Duration -->
       <div class="sip-field">
-        <label>Duration</label>
-        <div class="dur-row">
-          <input class="sip-input" id="sipDuration" type="number" value="10" min="1" step="1" oninput="calcSIP()">
-          <select class="sip-select" id="sipDurationUnit" onchange="calcSIP()">
-            <option value="years" selected>Years</option>
-            <option value="months">Months</option>
-          </select>
+        <label class="sif-solo-label">Duration</label>
+        <div class="sip-stepper">
+          <button class="stp-btn" onclick="stepField('sipDuration',-1,1,99);calcSIP()">−</button>
+          <div class="stp-input-wrap">
+            <input class="stp-input" id="sipDuration" type="number" value="10" min="1" step="1" oninput="calcSIP()" style="text-align:center">
+            <select class="stp-unit-select" id="sipDurationUnit" onchange="calcSIP()">
+              <option value="years" selected>Yrs</option>
+              <option value="months">Mo</option>
+            </select>
+          </div>
+          <button class="stp-btn" onclick="stepField('sipDuration',1,1,99);calcSIP()">+</button>
+        </div>
+        <div class="stp-hints">
+          <button class="stp-hint" onclick="setField('sipDuration',3);setUnit('sipDurationUnit','years');calcSIP()">3Y</button>
+          <button class="stp-hint" onclick="setField('sipDuration',5);setUnit('sipDurationUnit','years');calcSIP()">5Y</button>
+          <button class="stp-hint" onclick="setField('sipDuration',10);setUnit('sipDurationUnit','years');calcSIP()">10Y</button>
+          <button class="stp-hint" onclick="setField('sipDuration',15);setUnit('sipDurationUnit','years');calcSIP()">15Y</button>
+          <button class="stp-hint" onclick="setField('sipDuration',20);setUnit('sipDurationUnit','years');calcSIP()">20Y</button>
         </div>
       </div>
+
+      <!-- Expected Return -->
       <div class="sip-field">
-        <label>Expected Return (% p.a.)</label>
-        <input class="sip-input" id="sipRate" type="number" value="12" min="0.1" max="100" step="0.1" oninput="calcSIP()">
+        <label class="sif-solo-label">Expected Return (% p.a.)</label>
+        <div class="sip-stepper">
+          <button class="stp-btn" onclick="stepField('sipRate',-0.5,1,50);calcSIP()">−</button>
+          <div class="stp-input-wrap">
+            <input class="stp-input" id="sipRate" type="number" value="12" min="0.1" max="100" step="0.1" oninput="calcSIP()" style="text-align:center">
+            <span class="stp-suffix">%</span>
+          </div>
+          <button class="stp-btn" onclick="stepField('sipRate',0.5,1,50);calcSIP()">+</button>
+        </div>
+        <div class="stp-hints">
+          <button class="stp-hint" onclick="setField('sipRate',8);calcSIP()">8%</button>
+          <button class="stp-hint" onclick="setField('sipRate',10);calcSIP()">10%</button>
+          <button class="stp-hint" onclick="setField('sipRate',12);calcSIP()">12%</button>
+          <button class="stp-hint" onclick="setField('sipRate',15);calcSIP()">15%</button>
+        </div>
       </div>
+
+      <!-- Step-up -->
       <div class="sip-field sip-only">
-        <label>Annual Step-up (%)</label>
-        <input class="sip-input" id="sipStepup" type="number" value="0" min="0" max="50" step="1" oninput="calcSIP()">
+        <label class="sif-solo-label">Annual Step-up (%)</label>
+        <div class="sip-stepper">
+          <button class="stp-btn" onclick="stepField('sipStepup',-1,0,30);calcSIP()">−</button>
+          <div class="stp-input-wrap">
+            <input class="stp-input" id="sipStepup" type="number" value="0" min="0" max="50" step="1" oninput="calcSIP()" style="text-align:center">
+            <span class="stp-suffix">%</span>
+          </div>
+          <button class="stp-btn" onclick="stepField('sipStepup',1,0,30);calcSIP()">+</button>
+        </div>
+        <div class="stp-hints">
+          <button class="stp-hint" onclick="setField('sipStepup',0);calcSIP()">0%</button>
+          <button class="stp-hint" onclick="setField('sipStepup',5);calcSIP()">5%</button>
+          <button class="stp-hint" onclick="setField('sipStepup',10);calcSIP()">10%</button>
+          <button class="stp-hint" onclick="setField('sipStepup',15);calcSIP()">15%</button>
+        </div>
       </div>
-    </div>
-    <div class="sip-summary" id="sipSummary"></div>
-    <div class="sip-results-grid" id="sipResultCards"></div>
-    <div class="sip-chart-wrap"><canvas id="sipChart"></canvas></div>
-  </div>
+
+    </div><!-- /.sip-left -->
+
+    <!-- ══ RIGHT: Results ══ -->
+    <div class="sip-right">
+
+      <!-- Big corpus display -->
+      <div class="sip-big-result" id="sipBigResult">
+        <div class="sbr-eyebrow">Estimated Corpus (Base Case)</div>
+        <div class="sbr-corpus" id="sbrCorpus">₹—</div>
+        <div class="sbr-sub-row">
+          <span class="sbr-chip sbr-invested" id="sbrInvested">Invested: —</span>
+          <span class="sbr-chip sbr-gain" id="sbrGain">Gain: —</span>
+          <span class="sbr-chip sbr-mult" id="sbrMult">—×</span>
+        </div>
+        <!-- Insight sentence -->
+        <div class="sbr-insight" id="sbrInsight"></div>
+        <!-- Stacked bar -->
+        <div class="sbr-bar-wrap">
+          <div class="sbr-bar-invested" id="sbrBarInvested" style="width:50%"></div>
+          <div class="sbr-bar-gain"     id="sbrBarGain"     style="width:50%"></div>
+        </div>
+        <div class="sbr-bar-labels">
+          <span>Invested</span><span>Wealth Gained</span>
+        </div>
+      </div>
+
+      <!-- Summary strip -->
+      <div class="sip-summary" id="sipSummary"></div>
+
+      <!-- Scenario cards -->
+      <div class="sip-results-grid" id="sipResultCards"></div>
+
+      <!-- Chart -->
+      <div class="sip-chart-wrap"><canvas id="sipChart"></canvas></div>
+
+    </div><!-- /.sip-right -->
+  </div><!-- /.sip-split-body -->
+</div><!-- /.sip-split-card -->
 </div>
-
-
-</div>
-
 <!-- PANEL: GOAL PLANNER -->
 <div class="main-panel" id="mpanel-goal">
 <!-- GOAL PLANNER -->
@@ -1293,17 +1772,54 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
     </div>
   </div>
   <div class="sip-card-body">
-    <!-- Goal Presets -->
-    <div style="margin-bottom:20px">
-      <div class="section-label" style="margin-bottom:10px">🏷️ Quick Goal Presets</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px" id="goalPresets" class="goal-preset-btns-wrap">
-        <button class="goal-preset-btn active" onclick="applyGoalPreset(this,'child_edu')">🎓 Child Education</button>
-        <button class="goal-preset-btn" onclick="applyGoalPreset(this,'retirement')">🏖️ Retirement</button>
-        <button class="goal-preset-btn" onclick="applyGoalPreset(this,'home')">🏠 Home Purchase</button>
-        <button class="goal-preset-btn" onclick="applyGoalPreset(this,'emergency')">🛡️ Emergency Fund</button>
-        <button class="goal-preset-btn" onclick="applyGoalPreset(this,'travel')">✈️ Dream Vacation</button>
-        <button class="goal-preset-btn" onclick="applyGoalPreset(this,'car')">🚗 Car Purchase</button>
-        <button class="goal-preset-btn" onclick="applyGoalPreset(this,'custom')">✏️ Custom Goal</button>
+    <!-- Goal Preset Icon Cards -->
+    <div class="gp-presets-section">
+      <div class="section-label" style="margin-bottom:14px">🎯 What are you saving for?</div>
+      <div class="gp-preset-cards" id="goalPresets">
+        <button class="gp-preset-card active" onclick="applyGoalPreset(this,'child_edu')">
+          <span class="gppc-icon">🎓</span>
+          <span class="gppc-name">Child Education</span>
+          <span class="gppc-hint">₹25L–₹1Cr · 10–18Y</span>
+        </button>
+        <button class="gp-preset-card" onclick="applyGoalPreset(this,'retirement')">
+          <span class="gppc-icon">🏖️</span>
+          <span class="gppc-name">Retirement</span>
+          <span class="gppc-hint">₹2Cr+ · 20–30Y</span>
+        </button>
+        <button class="gp-preset-card" onclick="applyGoalPreset(this,'home')">
+          <span class="gppc-icon">🏠</span>
+          <span class="gppc-name">Home Purchase</span>
+          <span class="gppc-hint">₹50L–₹2Cr · 5–10Y</span>
+        </button>
+        <button class="gp-preset-card" onclick="applyGoalPreset(this,'emergency')">
+          <span class="gppc-icon">🛡️</span>
+          <span class="gppc-name">Emergency Fund</span>
+          <span class="gppc-hint">3–6 months · 1–2Y</span>
+        </button>
+        <button class="gp-preset-card" onclick="applyGoalPreset(this,'travel')">
+          <span class="gppc-icon">✈️</span>
+          <span class="gppc-name">Dream Vacation</span>
+          <span class="gppc-hint">₹2L–₹10L · 2–5Y</span>
+        </button>
+        <button class="gp-preset-card" onclick="applyGoalPreset(this,'car')">
+          <span class="gppc-icon">🚗</span>
+          <span class="gppc-name">Car Purchase</span>
+          <span class="gppc-hint">₹5L–₹30L · 3–5Y</span>
+        </button>
+        <button class="gp-preset-card" onclick="applyGoalPreset(this,'custom')">
+          <span class="gppc-icon">✏️</span>
+          <span class="gppc-name">Custom Goal</span>
+          <span class="gppc-hint">Set your own target</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- North Star Banner -->
+    <div class="gp-north-star" id="gpNorthStar">
+      <div class="gpns-icon">🌟</div>
+      <div class="gpns-text">
+        <div class="gpns-label">Your Goal</div>
+        <div class="gpns-sentence" id="gpNorthStarText">Planning your Child Education Fund of ₹20L in 15 years</div>
       </div>
     </div>
     <!-- Inputs Grid -->
@@ -1706,6 +2222,314 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 <div style="display:none"><!-- page div already closed above -->
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 
+
+/* ════════════════════════════════════════
+   BRAND STRIP — IST CLOCK
+════════════════════════════════════════ */
+(function startClock(){
+  function tick(){
+    const el = document.getElementById('brandClockTime');
+    if(!el) return;
+    const now = new Date();
+    // IST = UTC+5:30
+    const ist = new Date(now.getTime() + (5*60+30)*60*1000);
+    const h = String(ist.getUTCHours()).padStart(2,'0');
+    const m = String(ist.getUTCMinutes()).padStart(2,'0');
+    const s = String(ist.getUTCSeconds()).padStart(2,'0');
+    el.textContent = h+':'+m+':'+s;
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+
+/* ════════════════════════════════════════
+   QUICK PICKS — live API, random per category
+════════════════════════════════════════ */
+const QP_CATEGORIES = [
+  { label: 'Small Cap',   query: 'small cap fund' },
+  { label: 'Flexi Cap',   query: 'flexi cap fund' },
+  { label: 'Multi Asset', query: 'multi asset fund' },
+  { label: 'Mid Cap',     query: 'mid cap fund' },
+  { label: 'ELSS',        query: 'ELSS tax saver' },
+];
+
+// Only pick from these trusted AMCs
+const TRUSTED_AMCS = [
+  'sbi','hdfc','icici','axis','nippon','kotak','mirae','uti',
+  'parag parikh','quant','dsp','franklin','tata','canara',
+  'aditya birla','invesco','motilal',
+  'groww','bandhan','edelweiss','hsbc','nj ',
+];
+
+// Resolved picks — populated on load, reused for "Try" pairs
+const _resolvedPicks = [];
+
+function isTrustedAMC(name) {
+  const n = name.toLowerCase();
+  return TRUSTED_AMCS.some(a => n.includes(a));
+}
+
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// Words that disqualify a fund from quick-picks
+const QP_BLOCKED = [
+  'institutional','discontinued','debt','insurance',
+  'fmp','liquid','overnight','arbitrage','interval',
+  'fixed maturity','banking','psu','credit risk',
+  'money market','low duration','ultra short','short duration',
+  'medium duration','long duration','gilt','dynamic bond',
+  'corporate bond','floater','conservative','pension',
+  'segregated','close ended','close-ended',
+];
+
+function isEligible(name) {
+  const n = name.toLowerCase();
+  // Must not be direct plan
+  if (n.includes('direct')) return false;
+  // Must be growth (not dividend/idcw)
+  if (!n.includes('growth')) return false;
+  // Must not contain any blocked keyword
+  if (QP_BLOCKED.some(b => n.includes(b))) return false;
+  return true;
+}
+
+// Resolve TWO random picks per category (for same-category Try pairs)
+async function resolveQuickPick(cat) {
+  const res = await fetch(
+    'https://api.mfapi.in/mf/search?q=' + encodeURIComponent(cat.query)
+  );
+  const results = await res.json();
+  const pool = results.filter(f => isEligible(f.schemeName));
+  const trusted = pool.filter(f => isTrustedAMC(f.schemeName));
+  const source = trusted.length >= 2 ? trusted : (pool.length ? pool : null);
+  if (!source) throw new Error('No match for ' + cat.label);
+  // Pick two distinct random funds
+  const shuffled = [...source].sort(() => Math.random() - 0.5);
+  const pick1 = shuffled[0];
+  const pick2 = shuffled[1] || shuffled[0]; // fallback if only 1 result
+  const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
+  return { primary: make(pick1), secondary: make(pick2) };
+}
+
+function renderQAChip(pick) {
+  const btn = document.createElement('button');
+  btn.className = 'qa-chip';
+  // Shorten name: strip "- Regular Plan - Growth" suffix
+  const shortName = pick.name
+    .replace(/\s*-\s*regular\s*plan\s*-\s*growth\s*/i, '')
+    .replace(/\s*-\s*growth\s*/i, '')
+    .trim();
+  btn.innerHTML = `<span class="qa-chip-cat">${pick.label}</span>
+    <span class="qa-chip-name">${shortName.length > 28 ? shortName.slice(0,26)+'…' : shortName}</span>`;
+  btn.title = pick.name;
+  btn.onclick = function() { quickAddFund(pick.code, pick.name, pick.label, this); };
+  return btn;
+}
+
+async function loadQuickPicks() {
+  const settled = await Promise.allSettled(QP_CATEGORIES.map(resolveQuickPick));
+  const chips = document.getElementById('qaChips');
+  if (!chips) return;
+  chips.innerHTML = '';
+
+  settled.forEach((result, i) => {
+    if (result.status === 'fulfilled') {
+      // Store both picks; show primary as the chip
+      _resolvedPicks[i] = result.value;
+      chips.appendChild(renderQAChip(result.value.primary));
+    } else {
+      console.warn('Quick pick failed:', QP_CATEGORIES[i].label, result.reason);
+    }
+  });
+
+  populateTryRow();
+}
+
+function populateTryRow() {
+  const tryRow = document.getElementById('esTryRow');
+  if (!tryRow) return;
+
+  const short = name => name
+    .replace(/\s*-\s*regular\s*plan\s*-\s*growth\s*/i, '')
+    .replace(/\s*-\s*growth\s*/i, '')
+    .replace(/\bfund\b/gi, '').trim()
+    .replace(/\s+/g, ' ');
+
+  tryRow.innerHTML = '<span class="es-try-label">Try:</span>';
+
+  // Each resolved pick has {primary, secondary} of the SAME category
+  // Shuffle resolved categories, then use two different categories for 2 buttons
+  const available = _resolvedPicks.filter(Boolean);
+  if (available.length < 1) return;
+
+  // Shuffle category order
+  const cats = [...available].sort(() => Math.random() - 0.5);
+
+  // Button 1: primary vs secondary from same category (cat 0)
+  const c1 = cats[0];
+  if (c1 && c1.primary && c1.secondary && c1.primary.code !== c1.secondary.code) {
+    const b1 = document.createElement('button');
+    b1.className = 'es-try-btn';
+    b1.title = c1.primary.label + ' category comparison';
+    b1.textContent = short(c1.primary.name) + ' vs ' + short(c1.secondary.name);
+    b1.onclick = () => {
+      quickAddFund(c1.primary.code, c1.primary.name, c1.primary.label, null);
+      quickAddFund(c1.secondary.code, c1.secondary.name, c1.secondary.label, null);
+    };
+    tryRow.appendChild(b1);
+  }
+
+  // Button 2: primary vs secondary from a different category (cat 1)
+  const c2 = cats[1] || cats[0];
+  if (c2 && c2.primary && c2.secondary && c2.primary.code !== c2.secondary.code) {
+    const b2 = document.createElement('button');
+    b2.className = 'es-try-btn';
+    b2.title = c2.primary.label + ' category comparison';
+    b2.textContent = short(c2.primary.name) + ' vs ' + short(c2.secondary.name);
+    b2.onclick = () => {
+      quickAddFund(c2.primary.code, c2.primary.name, c2.primary.label, null);
+      quickAddFund(c2.secondary.code, c2.secondary.name, c2.secondary.label, null);
+    };
+    tryRow.appendChild(b2);
+  }
+}
+
+/* ════════════════════════════════════════
+   FUND COMPARE — quick-add helper
+════════════════════════════════════════ */
+function quickAddFund(schemeCode, name, category, btn){
+  if(selectedFunds.length>=5){alert('Max 5 funds.');return;}
+  if(selectedFunds.find(f=>f.code===schemeCode)){return;}
+  if(btn) btn.classList.add('added');
+  setLoading(true);
+  fetch('https://api.mfapi.in/mf/'+schemeCode)
+    .then(r=>r.json())
+    .then(res=>{
+      if(!res.data||!res.data.length) throw new Error('No data');
+      const cleaned = res.data
+        .filter(d=>{const v=parseFloat(d.nav);return !isNaN(v)&&v>0;})
+        .sort((a,b)=>parseNAVDate(a.date)-parseNAVDate(b.date));
+      selectedFunds.push({code:schemeCode, name:res.meta?.scheme_name||name, rawData:cleaned});
+      renderChips();
+      renderAll();
+      setLoading(false);
+      // Hide empty state + quick-add row once a fund is added
+      const es=document.getElementById('emptyState');
+      const qa=document.getElementById('quickAddWrap');
+      if(es) es.style.display='none';
+      if(qa) qa.style.display='none';
+      // Show toolbar + tabs
+      const tb=document.getElementById('toolbar');
+      const tr=document.getElementById('tabsRow');
+      if(tb) tb.style.display='flex';
+      if(tr) tr.style.display='flex';
+    })
+    .catch(()=>{ setLoading(false); if(btn) btn.classList.remove('added'); alert('Failed to load. Try again.'); });
+}
+
+/* ════════════════════════════════════════
+   GOAL PLANNER — north star banner update
+════════════════════════════════════════ */
+function updateGoalNorthStar(){
+  const el = document.getElementById('gpNorthStarText');
+  if(!el) return;
+  const nameEl = document.getElementById('goalName');
+  const amtEl  = document.getElementById('goalAmount');
+  const durEl  = document.getElementById('goalDuration');
+  const unitEl = document.getElementById('goalDurationUnit');
+  if(!nameEl || !amtEl || !durEl) return;
+  const name = nameEl.value || 'your goal';
+  const amt  = parseFloat(amtEl.value) || 0;
+  const dur  = parseFloat(durEl.value) || 0;
+  const unit = unitEl ? unitEl.value : 'years';
+  el.textContent = 'Planning your ' + name + ' of ₹' + fmtINR(amt) + ' in ' + dur + ' ' + unit;
+}
+
+/* ════════════════════════════════════════
+   SIP STEPPER HELPERS
+════════════════════════════════════════ */
+function stepField(id, delta, min, max){
+  const el = document.getElementById(id);
+  if(!el) return;
+  let v = (parseFloat(el.value)||0) + delta;
+  v = Math.min(max, Math.max(min, v));
+  // Round to avoid floating-point drift
+  v = Math.round(v * 100) / 100;
+  el.value = v;
+}
+function setField(id, val){
+  const el = document.getElementById(id);
+  if(el) el.value = val;
+}
+function setUnit(id, val){
+  const el = document.getElementById(id);
+  if(el) el.value = val;
+}
+
+function initSIPSliders() { /* steppers need no init */ }
+function syncSlider(){}
+function syncInput(){}
+function syncSliderDur(){}
+function syncSliderDurUnit(){}
+
+
+// Animated counter for big corpus number
+let _counterTimer = null;
+function animateCounter(el, targetVal) {
+  if (_counterTimer) clearInterval(_counterTimer);
+  const startVal = parseFloat(el.dataset.rawVal || 0);
+  el.dataset.rawVal = targetVal;
+  if (targetVal === startVal) { el.textContent = '₹' + fmtINR(targetVal); return; }
+  const duration = 420, steps = 28;
+  const interval = duration / steps;
+  const delta = (targetVal - startVal) / steps;
+  let current = startVal, step = 0;
+  el.classList.add('animating');
+  _counterTimer = setInterval(() => {
+    step++;
+    current += delta;
+    if (step >= steps) {
+      current = targetVal;
+      clearInterval(_counterTimer);
+      el.classList.remove('animating');
+    }
+    el.textContent = '₹' + fmtINR(Math.round(current));
+  }, interval);
+}
+
+// Update the big result panel
+function updateBigResult(corpus, invested, gain, mult, wealthGainPct, p) {
+  const corpusEl = document.getElementById('sbrCorpus');
+  if (corpusEl) animateCounter(corpusEl, corpus);
+
+  const invEl = document.getElementById('sbrInvested');
+  const gainEl = document.getElementById('sbrGain');
+  const multEl = document.getElementById('sbrMult');
+  if (invEl)  invEl.textContent  = 'Invested: ₹' + fmtINR(invested);
+  if (gainEl) gainEl.textContent = 'Gain: ₹'     + fmtINR(gain);
+  if (multEl) multEl.textContent = mult.toFixed(2) + '×';
+
+  // Stacked bar
+  const invPct = corpus > 0 ? Math.round((invested / corpus) * 100) : 50;
+  const gainPct = 100 - invPct;
+  const barInv  = document.getElementById('sbrBarInvested');
+  const barGain = document.getElementById('sbrBarGain');
+  if (barInv)  barInv.style.width  = invPct  + '%';
+  if (barGain) barGain.style.width = gainPct + '%';
+
+  // Insight sentence
+  const insightEl = document.getElementById('sbrInsight');
+  if (insightEl) {
+    const years = p.totalYears.toFixed(0);
+    const freq  = p.isLump ? 'one-time investment' : '₹' + fmtINR(p.sipAmt) + '/mo';
+    const grows = (mult >= 1) ? 'grows to' : 'returns';
+    insightEl.textContent =
+      `Your ${freq} ${grows} ₹${fmtINR(corpus)} in ${years} years — that's ${mult.toFixed(2)}× your money.`;
+  }
+}
+
 /* ════════════════════════════════════════
    MAIN TAB SWITCHING — lazy init per tab
 ════════════════════════════════════════ */
@@ -1719,7 +2543,7 @@ function switchMainTab(id, btn) {
   // Lazy init: only compute on first visit
   if (!_tabInited[id]) {
     _tabInited[id] = true;
-    if (id === 'sip')  calcSIP();
+    if (id === 'sip')  { initSIPSliders(); calcSIP(); }
     if (id === 'goal') calcGoal();
     if (id === 'swp')  calcSWP();
   }
@@ -1908,7 +2732,26 @@ function renderAll(){
   if(!selectedFunds.length){
     if(navChart){navChart.destroy();navChart=null;}
     toolbar.style.display="none";tabsRow.style.display="none";
-    container.innerHTML=`<div class="empty-state"><div class="empty-icon">🌿</div><div class="empty-title">No funds selected</div><p class="empty-p">Search and add up to 5 funds above to begin your analysis</p></div>`;
+    // Restore quick-add row and upgraded empty state
+    const qa=document.getElementById('quickAddWrap');
+    if(qa){ qa.style.display=''; qa.querySelectorAll('.qa-chip').forEach(c=>c.classList.remove('added')); }
+    container.innerHTML=`<div class="empty-state" id="emptyState">
+      <div class="es-chart"><svg viewBox="0 0 280 80" fill="none" xmlns="http://www.w3.org/2000/svg" class="es-svg">
+        <polyline class="es-line es-line-1" points="0,65 30,58 60,50 90,42 120,38 150,28 180,22 210,18 240,12 280,8"/>
+        <polyline class="es-line es-line-2" points="0,72 30,68 60,62 90,55 120,52 150,46 180,40 210,36 240,30 280,24"/>
+        <polyline class="es-line es-line-3" points="0,70 30,72 60,68 90,65 120,60 150,55 180,50 210,46 240,42 280,38"/>
+      </svg></div>
+      <div class="es-icon">📊</div>
+      <div class="empty-title">Compare up to 5 funds side-by-side</div>
+      <p class="empty-p">Search above or pick a popular fund below to get started</p>
+      <div class="es-try-row" id="esTryRow">
+        <span class="es-try-label">Try:</span>
+        <span class="qa-skeleton" style="width:160px;height:28px;border-radius:6px"></span>
+        <span class="qa-skeleton" style="width:160px;height:28px;border-radius:6px"></span>
+      </div>
+    </div>`;
+    // Re-populate Try row with resolved picks
+    setTimeout(populateTryRow, 0);
     return;
   }
   toolbar.style.display="flex";tabsRow.style.display="flex";
@@ -2441,6 +3284,9 @@ function calcSIP(){
   }).join("");
 
   drawSIPChart(p,scenarios);
+  // ── Update big result panel ──
+  const mult = totalInvested>0 ? finalCorpus/totalInvested : 1;
+  updateBigResult(finalCorpus, totalInvested, totalGain, mult, parseFloat(wealthGain), p);
 }
 
 function drawSIPChart(p,scenarios){
@@ -2516,6 +3362,10 @@ function applyGoalPreset(btn, key){
   document.getElementById('goalDuration').value = p.dur;
   document.getElementById('goalDurationUnit').value = p.unit;
   calcGoal();
+  updateGoalNorthStar();
+  // Also update gp-preset-card active state
+  document.querySelectorAll('.gp-preset-card').forEach(c=>c.classList.remove('active'));
+  if(btn.classList.contains('gp-preset-card')) btn.classList.add('active');
 }
 
 function toggleGoalAdvanced(){
@@ -2701,6 +3551,7 @@ function calcGoal(){
     </div>`;
 
   drawGoalChart(p, sipOnly, lumpOnly, hybridLump, hybridSIP);
+  updateGoalNorthStar();
 }
 
 function drawGoalChart(p, sipOnly, lumpOnly, hybridLump, hybridSIP){
@@ -3271,8 +4122,14 @@ ${chartImg?`<div class="sec">Projection</div><div class="ci"><img src="${chartIm
 }
 
 calcSWP();
+// Pre-init SIP so big result is ready when tab is first opened
+initSIPSliders();
+calcSIP();
+_tabInited['sip'] = true;
 
 document.getElementById('footerYear').textContent = new Date().getFullYear();
+// Load dynamic quick picks from AMFI API
+loadQuickPicks();
 </script>
 </body>
 </html>
