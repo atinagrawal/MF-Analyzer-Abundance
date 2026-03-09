@@ -1,9 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns#">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MF Risk & Return Analyzer | Abundance Financial Services</title>
+
+<!-- ═══ Primary SEO ═══ -->
+<title>Mutual Fund Analyzer — SIP, Goal Planner & SWP Calculator | Abundance Financial Services</title>
+<meta name="description" content="Free mutual fund analyzer by Abundance Financial Services. Compare fund risk & returns, calculate SIP corpus, plan investment goals, and model SWP withdrawals. Live AMFI data. ARN-251838.">
+<meta name="keywords" content="mutual fund analyzer, SIP calculator, goal planner, SWP calculator, fund comparison, CAGR, Sharpe ratio, NAV, AMFI, India, Abundance Financial Services, Haldwani, Uttarakhand">
+<meta name="author" content="Abundance Financial Services">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#2e7d32">
+<link rel="canonical" href="https://mfcalc.getabundance.in/">
+
+<!-- ═══ Favicons ═══ -->
+<link rel="icon" type="image/x-icon" href="https://www.getabundance.in/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="https://www.getabundance.in/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="https://www.getabundance.in/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://www.getabundance.in/apple-touch-icon.png">
+<link rel="manifest" href="https://www.getabundance.in/site.webmanifest">
+
+<!-- ═══ Open Graph (Facebook, WhatsApp, LinkedIn) ═══ -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Abundance Financial Services">
+<meta property="og:title" content="Mutual Fund Analyzer — SIP, Goal Planner & SWP | Abundance">
+<meta property="og:description" content="Compare mutual funds side-by-side. Calculate SIP returns, plan goals, model SWP withdrawals. Live AMFI data. Free tool by Abundance Financial Services, Haldwani.">
+<meta property="og:url" content="https://mfcalc.getabundance.in/">
+<meta property="og:image" content="https://www.getabundance.in/images/logo.png">
+<meta property="og:image:alt" content="Abundance Financial Services — Mutual Fund Analyzer">
+<meta property="og:locale" content="en_IN">
+
+<!-- ═══ Twitter / X Card ═══ -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:site" content="@abundancefinsvs">
+<meta name="twitter:title" content="Mutual Fund Analyzer — SIP, Goal Planner & SWP | Abundance">
+<meta name="twitter:description" content="Compare mutual funds, calculate SIP corpus, plan goals & model SWP. Live AMFI data. Free tool by Abundance Financial Services.">
+<meta name="twitter:image" content="https://www.getabundance.in/images/logo.png">
+
+<!-- ═══ Structured Data (JSON-LD) ═══ -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Mutual Fund Analyzer",
+  "url": "https://mfcalc.getabundance.in/",
+  "description": "Free mutual fund analyzer — compare fund risk & returns, SIP calculator, goal planner, SWP calculator. Live AMFI data.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" },
+  "author": {
+    "@type": "Organization",
+    "name": "Abundance Financial Services",
+    "url": "https://www.getabundance.in",
+    "logo": "https://www.getabundance.in/images/logo.png",
+    "telephone": "+919808105923",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "1st Floor, Kapil Complex, Mukhani",
+      "addressLocality": "Haldwani",
+      "addressRegion": "Uttarakhand",
+      "postalCode": "263139",
+      "addressCountry": "IN"
+    },
+    "sameAs": [
+      "https://www.instagram.com/abundancefinancialservices",
+      "https://www.facebook.com/abundancefinancialservices",
+      "https://twitter.com/abundancefinsvs"
+    ]
+  }
+}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js">
 /* ════════════════════════════════════════
    MAIN TAB CONTROLLER
@@ -253,6 +319,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .metric-row:last-child{border-bottom:none}
 .metric-key{font-size:.72rem;color:var(--text2)}
 .metric-val{font-family:"JetBrains Mono",monospace;font-size:.82rem;font-weight:500;color:var(--text)}
+
 .pos{color:var(--pos)!important;font-weight:700!important}
 .neg{color:var(--neg)!important;font-weight:700!important}
 
@@ -1186,9 +1253,10 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .wr-stat-chip{display:flex;flex-direction:column;align-items:center;padding:8px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:10px;min-width:70px;cursor:default;transition:background .18s}
 .wr-stat-chip:hover{background:rgba(255,255,255,.13)}
 .wr-stat-chip-label{font-size:.52rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:2px;font-family:'JetBrains Mono',monospace}
-.wr-stat-chip-val{font-size:.85rem;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace}
-.wr-stat-chip-val.pos{color:#a5d6a7}
-.wr-stat-chip-val.neg{color:#ef9a9a}
+.wr-stat-chip-val{font-size:.85rem;font-weight:700;color:#e8f5e9;font-family:'JetBrains Mono',monospace}
+.wr-stat-chip-val.pos{color:#a5d6a7!important}
+.wr-stat-chip-val.neg{color:#ef9a9a!important}
+.wr-stat-chip-label{color:rgba(255,255,255,.55)!important}
 .wr-radar{position:absolute;bottom:-10px;right:120px;width:130px;height:130px;opacity:.5;pointer-events:none;animation:radarSpin 18s linear infinite}
 @keyframes radarSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
@@ -4440,6 +4508,8 @@ _tabInited['sip'] = true;
 document.getElementById('footerYear').textContent = new Date().getFullYear();
 // Load dynamic quick picks from AMFI API
 loadQuickPicks();
+
+
 </script>
 </body>
 </html>
