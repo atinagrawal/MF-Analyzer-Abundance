@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- ═══ Primary SEO ═══ -->
-<title>SIP, EMI & Mutual Fund Calculator — Free | Abundance Financial Services</title>
-<meta name="description" content="Free financial calculators by Abundance Financial Services. Compare mutual fund risk & returns, calculate SIP & lumpsum corpus, plan goals, model SWP withdrawals, and compute EMI with prepayment analysis. Live AMFI data. ARN-251838.">
+<title>Free SIP Calculator, Mutual Fund Comparison &amp; EMI Tool | Abundance Financial Services</title>
+<meta name="description" content="Free investment calculators by Abundance Financial Services, Haldwani. Compare up to 5 mutual funds with live AMFI NAV data — Sharpe ratio, volatility &amp; max drawdown across 1M to 5Y periods. Calculate SIP, lumpsum, goal corpus, SWP income and loan EMI with prepayment savings. ARN-251838.">
 <meta name="keywords" content="SIP calculator India, EMI calculator India, home loan EMI calculator, car loan EMI calculator, personal loan EMI, mutual fund comparison, best SIP to invest 2025, SWP calculator, lumpsum calculator, goal based investing, CAGR calculator, Sharpe ratio, NAV comparison, AMFI data, loan prepayment calculator, amortisation schedule India, mutual fund risk return, investment goal planner, Abundance Financial Services, ARN-251838, Haldwani, Uttarakhand, free financial calculator">
 <meta name="author" content="Abundance Financial Services">
 <meta name="robots" content="index, follow">
@@ -32,21 +32,21 @@
 <!-- ═══ Open Graph (Facebook, WhatsApp, LinkedIn) ═══ -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Abundance Financial Services">
-<meta property="og:title" content="Free SIP, EMI & Mutual Fund Calculator | Abundance Financial Services">
-<meta property="og:description" content="Compare mutual funds, calculate SIP &amp; lumpsum returns, plan goals, model SWP withdrawals, and analyse EMI with prepayment savings. Live AMFI data. Free tool by Abundance Financial Services, Haldwani.">
+<meta property="og:title" content="Free SIP Calculator, Mutual Fund Comparison &amp; EMI Tool | Abundance">
+<meta property="og:description" content="Compare up to 5 mutual funds with live AMFI data — Sharpe ratio, volatility &amp; returns across 1M to 5Y. Calculate SIP corpus, plan goals, model SWP income &amp; analyse loan EMI. Free tool by Abundance Financial Services, Haldwani. ARN-251838.">
 <meta property="og:url" content="https://mfcalc.getabundance.in/">
-<meta property="og:image" content="https://www.getabundance.in/images/logo.png">
+<meta property="og:image" content="https://mfcalc.getabundance.in/og-mfcalc.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Abundance Financial Services — MF & Loan Calculator Suite">
 <meta property="og:locale" content="en_IN">
 
 <!-- ═══ Twitter / X Card ═══ -->
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@abundancefinsvs">
-<meta name="twitter:title" content="Free SIP, EMI & Mutual Fund Calculator | Abundance">
-<meta name="twitter:description" content="Compare mutual funds, calculate SIP returns, plan goals, model SWP & compute loan EMI with prepayment analysis. Live AMFI data. Free tool by Abundance.">
-<meta name="twitter:image" content="https://www.getabundance.in/images/logo.png">
+<meta name="twitter:title" content="Free SIP Calculator, MF Comparison &amp; EMI Tool | Abundance">
+<meta name="twitter:description" content="Compare up to 5 mutual funds live — Sharpe ratio, volatility &amp; 1M–5Y returns. SIP corpus, goal planner, SWP income, EMI &amp; prepayment analysis. Free by Abundance, Haldwani.">
+<meta name="twitter:image" content="https://mfcalc.getabundance.in/og-mfcalc.png">
 
 <!-- ═══ Structured Data (JSON-LD) ═══ -->
 
@@ -64,17 +64,19 @@
   "browserRequirements": "Requires JavaScript",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" },
   "featureList": [
-    "Mutual Fund Comparison (up to 5 funds)",
-    "SIP Returns Calculator with Step-up",
-    "Lumpsum Calculator",
-    "Investment Goal Planner",
-    "SWP — Systematic Withdrawal Plan Calculator",
+    "Mutual Fund Comparison — up to 5 funds simultaneously",
+    "Live AMFI NAV Data via mfapi.in",
+    "Risk Table — 1M, 3M, 1Y, 3Y, 5Y returns per fund",
+    "Sharpe Ratio, Annualised Volatility & Max Drawdown (5Y or full history)",
+    "SIP Returns Calculator with Step-up SIP",
+    "Lumpsum Investment Calculator",
+    "Investment Goal Planner — SIP, lumpsum or hybrid",
+    "SWP — Systematic Withdrawal Plan with corpus longevity analysis",
     "EMI Calculator for Home, Car & Personal Loans",
     "Loan Prepayment Analyser with Interest Savings",
+    "Balance Transfer Analyser for Loans",
     "Year-by-Year Amortisation Schedule",
-    "Sharpe Ratio & Volatility Analysis",
-    "Live AMFI NAV Data",
-    "Fund Risk-Return Metrics"
+    "Discontinued AMC filtering (13 wound-down fund houses hidden by default)"
   ],
   "audience": {"@type": "Audience", "audienceType": "Individual investors, loan seekers, financial planners"},
   "author": {
@@ -134,26 +136,34 @@
   "mainEntity": [
     {
       "@type": "Question",
+      "name": "How do I compare mutual funds online for free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Use the Fund Compare tab in this tool. Search for any AMFI-registered mutual fund by name or AMC. You can add up to 5 funds simultaneously and compare their NAV performance, 1M/3M/1Y/3Y/5Y returns, Sharpe ratio, volatility and maximum drawdown — all using live data from AMFI via mfapi.in."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is Sharpe Ratio in mutual funds and what is a good score?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sharpe Ratio measures risk-adjusted return. It is calculated as (Fund CAGR minus risk-free rate) divided by annualised volatility. This tool uses 6.5% as the risk-free rate, approximating current Indian G-Sec yields. A Sharpe above 1 is considered good, above 2 is excellent. The tool calculates Sharpe using 5 years of data, or the full available history if the fund is younger than 5 years."
+      }
+    },
+    {
+      "@type": "Question",
       "name": "How is SIP return calculated?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "SIP returns are calculated using the XIRR method — each instalment is treated as a separate cash flow and the internal rate of return is computed. This tool uses a simplified compounding model assuming constant monthly returns equal to the annual rate divided by 12."
+        "text": "SIP returns are calculated using a compounding model where each monthly instalment earns returns for the remaining investment period. The tool shows corpus at three scenarios — conservative, moderate and aggressive — based on your chosen return rate. The SIP calculator also supports step-up SIP where you increase your monthly investment by a fixed percentage each year."
       }
     },
     {
       "@type": "Question",
-      "name": "What is Sharpe Ratio in mutual funds?",
+      "name": "What is SWP in mutual funds and how is it used for retirement income?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Sharpe Ratio measures risk-adjusted return. It is calculated as (Fund CAGR minus risk-free rate) divided by annualised volatility. A Sharpe above 1 is considered good, above 2 is excellent. This tool uses 6.5% as the risk-free rate, approximating Indian G-Sec yields."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "What is SWP in mutual funds?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "SWP stands for Systematic Withdrawal Plan. It allows investors to withdraw a fixed amount from their mutual fund corpus at regular intervals — monthly, quarterly or annually — while the remaining corpus continues to grow. It is commonly used as a retirement income strategy."
+        "text": "SWP stands for Systematic Withdrawal Plan. It lets investors withdraw a fixed amount from their mutual fund corpus at regular intervals while the remaining corpus continues to grow. This tool's SWP calculator models corpus longevity, month-by-month depletion, and shows how long your corpus will last at different withdrawal rates and return assumptions. It also supports a delay period before withdrawals begin."
       }
     },
     {
@@ -161,39 +171,31 @@
       "name": "How much SIP do I need to reach my investment goal?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Use the Goal Planner tab in this tool. Enter your target amount, time horizon and expected return rate. The calculator will compute the required monthly SIP, lumpsum, or a hybrid combination needed to reach your goal, accounting for inflation if needed."
+        "text": "Use the Goal Planner tab. Enter your target amount, time horizon, expected return rate and any existing corpus. The calculator will compute the required monthly SIP, one-time lumpsum, or a combination of both to reach your goal. It also accounts for inflation adjustment on the target amount."
       }
     },
     {
       "@type": "Question",
-      "name": "How is EMI calculated?",
+      "name": "How is EMI calculated and what is an amortisation schedule?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "EMI is calculated using the formula: EMI = P × r × (1+r)^n / ((1+r)^n - 1), where P is the principal loan amount, r is the monthly interest rate (annual rate divided by 12), and n is the total number of monthly instalments. This tool computes EMI instantly and also shows the full year-by-year amortisation schedule."
+        "text": "EMI is calculated using the formula: EMI = P × r × (1+r)^n / ((1+r)^n − 1), where P is the loan amount, r is the monthly interest rate and n is the total number of instalments. An amortisation schedule shows, year by year, how much of each EMI goes toward interest versus principal. In early years, most of the EMI is interest. This tool provides the full year-by-year schedule with prepayment rows highlighted."
       }
     },
     {
       "@type": "Question",
-      "name": "How much do I save with loan prepayment?",
+      "name": "Should I transfer my home loan to a lower interest rate lender?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Prepaying a loan reduces your outstanding principal, which lowers the interest charged on future months. The EMI Calculator's Prepayment Analyser shows exactly how much interest you save and by how many years your loan tenure shortens when you make an annual lump-sum prepayment. Even a single prepayment in early years can save lakhs in interest on a home loan."
+        "text": "Use the Balance Transfer Analyser in the EMI tab. Enter your current loan details and the new lender's rate and processing fee. The tool will calculate whether the interest savings over your remaining tenure outweigh the switching cost and show a clear verdict — transfer recommended, not recommended, or marginal — with exact numbers."
       }
     },
     {
       "@type": "Question",
-      "name": "What is an amortisation schedule?",
+      "name": "Is this mutual fund and SIP calculator free to use?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "An amortisation schedule is a complete table of loan repayments showing, for each period, how much of the EMI goes toward interest and how much reduces the principal. In the early years of a loan, a larger share goes to interest. This tool provides a year-by-year amortisation table with prepayment rows highlighted so you can see exactly when your loan closes."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Is this mutual fund calculator free to use?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes, this tool is completely free. It is provided by Abundance Financial Services (ARN-251838), an AMFI-registered mutual fund distributor based in Haldwani, Uttarakhand. All fund data is sourced live from AMFI via the mfapi.in API."
+        "text": "Yes, completely free. This tool is provided by Abundance Financial Services (AMFI ARN-251838), a SEBI-registered mutual fund distributor based in Haldwani, Uttarakhand. All fund NAV data is sourced live from AMFI via the open mfapi.in API. No login or signup is required."
       }
     }
   ]
@@ -1888,11 +1890,33 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .main-tab-icon{font-size:1.15rem}
 }
 
+
+/* ════════════════════════════════════════
+   FAQ SECTION
+════════════════════════════════════════ */
+.faq-section{background:var(--surface2);border-top:1.5px solid var(--border);padding-bottom:48px}
+.faq-heading{font-size:1.1rem;font-weight:800;color:var(--g1);margin-bottom:20px;letter-spacing:-.3px}
+.faq-list{display:flex;flex-direction:column;gap:8px;max-width:800px}
+.faq-item{border:1.5px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface);transition:border-color .18s}
+.faq-item[open]{border-color:var(--g3)}
+.faq-q{padding:16px 20px;font-size:.88rem;font-weight:700;color:var(--text2);cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;transition:background .15s}
+.faq-q::-webkit-details-marker{display:none}
+.faq-q::after{content:"＋";font-size:.9rem;font-weight:700;color:var(--g3);flex-shrink:0;transition:transform .2s}
+.faq-item[open] .faq-q::after{content:"－"}
+.faq-q:hover{background:var(--g-xlight);color:var(--g1)}
+.faq-a{padding:0 20px 16px;font-size:.82rem;color:var(--text2);line-height:1.75;border-top:1px solid var(--surface2)}
+.faq-a strong{color:var(--g1)}
+@media(max-width:640px){
+  .faq-heading{font-size:.95rem}
+  .faq-q{font-size:.82rem;padding:13px 14px}
+  .faq-a{padding:0 14px 13px;font-size:.78rem}
+}
 </style>
 </head>
 <body>
 <div class="accent-line"></div>
 <a href="#mpanel-fund" class="skip-link">Skip to main content</a>
+<h1 class="sr-only">Free SIP Calculator, Mutual Fund Comparison, EMI &amp; Goal Planner — Abundance Financial Services</h1>
 <div class="page">
 
 <!-- NAVBAR -->
@@ -1920,7 +1944,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
       <span class="brand-strip-eyebrow">
         <span class="brand-strip-dot"></span>Live AMFI Data
       </span>
-      <h1 class="brand-strip-title">MF &amp; Loan Calculator Suite</h1>
+      <p class="brand-strip-title" aria-hidden="true">MF &amp; Loan Calculator Suite</p>
     </div>
 
     <!-- Center: scrolling category ticker -->
@@ -3163,6 +3187,51 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 </div><!-- /.page -->
 
 <!-- ═══ DARK FOOTER (full-bleed) ═══ -->
+
+<!-- ═══════════════════════════════════════
+     FAQ SECTION — SEO + User Education
+═══════════════════════════════════════ -->
+<section class="faq-section" aria-label="Frequently Asked Questions" id="faq">
+  <div class="page">
+    <div class="section-divider"><div class="section-divider-line"></div><div class="section-divider-label">FAQ</div><div class="section-divider-line"></div></div>
+    <h2 class="faq-heading">Frequently Asked Questions</h2>
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary class="faq-q">How do I compare mutual funds online for free?</summary>
+        <div class="faq-a">Use the <strong>Fund Compare</strong> tab. Search any AMFI-registered fund by name or AMC and add up to 5 funds. The tool shows NAV performance, 1M/3M/1Y/3Y/5Y returns, Sharpe ratio, volatility and maximum drawdown using live data from AMFI.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">What is Sharpe Ratio and what is a good score?</summary>
+        <div class="faq-a">Sharpe Ratio measures risk-adjusted return: <strong>(Fund CAGR − risk-free rate) ÷ annualised volatility</strong>. This tool uses 6.5% as the risk-free rate (Indian G-Sec approximation). A Sharpe above 1 is good; above 2 is excellent. Calculated on 5Y data, or full history for newer funds.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">How is SIP return calculated?</summary>
+        <div class="faq-a">Each monthly instalment earns compounded returns for the remaining investment period. The SIP calculator shows corpus at conservative, moderate and aggressive return scenarios. It also supports <strong>step-up SIP</strong> — increasing your monthly investment by a fixed % each year.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">What is SWP and how does it work for retirement income?</summary>
+        <div class="faq-a"><strong>Systematic Withdrawal Plan (SWP)</strong> lets you withdraw a fixed amount monthly from your mutual fund corpus while the remainder keeps growing. The SWP tab models corpus longevity, shows month-by-month depletion and supports an optional delay period before withdrawals begin.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">How much SIP do I need to reach my financial goal?</summary>
+        <div class="faq-a">Go to the <strong>Goal Planner</strong> tab. Enter your target amount, time horizon, expected return rate and existing corpus. The tool calculates the required monthly SIP, lumpsum, or a combination — with optional inflation adjustment on the target.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">How is EMI calculated? What is an amortisation schedule?</summary>
+        <div class="faq-a">EMI formula: <strong>P × r × (1+r)ⁿ / ((1+r)ⁿ − 1)</strong> where P = principal, r = monthly rate, n = instalments. An amortisation schedule shows year-by-year how much EMI goes to interest vs. principal. Early years are interest-heavy. The EMI tab shows the full schedule with prepayment rows highlighted.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">Should I transfer my home loan to a lower interest rate?</summary>
+        <div class="faq-a">Use the <strong>Balance Transfer Analyser</strong> in the EMI tab. Enter your current loan, the new lender's rate and processing fee. The tool calculates whether interest savings outweigh switching costs and gives a clear recommend / not recommended verdict with exact figures.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">Is this calculator free? Who made it?</summary>
+        <div class="faq-a">Yes, completely free. Built by <strong>Abundance Financial Services</strong> (ARN-251838), an AMFI-registered mutual fund distributor in Haldwani, Uttarakhand. All NAV data is sourced live from AMFI via the open mfapi.in API. No login required.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
 <footer class="dark-footer">
   <!-- Decorative top edge -->
   <div class="dark-footer-edge"></div>
@@ -4193,7 +4262,7 @@ function printCalc(){
 
   const win = window.open("","_blank","width=900,height=700");
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-<title>SIP Calculator — Abundance Financial Services (ARN-251838)</title>
+<title>Free SIP Calculator, Mutual Fund Comparison &amp; EMI Tool | Abundance Financial Services</title>
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -4822,7 +4891,7 @@ function printGoalPlan(){
   const chartImg   = document.getElementById('goalChart') ? document.getElementById('goalChart').toDataURL('image/png') : '';
   const win = window.open('','_blank','width=900,height=700');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-<title>Goal Plan — ${p.goalName} — Abundance</title>
+<title>Free SIP Calculator, Mutual Fund Comparison &amp; EMI Tool | Abundance Financial Services</title>
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -5282,7 +5351,7 @@ function printSWP(){
   const insightHTML= insightEl&&insightEl.style.display!=='none'?insightEl.outerHTML:'';
 
   const win = window.open('','_blank','width=940,height=720');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SWP Plan — Abundance</title>
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Free SIP Calculator, Mutual Fund Comparison &amp; EMI Tool | Abundance Financial Services</title>
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px 36px}
@@ -5935,7 +6004,7 @@ function printEMI() {
 <html lang="en-IN">
 <head>
 <meta charset="UTF-8">
-<title>EMI Plan — ${loanLabel} — Abundance Financial Services</title>
+<title>Free SIP Calculator, Mutual Fund Comparison &amp; EMI Tool | Abundance Financial Services</title>
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
