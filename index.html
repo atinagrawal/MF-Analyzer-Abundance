@@ -3602,21 +3602,43 @@ const COLORS_LIGHT=["rgba(46,125,50,.13)","rgba(21,101,192,.13)","rgba(230,81,0,
 let selectedFunds=[],currentPeriod='1Y',searchTimeout=null;
 let navChart=null,currentTab="nav";
 
+let searchAbortCtrl=null;
+const searchCache=new Map();
+
 function onSearch(){
   const q=document.getElementById("mfInput").value.trim(),dd=document.getElementById("dropdown");
   clearTimeout(searchTimeout);
   if(q.length<2){dd.classList.remove("open");return;}
   searchTimeout=setTimeout(()=>doSearch(q),300);
 }
-async function doSearch(q){
-  const dd=document.getElementById("dropdown");
-  dd.innerHTML='<div class="dropdown-loading">Searching…</div>';dd.classList.add("open");
-  try{
-    const r=await fetch(`https://api.mfapi.in/mf/search?q=${encodeURIComponent(q)}`);
-    const data=await r.json();
+// Deprioritise likely pre-rationalisation/merged funds by name pattern only
+// (search API returns null isinGrowth for all funds — not usable as signal)
+// Post-2018 SEBI rationalisation: active fund names always contain "Plan" or "Option"
+// AMCs where every scheme is discontinued (null ISINs) — hidden unless explicitly searched
+const DEAD_AMCS=[
+  'grindlays','dbs chola','ing vysya','ing mutual','abn amro',
+  'standard chartered','fidelity','dws','sahara','morgan stanley',
+  'pinebridge','escorts','benchmark'
+];
+function isDeadAMC(schemeName){
+  const n=schemeName.toLowerCase();
+  return DEAD_AMCS.some(a=>n.startsWith(a));
+}
+function deadAMCQueried(q){
+  const ql=q.toLowerCase();
+  return DEAD_AMCS.some(a=>ql.includes(a));
+}
+
+function fundRank(f){
+  const n=f.schemeName.toLowerCase();
+  return /(^|\W)(plan|option)(\W|$)/.test(n)?0:1;
+}
+function renderSearchResults(q,data,dd){
     if(!data.length){dd.innerHTML='<div class="dropdown-loading">No results found</div>';return;}
-    const filtered=data.filter(f=>!/direct/i.test(f.schemeName));
-    const results=filtered.slice(0,25);
+    const hideDeadAMC=!deadAMCQueried(q);
+    const filtered=data.filter(f=>!/direct/i.test(f.schemeName)&&(!hideDeadAMC||!isDeadAMC(f.schemeName)));
+    const ranked=filtered.slice().sort((a,b)=>fundRank(a)-fundRank(b));
+    const results=ranked.slice(0,25);
     const ql=q.toLowerCase();
     // Highlight matched portion in fund name
     function highlight(name){
@@ -3630,7 +3652,22 @@ async function doSearch(q){
         <span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${highlight(f.schemeName)}</span>
         <span class="di-code">${f.schemeCode}</span>
       </div>`).join("");
-  }catch(e){dd.innerHTML='<div class="dropdown-loading">⚠️ Search failed. Check connection.</div>';}
+}
+
+async function doSearch(q){
+  const dd=document.getElementById("dropdown");
+  dd.innerHTML='<div class="dropdown-loading">Searching…</div>';dd.classList.add("open");
+  if(searchAbortCtrl){searchAbortCtrl.abort();}
+  searchAbortCtrl=new AbortController();
+  const signal=searchAbortCtrl.signal;
+  try{
+    if(searchCache.has(q)){renderSearchResults(q,searchCache.get(q),dd);return;}
+    const r=await fetch(`https://api.mfapi.in/mf/search?q=${encodeURIComponent(q)}`,{signal});
+    const data=await r.json();
+    searchCache.set(q,data);
+    renderSearchResults(q,data,dd);
+
+  }catch(e){if(e.name!=='AbortError')dd.innerHTML='<div class="dropdown-loading">⚠️ Search failed. Check connection.</div>';}
 }
 document.addEventListener("click",e=>{if(!e.target.closest(".search-wrap"))document.getElementById("dropdown").classList.remove("open");});
 
@@ -3649,9 +3686,15 @@ async function addFund(code){
     const cleaned=res.data
       .filter(d=>{const v=parseFloat(d.nav);return!isNaN(v)&&v>0;})
       .sort((a,b)=>parseNAVDate(a.date)-parseNAVDate(b.date));
+    if(!cleaned.length)throw new Error('no_data');
     selectedFunds.push({code,name:res.meta.scheme_name,rawData:cleaned});
     renderChips();renderAll();
-  }catch(e){alert("Failed to load. Try again.");}
+  }catch(e){
+    const msg=e.message==='no_data'
+      ?'This scheme appears discontinued or merged.\nTry searching for the \'Regular Plan\' version.'
+      :'Failed to load fund data. Please try again.';
+    alert(msg);
+  }
   setLoading(false);
 }
 function removeFund(code){selectedFunds=selectedFunds.filter(f=>f.code!==code);renderChips();renderAll();}
@@ -3743,6 +3786,37 @@ function getPeriodLabel(){
 }
 function setLoading(on){document.getElementById("loadingBar").classList.toggle("active",on);}
 
+function calcPeriodReturn(rawData,months){
+  if(!rawData||!rawData.length)return null;
+  const newest=parseNAVDate(rawData[rawData.length-1].date);
+  const cutoff=new Date(newest);cutoff.setMonth(cutoff.getMonth()-months);
+  const oldest=parseNAVDate(rawData[0].date);
+  if(cutoff<=oldest)return null;
+  let i=rawData.findIndex(d=>parseNAVDate(d.date)>=cutoff);
+  if(i<0)return null;
+  const sl=rawData.slice(i);if(sl.length<5)return null;
+  const v0=parseFloat(sl[0].nav),v1=parseFloat(sl[sl.length-1].nav);
+  return((v1-v0)/v0*100).toFixed(2);
+}
+function calcRiskMetrics(rawData){
+  if(!rawData||!rawData.length)return null;
+  const newest=parseNAVDate(rawData[rawData.length-1].date);
+  const c5=new Date(newest);c5.setFullYear(c5.getFullYear()-5);
+  const oldest=parseNAVDate(rawData[0].date);
+  let i=c5>oldest?rawData.findIndex(d=>parseNAVDate(d.date)>=c5):0;
+  if(i<0)i=0;
+  const sl=rawData.slice(i),navs=sl.map(d=>parseFloat(d.nav)),n=navs.length;
+  if(n<20)return null;
+  const dr=[];for(let j=1;j<n;j++)dr.push((navs[j]-navs[j-1])/navs[j-1]);
+  const mean=dr.reduce((a,b)=>a+b,0)/dr.length;
+  const vol=Math.sqrt(dr.map(x=>(x-mean)**2).reduce((a,b)=>a+b,0)/dr.length)*Math.sqrt(252)*100;
+  const yrs=n/252,ann=(Math.pow(navs[n-1]/navs[0],1/Math.max(yrs,.1))-1)*100;
+  const sharpe=vol>0?((ann-6.5)/vol).toFixed(2):null;
+  let peak=navs[0],dd=0;
+  for(const v of navs){if(v>peak)peak=v;const d=(peak-v)/peak;if(d>dd)dd=d;}
+  return{sharpe,annVol:vol.toFixed(2),maxDD:(dd*100).toFixed(2),
+    years:yrs.toFixed(1),isFullHistory:c5<=oldest};
+}
 function calcMetrics(rawData, forcedCutoff){
   const {data,insufficient}=getSlice(rawData, forcedCutoff);
   const navs=data.map(d=>parseFloat(d.nav)),n=navs.length;
@@ -3859,7 +3933,7 @@ function renderNavTab(container,metrics){
   },options:chartOpts()});
   // Risk table: each fund uses its own full slice for the period (no common cutoff clipping)
   // Chart is aligned for visual comparison; table shows each fund's actual data
-  const individualMetrics=selectedFunds.map(f=>({...calcMetrics(f.rawData),name:f.name,code:f.code,category:f.category||'',subCategory:f.subCategory||''}));
+  const individualMetrics=selectedFunds.map(f=>({...calcMetrics(f.rawData),rawData:f.rawData,name:f.name,code:f.code,category:f.category||'',subCategory:f.subCategory||''}));
   renderRiskTable(individualMetrics,getPeriodLabel());
 }
 
@@ -3885,33 +3959,38 @@ function renderMetricsTab(container,metrics){
       </div>`).join("")}</div></div></div>`;
 }
 
-function renderRiskTable(metrics,periodLabel){
-  // Check if funds have different data ranges — only then show date pills
-  const starts=metrics.map(m=>m.points&&m.points.length?m.points[0].date:"");
-  const ends=metrics.map(m=>m.points&&m.points.length?m.points[m.points.length-1].date:"");
-  const allSameStart=starts.every(d=>d===starts[0]);
-  const allSameEnd=ends.every(d=>d===ends[0]);
-  const showDatePill=metrics.length>1&&(!allSameStart||!allSameEnd);
-  const fmtD=str=>{
-    if(!str)return"";
-    const [d,mo,y]=str.split("-");
-    const mNames=["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return `${d} ${mNames[+mo]} ${y}`;
-  };
-  document.getElementById("riskTable").innerHTML=`
-    <thead><tr><th>Fund</th><th>${periodLabel||"Period"} Return</th><th>Ann. Return</th><th>Volatility</th><th>Sharpe</th><th>Max DD</th></tr></thead>
-    <tbody>${metrics.map((m,i)=>{
-      const s=m.points&&m.points.length?m.points[0].date:"";
-      const e=m.points&&m.points.length?m.points[m.points.length-1].date:"";
-      const datePill=showDatePill?`<div style="margin-top:3px;font-size:.62rem;font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--muted);background:var(--surface2);border-radius:4px;padding:1px 6px;display:inline-block;letter-spacing:.2px">${fmtD(s)} → ${fmtD(e)}</div>`:"";
-      return`<tr>
-      <td><div class="fund-name-cell" style="flex-direction:column;align-items:flex-start;gap:2px"><div style="display:flex;align-items:center;gap:8px"><span class="fund-dot" style="background:${COLORS[i]};flex-shrink:0"></span><span class="fund-name-text">${m.name}</span></div>${datePill}</div></td>
-      <td data-label="${periodLabel||'Period'} Ret" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${parseFloat(m.totalReturn)>=0?"#1b5e20":"#b71c1c"}">${parseFloat(m.totalReturn)>=0?"+":""}${m.totalReturn}%</td>
-      <td data-label="Ann. Return" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${parseFloat(m.annReturn)>=0?"#1b5e20":"#b71c1c"}">${parseFloat(m.annReturn)>=0?"+":""}${m.annReturn}%</td>
-      <td data-label="Volatility" style="font-family:'JetBrains Mono',monospace;color:#2e4d2e">${m.annVol}%</td>
-      <td data-label="Sharpe" style="font-family:'JetBrains Mono',monospace;color:#2e4d2e">${m.sharpe}</td>
-      <td data-label="Max DD" style="font-family:'JetBrains Mono',monospace;color:#b71c1c">-${m.maxDD}%</td>
-    </tr>`;}).join("")}</tbody>`;
+function renderRiskTable(metrics){
+  const PERIODS=[{l:'1M',m:1},{l:'3M',m:3},{l:'1Y',m:12},{l:'3Y',m:36},{l:'5Y',m:60}];
+  const dash='<span style="color:var(--muted)">—</span>';
+  function retCell(v,lbl){
+    if(v===null)return`<td data-label="${lbl}">${dash}</td>`;
+    const pos=parseFloat(v)>=0;
+    return`<td data-label="${lbl}" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${pos?'#1b5e20':'#b71c1c'}">${pos?'+':''}${v}%</td>`;
+  }
+  const pHeaders=PERIODS.map(p=>`<th>${p.l} Ret</th>`).join('');
+  const rNote='<div style="font-size:.58rem;font-weight:400;color:var(--muted);margin-top:1px">5Y or max avail.</div>';
+  const rows=metrics.map((m,i)=>{
+    const rets=PERIODS.map(p=>calcPeriodReturn(m.rawData,p.m));
+    const risk=calcRiskMetrics(m.rawData);
+    const rLabel=risk?(risk.isFullHistory?`full ${risk.years}y`:'5Y'):'';
+    const rSub=risk?`<div style="font-size:.58rem;color:var(--muted);margin-top:2px">${rLabel}</div>`:'';
+    return`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <span class="fund-dot" style="background:${COLORS[i]};flex-shrink:0"></span>
+        <span class="fund-name-text">${m.name}</span>
+      </div></td>
+      ${PERIODS.map((p,j)=>retCell(rets[j],p.l+' Ret')).join('')}
+      ${risk
+        ?`<td data-label="Sharpe" style="font-family:'JetBrains Mono',monospace;color:#2e4d2e">${risk.sharpe??'—'}${rSub}</td>
+           <td data-label="Volatility" style="font-family:'JetBrains Mono',monospace;color:#2e4d2e">${risk.annVol}%${rSub}</td>
+           <td data-label="Max DD" style="font-family:'JetBrains Mono',monospace;color:#b71c1c">-${risk.maxDD}%${rSub}</td>`
+        :`<td>${dash}</td><td>${dash}</td><td>${dash}</td>`}
+    </tr>`;
+  }).join('');
+  document.getElementById('riskTable').innerHTML=`
+    <thead><tr><th>Fund</th>${pHeaders}
+      <th>Sharpe${rNote}</th><th>Volatility${rNote}</th><th>Max DD${rNote}</th>
+    </tr></thead><tbody>${rows}</tbody>`;
 }
 
 function mr(key,valHtml){return`<div class="metric-row"><span class="metric-key">${key}</span>${valHtml}</div>`;}
@@ -5664,7 +5743,11 @@ function calcEMI() {
   }
 
   // ── Chart ──
-  drawEMIChart(loanAmt, p.rate, emiAmt, tenureMonths);
+  drawEMIChart(loanAmt, p.rate, emiAmt, tenureMonths, emiBTOn ? {
+    on: true,
+    elapsed: parseInt(document.getElementById('emiBTElapsed')?.value) || 0,
+    newRate: parseFloat(document.getElementById('emiBTRate')?.value)   || 7.5,
+  } : null);
 
   // ── Amortisation table ──
   buildEMITable(loanAmt, p.rate, emiAmt, tenureMonths, emiPrepayOn ? p.prepayAmt : 0, p.prepayFrom);
@@ -5675,7 +5758,7 @@ function calcEMI() {
 }
 
 
-function drawEMIChart(principal, rate, emiAmt, months) {
+function drawEMIChart(principal, rate, emiAmt, months, btParams) {
   if (emiChartInst) { emiChartInst.destroy(); emiChartInst = null; }
   const ctx = document.getElementById('emiChart');
   if (!ctx) return;
@@ -5698,6 +5781,47 @@ function drawEMIChart(principal, rate, emiAmt, months) {
     principalData.push(Math.round(yPrincipal));
     interestData.push(Math.round(yInterest));
     balanceData.push(Math.max(0, Math.round(balance)));
+  }
+
+  // ── BT comparison line (optional) ──
+  let btBalanceData = null;
+  if (btParams && btParams.on && btParams.elapsed >= 0 && btParams.newRate > 0) {
+    const { elapsed, newRate } = btParams;
+    // Replay current loan up to elapsed months to find outstanding
+    const r0 = rate / 100 / 12;
+    let bal0 = principal;
+    for (let m = 0; m < elapsed; m++) {
+      const int0 = bal0 * r0;
+      const pri0 = Math.min(emiAmt - int0, bal0);
+      bal0 -= pri0;
+      if (bal0 <= 0) { bal0 = 0; break; }
+    }
+    // New EMI at newRate for remaining months
+    const remMonths = Math.max(1, months - elapsed);
+    const newEMI = calcEMIValue(Math.round(bal0), newRate, remMonths);
+    const rNew = newRate / 100 / 12;
+    let balNew = bal0;
+    btBalanceData = new Array(Math.ceil(months / 12)).fill(null);
+    // Before transfer: same as original (null = use original line)
+    // After transfer: simulate new amortisation
+    for (let y = 1; y <= Math.ceil(months / 12); y++) {
+      const monthEnd = y * 12;
+      if (monthEnd <= elapsed) {
+        btBalanceData[y - 1] = null; // merged with original line before transfer
+      } else {
+        // Advance balNew month by month for this year segment
+        const startMonth = Math.max(elapsed, (y - 1) * 12);
+        const endMonth = Math.min(months, y * 12);
+        for (let m = startMonth; m < endMonth; m++) {
+          if (balNew <= 0.5) break;
+          const intN = balNew * rNew;
+          const priN = Math.min(newEMI - intN, balNew);
+          balNew -= priN;
+        }
+        btBalanceData[y - 1] = Math.max(0, Math.round(balNew));
+        if (balNew <= 0.5) break;
+      }
+    }
   }
 
   emiChartInst = new Chart(ctx, {
