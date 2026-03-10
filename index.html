@@ -128,6 +128,62 @@
 }
 </script>
 
+<!-- LocalBusiness -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": ["FinancialService", "LocalBusiness"],
+  "name": "Abundance Financial Services",
+  "alternateName": "Abundance FS",
+  "url": "https://www.getabundance.in",
+  "logo": "https://www.getabundance.in/images/logo.png",
+  "image": "https://mfcalc.getabundance.in/og-mfcalc.png",
+  "description": "AMFI-registered Mutual Fund and SIF Distributor in Haldwani, Uttarakhand. Expert advice on SIP, lumpsum, goal-based investing, SWP for retirement income, and loan planning.",
+  "telephone": "+919808105923",
+  "email": "contact@getabundance.in",
+  "priceRange": "Free",
+  "currenciesAccepted": "INR",
+  "paymentAccepted": "Online Transfer, Cheque",
+  "openingHours": "Mo-Sa 09:30-18:30",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "1st Floor, Kapil Complex, Mukhani",
+    "addressLocality": "Haldwani",
+    "addressRegion": "Uttarakhand",
+    "postalCode": "263139",
+    "addressCountry": "IN"
+  },
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": 29.2183,
+    "longitude": 79.5130
+  },
+  "hasMap": "https://maps.app.goo.gl/TgQSLRDo3UBKR77g7",
+  "areaServed": [
+    {"@type": "City", "name": "Haldwani"},
+    {"@type": "State", "name": "Uttarakhand"},
+    {"@type": "Country", "name": "India"}
+  ],
+  "serviceType": [
+    "Mutual Fund Distribution",
+    "Specialised Investment Fund (SIF) Distribution",
+    "SIP Planning",
+    "Goal-based Financial Planning",
+    "Systematic Withdrawal Plan (SWP)",
+    "Loan Advisory"
+  ],
+  "sameAs": [
+    "https://www.instagram.com/abundancefinancialservices",
+    "https://www.facebook.com/abundancefinancialservices",
+    "https://twitter.com/abundancefinsvs"
+  ],
+  "identifier": [
+    {"@type": "PropertyValue", "name": "AMFI ARN", "value": "ARN-251838"},
+    {"@type": "PropertyValue", "name": "GST", "value": "05AXYPA6954G1Z3"}
+  ]
+}
+</script>
+
 <!-- FAQPage -->
 <script type="application/ld+json">
 {
@@ -198,6 +254,55 @@
         "text": "Yes, completely free. This tool is provided by Abundance Financial Services (AMFI ARN-251838), a SEBI-registered mutual fund distributor based in Haldwani, Uttarakhand. All fund NAV data is sourced live from AMFI via the open mfapi.in API. No login or signup is required."
       }
     }
+    ,
+    {
+      "@type": "Question",
+      "name": "What is a Specialised Investment Fund (SIF) in India?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A Specialised Investment Fund (SIF) is a new SEBI-regulated investment category launched in 2025, positioned between Mutual Funds and Portfolio Management Services (PMS). SIFs require a minimum investment of ₹10 lakh and offer more flexible investment strategies than traditional mutual funds, including long-short equity, derivatives overlay, and concentrated portfolios. They are distributed by AMFI-registered SIF Distributors."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the minimum investment in a Specialised Investment Fund (SIF)?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The minimum investment in a Specialised Investment Fund (SIF) is ₹10 lakh per investor. Unlike mutual funds which start at ₹500, SIFs are designed for sophisticated investors with higher risk capacity and a larger investable surplus. SIF units can be held in demat form."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the difference between SIF, PMS, and Mutual Funds?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Mutual Funds start from as low as ₹500 and are strictly regulated by SEBI with standardised strategies. SIFs (Specialised Investment Funds) require ₹10 lakh minimum and allow more flexible, differentiated strategies including long-short positions. PMS (Portfolio Management Services) requires ₹50 lakh minimum and offers fully customised portfolios. SIFs bridge the gap — offering flexibility beyond mutual funds but more affordably than PMS. Abundance Financial Services is an authorised distributor of all three."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Who is eligible to invest in a SIF in India?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Any resident Indian individual, HUF, NRI, or institutional investor can invest in a Specialised Investment Fund (SIF) provided they meet the ₹10 lakh minimum investment threshold. Investors must complete standard KYC. The higher minimum is intended to ensure that SIF investors have the financial sophistication and risk tolerance for more complex strategies."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is a SIF taxed in India?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "SIF taxation follows rules similar to mutual funds. Equity-oriented SIFs held for more than 1 year attract Long Term Capital Gains (LTCG) tax at 12.5% on gains above ₹1.25 lakh per year. Short-term gains (held less than 1 year) are taxed at 20%. Debt-oriented SIF gains are added to income and taxed at the investor's slab rate. Tax treatment may evolve as SEBI and the Income Tax Department finalise SIF-specific rules — consult a tax advisor for the latest guidance."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I invest in SIF through Abundance Financial Services, Haldwani?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Abundance Financial Services (ARN-251838), based in Haldwani, Uttarakhand, is an AMFI-registered SIF Distributor. You can contact us at +91 98081 05923 or visit getabundance.in to explore SIF investment options tailored to your financial goals and risk profile."
+      }
+    }
   ]
 }
 </script>
@@ -221,6 +326,14 @@ function switchMainTab(name,btn){
   if(wrap) window.scrollTo({top:wrap.offsetTop,behavior:'smooth'});
 }
 
+/* ════════════════════════════════════════
+   WHATSAPP SHARE
+════════════════════════════════════════ */
+function shareOnWhatsApp() {
+  var text = 'Free mutual fund & loan calculator — compare funds, SIP, SWP, EMI, goal planner. Live AMFI data. By Abundance Financial Services, Haldwani.\n\nhttps://mfcalc.getabundance.in/';
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
+}
+
 </script>
 <!-- html2canvas loaded lazily on first export -->
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -242,6 +355,22 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
   background-image:radial-gradient(ellipse 70% 40% at 50% -10%,rgba(46,125,50,.07) 0%,transparent 60%)}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 .accent-line{height:3px;background:linear-gradient(90deg,var(--g1),var(--g3),var(--g4),var(--g3),var(--g1))}
+
+/* WhatsApp share button */
+.wa-share-btn{
+  position:fixed;bottom:24px;right:24px;z-index:999;
+  display:flex;align-items:center;gap:8px;
+  background:#25D366;color:#fff;border:none;
+  padding:11px 18px 11px 14px;border-radius:50px;
+  font-family:inherit;font-size:.82rem;font-weight:700;
+  cursor:pointer;box-shadow:0 4px 18px rgba(37,211,102,.35);
+  transition:transform .15s,box-shadow .15s;
+  text-decoration:none;
+}
+.wa-share-btn:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(37,211,102,.45);}
+.wa-share-btn:active{transform:translateY(0);}
+@media(max-width:480px){.wa-share-btn span{display:none;} .wa-share-btn{padding:13px;}}
+
 .page{max-width:1160px;margin:0 auto;padding:0 24px 0}
 
 /* NAVBAR */
@@ -1912,6 +2041,19 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .faq-a{padding:0 14px 13px;font-size:.78rem}
 }
 </style>
+<!-- ═══ Analytics — replace G-9KMZ8MS3M7 with your GA4 Measurement ID ═══
+     To find your ID: analytics.google.com → Admin → Data Streams → your stream
+     If you already have GA4 on getabundance.in, use the SAME Measurement ID here -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-9KMZ8MS3M7"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-9KMZ8MS3M7', {
+    page_title: 'MF & Loan Calculator Suite',
+    page_location: 'https://mfcalc.getabundance.in/'
+  });
+</script>
 </head>
 <body>
 <div class="accent-line"></div>
@@ -3228,6 +3370,32 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         <summary class="faq-q">Is this calculator free? Who made it?</summary>
         <div class="faq-a">Yes, completely free. Built by <strong>Abundance Financial Services</strong> (ARN-251838), an AMFI-registered mutual fund distributor in Haldwani, Uttarakhand. All NAV data is sourced live from AMFI via the open mfapi.in API. No login required.</div>
       </details>
+
+      <details class="faq-item">
+        <summary class="faq-q">What is a Specialised Investment Fund (SIF)?</summary>
+        <div class="faq-a"><strong>SIF (Specialised Investment Fund)</strong> is a new SEBI-regulated category launched in 2025, sitting between Mutual Funds and PMS. Minimum investment is <strong>₹10 lakh</strong>. SIFs can run long-short strategies, use derivatives, and take more concentrated positions than a regular mutual fund — giving sophisticated investors access to alpha-seeking strategies at a fraction of PMS cost.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">SIF vs Mutual Fund vs PMS — what's the difference?</summary>
+        <div class="faq-a">
+          <strong>Mutual Fund:</strong> Starts from ₹500. Standardised SEBI-regulated strategies. Best for most retail investors.<br>
+          <strong>SIF:</strong> Minimum ₹10 lakh. Flexible strategies (long-short, derivatives overlay). Demat-held units. New in 2025.<br>
+          <strong>PMS:</strong> Minimum ₹50 lakh. Fully customised portfolio. Direct securities in your name.<br>
+          Abundance Financial Services is an authorised distributor of all three.
+        </div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">Who can invest in SIF and what is the minimum amount?</summary>
+        <div class="faq-a">Any resident Indian, HUF, NRI, or institution with completed KYC can invest in a SIF. The minimum ticket is <strong>₹10 lakh</strong> per investor. This threshold is designed to ensure investors have the financial sophistication and risk capacity for SIF strategies. <a href="https://www.getabundance.in/contact-us" target="_blank" rel="noopener">Contact Abundance Financial Services</a> to explore which SIF is right for you.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">How is SIF taxed — LTCG or slab rate?</summary>
+        <div class="faq-a">SIF taxation mirrors mutual fund rules. <strong>Equity-oriented SIFs</strong> held 1+ year: 12.5% LTCG on gains above ₹1.25L/year. Held under 1 year: 20% STCG. <strong>Debt-oriented SIFs:</strong> gains taxed at your income slab rate. Always consult a tax advisor as SIF-specific rules are still being finalised by SEBI.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">Can I invest in SIF through Abundance Financial Services, Haldwani?</summary>
+        <div class="faq-a">Yes. <strong>Abundance Financial Services</strong> (ARN-251838), Haldwani, is an <strong>AMFI-registered SIF Distributor</strong>. Call us on <a href="tel:+919808105923">+91 98081 05923</a> or visit <a href="https://www.getabundance.in/contact-us" target="_blank" rel="noopener">getabundance.in</a> to book a free consultation and explore SIF options matching your goals.</div>
+      </details>
     </div>
   </div>
 </section>
@@ -3297,7 +3465,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         </a>
         <div class="dfc-tool-badge">
           <span>🛠</span>
-          <span>Live AMFI data · EMI + SIP + SWP + Goal + Fund Compare</span>
+          <span>Live AMFI data · MF &amp; SIF Distributor · EMI + SIP + SWP + Goal + Fund Compare</span>
         </div>
       </div>
 
@@ -3318,6 +3486,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 
   </div><!-- /.dark-footer-inner -->
 </footer>
+
+<!-- WhatsApp Share Button -->
+<button class="wa-share-btn" onclick="shareOnWhatsApp()" aria-label="Share on WhatsApp" title="Share on WhatsApp">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.845L.057 23.882a.5.5 0 0 0 .61.61l6.037-1.471A11.944 11.944 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.015-1.376l-.36-.214-3.731.909.924-3.636-.236-.374A9.818 9.818 0 1 1 12 21.818z"/></svg>
+  <span>Share</span>
+</button>
+
 <div style="display:none"><!-- page div already closed above -->
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 
