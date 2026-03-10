@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mfcalc.getabundance.in/sitemap.xml
