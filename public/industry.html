@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MF Industry Pulse — Live AUM, Flows & Folio Data | Abundance Financial Services®</title>
+<meta name="description" content="Live AMFI mutual fund industry data — total AUM ₹82L Cr, category-wise flows, folio growth trends. Free MF industry dashboard by Abundance Financial Services® ARN-251838.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://mfcalc.getabundance.in/industry">
+<link rel="icon" type="image/x-icon" href="https://www.getabundance.in/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="https://www.getabundance.in/favicon-32x32.png">
+<meta property="og:title" content="MF Industry Pulse — Live AUM & Flows | Abundance Financial Services®">
+<meta property="og:description" content="AMFI mutual fund industry dashboard — AUM, net flows, folios by category. Free tool by Abundance Financial Services® ARN-251838.">
+<meta property="og:url" content="https://mfcalc.getabundance.in/industry">
+<meta property="og:image" content="https://mfcalc.getabundance.in/og-mfcalc.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<!-- GA4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-9KMZ8MS3M7"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-9KMZ8MS3M7');</script>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f0f7f0;--surface:#fff;--surface2:#edf6ed;--surface3:#dff0df;
+  --border:#c2dfc2;--border2:#a8cfa8;
+  --text:#162616;--text2:#2e4d2e;--muted:#5e8a5e;
+  --g1:#1b5e20;--g2:#2e7d32;--g3:#43a047;--g4:#66bb6a;
+  --g-light:#a5d6a7;--g-xlight:#e8f5e9;
+  --neg:#b71c1c;--neg-bg:#ffebee;
+  --pos:#1b5e20;--pos-bg:#e8f5e9;
+  --shadow:0 2px 16px rgba(46,125,50,.09);--shadow-lg:0 8px 40px rgba(46,125,50,.14);
+  --radius:14px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse 70% 40% at 50% -10%,rgba(46,125,50,.07) 0%,transparent 60%)}
+a{color:inherit;text-decoration:none}
+.container{max-width:1100px;margin:0 auto;padding:0 20px}
+
+/* ── NAVBAR ── */
+.navbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0 18px;margin-bottom:28px;border-bottom:1.5px solid var(--border);gap:16px;flex-wrap:wrap}
+.logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none}
+.logo-img{height:38px;width:auto;border-radius:6px}
+.logo-icon{width:38px;height:38px;border-radius:8px;background:var(--g2);color:#fff;font-weight:800;font-size:1.1rem;display:none;align-items:center;justify-content:center}
+.logo-text .brand{font-size:.95rem;font-weight:800;color:var(--g1);letter-spacing:-.3px}
+.logo-text .sub{font-size:.62rem;font-weight:600;color:var(--muted);letter-spacing:.4px}
+.nav-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.nav-link{padding:7px 14px;border-radius:8px;font-size:.75rem;font-weight:700;color:var(--g2);background:var(--surface2);border:1.5px solid var(--border);transition:all .15s;letter-spacing:.2px}
+.nav-link:hover{background:var(--surface3);border-color:var(--border2)}
+.nav-tag{padding:7px 14px;border-radius:8px;font-size:.75rem;font-weight:700;background:var(--g2);color:#fff;letter-spacing:.2px}
+.nav-tag.active{background:var(--g1)}
+
+/* ── PAGE HEADER ── */
+.page-header{margin-bottom:28px;animation:fadeDown .5s ease both}
+.page-eyebrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#43a047;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.page-eyebrow-text{font-size:.65rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.page-title{font-size:1.6rem;font-weight:800;color:var(--g1);letter-spacing:-.5px;line-height:1.2}
+.page-title span{color:var(--g3)}
+.page-subtitle{font-size:.82rem;color:var(--muted);margin-top:6px;font-weight:500}
+.month-selector{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+.month-select{padding:8px 14px;font-family:'Raleway',sans-serif;font-size:.78rem;font-weight:700;border:1.5px solid var(--border2);border-radius:9px;background:var(--surface2);color:var(--text);outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235e8a5e' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-color:var(--surface2);padding-right:28px}
+.month-select:focus{border-color:var(--g3)}
+.load-btn{padding:8px 18px;border-radius:9px;background:var(--g2);color:#fff;font-family:'Raleway',sans-serif;font-size:.78rem;font-weight:700;border:none;cursor:pointer;transition:all .15s;letter-spacing:.3px}
+.load-btn:hover{background:var(--g1)}
+.data-source-note{font-size:.65rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+
+/* ── LOADING / ERROR ── */
+.state-box{text-align:center;padding:60px 20px;background:var(--surface);border-radius:var(--radius);border:1.5px solid var(--border)}
+.state-spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--g3);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.state-msg{font-size:.85rem;color:var(--muted);font-weight:600}
+.state-error{color:var(--neg);font-size:.85rem;font-weight:600}
+.state-detail{font-size:.72rem;color:var(--muted);margin-top:8px;font-family:'JetBrains Mono',monospace}
+.retry-btn{margin-top:14px;padding:8px 20px;border-radius:9px;background:var(--g2);color:#fff;font-family:'Raleway',sans-serif;font-size:.78rem;font-weight:700;border:none;cursor:pointer}
+
+/* ── SUMMARY CARDS ── */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px}
+.sum-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:18px 16px;transition:all .2s;animation:fadeUp .4s ease both}
+.sum-card:hover{border-color:var(--border2);box-shadow:var(--shadow)}
+.sum-card.highlight{background:linear-gradient(135deg,#1b5e20,#2e7d32);border-color:#1b5e20;color:#fff}
+.sum-card.highlight .sum-label,.sum-card.highlight .sum-sub{color:rgba(255,255,255,.7)}
+.sum-card.highlight .sum-val{color:#fff}
+.sum-icon{font-size:1.1rem;margin-bottom:8px}
+.sum-val{font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;color:var(--g1);line-height:1.1;margin-bottom:4px}
+.sum-label{font-size:.6rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.sum-sub{font-size:.65rem;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono',monospace}
+.sum-sub.pos{color:var(--pos)}
+.sum-sub.neg{color:var(--neg)}
+
+/* ── SECTION ── */
+.section{margin-bottom:32px}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
+.section-title{font-size:.9rem;font-weight:800;color:var(--g1);letter-spacing:-.2px}
+.section-badge{font-size:.6rem;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--surface3);color:var(--g2);border:1px solid var(--border);font-family:'JetBrains Mono',monospace;letter-spacing:.5px}
+
+/* ── CHART CARDS ── */
+.chart-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.chart-title{font-size:.78rem;font-weight:700;color:var(--text2);margin-bottom:16px;letter-spacing:-.1px}
+.chart-wrap{position:relative;height:240px}
+
+/* ── AUM BREAKDOWN BAR ── */
+.aum-breakdown{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:28px}
+.aum-bar-wrap{height:24px;border-radius:12px;overflow:hidden;display:flex;margin:16px 0 12px;background:var(--surface2)}
+.aum-seg{height:100%;transition:width .6s ease;position:relative}
+.aum-seg:first-child{border-radius:12px 0 0 12px}
+.aum-seg:last-child{border-radius:0 12px 12px 0}
+.aum-legend{display:flex;flex-wrap:wrap;gap:12px 20px}
+.aum-leg-item{display:flex;align-items:center;gap:6px;font-size:.7rem;font-weight:600;color:var(--text2)}
+.aum-leg-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.aum-leg-val{font-family:'JetBrains Mono',monospace;color:var(--muted);font-size:.68rem}
+
+/* ── CATEGORY TABLE ── */
+.cat-table-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.cat-filters{display:flex;gap:8px;padding:14px 16px;border-bottom:1.5px solid var(--border);flex-wrap:wrap}
+.cat-filter-btn{padding:5px 12px;border-radius:20px;font-size:.68rem;font-weight:700;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .15s;font-family:'Raleway',sans-serif;letter-spacing:.3px}
+.cat-filter-btn.active,.cat-filter-btn:hover{background:var(--g2);border-color:var(--g2);color:#fff}
+.cat-table{width:100%;border-collapse:collapse;font-size:.75rem}
+.cat-table th{text-align:left;padding:10px 14px;background:var(--surface2);font-size:.58rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);font-family:'JetBrains Mono',monospace;cursor:pointer;white-space:nowrap;user-select:none}
+.cat-table th:hover{color:var(--g2)}
+.cat-table th.sorted{color:var(--g2)}
+.cat-table th .sort-arrow{margin-left:4px;opacity:.5}
+.cat-table th.sorted .sort-arrow{opacity:1}
+.cat-table td{padding:10px 14px;border-bottom:1px solid var(--border);font-weight:500;vertical-align:middle}
+.cat-table tr:last-child td{border-bottom:none}
+.cat-table tr:hover td{background:var(--surface2)}
+.cat-name{font-weight:700;color:var(--text);font-size:.73rem}
+.cat-type-badge{display:inline-block;font-size:.55rem;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:.5px;text-transform:uppercase;margin-left:5px;vertical-align:middle;font-family:'JetBrains Mono',monospace}
+.type-equity{background:#e3f2fd;color:#1565c0}
+.type-debt{background:#fce4ec;color:#880e4f}
+.type-hybrid{background:#f3e5f5;color:#6a1b9a}
+.type-passive{background:#e8f5e9;color:#1b5e20}
+.type-solution{background:#fff3e0;color:#e65100}
+.mono{font-family:'JetBrains Mono',monospace;font-size:.7rem}
+.flow-pos{color:var(--pos);font-weight:700}
+.flow-neg{color:var(--neg);font-weight:700}
+.flow-bar-cell{min-width:80px}
+.flow-bar-bg{height:5px;border-radius:3px;background:var(--surface3);overflow:hidden;margin-top:3px}
+.flow-bar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+
+/* ── TWO COL CHARTS ── */
+.chart-duo{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px}
+@media(max-width:640px){.chart-duo{grid-template-columns:1fr}}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.sum-card:nth-child(1){animation-delay:.05s}
+.sum-card:nth-child(2){animation-delay:.1s}
+.sum-card:nth-child(3){animation-delay:.15s}
+.sum-card:nth-child(4){animation-delay:.2s}
+.sum-card:nth-child(5){animation-delay:.25s}
+.sum-card:nth-child(6){animation-delay:.3s}
+
+/* ── FOOTER ── */
+.dark-footer{background:#0d1f0d;color:#c8e6c9;margin-top:48px}
+.dark-footer-edge{height:3px;background:linear-gradient(90deg,#1b5e20,#43a047,#a5d6a7,#43a047,#1b5e20)}
+.dark-footer-inner{max-width:1100px;margin:0 auto;padding:44px 20px 0}
+.dark-footer-bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:16px 0;border-top:1px solid rgba(255,255,255,.08);margin-top:28px;font-size:.67rem;color:rgba(200,230,201,.5)}
+.dfb-arn{font-family:'JetBrains Mono',monospace;font-size:.62rem}
+.dark-footer-disclaimer{background:rgba(255,255,255,.04);border-radius:10px;padding:14px 18px;margin-top:20px;font-size:.68rem;color:rgba(200,230,201,.55);line-height:1.7}
+.dark-footer-disclaimer strong{color:rgba(200,230,201,.75)}
+.dfd-warn{margin-right:6px;font-size:.8rem}
+
+/* ── NO DATA ── */
+.no-data{text-align:center;padding:40px;color:var(--muted);font-size:.8rem;font-style:italic}
+
+/* ── BACK LINK ── */
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;color:var(--g2);padding:7px 14px;border-radius:8px;background:var(--surface2);border:1.5px solid var(--border);transition:all .15s;margin-bottom:20px}
+.back-link:hover{background:var(--surface3)}
+
+/* ── PARSE WARNING ── */
+.parse-warn{background:#fff8e1;border:1.5px solid #ffe082;border-radius:10px;padding:12px 16px;font-size:.72rem;color:#7c5c00;margin-bottom:20px;display:none}
+.parse-warn.show{display:block}
+
+@media(max-width:600px){
+  .page-title{font-size:1.3rem}
+  .cat-table{font-size:.68rem}
+  .cat-table td,.cat-table th{padding:8px 10px}
+  .summary-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a class="logo-wrap" href="https://www.getabundance.in" target="_blank" rel="noopener noreferrer">
+      <img class="logo-img" src="https://www.getabundance.in/images/logo.png" alt="Abundance Financial Services®"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="logo-icon">A</div>
+      <div class="logo-text">
+        <div class="brand">Abundance</div>
+        <div class="sub">Financial Services<sup style="font-size:.55em;vertical-align:super;opacity:.75">®</sup></div>
+        <div class="sub" style="font-size:.52rem;letter-spacing:1.2px;margin-top:2px;color:var(--g3)">Serving Investors Across India</div>
+      </div>
+    </a>
+    <div class="nav-right">
+      <a class="nav-link" href="https://www.getabundance.in" target="_blank" rel="noopener noreferrer">🏠 Home</a>
+      <a class="nav-link" href="/">📊 MF Calculator</a>
+      <a class="nav-link" href="https://www.getabundance.in/contact-us" target="_blank" rel="noopener noreferrer">📞 Contact</a>
+      <div class="nav-tag active">📈 Industry Pulse</div>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-eyebrow">
+      <div class="live-dot"></div>
+      <span class="page-eyebrow-text">AMFI Official Data</span>
+    </div>
+    <h1 class="page-title">MF Industry <span>Pulse</span></h1>
+    <p class="page-subtitle">Total AUM, category-wise flows, folio growth — sourced directly from AMFI monthly reports</p>
+
+    <div class="month-selector">
+      <select class="month-select" id="monthSel"></select>
+      <select class="month-select" id="yearSel"></select>
+      <button class="load-btn" onclick="loadData()">Load Report</button>
+      <span class="data-source-note" id="dataSourceNote">Source: AMFI Monthly Report</span>
+    </div>
+  </div>
+
+  <!-- PARSE WARNING -->
+  <div class="parse-warn" id="parseWarn">
+    ⚠️ Some category data could not be parsed from this month's report. Showing partial data.
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div id="mainContent">
+    <div class="state-box" id="stateBox">
+      <div class="state-spinner"></div>
+      <div class="state-msg">Loading AMFI industry data…</div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="dark-footer">
+  <div class="dark-footer-edge"></div>
+  <div class="dark-footer-inner">
+    <div class="dark-footer-disclaimer">
+      <span class="dfd-warn">⚠</span>
+      <strong>Disclaimer:</strong> Mutual fund investments are subject to market risks. Industry data sourced from AMFI monthly reports via the Abundance MF Calculator API. Figures are indicative and may differ slightly from official AMFI publications due to PDF parsing. This page is for informational purposes only and does not constitute financial advice. Consult your financial advisor before investing.
+    </div>
+    <div class="dark-footer-bottom">
+      <span>© <span id="footerYear"></span> Abundance Financial Services® · Atin Kumar Agrawal</span>
+      <span class="dfb-arn">ARN-251838 · AMFI Registered Mutual Funds Distributor &amp; SIF Distributor</span>
+      <span class="dfb-arn">GST: 05AXYPA6954G1Z3</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── CONSTANTS ──
+const API_BASE = '/api/amfi-industry';
+const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const MONTH_LABELS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const TYPE_COLORS = {
+  equity:  { seg:'#1565c0', badge:'type-equity',  label:'Equity'  },
+  debt:    { seg:'#880e4f', badge:'type-debt',    label:'Debt'    },
+  hybrid:  { seg:'#6a1b9a', badge:'type-hybrid',  label:'Hybrid'  },
+  passive: { seg:'#1b5e20', badge:'type-passive', label:'Passive' },
+  solution:{ seg:'#e65100', badge:'type-solution',label:'Solution'},
+};
+
+// ── STATE ──
+let currentData = null;
+let sortCol = 'aum';
+let sortDir = -1;
+let filterType = 'all';
+let charts = {};
+
+// ── INIT SELECTORS ──
+function initSelectors(){
+  const now = new Date();
+  const ms = document.getElementById('monthSel');
+  const ys = document.getElementById('yearSel');
+  MONTHS.forEach((m,i) => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = MONTH_LABELS[i];
+    ms.appendChild(opt);
+  });
+  // Default: last month or month before based on date
+  const defOffset = now.getDate() < 10 ? 2 : 1;
+  const defDate = new Date(now.getFullYear(), now.getMonth() - defOffset, 1);
+  ms.value = MONTHS[defDate.getMonth()];
+
+  for(let y = now.getFullYear(); y >= 2020; y--){
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    ys.appendChild(opt);
+  }
+  ys.value = defDate.getFullYear();
+}
+
+// ── FORMAT HELPERS ──
+function fmtCr(val){
+  if(!val && val!==0) return '—';
+  if(val >= 100000) return '₹' + (val/100000).toFixed(2) + 'L Cr';
+  if(val >= 1000)   return '₹' + (val/1000).toFixed(2) + 'K Cr';
+  return '₹' + val.toFixed(2) + ' Cr';
+}
+function fmtFlow(val){
+  if(!val && val!==0) return '—';
+  const abs = Math.abs(val);
+  let str = abs >= 100000 ? (abs/100000).toFixed(2)+'L' :
+            abs >= 1000   ? (abs/1000).toFixed(2)+'K'   :
+            abs.toFixed(2);
+  return (val < 0 ? '−' : '+') + '₹' + str + ' Cr';
+}
+function fmtFolios(val){
+  if(!val && val!==0) return '—';
+  if(val >= 10000000) return (val/10000000).toFixed(2) + ' Cr';
+  if(val >= 100000)   return (val/100000).toFixed(2) + ' L';
+  return val.toLocaleString('en-IN');
+}
+function fmtNum(val){
+  if(!val && val!==0) return '—';
+  return val.toLocaleString('en-IN');
+}
+
+// ── LOAD DATA ──
+async function loadData(){
+  const mon  = document.getElementById('monthSel').value;
+  const year = document.getElementById('yearSel').value;
+  const label = MONTH_LABELS[MONTHS.indexOf(mon)] + ' ' + year;
+
+  showState('loading', 'Fetching AMFI data for ' + label + '…');
+  document.getElementById('parseWarn').classList.remove('show');
+
+  // Destroy old charts
+  Object.values(charts).forEach(c => { try{ c.destroy(); }catch(e){} });
+  charts = {};
+
+  try {
+    const res = await fetch(`${API_BASE}?month=${mon}&year=${year}`);
+    if(!res.ok){
+      const err = await res.json().catch(()=>({error:'HTTP '+res.status}));
+      showState('error', 'Report not available for ' + label, err.error || '');
+      return;
+    }
+
+    const data = await res.json();
+
+    if(data.error){
+      showState('error', 'Could not load data', data.error);
+      return;
+    }
+
+    currentData = data;
+    document.getElementById('dataSourceNote').textContent =
+      'Source: AMFI Monthly Report · ' + label + ' · Parsed ' + new Date(data.parsedAt||Date.now()).toLocaleTimeString('en-IN');
+
+    // Check if parsing was partial
+    const catCount = Object.keys(data.categories||{}).length;
+    if(catCount < 10){
+      document.getElementById('parseWarn').classList.add('show');
+    }
+
+    renderAll(data);
+
+  } catch(e) {
+    showState('error', 'Network error', e.message);
+  }
+}
+
+function showState(type, msg, detail=''){
+  const box = document.getElementById('mainContent');
+  if(type === 'loading'){
+    box.innerHTML = `<div class="state-box"><div class="state-spinner"></div><div class="state-msg">${msg}</div></div>`;
+  } else {
+    box.innerHTML = `<div class="state-box">
+      <div style="font-size:2rem;margin-bottom:12px">⚠️</div>
+      <div class="state-error">${msg}</div>
+      ${detail ? `<div class="state-detail">${detail}</div>` : ''}
+      <button class="retry-btn" onclick="loadData()">Retry</button>
+    </div>`;
+  }
+}
+
+// ── RENDER ALL ──
+function renderAll(data){
+  const s = data.summary || {};
+  const cats = data.categories || {};
+
+  // Check data quality
+  const hasRealData = s.totalAum > 0;
+
+  const html = `
+    ${renderSummaryCards(s, data)}
+    ${renderAumBreakdown(s)}
+    <div class="chart-duo">
+      <div class="chart-card">
+        <div class="chart-title">📊 AUM by Category Type (₹ Crore)</div>
+        <div class="chart-wrap"><canvas id="chartAumDonut"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">💸 Net Flows by Category Type (₹ Crore)</div>
+        <div class="chart-wrap"><canvas id="chartFlowBar"></canvas></div>
+      </div>
+    </div>
+    ${renderCategoryTable(cats)}
+  `;
+
+  document.getElementById('mainContent').innerHTML = html;
+
+  // Render charts after DOM update
+  setTimeout(() => {
+    renderDonut(s);
+    renderFlowBar(cats);
+  }, 50);
+}
+
+// ── SUMMARY CARDS ──
+function renderSummaryCards(s, data){
+  const mon = data.month || '';
+  const yr  = data.year  || '';
+  const label = mon && yr ? (MONTH_LABELS[MONTHS.indexOf(mon)]||mon) + ' ' + yr : '';
+
+  const cards = [
+    { icon:'🏦', val: fmtCr(s.totalAum),      label:'Total Industry AUM',   sub: label,            highlight: true  },
+    { icon:'👥', val: fmtFolios(s.totalFolios),label:'Total Folios',          sub:'Investor accounts', highlight: false },
+    { icon:'📈', val: fmtCr(s.equityAum),      label:'Equity AUM',            sub:'Active schemes',    highlight: false },
+    { icon:'🏛', val: fmtCr(s.debtAum),        label:'Debt AUM',              sub:'Fixed income',      highlight: false },
+    { icon:'⚖️', val: fmtCr(s.hybridAum),      label:'Hybrid AUM',            sub:'Balanced funds',    highlight: false },
+    { icon:'📊', val: fmtCr(s.passiveAum),     label:'Passive AUM',           sub:'Index & ETFs',      highlight: false },
+  ];
+
+  return `<div class="summary-grid">${cards.map(c=>`
+    <div class="sum-card${c.highlight?' highlight':''}">
+      <div class="sum-icon">${c.icon}</div>
+      <div class="sum-val">${c.val}</div>
+      <div class="sum-label">${c.label}</div>
+      <div class="sum-sub">${c.sub}</div>
+    </div>`).join('')}</div>`;
+}
+
+// ── AUM BREAKDOWN BAR ──
+function renderAumBreakdown(s){
+  const total = s.totalAum || 1;
+  const segs = [
+    { label:'Equity',  val: s.equityAum,  color:'#1565c0', pct: (s.equityAum/total*100).toFixed(1)  },
+    { label:'Debt',    val: s.debtAum,    color:'#880e4f', pct: (s.debtAum/total*100).toFixed(1)    },
+    { label:'Hybrid',  val: s.hybridAum,  color:'#6a1b9a', pct: (s.hybridAum/total*100).toFixed(1)  },
+    { label:'Passive', val: s.passiveAum, color:'#1b5e20', pct: (s.passiveAum/total*100).toFixed(1) },
+  ];
+
+  const bars = segs.map(sg=>`<div class="aum-seg" style="width:${sg.pct}%;background:${sg.color}" title="${sg.label}: ₹${sg.val?.toFixed(0)||0} Cr"></div>`).join('');
+  const legs = segs.map(sg=>`<div class="aum-leg-item"><div class="aum-leg-dot" style="background:${sg.color}"></div>${sg.label} <span class="aum-leg-val">${fmtCr(sg.val)} · ${sg.pct}%</span></div>`).join('');
+
+  return `<div class="aum-breakdown section">
+    <div class="section-head">
+      <div class="section-title">📊 AUM Distribution</div>
+      <div class="section-badge">BREAKDOWN</div>
+    </div>
+    <div class="aum-bar-wrap">${bars}</div>
+    <div class="aum-legend">${legs}</div>
+  </div>`;
+}
+
+// ── DONUT CHART ──
+function renderDonut(s){
+  const ctx = document.getElementById('chartAumDonut');
+  if(!ctx) return;
+  charts.donut = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Equity','Debt','Hybrid','Passive'],
+      datasets:[{
+        data: [s.equityAum||0, s.debtAum||0, s.hybridAum||0, s.passiveAum||0],
+        backgroundColor:['#1565c0','#880e4f','#6a1b9a','#1b5e20'],
+        borderWidth: 2,
+        borderColor: '#fff',
+        hoverOffset: 8
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'bottom', labels:{ font:{family:'Raleway',size:11}, padding:12, boxWidth:12 }},
+        tooltip:{ callbacks:{ label: ctx => ' ' + fmtCr(ctx.raw) + ' (' + ((ctx.raw/(s.totalAum||1))*100).toFixed(1) + '%)' }}
+      },
+      cutout:'62%'
+    }
+  });
+}
+
+// ── FLOW BAR CHART ──
+function renderFlowBar(cats){
+  const ctx = document.getElementById('chartFlowBar');
+  if(!ctx) return;
+
+  // Aggregate net flow by type
+  const flows = {equity:0, debt:0, hybrid:0, passive:0, solution:0};
+  Object.values(cats).forEach(c => {
+    if(flows[c.type] !== undefined) flows[c.type] += (c.netFlow||0);
+  });
+
+  const labels = ['Equity','Debt','Hybrid','Passive','Solution'];
+  const vals   = [flows.equity, flows.debt, flows.hybrid, flows.passive, flows.solution];
+  const colors = vals.map(v => v >= 0 ? 'rgba(27,94,32,.8)' : 'rgba(183,28,28,.7)');
+
+  charts.flow = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets:[{ data: vals, backgroundColor: colors, borderRadius: 6, borderSkipped: false }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label: ctx => ' Net Flow: ' + fmtFlow(ctx.raw) }}
+      },
+      scales:{
+        x:{ grid:{ display:false }, ticks:{ font:{family:'Raleway',size:11} }},
+        y:{ grid:{ color:'rgba(0,0,0,.05)' }, ticks:{ font:{family:'JetBrains Mono',size:10}, callback: v => v>=0?'+₹'+fmtNum(v/100)+'K Cr':'−₹'+fmtNum(-v/100)+'K Cr' }}
+      }
+    }
+  });
+}
+
+// ── CATEGORY TABLE ──
+function renderCategoryTable(cats){
+  return `<div class="section">
+    <div class="section-head">
+      <div class="section-title">📋 Category-wise Data</div>
+      <div class="section-badge">${Object.keys(cats).length} CATEGORIES</div>
+    </div>
+    <div class="cat-table-wrap">
+      <div class="cat-filters">
+        <button class="cat-filter-btn active" onclick="filterTable('all',this)">All</button>
+        <button class="cat-filter-btn" onclick="filterTable('equity',this)">Equity</button>
+        <button class="cat-filter-btn" onclick="filterTable('debt',this)">Debt</button>
+        <button class="cat-filter-btn" onclick="filterTable('hybrid',this)">Hybrid</button>
+        <button class="cat-filter-btn" onclick="filterTable('passive',this)">Passive</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="cat-table" id="catTable">
+          <thead>
+            <tr>
+              <th onclick="sortTable('label')">Category <span class="sort-arrow">↕</span></th>
+              <th onclick="sortTable('schemes')" class="mono">Schemes <span class="sort-arrow">↕</span></th>
+              <th onclick="sortTable('folios')" class="mono">Folios <span class="sort-arrow">↕</span></th>
+              <th onclick="sortTable('inflow')" class="mono">Inflow (Cr) <span class="sort-arrow">↕</span></th>
+              <th onclick="sortTable('redemption')" class="mono">Redemption (Cr) <span class="sort-arrow">↕</span></th>
+              <th onclick="sortTable('netFlow')" class="sorted mono">Net Flow (Cr) <span class="sort-arrow">↓</span></th>
+              <th onclick="sortTable('aum')" class="mono">AUM (Cr) <span class="sort-arrow">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="catTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+function filterTable(type, btn){
+  filterType = type;
+  document.querySelectorAll('.cat-filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTableRows();
+}
+
+function sortTable(col){
+  if(sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = -1; }
+
+  // Update header UI
+  document.querySelectorAll('.cat-table th').forEach(th => {
+    th.classList.remove('sorted');
+    const arrow = th.querySelector('.sort-arrow');
+    if(arrow) arrow.textContent = '↕';
+  });
+  const headers = ['label','schemes','folios','inflow','redemption','netFlow','aum'];
+  const idx = headers.indexOf(col);
+  const ths = document.querySelectorAll('.cat-table th');
+  if(ths[idx]){
+    ths[idx].classList.add('sorted');
+    const arrow = ths[idx].querySelector('.sort-arrow');
+    if(arrow) arrow.textContent = sortDir === -1 ? '↓' : '↑';
+  }
+  renderTableRows();
+}
+
+function renderTableRows(){
+  if(!currentData) return;
+  const cats = currentData.categories || {};
+  let rows = Object.values(cats);
+
+  if(filterType !== 'all') rows = rows.filter(r => r.type === filterType);
+
+  rows.sort((a,b) => {
+    const av = a[sortCol] ?? (sortCol==='label' ? '' : 0);
+    const bv = b[sortCol] ?? (sortCol==='label' ? '' : 0);
+    if(typeof av === 'string') return sortDir * av.localeCompare(bv);
+    return sortDir * (av - bv);
+  });
+
+  // Max AUM for bar scaling
+  const maxAum = Math.max(...rows.map(r=>r.aum||0), 1);
+  const maxFlow = Math.max(...rows.map(r=>Math.abs(r.netFlow||0)), 1);
+
+  const tbody = document.getElementById('catTableBody');
+  if(!tbody) return;
+
+  if(rows.length === 0){
+    tbody.innerHTML = `<tr><td colspan="7" class="no-data">No data available for this filter</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    const tc = TYPE_COLORS[r.type] || {badge:'',label:r.type||''};
+    const flowClass = (r.netFlow||0) >= 0 ? 'flow-pos' : 'flow-neg';
+    const flowPct = Math.abs(r.netFlow||0) / maxFlow * 100;
+    const flowColor = (r.netFlow||0) >= 0 ? '#1b5e20' : '#b71c1c';
+    const aumPct = (r.aum||0) / maxAum * 100;
+
+    return `<tr>
+      <td><span class="cat-name">${r.label||'—'}</span><span class="cat-type-badge ${tc.badge}">${tc.label}</span></td>
+      <td class="mono">${r.schemes ? fmtNum(r.schemes) : '—'}</td>
+      <td class="mono">${fmtFolios(r.folios)}</td>
+      <td class="mono">${r.inflow ? '₹'+fmtNum(Math.round(r.inflow)) : '—'}</td>
+      <td class="mono">${r.redemption ? '₹'+fmtNum(Math.round(r.redemption)) : '—'}</td>
+      <td class="flow-bar-cell">
+        <span class="${flowClass} mono">${fmtFlow(r.netFlow)}</span>
+        <div class="flow-bar-bg"><div class="flow-bar-fill" style="width:${flowPct}%;background:${flowColor}"></div></div>
+      </td>
+      <td>
+        <span class="mono">${r.aum ? '₹'+fmtNum(Math.round(r.aum)) : '—'}</span>
+        <div class="flow-bar-bg"><div class="flow-bar-fill" style="width:${aumPct}%;background:var(--g3)"></div></div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── BOOT ──
+document.getElementById('footerYear').textContent = new Date().getFullYear();
+initSelectors();
+loadData();
+</script>
+</body>
+</html>
