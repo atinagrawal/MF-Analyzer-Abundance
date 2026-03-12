@@ -323,13 +323,15 @@ function fmtNum(val){
   return val.toLocaleString('en-IN');
 }
 
-// ── LOAD DATA ──
-async function loadData(){
+// ── LOAD DATA (with auto-retry) ──
+async function loadData(attempt=1){
+  const MAX = 3;
   const mon  = document.getElementById('monthSel').value;
   const year = document.getElementById('yearSel').value;
   const label = MONTH_LABELS[MONTHS.indexOf(mon)] + ' ' + year;
 
-  showState('loading', 'Fetching AMFI data for ' + label + '…');
+  const attemptMsg = attempt > 1 ? ` (attempt ${attempt}/${MAX})` : '';
+  showState('loading', 'Fetching AMFI data for ' + label + attemptMsg + '…');
   document.getElementById('parseWarn').classList.remove('show');
 
   // Destroy old charts
@@ -340,6 +342,10 @@ async function loadData(){
     const res = await fetch(`${API_BASE}?month=${mon}&year=${year}`);
     if(!res.ok){
       const err = await res.json().catch(()=>({error:'HTTP '+res.status}));
+      if(attempt < MAX){
+        await new Promise(r => setTimeout(r, 800 * attempt));
+        return loadData(attempt + 1);
+      }
       showState('error', 'Report not available for ' + label, err.error || '');
       return;
     }
@@ -347,16 +353,26 @@ async function loadData(){
     const data = await res.json();
 
     if(data.error){
-      showState('error', 'Could not load data', data.error);
+      if(attempt < MAX){
+        await new Promise(r => setTimeout(r, 800 * attempt));
+        return loadData(attempt + 1);
+      }
+      const tryInstead = data.tryInstead ? 'Available months: ' + data.tryInstead.join(', ') : '';
+      showState('error', 'Could not load data for this month', data.error + (tryInstead ? '<br><small>' + tryInstead + '</small>' : ''));
       return;
+    }
+
+    // Sanity check — retry if fewer than 10 categories parsed
+    const catCount = Object.keys(data.categories||{}).length;
+    if(catCount < 10 && attempt < MAX){
+      await new Promise(r => setTimeout(r, 800 * attempt));
+      return loadData(attempt + 1);
     }
 
     currentData = data;
     document.getElementById('dataSourceNote').textContent =
       'Source: AMFI Monthly Report · ' + label + ' · Parsed ' + new Date(data.parsedAt||Date.now()).toLocaleTimeString('en-IN');
 
-    // Check if parsing was partial
-    const catCount = Object.keys(data.categories||{}).length;
     if(catCount < 10){
       document.getElementById('parseWarn').classList.add('show');
     }
@@ -364,6 +380,10 @@ async function loadData(){
     renderAll(data);
 
   } catch(e) {
+    if(attempt < MAX){
+      await new Promise(r => setTimeout(r, 800 * attempt));
+      return loadData(attempt + 1);
+    }
     showState('error', 'Network error', e.message);
   }
 }
@@ -376,7 +396,7 @@ function showState(type, msg, detail=''){
     box.innerHTML = `<div class="state-box">
       <div style="font-size:2rem;margin-bottom:12px">⚠️</div>
       <div class="state-error">${msg}</div>
-      ${detail ? `<div class="state-detail">${detail}</div>` : ''}
+      ${detail ? `<div class="state-detail" style="margin-top:8px;line-height:1.6">${detail}</div>` : ''}
       <button class="retry-btn" onclick="loadData()">Retry</button>
     </div>`;
   }
@@ -412,6 +432,7 @@ function renderAll(data){
   setTimeout(() => {
     renderDonut(s);
     renderFlowBar(cats);
+    renderTableRows();
   }, 50);
 }
 
