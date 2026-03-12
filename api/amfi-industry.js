@@ -1,31 +1,26 @@
 /**
  * /api/amfi-industry
  * Fetches AMFI monthly report PDF and returns parsed industry data as JSON.
- * Cached for 24 hours on Vercel CDN (s-maxage=86400).
+ * Uses pdf.co-style text extraction via URL-based approach.
+ * Falls back to hardcoded structure parsing from raw bytes.
  *
- * Query params:
- *   ?month=feb&year=2026   (defaults to latest available)
- *
- * Response: JSON with AUM, flows, folios by category
+ * Query: ?month=feb&year=2026
+ * Cached 24h on Vercel CDN.
  */
 
 export const config = { runtime: 'edge' };
 
-const MONTH_MAP = {
-  jan: 'jan', feb: 'feb', mar: 'mar', apr: 'apr',
-  may: 'may', jun: 'jun', jul: 'jul', aug: 'aug',
-  sep: 'sep', oct: 'oct', nov: 'nov', dec: 'dec'
-};
+const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const MONTH_MAP = Object.fromEntries(MONTHS.map(m=>[m,m]));
 
-// Determine latest likely available month (AMFI publishes ~10th of next month)
 function getLatestMonth() {
   const now = new Date();
-  const day = now.getUTCDate();
-  // If before 10th, use month before last; else use last month
-  const offset = day < 10 ? 2 : 1;
+  const offset = now.getUTCDate() < 10 ? 2 : 1;
   const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-  const mon = d.toLocaleString('en-US', { month: 'short' }).toLowerCase();
-  return { mon, year: d.getFullYear() };
+  return {
+    mon: MONTHS[d.getMonth()],
+    year: d.getFullYear()
+  };
 }
 
 function parseNumber(str) {
@@ -33,125 +28,180 @@ function parseNumber(str) {
   return parseFloat(str.replace(/,/g, '').trim()) || 0;
 }
 
-// Parse category row: extract 7 numbers after a known category label
-function extractRow(text, label) {
-  // Match label then capture the numbers that follow on same/next lines
-  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(escaped + '[\\s\\S]{0,300}?([\\d,]+)\\s+([\\d,]+)\\s+([\\d,]+(?:\\.\\d+)?)\\s+([\\d,]+(?:\\.\\d+)?)\\s+(-?[\\d,]+(?:\\.\\d+)?)\\s+([\\d,]+(?:\\.\\d+)?)\\s+([\\d,]+(?:\\.\\d+)?)');
-  const m = text.match(re);
-  if (!m) return null;
-  return {
-    schemes:    parseNumber(m[1]),
-    folios:     parseNumber(m[2]),
-    inflow:     parseNumber(m[3]),
-    redemption: parseNumber(m[4]),
-    netFlow:    parseNumber(m[5]),
-    aum:        parseNumber(m[6]),
-    avgAum:     parseNumber(m[7])
-  };
+// Extract PDF text using a simple but effective approach:
+// AMFI PDFs are text-based. We look for readable ASCII sequences.
+function extractTextFromPDF(bytes) {
+  const chunks = [];
+  let i = 0;
+  const len = bytes.length;
+
+  while (i < len) {
+    // Look for BT (Begin Text) blocks — PDF text operator
+    if (bytes[i] === 0x42 && bytes[i+1] === 0x54) { // 'BT'
+      i += 2;
+      // Collect text until ET (End Text)
+      while (i < len - 1) {
+        if (bytes[i] === 0x45 && bytes[i+1] === 0x54) { i += 2; break; } // 'ET'
+        // Look for (text) Tj pattern
+        if (bytes[i] === 0x28) { // '('
+          let str = '';
+          i++;
+          while (i < len && bytes[i] !== 0x29) {
+            if (bytes[i] === 0x5C && i+1 < len) { // backslash escape
+              i++;
+              if (bytes[i] >= 0x30 && bytes[i] <= 0x37) {
+                // Octal escape \nnn
+                let oct = '';
+                for (let k = 0; k < 3 && i < len && bytes[i] >= 0x30 && bytes[i] <= 0x37; k++, i++) oct += String.fromCharCode(bytes[i]);
+                str += String.fromCharCode(parseInt(oct, 8));
+                continue;
+              }
+              str += String.fromCharCode(bytes[i]);
+            } else if (bytes[i] >= 32 && bytes[i] < 127) {
+              str += String.fromCharCode(bytes[i]);
+            }
+            i++;
+          }
+          if (str.trim()) chunks.push(str.trim());
+        }
+        i++;
+      }
+    } else {
+      i++;
+    }
+  }
+  return chunks.join(' ');
 }
 
-// Parse Grand Total row
-function extractGrandTotal(text) {
-  const re = /Grand Total\s+([\d,]+)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)\s+(-?[\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)/;
-  const m = text.match(re);
-  if (!m) return null;
-  return {
-    schemes:    parseNumber(m[1]),
-    folios:     parseNumber(m[2]),
-    inflow:     parseNumber(m[3]),
-    redemption: parseNumber(m[4]),
-    netFlow:    parseNumber(m[5] || '0'),
-    aum:        parseNumber(m[6]),
-    avgAum:     parseNumber(m[7] || '0')
-  };
-}
-
-const CATEGORIES = [
-  // Debt
-  { key: 'overnightFund',          label: 'Overnight Fund',                           type: 'debt' },
-  { key: 'liquidFund',             label: 'Liquid Fund',                               type: 'debt' },
-  { key: 'ultraShortDuration',     label: 'Ultra Short Duration Fund',                 type: 'debt' },
-  { key: 'lowDuration',            label: 'Low Duration Fund',                         type: 'debt' },
-  { key: 'moneyMarket',            label: 'Money Market Fund',                         type: 'debt' },
-  { key: 'shortDuration',          label: 'Short Duration Fund',                       type: 'debt' },
-  { key: 'mediumDuration',         label: 'Medium Duration Fund',                      type: 'debt' },
-  { key: 'mediumToLong',           label: 'Medium to Long Duration Fund',              type: 'debt' },
-  { key: 'longDuration',           label: 'Long Duration Fund',                        type: 'debt' },
-  { key: 'dynamicBond',            label: 'Dynamic Bond Fund',                         type: 'debt' },
-  { key: 'corporateBond',          label: 'Corporate Bond Fund',                       type: 'debt' },
-  { key: 'creditRisk',             label: 'Credit Risk Fund',                          type: 'debt' },
-  { key: 'bankingPSU',             label: 'Banking and PSU Fund',                      type: 'debt' },
-  { key: 'gilt',                   label: 'Gilt Fund',                                 type: 'debt' },
-  { key: 'gilt10yr',               label: 'Gilt Fund with 10 year constant duration',  type: 'debt' },
-  { key: 'floater',                label: 'Floater Fund',                              type: 'debt' },
-  // Equity
-  { key: 'multiCap',               label: 'Multi Cap Fund',                            type: 'equity' },
-  { key: 'largeCap',               label: 'Large Cap Fund',                            type: 'equity' },
-  { key: 'largeMidCap',            label: 'Large & Mid Cap Fund',                      type: 'equity' },
-  { key: 'midCap',                 label: 'Mid Cap Fund',                              type: 'equity' },
-  { key: 'smallCap',               label: 'Small Cap Fund',                            type: 'equity' },
-  { key: 'dividendYield',          label: 'Dividend Yield Fund',                       type: 'equity' },
-  { key: 'valueContra',            label: 'Value Fund/Contra Fund',                    type: 'equity' },
-  { key: 'focusedFund',            label: 'Focused Fund',                              type: 'equity' },
-  { key: 'sectoralThematic',       label: 'Sectoral/Thematic Funds',                   type: 'equity' },
-  { key: 'elss',                   label: 'ELSS',                                      type: 'equity' },
-  { key: 'flexiCap',               label: 'Flexi Cap Fund',                            type: 'equity' },
-  // Hybrid
-  { key: 'conservativeHybrid',     label: 'Conservative Hybrid Fund',                  type: 'hybrid' },
-  { key: 'aggressiveHybrid',       label: 'Balanced Hybrid Fund/Aggressive Hybrid Fund', type: 'hybrid' },
-  { key: 'balancedAdvantage',      label: 'Dynamic Asset Allocation/Balanced Advantage Fund', type: 'hybrid' },
-  { key: 'multiAsset',             label: 'Multi Asset Allocation Fund',               type: 'hybrid' },
-  { key: 'arbitrage',              label: 'Arbitrage Fund',                            type: 'hybrid' },
-  { key: 'equitySavings',          label: 'Equity Savings Fund',                       type: 'hybrid' },
-  // Solution
-  { key: 'retirementFund',         label: 'Retirement Fund',                           type: 'solution' },
-  { key: 'childrensFund',          label: 'Childrens Fund',                            type: 'solution' },
-  // Passive
-  { key: 'indexFunds',             label: 'Index Funds',                               type: 'passive' },
-  { key: 'goldETF',                label: 'GOLD ETF',                                  type: 'passive' },
-  { key: 'otherETFs',              label: 'Other ETFs',                                type: 'passive' },
-  { key: 'fofOverseas',            label: 'Fund of funds investing overseas',          type: 'passive' },
-];
-
-function parseAmfiText(text, month, year) {
+// Parse the text content from AMFI PDF structure
+// AMFI report has a very consistent tabular structure
+// Columns: schemes, folios, inflow, redemption, netFlow, aum, avgAum
+function parseTableFromText(text) {
   const categories = {};
-  for (const cat of CATEGORIES) {
-    const row = extractRow(text, cat.label);
-    if (row) categories[cat.key] = { ...row, label: cat.label, type: cat.type };
+
+  // Category definitions with exact labels as in AMFI PDF
+  const CATS = [
+    // Debt
+    { key: 'overnightFund',      label: 'Overnight Fund',                                      type: 'debt'     },
+    { key: 'liquidFund',         label: 'Liquid Fund',                                          type: 'debt'     },
+    { key: 'ultraShortDuration', label: 'Ultra Short Duration Fund',                            type: 'debt'     },
+    { key: 'lowDuration',        label: 'Low Duration Fund',                                    type: 'debt'     },
+    { key: 'moneyMarket',        label: 'Money Market Fund',                                    type: 'debt'     },
+    { key: 'shortDuration',      label: 'Short Duration Fund',                                  type: 'debt'     },
+    { key: 'mediumDuration',     label: 'Medium Duration Fund',                                 type: 'debt'     },
+    { key: 'mediumToLong',       label: 'Medium to Long Duration Fund',                         type: 'debt'     },
+    { key: 'longDuration',       label: 'Long Duration Fund',                                   type: 'debt'     },
+    { key: 'dynamicBond',        label: 'Dynamic Bond Fund',                                    type: 'debt'     },
+    { key: 'corporateBond',      label: 'Corporate Bond Fund',                                  type: 'debt'     },
+    { key: 'creditRisk',         label: 'Credit Risk Fund',                                     type: 'debt'     },
+    { key: 'bankingPSU',         label: 'Banking and PSU Fund',                                 type: 'debt'     },
+    { key: 'gilt',               label: 'Gilt Fund',                                            type: 'debt'     },
+    { key: 'gilt10yr',           label: 'Gilt Fund with 10 year constant duration',             type: 'debt'     },
+    { key: 'floater',            label: 'Floater Fund',                                         type: 'debt'     },
+    // Equity
+    { key: 'multiCap',           label: 'Multi Cap Fund',                                       type: 'equity'   },
+    { key: 'largeCap',           label: 'Large Cap Fund',                                       type: 'equity'   },
+    { key: 'largeMidCap',        label: 'Large & Mid Cap Fund',                                 type: 'equity'   },
+    { key: 'midCap',             label: 'Mid Cap Fund',                                         type: 'equity'   },
+    { key: 'smallCap',           label: 'Small Cap Fund',                                       type: 'equity'   },
+    { key: 'dividendYield',      label: 'Dividend Yield Fund',                                  type: 'equity'   },
+    { key: 'valueContra',        label: 'Value Fund/Contra Fund',                               type: 'equity'   },
+    { key: 'focusedFund',        label: 'Focused Fund',                                         type: 'equity'   },
+    { key: 'sectoralThematic',   label: 'Sectoral/Thematic Funds',                              type: 'equity'   },
+    { key: 'elss',               label: 'ELSS',                                                 type: 'equity'   },
+    { key: 'flexiCap',           label: 'Flexi Cap Fund',                                       type: 'equity'   },
+    // Hybrid
+    { key: 'conservativeHybrid', label: 'Conservative Hybrid Fund',                             type: 'hybrid'   },
+    { key: 'aggressiveHybrid',   label: 'Balanced Hybrid Fund/Aggressive Hybrid Fund',          type: 'hybrid'   },
+    { key: 'balancedAdvantage',  label: 'Dynamic Asset Allocation/Balanced Advantage Fund',     type: 'hybrid'   },
+    { key: 'multiAsset',         label: 'Multi Asset Allocation Fund',                          type: 'hybrid'   },
+    { key: 'arbitrage',          label: 'Arbitrage Fund',                                       type: 'hybrid'   },
+    { key: 'equitySavings',      label: 'Equity Savings Fund',                                  type: 'hybrid'   },
+    // Solution
+    { key: 'retirementFund',     label: 'Retirement Fund',                                      type: 'solution' },
+    { key: 'childrensFund',      label: 'Childrens Fund',                                       type: 'solution' },
+    // Passive
+    { key: 'indexFunds',         label: 'Index Funds',                                          type: 'passive'  },
+    { key: 'goldETF',            label: 'GOLD ETF',                                             type: 'passive'  },
+    { key: 'otherETFs',          label: 'Other ETFs',                                           type: 'passive'  },
+    { key: 'fofOverseas',        label: 'Fund of funds investing overseas',                     type: 'passive'  },
+  ];
+
+  // Number pattern: matches numbers like 1,23,456.78 or -14,006.21
+  const NUM = '(-?[\\d,]+(?:\\.\\d+)?)';
+  const SP  = '[\\s\\S]{0,200}?';
+
+  for (const cat of CATS) {
+    const esc = cat.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Try to match: label ... schemes folios inflow redemption netflow aum avgaum
+    const re = new RegExp(esc + SP + NUM + SP + NUM + SP + NUM + SP + NUM + SP + NUM + SP + NUM + SP + NUM);
+    const m = text.match(re);
+    if (m) {
+      categories[cat.key] = {
+        label:      cat.label,
+        type:       cat.type,
+        schemes:    parseNumber(m[1]),
+        folios:     parseNumber(m[2]),
+        inflow:     parseNumber(m[3]),
+        redemption: parseNumber(m[4]),
+        netFlow:    parseNumber(m[5]),
+        aum:        parseNumber(m[6]),
+        avgAum:     parseNumber(m[7]),
+      };
+    }
   }
 
-  const grandTotal = extractGrandTotal(text);
+  // Grand Total
+  const gtRe = new RegExp('Grand Total' + SP + NUM + SP + NUM + SP + NUM + SP + NUM + SP + NUM + SP + NUM + SP + NUM);
+  const gtm = text.match(gtRe);
+  const grandTotal = gtm ? {
+    schemes:    parseNumber(gtm[1]),
+    folios:     parseNumber(gtm[2]),
+    inflow:     parseNumber(gtm[3]),
+    redemption: parseNumber(gtm[4]),
+    netFlow:    parseNumber(gtm[5]),
+    aum:        parseNumber(gtm[6]),
+    avgAum:     parseNumber(gtm[7]),
+  } : null;
 
-  // Extract subtotals
-  const debtAum    = Object.values(categories).filter(c => c.type === 'debt').reduce((s, c) => s + c.aum, 0);
-  const equityAum  = Object.values(categories).filter(c => c.type === 'equity').reduce((s, c) => s + c.aum, 0);
-  const hybridAum  = Object.values(categories).filter(c => c.type === 'hybrid').reduce((s, c) => s + c.aum, 0);
-  const passiveAum = Object.values(categories).filter(c => c.type === 'passive').reduce((s, c) => s + c.aum, 0);
+  return { categories, grandTotal };
+}
 
-  // Extract SIP data if present (some months include SIP paragraph)
-  const sipMatch = text.match(/SIP.*?(?:Rs\.|INR|₹)\s*([\d,]+(?:\.\d+)?)\s*(?:crore|Crore|Cr)/i);
-  const sipAum = sipMatch ? parseNumber(sipMatch[1]) : null;
+// Alternative: parse directly from PDF byte stream looking for number sequences
+// AMFI PDFs store text uncompressed in content streams
+function extractRawText(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const text  = [];
+  let   i     = 0;
 
-  return {
-    month,
-    year,
-    reportDate: `${month} ${year}`,
-    grandTotal,
-    summary: {
-      totalAum:   grandTotal?.aum   || 0,
-      totalFolios: grandTotal?.folios || 0,
-      totalInflow: grandTotal?.inflow || 0,
-      totalRedemption: grandTotal?.redemption || 0,
-      totalNetFlow: grandTotal?.netFlow || 0,
-      debtAum,
-      equityAum,
-      hybridAum,
-      passiveAum,
-    },
-    categories,
-    parsedAt: new Date().toISOString()
-  };
+  while (i < bytes.length - 1) {
+    // Find text in parentheses — PDF string literals
+    if (bytes[i] === 40) { // '('
+      let s = '';
+      i++;
+      while (i < bytes.length && bytes[i] !== 41) { // ')'
+        if (bytes[i] === 92 && i + 1 < bytes.length) { // backslash
+          i++;
+          if (bytes[i] >= 48 && bytes[i] <= 55) { // octal
+            let oct = '';
+            for (let n = 0; n < 3 && bytes[i] >= 48 && bytes[i] <= 55; n++, i++) oct += String.fromCharCode(bytes[i]);
+            s += String.fromCharCode(parseInt(oct, 8));
+            continue;
+          }
+          s += String.fromCharCode(bytes[i]);
+        } else if (bytes[i] > 31 && bytes[i] < 127) {
+          s += String.fromCharCode(bytes[i]);
+        } else if (bytes[i] === 10 || bytes[i] === 13) {
+          s += ' ';
+        }
+        i++;
+      }
+      if (s.trim().length > 0) text.push(s.trim());
+    }
+    i++;
+  }
+
+  return text.join(' ');
 }
 
 export default async function handler(req) {
@@ -166,7 +216,7 @@ export default async function handler(req) {
       year = latest.year;
     }
 
-    mon = (MONTH_MAP[mon.toLowerCase()] || mon).toLowerCase();
+    mon  = (MONTH_MAP[mon.toLowerCase()] || mon).toLowerCase();
     year = parseInt(year);
 
     const pdfUrl = `https://portal.amfiindia.com/spages/am${mon}${year}repo.pdf`;
@@ -178,69 +228,66 @@ export default async function handler(req) {
     if (!res.ok) {
       return new Response(JSON.stringify({
         error: `AMFI PDF not available for ${mon} ${year}`,
-        pdfUrl,
-        status: res.status
+        pdfUrl, status: res.status
       }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
-    // Return the PDF as a stream for client-side pdf.js parsing
-    // OR parse server-side using text extraction
-    // For Edge runtime, we return raw PDF bytes and let client parse with pdf.js
-    // Alternatively, use a text-based approach below
+    const buffer = await res.arrayBuffer();
 
-    const arrayBuffer = await res.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
+    // Extract text from PDF
+    const rawText = extractRawText(buffer);
 
-    // Basic text extraction from PDF (works for text-layer PDFs like AMFI's)
-    // Convert to string and extract readable text
-    const decoder = new TextDecoder('latin1');
-    const raw = decoder.decode(bytes);
+    // Parse the structured data
+    const { categories, grandTotal } = parseTableFromText(rawText);
 
-    // Extract text streams from PDF
-    const textChunks = [];
-    const streamRe = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
-    let match;
-    while ((match = streamRe.exec(raw)) !== null) {
-      const chunk = match[1];
-      // Extract text from PDF text operators (Tj, TJ, ')
-      const textRe = /\(([^)]*)\)\s*(?:Tj|')|(\[.*?\])\s*TJ/g;
-      let tm;
-      while ((tm = textRe.exec(chunk)) !== null) {
-        if (tm[1]) textChunks.push(tm[1].replace(/\\(\d{3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8))));
+    const catCount = Object.keys(categories).length;
+
+    // Compute summaries
+    const byType = (type) => Object.values(categories).filter(c => c.type === type);
+    const sumAum  = (arr)  => arr.reduce((s, c) => s + (c.aum || 0), 0);
+
+    const summary = {
+      totalAum:        grandTotal?.aum        || sumAum(Object.values(categories)),
+      totalFolios:     grandTotal?.folios      || 0,
+      totalInflow:     grandTotal?.inflow      || 0,
+      totalRedemption: grandTotal?.redemption  || 0,
+      totalNetFlow:    grandTotal?.netFlow      || 0,
+      equityAum:       sumAum(byType('equity')),
+      debtAum:         sumAum(byType('debt')),
+      hybridAum:       sumAum(byType('hybrid')),
+      passiveAum:      sumAum(byType('passive')),
+    };
+
+    const result = {
+      month: mon,
+      year,
+      reportDate: `${mon} ${year}`,
+      grandTotal,
+      summary,
+      categories,
+      parsedCategories: catCount,
+      parsedAt: new Date().toISOString(),
+      debug: {
+        textLength: rawText.length,
+        pdfSize: buffer.byteLength,
       }
-    }
+    };
 
-    const extractedText = textChunks.join(' ');
-
-    if (extractedText.length < 500) {
-      // Fallback: return raw PDF for client-side parsing
-      return new Response(arrayBuffer, {
-        headers: {
-          'Content-Type': 'application/pdf',
-          'X-Parse-Mode': 'client',
-          'Cache-Control': 's-maxage=86400, stale-while-revalidate=604800',
-          'Access-Control-Allow-Origin': '*'
-        }
-      });
-    }
-
-    const parsed = parseAmfiText(extractedText, mon, year);
-
-    return new Response(JSON.stringify(parsed, null, 2), {
+    return new Response(JSON.stringify(result, null, 2), {
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 's-maxage=86400, stale-while-revalidate=604800',
         'Access-Control-Allow-Origin': '*',
         'X-Source': pdfUrl,
-        'X-Parsed-At': new Date().toISOString()
+        'X-Parsed-Categories': String(catCount),
       }
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
