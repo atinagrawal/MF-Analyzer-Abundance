@@ -2,16 +2,16 @@
 // Returns parsed holdings JSON from AMC monthly portfolio PDFs
 // Strategy: hardcoded URL templates per AMC, HEAD-check each URL, fallback to prev month
 
-export const config = { runtime: 'nodejs20.x' };
+export const config = { runtime: 'nodejs' };
 
 const https = require('https');
 const http = require('http');
 const zlib = require('zlib');
 
-// ─── AMC URL Templates ───────────────────────────────────────────────────────
-// Each AMC has: url(year, mon, mm) → string | string[]
+// --- AMC URL Templates ---
+// Each AMC has: url(year, mon, mm) -> string | string[]
 // mon = 'January', mm = '01', yy = '26'
-// Confidence: ✅ verified  🟡 pattern-inferred  🔴 guessed
+// Confidence: [verified] verified  [medium] pattern-inferred  [low] guessed
 
 const AMC_CONFIG = {
   NIPPON: {
@@ -134,7 +134,7 @@ const AMC_CONFIG = {
   },
 };
 
-// ─── Month helpers ────────────────────────────────────────────────────────────
+// --- Month helpers ---
 const MONTHS = ['January','February','March','April','May','June',
                 'July','August','September','October','November','December'];
 
@@ -149,7 +149,7 @@ function getMonthParams(date) {
   };
 }
 
-// ─── HTTP helpers ─────────────────────────────────────────────────────────────
+// --- HTTP helpers ---
 function httpHead(urlStr, timeout = 5000) {
   return new Promise((resolve) => {
     const u = new URL(urlStr);
@@ -188,7 +188,7 @@ function httpGet(urlStr, timeout = 25000) {
   });
 }
 
-// ─── PDF text extractor (no external deps) ───────────────────────────────────
+// --- PDF text extractor (no external deps) ---
 function extractTextFromPDF(buf) {
   // Extract text streams from PDF using basic parsing
   const str = buf.toString('latin1');
@@ -244,7 +244,7 @@ function extractTextFromPDF(buf) {
   return texts.join('\n').replace(/\r/g, '').replace(/[ \t]+/g, ' ');
 }
 
-// ─── Holdings parser ──────────────────────────────────────────────────────────
+// --- Holdings parser ---
 function parseHoldings(text, schemeName) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const holdings = [];
@@ -323,7 +323,7 @@ function parseHoldings(text, schemeName) {
     .slice(0, 50); // top 50 holdings max
 }
 
-// ─── URL discovery ────────────────────────────────────────────────────────────
+// --- URL discovery ---
 async function findWorkingURL(amcKey, date) {
   const cfg = AMC_CONFIG[amcKey];
   if (!cfg) return null;
@@ -347,7 +347,7 @@ async function findWorkingURL(amcKey, date) {
   return null;
 }
 
-// ─── Main handler ─────────────────────────────────────────────────────────────
+// --- Main handler ---
 export default async function handler(req, res) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -356,7 +356,7 @@ export default async function handler(req, res) {
 
   const { amc, scheme, action } = req.query;
 
-  // Action: list → return all known AMCs
+  // Action: list -> return all known AMCs
   if (action === 'list') {
     return res.json({
       amcs: Object.entries(AMC_CONFIG).map(([key, cfg]) => ({
@@ -365,7 +365,7 @@ export default async function handler(req, res) {
     });
   }
 
-  // Action: probe → check which URL works for an AMC this month
+  // Action: probe -> check which URL works for an AMC this month
   if (action === 'probe' && amc) {
     const amcKey = amc.toUpperCase();
     if (!AMC_CONFIG[amcKey]) {
@@ -385,7 +385,7 @@ export default async function handler(req, res) {
     });
   }
 
-  // Action: holdings → full parse
+  // Action: holdings -> full parse
   if (!amc) {
     return res.status(400).json({
       error: 'Missing ?amc= parameter',
