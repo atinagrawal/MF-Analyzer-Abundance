@@ -18,17 +18,25 @@ const AMC_CONFIG = {
     name: 'Nippon India',
     url: (year, mon, mm, yy) => [
       `https://mf.nipponindiaim.com/InvestorServices/Reports/PortfolioMon/Nippon-India-MF-Monthly-Portfolio-${mon}-${year}.pdf`,
-      `https://mf.nipponindiaim.com/InvestorServices/Reports/PortfolioMon/Nippon-India-MF-Monthly-Portfolio-${mon.substring(0,3)}-${year}.pdf`,
+      `https://mf.nipponindiaim.com/InvestorServices/Reports/PortfolioMon/Nippon-India-Monthly-Portfolio-${mon}-${year}.pdf`,
+      `https://mf.nipponindiaim.com/InvestorServices/Reports/PortfolioMon/NipponIndia-Monthly-Portfolio-${mon}-${year}.pdf`,
+      `https://mf.nipponindiaim.com/InvestorServices/FactSheets/NipponIndia-Factsheet-${mon}-${year}.pdf`,
     ],
-    confidence: 'high',
+    confidence: 'medium',
   },
   PPFAS: {
     name: 'Parag Parikh',
-    url: (year, mon, mm, yy) => [
-      `https://amc.ppfas.com/downloads/portfolio-disclosure/ppfas-mf-portfolio-${mon.toLowerCase()}-${year}.pdf`,
-      `https://amc.ppfas.com/downloads/portfolio-disclosure/ppfas-mf-portfolio-${mon.substring(0,3).toLowerCase()}${yy}.pdf`,
-    ],
-    confidence: 'high',
+    url: (year, mon, mm, yy) => {
+      const monLower = mon.toLowerCase();
+      const mon3 = mon.substring(0, 3).toLowerCase();
+      return [
+        `https://amc.ppfas.com/downloads/portfolio-disclosure/ppfas-mf-monthly-portfolio-${monLower}-${year}.pdf`,
+        `https://amc.ppfas.com/schemes/scheme-financials/${monLower}-${year}/monthly-portfolio-disclosure-${monLower}-${year}.pdf`,
+        `https://amc.ppfas.com/downloads/portfolio-disclosure/ppfas-portfolio-${mon3}${yy}.pdf`,
+        `https://amc.ppfas.com/downloads/factsheet/${year}/ppfas-mf-factsheet-for-${mon}-${year}.pdf`,
+      ];
+    },
+    confidence: 'medium',
   },
   HDFC: {
     name: 'HDFC',
@@ -324,7 +332,7 @@ function parseHoldings(text, schemeName) {
 }
 
 // --- URL discovery ---
-async function findWorkingURL(amcKey, date) {
+async function findWorkingURL(amcKey, date, collectTriedUrls) {
   const cfg = AMC_CONFIG[amcKey];
   if (!cfg) return null;
 
@@ -338,10 +346,13 @@ async function findWorkingURL(amcKey, date) {
     for (const url of urls) {
       try {
         const status = await httpHead(url);
+        if (collectTriedUrls) collectTriedUrls.push({ url, status });
         if (status === 200 || status === 302) {
           return { url, ...params, monthOffset };
         }
-      } catch { /* try next */ }
+      } catch (e) {
+        if (collectTriedUrls) collectTriedUrls.push({ url, status: 0, error: e.message });
+      }
     }
   }
   return null;
@@ -371,9 +382,10 @@ export default async function handler(req, res) {
     if (!AMC_CONFIG[amcKey]) {
       return res.status(400).json({ error: `Unknown AMC: ${amc}` });
     }
-    const result = await findWorkingURL(amcKey, new Date());
+    const tried = [];
+    const result = await findWorkingURL(amcKey, new Date(), tried);
     if (!result) {
-      return res.status(404).json({ error: 'No working URL found', amc: amcKey });
+      return res.status(404).json({ error: 'No working URL found', amc: amcKey, tried });
     }
     return res.json({
       amc: amcKey,
@@ -382,6 +394,7 @@ export default async function handler(req, res) {
       month: result.mon,
       year: result.year,
       monthOffset: result.monthOffset,
+      tried,
     });
   }
 
@@ -401,7 +414,7 @@ export default async function handler(req, res) {
 
   try {
     // Step 1: Find working URL
-    const found = await findWorkingURL(amcKey, new Date());
+    const found = await findWorkingURL(amcKey, new Date(), null);
     if (!found) {
       return res.status(503).json({
         error: 'Could not find portfolio PDF for this AMC',
