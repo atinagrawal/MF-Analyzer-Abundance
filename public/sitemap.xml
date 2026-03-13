@@ -1,14 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
-        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
 
   <url>
     <loc>https://mfcalc.getabundance.in/</loc>
-    <lastmod>2026-03-11</lastmod>
+    <lastmod>2026-03-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en-IN" href="https://mfcalc.getabundance.in/"/>
+    <xhtml:link rel="alternate" hreflang="en"    href="https://mfcalc.getabundance.in/"/>
+  </url>
+
+  <url>
+    <loc>https://mfcalc.getabundance.in/industry</loc>
+    <lastmod>2026-03-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en-IN" href="https://mfcalc.getabundance.in/industry"/>
+    <xhtml:link rel="alternate" hreflang="en"    href="https://mfcalc.getabundance.in/industry"/>
   </url>
 
 </urlset>
