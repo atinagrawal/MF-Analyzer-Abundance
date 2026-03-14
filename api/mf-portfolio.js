@@ -269,43 +269,8 @@ function extractZipEntries(buf) {
   return entries;
 }
 
-function parseXLSX(buf) {
-  const entries = extractZipEntries(buf);
-  const entryNames = Object.keys(entries);
-
-  // 1. Shared string table
-  const sst = [];
-  const sstBuf = entries['xl/sharedStrings.xml'] || entries['xl/SharedStrings.xml'];
-  if (sstBuf) {
-    const sstText = sstBuf.toString('utf8');
-    const siRegex = /<si>([\s\S]*?)<\/si>/g;
-    let m;
-    while ((m = siRegex.exec(sstText)) !== null) {
-      const tRegex = /<t[^>]*>([\s\S]*?)<\/t>/g;
-      let tm; const parts = [];
-      while ((tm = tRegex.exec(m[1])) !== null) {
-        parts.push(tm[1]
-          .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
-          .replace(/&quot;/g,'"').replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(parseInt(n))));
-      }
-      sst.push(parts.join(''));
-    }
-  }
-
-  // 2. Find worksheets (sheet1.xml first, then others)
-  const sheetFiles = entryNames
-    .filter(n => /xl\/worksheets\/sheet\d+\.xml$/.test(n))
-    .sort((a, b) => {
-      const na = parseInt(a.match(/sheet(\d+)/)[1]);
-      const nb = parseInt(b.match(/sheet(\d+)/)[1]);
-      return na - nb;
-    });
-  if (!sheetFiles.length) return [];
-
-  // 3. Parse sheet1 (combined portfolio - usually the main sheet)
-  const sheetXml = entries[sheetFiles[0]].toString('utf8');
+function parseSheetXml(sheetXml, sst) {
   const matrix = [];
-
   const rowRegex = /<row\b[^>]*>([\s\S]*?)<\/row>/g;
   let rowM;
   while ((rowM = rowRegex.exec(sheetXml)) !== null) {
@@ -338,6 +303,73 @@ function parseXLSX(buf) {
     }
   }
   return matrix;
+}
+
+function parseXLSX(buf) {
+  // Returns { indexMatrix, sheetFiles, entries, sst }
+  // indexMatrix = sheet1 (index of schemes)
+  // Call parseXLSXSheet(result, sheetNum) to get a specific sheet's matrix
+  const entries = extractZipEntries(buf);
+  const entryNames = Object.keys(entries);
+
+  // 1. Shared string table
+  const sst = [];
+  const sstBuf = entries['xl/sharedStrings.xml'] || entries['xl/SharedStrings.xml'];
+  if (sstBuf) {
+    const sstText = sstBuf.toString('utf8');
+    const siRegex = /<si>([\s\S]*?)<\/si>/g;
+    let m;
+    while ((m = siRegex.exec(sstText)) !== null) {
+      const tRegex = /<t[^>]*>([\s\S]*?)<\/t>/g;
+      let tm; const parts = [];
+      while ((tm = tRegex.exec(m[1])) !== null) {
+        parts.push(tm[1]
+          .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+          .replace(/&quot;/g,'"').replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(parseInt(n))));
+      }
+      sst.push(parts.join(''));
+    }
+  }
+
+  // 2. Sorted sheet list
+  const sheetFiles = entryNames
+    .filter(n => /xl\/worksheets\/sheet\d+\.xml$/.test(n))
+    .sort((a, b) => parseInt(a.match(/sheet(\d+)/)[1]) - parseInt(b.match(/sheet(\d+)/)[1]));
+
+  if (!sheetFiles.length) return null;
+
+  // 3. Parse sheet1 as index
+  const indexMatrix = parseSheetXml(entries[sheetFiles[0]].toString('utf8'), sst);
+
+  return { indexMatrix, sheetFiles, entries, sst };
+}
+
+function parseXLSXSheet(xlsxResult, sheetNum) {
+  // sheetNum is 1-based (sheet1 = index, sheet2 = first scheme, etc.)
+  const { sheetFiles, entries, sst } = xlsxResult;
+  const idx = sheetNum - 1; // 0-indexed into sheetFiles
+  if (idx < 0 || idx >= sheetFiles.length) return [];
+  return parseSheetXml(entries[sheetFiles[idx]].toString('utf8'), sst);
+}
+
+function findSchemeSheetNum(xlsxResult, schemeName) {
+  // Search index sheet for scheme name, return sheet number (2-based since sheet1=index)
+  const { indexMatrix } = xlsxResult;
+  const norm = schemeName.toLowerCase().replace(/\s+/g,' ').trim();
+  // Try progressively shorter prefixes to handle partial matches
+  for (let prefixLen = Math.min(norm.length, 30); prefixLen >= 10; prefixLen -= 5) {
+    const prefix = norm.substring(0, prefixLen);
+    for (let i = 0; i < indexMatrix.length; i++) {
+      const row = indexMatrix[i];
+      // Check all cells in the row
+      for (const cell of row) {
+        if (cell && cell.toLowerCase().replace(/\s+/g,' ').includes(prefix)) {
+          return i + 2; // +1 for 1-based, +1 because sheet1=index
+        }
+      }
+    }
+  }
+  return -1;
 }
 
 // --- BIFF8 XLS parser (kept for CFB-format files) ---
@@ -735,7 +767,28 @@ export default async function handler(req, res) {
     });
   }
 
-  // Action: debug -> download file and return diagnostics (magic bytes, first rows, xlsRows count)
+  // Action: schemes -> list all scheme names in the XLSX index sheet
+  if (action === 'schemes' && amc) {
+    const amcKey = amc.toUpperCase();
+    if (!AMC_CONFIG[amcKey]) return res.status(400).json({ error: `Unknown AMC: ${amc}` });
+    const found = await findWorkingURL(amcKey, new Date(), null);
+    if (!found) return res.status(404).json({ error: 'No working URL found' });
+    let fileBuf;
+    try { fileBuf = await httpGet(found.url, 25000); } catch (e) {
+      return res.status(503).json({ error: e.message });
+    }
+    const magic = fileBuf.slice(0, 4).toString('hex');
+    if (magic !== '504b0304') return res.status(422).json({ error: 'Not an XLSX file', magic });
+    const xlsxResult = parseXLSX(fileBuf);
+    if (!xlsxResult) return res.status(422).json({ error: 'Could not parse XLSX' });
+    const schemes = xlsxResult.indexMatrix
+      .filter(r => r[0] && r[1] && r[0] !== 'INDEX')
+      .map((r, i) => ({ code: r[0], name: r[1].split('\n')[0].trim(), sheetNum: i + 2 }));
+    return res.json({ amc: amcKey, month: found.mon, year: found.year,
+      url: found.url, totalSheets: xlsxResult.sheetFiles.length, schemes });
+  }
+
+  // Action: debug -> download file and return diagnostics
   if (action === 'debug' && amc) {
     const amcKey = amc.toUpperCase();
     if (!AMC_CONFIG[amcKey]) return res.status(400).json({ error: `Unknown AMC: ${amc}` });
@@ -751,14 +804,23 @@ export default async function handler(req, res) {
     const first100 = fileBuf.slice(0, 100).toString('utf8').toLowerCase();
     const isHTML = magic.startsWith('3c68746d') || magic.startsWith('3c48544d') ||
                    first100.includes('<html') || first100.includes('<table');
-    let matrix = [];
-    if (isZIP)       { matrix = parseXLSX(fileBuf); }
-    else if (isHTML) { matrix = parseHTMLTable(fileBuf); }
-    else if (isCFB)  { matrix = xlsRowsToMatrix(parseXLS(fileBuf)); }
-    const sample = matrix.slice(0, 20).map(row => row.slice(0, 8));
+    let indexSample = [], sheet2Sample = [], totalSheets = 0;
+    if (isZIP) {
+      const xlsxResult = parseXLSX(fileBuf);
+      if (xlsxResult) {
+        totalSheets = xlsxResult.sheetFiles.length;
+        indexSample = xlsxResult.indexMatrix.slice(0, 25).map(r => r.slice(0, 3));
+        const sheet2 = parseXLSXSheet(xlsxResult, 2);
+        sheet2Sample = sheet2.slice(0, 15).map(r => r.slice(0, 8));
+      }
+    } else if (isHTML) {
+      indexSample = parseHTMLTable(fileBuf).slice(0, 20).map(r => r.slice(0, 8));
+    } else if (isCFB) {
+      indexSample = xlsRowsToMatrix(parseXLS(fileBuf)).slice(0, 20).map(r => r.slice(0, 8));
+    }
     return res.json({
       url: found.url, fileSize: fileBuf.length, magic, isCFB, isZIP, isHTML,
-      matrixRows: matrix.length, sampleRows: sample,
+      totalSheets, indexSample, sheet2Sample,
     });
   }
 
@@ -819,7 +881,32 @@ export default async function handler(req, res) {
                      fileBuf.slice(0, 100).toString('utf8').toLowerCase().includes('<table');
       let matrix = [];
       if (isZIP) {
-        matrix = parseXLSX(fileBuf);
+        const xlsxResult = parseXLSX(fileBuf);
+        if (xlsxResult) {
+          if (scheme) {
+            // Find the sheet for this scheme
+            const sheetNum = findSchemeSheetNum(xlsxResult, scheme);
+            if (sheetNum > 0) {
+              matrix = parseXLSXSheet(xlsxResult, sheetNum);
+            } else {
+              // Scheme not found in index - try to find it by scanning all sheets
+              // Fall back to sheet2 (first scheme sheet)
+              matrix = parseXLSXSheet(xlsxResult, 2);
+            }
+          } else {
+            // No scheme specified - return index list
+            return res.json({
+              amc: amcKey, amcName: AMC_CONFIG[amcKey].name,
+              month: found.mon, year: found.year,
+              fileUrl: found.url, fileType,
+              message: 'Multiple schemes in file. Pass ?scheme= to get holdings for a specific scheme.',
+              schemes: xlsxResult.indexMatrix
+                .filter(r => r[0] && r[1] && r[0] !== 'INDEX')
+                .map(r => ({ code: r[0], name: r[1].split('\n')[0].trim() })),
+              totalSheets: xlsxResult.sheetFiles.length,
+            });
+          }
+        }
       } else if (isHTML) {
         matrix = parseHTMLTable(fileBuf);
       } else if (isCFB) {
@@ -830,7 +917,7 @@ export default async function handler(req, res) {
         return res.status(422).json({
           error: 'Could not parse spreadsheet file - check ?action=debug for diagnostics',
           url: found.url, magic, isZIP, isCFB, isHTML,
-          hint: isZIP ? 'XLSX parsed but no rows found - sheet may be empty or structured differently' :
+          hint: isZIP ? 'XLSX parsed but no rows found for this scheme. Use ?action=schemes&amc=NIPPON to list available schemes.' :
                 isCFB ? 'CFB/BIFF8 XLS parsed but no rows found' :
                 isHTML ? 'HTML parsed but no table rows found' :
                 'Unknown file format',
