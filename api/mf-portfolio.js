@@ -552,86 +552,116 @@ function parseHTMLTable(buf) {
   return matrix;
 }
 
-// --- Holdings parser for XLS matrix ---
+// --- Holdings parser for XLS/XLSX matrix ---
 function parseHoldingsFromXLS(matrix, schemeName) {
   const holdings = [];
-  const schemeNorm = (schemeName || '').toLowerCase().replace(/\s+/g, ' ').trim();
 
-  let inScheme = !schemeNorm; // if no scheme given, parse everything
+  // For Nippon-style: each sheet IS one scheme, no need to find a scheme section.
+  // Just find the header row (ISIN | Name of Instrument | ... | % to NAV) and parse below it.
+  // For multi-scheme sheets: also try to find the scheme section first.
+
   let headerRow = -1;
-  let nameCol = -1, pctCol = -1, isinCol = -1, mktValCol = -1;
+  let nameCol = -1, pctCol = -1, isinCol = -1, mktValCol = -1, ratingCol = -1, sectorCol = -1;
 
-  const headerKeywords = ['name of instrument', 'security name', 'name of security',
-    'issuer', 'company name', 'scrip name', 'instrument', 'name'];
-  const pctKeywords = ['% to nav', '% of nav', 'pct', 'percentage', '% to net'];
-  const isinKeywords = ['isin', 'isin code'];
-  const mktKeywords = ['market value', 'mkt value', 'value'];
-  const stopKeywords = ['total', 'grand total', 'sub total', 'net assets'];
+  const nameKws  = ['name of instrument', 'security name', 'name of security', 'issuer',
+                    'company name', 'scrip name', 'instrument name', 'name of the instrument'];
+  const pctKws   = ['% to nav', '% of nav', '% to net assets', 'percentage to nav',
+                    '% tonav', '%tonav', 'nav %'];
+  const isinKws  = ['isin', 'isin code', 'isin no'];
+  const mktKws   = ['market value', 'mkt value', 'market val', 'market price'];
+  const stopKws  = ['grand total', 'total net assets', 'net assets', 'total of'];
 
-  for (let r = 0; r < matrix.length; r++) {
+  // Scan for header row
+  for (let r = 0; r < Math.min(matrix.length, 20); r++) {
     const row = matrix[r];
     const rowText = row.join(' ').toLowerCase();
-
-    // Detect scheme section
-    if (!inScheme && schemeNorm && rowText.includes(schemeNorm.substring(0, 20))) {
-      inScheme = true;
-      headerRow = -1; nameCol = -1; pctCol = -1; isinCol = -1;
-    }
-    if (!inScheme) continue;
-
-    // Detect header row
-    if (headerRow === -1 && headerKeywords.some(kw => rowText.includes(kw))) {
+    const hasNameKw = nameKws.some(kw => rowText.includes(kw));
+    const hasPctKw  = pctKws.some(kw => rowText.includes(kw));
+    // Header row must have at least a name keyword OR (a pct keyword AND an isin keyword)
+    if (hasNameKw || (hasPctKw && rowText.includes('isin'))) {
       headerRow = r;
-      // Identify column indices
       row.forEach((cell, ci) => {
-        const cl = cell.toLowerCase();
-        if (nameCol === -1 && headerKeywords.some(kw => cl.includes(kw))) nameCol = ci;
-        if (pctCol === -1 && pctKeywords.some(kw => cl.includes(kw))) pctCol = ci;
-        if (isinCol === -1 && isinKeywords.some(kw => cl.includes(kw))) isinCol = ci;
-        if (mktValCol === -1 && mktKeywords.some(kw => cl.includes(kw))) mktValCol = ci;
+        const cl = cell.toLowerCase().replace(/\s+/g,' ').trim();
+        if (nameCol  === -1 && nameKws.some(kw => cl.includes(kw)))  nameCol  = ci;
+        if (pctCol   === -1 && pctKws.some(kw => cl.includes(kw)))   pctCol   = ci;
+        if (isinCol  === -1 && isinKws.some(kw => cl.includes(kw)))  isinCol  = ci;
+        if (mktValCol=== -1 && mktKws.some(kw => cl.includes(kw)))   mktValCol= ci;
       });
-      // Default fallback
-      if (nameCol === -1) nameCol = 0;
-      continue;
+      if (nameCol === -1) nameCol = 1; // Nippon typical: col0=ISIN, col1=name
+      break;
     }
+  }
 
-    if (headerRow === -1) continue;
-
-    // Stop at totals
-    if (stopKeywords.some(kw => rowText.trim().startsWith(kw)) && holdings.length > 0) {
-      if (rowText.includes('grand total') || rowText.includes('net assets')) break;
-    }
-
-    // Extract holding
-    const name = nameCol >= 0 ? (row[nameCol] || '').trim() : row[0]?.trim() || '';
-    if (!name || name.length < 3 || name.length > 120) continue;
-    if (headerKeywords.some(kw => name.toLowerCase().includes(kw))) continue;
-
-    // Get % to NAV
-    let pct = 0;
-    if (pctCol >= 0 && row[pctCol]) {
-      pct = parseFloat(row[pctCol].replace(/[^0-9.]/g, ''));
-    } else {
-      // Try to find a column with a percentage value
-      for (let c = row.length - 1; c >= 1; c--) {
-        const v = parseFloat((row[c] || '').replace(/[^0-9.]/g, ''));
-        if (!isNaN(v) && v > 0 && v < 50) { pct = v; break; }
+  // If no header found, try heuristic: first row with an ISIN-like value defines data start
+  let dataStart = headerRow >= 0 ? headerRow + 1 : 0;
+  if (headerRow === -1) {
+    for (let r = 0; r < Math.min(matrix.length, 30); r++) {
+      if (matrix[r].some(c => /^INE[A-Z0-9]{9}$/.test(c.trim()))) {
+        dataStart = r;
+        // Try to infer columns from this row
+        const row = matrix[r];
+        isinCol = row.findIndex(c => /^INE[A-Z0-9]{9}$/.test(c.trim()));
+        nameCol = isinCol >= 0 ? isinCol + 1 : 1;
+        break;
       }
     }
-    if (!pct || isNaN(pct) || pct <= 0 || pct > 50) continue;
+  }
 
-    // ISIN
-    const isinMatch = row.join(' ').match(/INE[A-Z0-9]{9}/);
-    const isin = isinCol >= 0 ? (row[isinCol] || '').trim() || (isinMatch ? isinMatch[0] : null)
-                              : (isinMatch ? isinMatch[0] : null);
+  // Parse data rows
+  for (let r = dataStart; r < matrix.length; r++) {
+    const row = matrix[r];
+    if (!row || !row.length) continue;
+    const rowText = row.join(' ').toLowerCase();
 
-    // Market value
-    let mktVal = null;
-    if (mktValCol >= 0 && row[mktValCol]) {
-      mktVal = parseFloat(row[mktValCol].replace(/[^0-9.]/g, '')) || null;
+    // Stop at total/summary rows
+    if (stopKws.some(kw => rowText.includes(kw))) break;
+    // Skip rows that are sub-headers (e.g. "Equity & Equity Related", "Debt Instruments")
+    const firstCell = (row[0] || '').trim();
+    if (firstCell && row.filter(c => c.trim()).length <= 2 && !firstCell.match(/^INE/)) continue;
+
+    // Extract ISIN
+    let isin = null;
+    if (isinCol >= 0) {
+      isin = (row[isinCol] || '').trim() || null;
+      if (isin && !/^INE[A-Z0-9]{9}$/.test(isin)) isin = null;
+    }
+    // Also scan whole row for ISIN pattern
+    if (!isin) {
+      const isinMatch = row.join(' ').match(/\bINE[A-Z0-9]{9}\b/);
+      if (isinMatch) isin = isinMatch[0];
     }
 
-    holdings.push({ name, isin: isin || null, pct, mktVal });
+    // Extract name
+    let name = '';
+    if (nameCol >= 0) name = (row[nameCol] || '').trim();
+    if (!name && isinCol >= 0) name = (row[isinCol + 1] || '').trim(); // fallback: cell after ISIN
+    if (!name) name = firstCell;
+    name = name.replace(/^INE[A-Z0-9]{9}\s*/, '').trim();
+    if (!name || name.length < 3 || name.length > 150) continue;
+    if (nameKws.some(kw => name.toLowerCase().includes(kw))) continue;
+    if (name.match(/^\d/)) continue;
+
+    // Extract % to NAV
+    let pct = NaN;
+    if (pctCol >= 0 && row[pctCol]) {
+      pct = parseFloat(String(row[pctCol]).replace(/[^0-9.-]/g, ''));
+    }
+    if (isNaN(pct) || pct <= 0) {
+      // Scan from right for a plausible % value
+      for (let c = row.length - 1; c >= 1; c--) {
+        const v = parseFloat(String(row[c] || '').replace(/[^0-9.-]/g, ''));
+        if (!isNaN(v) && v > 0 && v <= 50) { pct = v; break; }
+      }
+    }
+    if (isNaN(pct) || pct <= 0 || pct > 50) continue;
+
+    // Extract market value (optional)
+    let mktVal = null;
+    if (mktValCol >= 0 && row[mktValCol]) {
+      mktVal = parseFloat(String(row[mktValCol]).replace(/[^0-9.]/g, '')) || null;
+    }
+
+    holdings.push({ name, isin, pct, mktVal });
   }
 
   const seen = new Set();
@@ -640,6 +670,7 @@ function parseHoldingsFromXLS(matrix, schemeName) {
     .sort((a, b) => b.pct - a.pct)
     .slice(0, 80);
 }
+
 
 // --- PDF text extractor (for non-Nippon AMCs, no external deps) ---
 function extractTextFromPDF(buf) {
@@ -768,6 +799,32 @@ export default async function handler(req, res) {
   }
 
   // Action: schemes -> list all scheme names in the XLSX index sheet
+  // Action: sheet -> return sample rows from a specific sheet number
+  if (action === 'sheet' && amc) {
+    const amcKey = amc.toUpperCase();
+    if (!AMC_CONFIG[amcKey]) return res.status(400).json({ error: `Unknown AMC: ${amc}` });
+    const sheetNum = parseInt(req.query.sheetNum || '2');
+    const found = await findWorkingURL(amcKey, new Date(), null);
+    if (!found) return res.status(404).json({ error: 'No working URL found' });
+    let fileBuf;
+    try { fileBuf = await httpGet(found.url, 25000); } catch (e) {
+      return res.status(503).json({ error: e.message });
+    }
+    const magic = fileBuf.slice(0, 4).toString('hex');
+    if (magic !== '504b0304') return res.status(422).json({ error: 'Not an XLSX file', magic });
+    const xlsxResult = parseXLSX(fileBuf);
+    if (!xlsxResult) return res.status(422).json({ error: 'Could not parse XLSX' });
+    const matrix = parseXLSXSheet(xlsxResult, sheetNum);
+    // Also test findSchemeSheetNum if scheme passed
+    let foundSheetNum = null;
+    if (req.query.scheme) foundSheetNum = findSchemeSheetNum(xlsxResult, req.query.scheme);
+    return res.json({
+      sheetNum, rows: matrix.length,
+      sampleRows: matrix.slice(0, 20).map(r => r.slice(0, 10)),
+      foundSheetNum,
+    });
+  }
+
   if (action === 'schemes' && amc) {
     const amcKey = amc.toUpperCase();
     if (!AMC_CONFIG[amcKey]) return res.status(400).json({ error: `Unknown AMC: ${amc}` });
