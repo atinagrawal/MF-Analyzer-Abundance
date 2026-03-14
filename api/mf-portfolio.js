@@ -235,101 +235,164 @@ function httpGet(urlStr, timeout = 28000) {
   });
 }
 
-// --- XLS parser (pure JS, no external deps) ---
-// Reads BIFF8 Excel files and extracts cell text values
-// Supports: LabelSst (0xFD), Label (0x0204), Number (0x0203), RK (0x027E), MulRk (0x00BD)
-function parseXLS(buf) {
-  // XLS BIFF8 format: series of records each with 2-byte type, 2-byte length, then data
-  const rows = {}; // row -> col -> value
+// --- XLSX parser (pure JS, uses built-in zlib for ZIP/deflate) ---
+// XLSX = ZIP file containing xl/sharedStrings.xml + xl/worksheets/sheetN.xml
+function colLetterToNum(letters) {
+  let n = 0;
+  for (const c of letters) n = n * 26 + c.charCodeAt(0) - 64;
+  return n - 1; // 0-indexed
+}
 
-  if (buf.length < 8) return rows;
+function extractZipEntries(buf) {
+  const entries = {};
+  let pos = 0;
+  let safety = 0;
+  while (pos + 30 <= buf.length && safety++ < 5000) {
+    const sig = buf.readUInt32LE(pos);
+    if (sig === 0x06054B50 || sig === 0x02014B50) break; // end/central dir
+    if (sig !== 0x04034B50) { pos++; continue; } // not local file header
+    const method    = buf.readUInt16LE(pos + 8);
+    const compSize  = buf.readUInt32LE(pos + 18);
+    const nameLen   = buf.readUInt16LE(pos + 26);
+    const extraLen  = buf.readUInt16LE(pos + 28);
+    const name      = buf.slice(pos + 30, pos + 30 + nameLen).toString('utf8');
+    const dataStart = pos + 30 + nameLen + extraLen;
+    const dataEnd   = dataStart + compSize;
+    if (compSize > 0 && dataEnd <= buf.length) {
+      const compData = buf.slice(dataStart, dataEnd);
+      try {
+        entries[name] = (method === 0) ? compData : zlib.inflateRawSync(compData);
+      } catch { entries[name] = compData; }
+    }
+    pos = (compSize > 0) ? dataEnd : pos + 30 + nameLen + extraLen;
+  }
+  return entries;
+}
 
-  // Check for CFB (Compound File Binary) header: D0 CF 11 E0
-  if (buf[0] !== 0xD0 || buf[1] !== 0xCF || buf[2] !== 0x11 || buf[3] !== 0xE0) {
-    return rows; // not a valid XLS file
+function parseXLSX(buf) {
+  const entries = extractZipEntries(buf);
+  const entryNames = Object.keys(entries);
+
+  // 1. Shared string table
+  const sst = [];
+  const sstBuf = entries['xl/sharedStrings.xml'] || entries['xl/SharedStrings.xml'];
+  if (sstBuf) {
+    const sstText = sstBuf.toString('utf8');
+    const siRegex = /<si>([\s\S]*?)<\/si>/g;
+    let m;
+    while ((m = siRegex.exec(sstText)) !== null) {
+      const tRegex = /<t[^>]*>([\s\S]*?)<\/t>/g;
+      let tm; const parts = [];
+      while ((tm = tRegex.exec(m[1])) !== null) {
+        parts.push(tm[1]
+          .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+          .replace(/&quot;/g,'"').replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(parseInt(n))));
+      }
+      sst.push(parts.join(''));
+    }
   }
 
-  // Parse CFB to find Workbook stream
+  // 2. Find worksheets (sheet1.xml first, then others)
+  const sheetFiles = entryNames
+    .filter(n => /xl\/worksheets\/sheet\d+\.xml$/.test(n))
+    .sort((a, b) => {
+      const na = parseInt(a.match(/sheet(\d+)/)[1]);
+      const nb = parseInt(b.match(/sheet(\d+)/)[1]);
+      return na - nb;
+    });
+  if (!sheetFiles.length) return [];
+
+  // 3. Parse sheet1 (combined portfolio - usually the main sheet)
+  const sheetXml = entries[sheetFiles[0]].toString('utf8');
+  const matrix = [];
+
+  const rowRegex = /<row\b[^>]*>([\s\S]*?)<\/row>/g;
+  let rowM;
+  while ((rowM = rowRegex.exec(sheetXml)) !== null) {
+    const cells = [];
+    const cellRegex = /<c\s([^>]*)>([\s\S]*?)<\/c>/g;
+    let cellM;
+    while ((cellM = cellRegex.exec(rowM[1])) !== null) {
+      const attrs  = cellM[1];
+      const inner  = cellM[2];
+      const typeM  = attrs.match(/\bt="([^"]+)"/);
+      const type   = typeM ? typeM[1] : 'n';
+      const refM   = attrs.match(/\br="([A-Z]+)\d+"/);
+      const colIdx = refM ? colLetterToNum(refM[1]) : cells.length;
+      const vM     = inner.match(/<v>([\s\S]*?)<\/v>/);
+      const tM     = inner.match(/<t>([\s\S]*?)<\/t>/);
+      let val = '';
+      if (vM) {
+        val = (type === 's') ? (sst[parseInt(vM[1])] || '') : vM[1];
+      } else if (tM) {
+        val = tM[1];
+      }
+      val = val.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();
+      cells.push({ col: colIdx, val });
+    }
+    if (cells.length) {
+      const maxCol = Math.max(...cells.map(c => c.col));
+      const arr = new Array(maxCol + 1).fill('');
+      cells.forEach(c => { arr[c.col] = c.val; });
+      matrix.push(arr);
+    }
+  }
+  return matrix;
+}
+
+// --- BIFF8 XLS parser (kept for CFB-format files) ---
+function parseXLS(buf) {
+  const rows = {};
+  if (buf.length < 8) return rows;
+  if (buf[0] !== 0xD0 || buf[1] !== 0xCF || buf[2] !== 0x11 || buf[3] !== 0xE0) return rows;
   const workbookBuf = extractCFBStream(buf, 'Workbook') || extractCFBStream(buf, 'Book');
   if (!workbookBuf) return rows;
-
-  // Now parse BIFF8 records
-  const sst = []; // shared string table
+  const sst = [];
   let pos = 0;
-
   while (pos + 4 <= workbookBuf.length) {
     const recType = workbookBuf.readUInt16LE(pos);
-    const recLen = workbookBuf.readUInt16LE(pos + 2);
+    const recLen  = workbookBuf.readUInt16LE(pos + 2);
     pos += 4;
     if (pos + recLen > workbookBuf.length) break;
     const data = workbookBuf.slice(pos, pos + recLen);
     pos += recLen;
-
-    if (recType === 0x00FC) { // SST - Shared String Table
-      parseSSTRecord(data, sst);
-    } else if (recType === 0x00FD) { // LabelSst
-      if (data.length >= 8) {
-        const row = data.readUInt16LE(0);
-        const col = data.readUInt16LE(2);
-        const sstIdx = data.readUInt32LE(6);
+    if (recType === 0x00FC) { parseSSTRecord(data, sst); }
+    else if (recType === 0x00FD && data.length >= 8) {
+      const row = data.readUInt16LE(0), col = data.readUInt16LE(2);
+      const sstIdx = data.readUInt32LE(6);
+      if (!rows[row]) rows[row] = {};
+      rows[row][col] = sst[sstIdx] || '';
+    } else if (recType === 0x0204 && data.length >= 8) {
+      const row = data.readUInt16LE(0), col = data.readUInt16LE(2);
+      const len = data.readUInt16LE(6);
+      if (!rows[row]) rows[row] = {};
+      rows[row][col] = data.slice(8, 8 + len).toString('latin1');
+    } else if (recType === 0x0203 && data.length >= 14) {
+      const row = data.readUInt16LE(0), col = data.readUInt16LE(2);
+      const val = data.readDoubleBE(6);
+      if (!rows[row]) rows[row] = {};
+      rows[row][col] = isNaN(val) ? '' : String(val);
+    } else if (recType === 0x027E && data.length >= 8) {
+      const row = data.readUInt16LE(0), col = data.readUInt16LE(2);
+      if (!rows[row]) rows[row] = {};
+      rows[row][col] = String(rkToNum(data.readUInt32LE(4)));
+    } else if (recType === 0x00BD && data.length >= 6) {
+      const row = data.readUInt16LE(0), firstCol = data.readUInt16LE(2);
+      const count = (data.length - 6) / 6;
+      for (let i = 0; i < count; i++) {
+        const col = firstCol + i;
         if (!rows[row]) rows[row] = {};
-        rows[row][col] = sst[sstIdx] || '';
-      }
-    } else if (recType === 0x0204) { // Label
-      if (data.length >= 8) {
-        const row = data.readUInt16LE(0);
-        const col = data.readUInt16LE(2);
-        const len = data.readUInt16LE(6);
-        const str = data.slice(8, 8 + len).toString('latin1');
-        if (!rows[row]) rows[row] = {};
-        rows[row][col] = str;
-      }
-    } else if (recType === 0x0203) { // Number
-      if (data.length >= 14) {
-        const row = data.readUInt16LE(0);
-        const col = data.readUInt16LE(2);
-        const val = data.readDoubleBE(6);
-        if (!rows[row]) rows[row] = {};
-        rows[row][col] = isNaN(val) ? '' : String(val);
-      }
-    } else if (recType === 0x027E) { // RK (compressed number)
-      if (data.length >= 8) {
-        const row = data.readUInt16LE(0);
-        const col = data.readUInt16LE(2);
-        const rk = data.readUInt32LE(4);
-        const val = rkToNum(rk);
-        if (!rows[row]) rows[row] = {};
-        rows[row][col] = String(val);
-      }
-    } else if (recType === 0x00BD) { // MulRk
-      if (data.length >= 6) {
-        const row = data.readUInt16LE(0);
-        const firstCol = data.readUInt16LE(2);
-        const count = (data.length - 6) / 6;
-        for (let i = 0; i < count; i++) {
-          const rk = data.readUInt32LE(4 + i * 6 + 2);
-          const val = rkToNum(rk);
-          const col = firstCol + i;
-          if (!rows[row]) rows[row] = {};
-          rows[row][col] = String(val);
-        }
+        rows[row][col] = String(rkToNum(data.readUInt32LE(4 + i * 6 + 2)));
       }
     }
-    // 0x0201 = BLANK, skip; 0x0006 = FORMULA, complex - skip for now
   }
-
   return rows;
 }
 
 function rkToNum(rk) {
   let val;
-  if (rk & 0x02) {
-    val = rk >> 2;
-  } else {
-    const buf8 = Buffer.alloc(8);
-    buf8.writeUInt32LE(rk & 0xFFFFFFFC, 4);
-    val = buf8.readDoubleBE(0);
-  }
+  if (rk & 0x02) { val = rk >> 2; }
+  else { const b = Buffer.alloc(8); b.writeUInt32LE(rk & 0xFFFFFFFC, 4); val = b.readDoubleBE(0); }
   if (rk & 0x01) val /= 100;
   return val;
 }
@@ -351,58 +414,39 @@ function parseSSTRecord(data, sst) {
     if (hasExt && pos + 4 <= data.length) { extLen = data.readUInt32LE(pos); pos += 4; }
     const byteLen = isUnicode ? charCount * 2 : charCount;
     if (pos + byteLen > data.length) { sst.push(''); break; }
-    const str = isUnicode
+    sst.push(isUnicode
       ? data.slice(pos, pos + byteLen).toString('utf16le')
-      : data.slice(pos, pos + byteLen).toString('latin1');
-    sst.push(str);
+      : data.slice(pos, pos + byteLen).toString('latin1'));
     pos += byteLen + richCount * 4 + extLen;
   }
 }
 
 function extractCFBStream(buf, streamName) {
-  // Minimal CFB parser to extract a named stream
-  // Sector size is typically 512 bytes for older files
   const sectorSize = 1 << buf.readUInt16LE(30);
   const fatCount = buf.readUInt32LE(44);
   const firstDirSector = buf.readUInt32LE(48);
-
-  // Read FAT sectors
   const fatSectors = [];
   for (let i = 0; i < Math.min(fatCount, 109); i++) {
-    const sectorId = buf.readUInt32LE(76 + i * 4);
-    if (sectorId >= 0xFFFFFFFA) break;
-    fatSectors.push(sectorId);
+    const s = buf.readUInt32LE(76 + i * 4);
+    if (s >= 0xFFFFFFFA) break;
+    fatSectors.push(s);
   }
-
-  function readSector(sectorId) {
-    const offset = (sectorId + 1) * sectorSize;
-    if (offset + sectorSize > buf.length) return Buffer.alloc(0);
-    return buf.slice(offset, offset + sectorSize);
+  function readSector(id) {
+    const off = (id + 1) * sectorSize;
+    return (off + sectorSize <= buf.length) ? buf.slice(off, off + sectorSize) : Buffer.alloc(0);
   }
-
-  // Build FAT chain
   const fat = [];
   for (const s of fatSectors) {
     const sec = readSector(s);
-    for (let i = 0; i < sec.length; i += 4) {
-      if (i + 4 <= sec.length) fat.push(sec.readUInt32LE(i));
-    }
+    for (let i = 0; i + 4 <= sec.length; i += 4) fat.push(sec.readUInt32LE(i));
   }
-
   function followChain(start) {
-    const chunks = [];
-    let cur = start;
-    const visited = new Set();
-    while (cur < 0xFFFFFFF8 && !visited.has(cur)) {
-      visited.add(cur);
-      chunks.push(readSector(cur));
-      if (cur >= fat.length) break;
-      cur = fat[cur];
+    const chunks = []; let cur = start; const visited = new Set();
+    while (cur < 0xFFFFFFF8 && !visited.has(cur) && cur < fat.length) {
+      visited.add(cur); chunks.push(readSector(cur)); cur = fat[cur];
     }
     return Buffer.concat(chunks);
   }
-
-  // Walk directory entries (each is 128 bytes)
   const dirData = followChain(firstDirSector);
   for (let i = 0; i * 128 < dirData.length; i++) {
     const off = i * 128;
@@ -410,18 +454,14 @@ function extractCFBStream(buf, streamName) {
     const nameLen = dirData.readUInt16LE(off + 64);
     if (nameLen < 2) continue;
     const name = dirData.slice(off, off + Math.min(nameLen - 2, 64)).toString('utf16le');
-    const entryType = dirData[off + 66];
-    if (entryType !== 2) continue; // only stream entries
+    if (dirData[off + 66] !== 2) continue;
     if (name.toLowerCase() !== streamName.toLowerCase()) continue;
-    const startSector = dirData.readUInt32LE(off + 116);
-    const size = dirData.readUInt32LE(off + 120);
-    const data = followChain(startSector);
-    return data.slice(0, size);
+    return followChain(dirData.readUInt32LE(off + 116)).slice(0, dirData.readUInt32LE(off + 120));
   }
   return null;
 }
 
-// Convert row/col map to array of arrays (CSV-like)
+// Convert BIFF8 row/col map to matrix
 function xlsRowsToMatrix(rows) {
   const rowNums = Object.keys(rows).map(Number).sort((a, b) => a - b);
   if (!rowNums.length) return [];
@@ -438,6 +478,7 @@ function xlsRowsToMatrix(rows) {
   }
   return result;
 }
+
 
 // --- HTML-as-XLS table parser ---
 // Many Indian AMC sites serve HTML tables with .xls extension (Excel "Save as Web Page")
@@ -705,18 +746,15 @@ export default async function handler(req, res) {
       return res.status(503).json({ error: e.message, url: found.url });
     }
     const magic = fileBuf.slice(0, 8).toString('hex');
-    const isCFB = magic.startsWith('d0cf11e0');
-    const isZIP = magic.startsWith('504b0304');
+    const isCFB  = magic.startsWith('d0cf11e0');
+    const isZIP  = magic.startsWith('504b0304');
     const first100 = fileBuf.slice(0, 100).toString('utf8').toLowerCase();
     const isHTML = magic.startsWith('3c68746d') || magic.startsWith('3c48544d') ||
                    first100.includes('<html') || first100.includes('<table');
     let matrix = [];
-    if (isHTML) {
-      matrix = parseHTMLTable(fileBuf);
-    } else {
-      const xlsRows = parseXLS(fileBuf);
-      matrix = xlsRowsToMatrix(xlsRows);
-    }
+    if (isZIP)       { matrix = parseXLSX(fileBuf); }
+    else if (isHTML) { matrix = parseHTMLTable(fileBuf); }
+    else if (isCFB)  { matrix = xlsRowsToMatrix(parseXLS(fileBuf)); }
     const sample = matrix.slice(0, 20).map(row => row.slice(0, 8));
     return res.json({
       url: found.url, fileSize: fileBuf.length, magic, isCFB, isZIP, isHTML,
@@ -774,26 +812,28 @@ export default async function handler(req, res) {
 
     if (fileType === 'xls' || fileType === 'xlsx') {
       const magic = fileBuf.slice(0, 4).toString('hex');
+      const isZIP  = magic === '504b0304';
+      const isCFB  = magic === 'd0cf11e0';
       const isHTML = magic === '3c68746d' || magic === '3c48544d' ||
                      fileBuf.slice(0, 100).toString('utf8').toLowerCase().includes('<html') ||
                      fileBuf.slice(0, 100).toString('utf8').toLowerCase().includes('<table');
       let matrix = [];
-      if (isHTML) {
-        // HTML-as-XLS (common Indian AMC pattern: "Save as Web Page")
+      if (isZIP) {
+        matrix = parseXLSX(fileBuf);
+      } else if (isHTML) {
         matrix = parseHTMLTable(fileBuf);
-      } else {
-        // Try BIFF8 binary XLS
+      } else if (isCFB) {
         const xlsRows = parseXLS(fileBuf);
         matrix = xlsRowsToMatrix(xlsRows);
       }
       if (!matrix.length) {
         return res.status(422).json({
-          error: 'Could not parse XLS file - check ?action=debug for diagnostics',
-          url: found.url, magic, isHTML,
-          hint: magic.startsWith('d0cf11e0') ? 'CFB detected, Workbook stream not found' :
-                magic.startsWith('504b0304') ? 'ZIP/XLSX - try adding .xlsx to URL candidates' :
+          error: 'Could not parse spreadsheet file - check ?action=debug for diagnostics',
+          url: found.url, magic, isZIP, isCFB, isHTML,
+          hint: isZIP ? 'XLSX parsed but no rows found - sheet may be empty or structured differently' :
+                isCFB ? 'CFB/BIFF8 XLS parsed but no rows found' :
                 isHTML ? 'HTML parsed but no table rows found' :
-                'Not a valid BIFF8 XLS or HTML file',
+                'Unknown file format',
         });
       }
       holdings = parseHoldingsFromXLS(matrix, scheme || '');
