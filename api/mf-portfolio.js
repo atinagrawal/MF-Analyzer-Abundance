@@ -340,12 +340,20 @@ function parseXLSX(buf) {
     const wbText = wbBuf.toString('utf8');
     const relsText = relsBuf.toString('utf8');
 
-    // Parse rels: rId -> target filename
+    // Parse rels: rId -> target filename (resolve relative to xl/ directory)
     const rIdToFile = {};
     const relRegex = /<Relationship\s[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"/g;
     let relM;
     while ((relM = relRegex.exec(relsText)) !== null) {
-      const target = relM[2].replace(/^\.\.\//, 'xl/').replace(/^\/xl\//, 'xl/');
+      let target = relM[2];
+      // Target is relative to xl/ directory
+      if (target.startsWith('../')) {
+        target = 'xl/' + target.slice(3);     // "../worksheets/sheet1.xml" -> "xl/worksheets/sheet1.xml"
+      } else if (target.startsWith('/')) {
+        target = target.slice(1);              // absolute path
+      } else if (!target.startsWith('xl/')) {
+        target = 'xl/' + target;               // "worksheets/sheet1.xml" -> "xl/worksheets/sheet1.xml"
+      }
       rIdToFile[relM[1]] = target;
     }
 
@@ -856,11 +864,18 @@ export default async function handler(req, res) {
     // Also test findSchemeSheetNum if scheme passed
     let foundSheetNum = null;
     if (req.query.scheme) foundSheetNum = findSchemeSheetNum(xlsxResult, req.query.scheme);
+    // If foundSheetNum is set, also show its content
+    let foundMatrix = [];
+    if (foundSheetNum > 0 && foundSheetNum !== sheetNum) {
+      foundMatrix = parseXLSXSheet(xlsxResult, foundSheetNum).slice(0, 10).map(r => r.slice(0, 10));
+    }
     return res.json({
       sheetNum, rows: matrix.length,
       sheetFile: xlsxResult.sheetFiles[sheetNum - 1] || null,
       sampleRows: matrix.slice(0, 20).map(r => r.slice(0, 10)),
       foundSheetNum,
+      foundSheetFile: foundSheetNum > 0 ? (xlsxResult.sheetFiles[foundSheetNum - 1] || null) : null,
+      foundSheetSample: foundMatrix,
     });
   }
 
@@ -980,14 +995,16 @@ export default async function handler(req, res) {
         const xlsxResult = parseXLSX(fileBuf);
         if (xlsxResult) {
           if (scheme) {
-            // Find the sheet for this scheme
+            // Find the sheet for this scheme via index search
             const sheetNum = findSchemeSheetNum(xlsxResult, scheme);
             if (sheetNum > 0) {
               matrix = parseXLSXSheet(xlsxResult, sheetNum);
             } else {
-              // Scheme not found in index - try to find it by scanning all sheets
-              // Fall back to sheet2 (first scheme sheet)
-              matrix = parseXLSXSheet(xlsxResult, 2);
+              return res.status(404).json({
+                error: `Scheme not found in portfolio file: "${scheme}"`,
+                hint: 'Use ?action=schemes&amc=NIPPON to list exact scheme names',
+                amc: amcKey, url: found.url,
+              });
             }
           } else {
             // No scheme specified - return index list
