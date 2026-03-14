@@ -654,6 +654,31 @@ export default async function handler(req, res) {
     });
   }
 
+  // Action: debug -> download file and return diagnostics (magic bytes, first rows, xlsRows count)
+  if (action === 'debug' && amc) {
+    const amcKey = amc.toUpperCase();
+    if (!AMC_CONFIG[amcKey]) return res.status(400).json({ error: `Unknown AMC: ${amc}` });
+    const found = await findWorkingURL(amcKey, new Date(), null);
+    if (!found) return res.status(404).json({ error: 'No working URL found', amc: amcKey });
+    let fileBuf;
+    try { fileBuf = await httpGet(found.url, 25000); } catch (e) {
+      return res.status(503).json({ error: e.message, url: found.url });
+    }
+    const magic = fileBuf.slice(0, 8).toString('hex');
+    const isCFB = magic.startsWith('d0cf11e0');
+    const isZIP = magic.startsWith('504b0304');
+    const isHTML = fileBuf.slice(0, 50).toString('utf8').toLowerCase().includes('<html');
+    const xlsRows = parseXLS(fileBuf);
+    const rowCount = Object.keys(xlsRows).length;
+    const matrix = xlsRowsToMatrix(xlsRows);
+    // Return first 15 rows as sample
+    const sample = matrix.slice(0, 15).map(row => row.slice(0, 8));
+    return res.json({
+      url: found.url, fileSize: fileBuf.length, magic, isCFB, isZIP, isHTML,
+      xlsRowCount: rowCount, matrixRows: matrix.length, sampleRows: sample,
+    });
+  }
+
   if (action === 'probe' && amc) {
     const amcKey = amc.toUpperCase();
     if (!AMC_CONFIG[amcKey]) return res.status(400).json({ error: `Unknown AMC: ${amc}` });
@@ -703,12 +728,16 @@ export default async function handler(req, res) {
     const fileType = found.fileType || AMC_CONFIG[amcKey].fileType || 'pdf';
 
     if (fileType === 'xls' || fileType === 'xlsx') {
+      const magic = fileBuf.slice(0, 4).toString('hex');
       const xlsRows = parseXLS(fileBuf);
       const matrix = xlsRowsToMatrix(xlsRows);
       if (!matrix.length) {
         return res.status(422).json({
-          error: 'Could not parse XLS file',
-          url: found.url, rowCount: Object.keys(xlsRows).length,
+          error: 'Could not parse XLS file - check ?action=debug for diagnostics',
+          url: found.url, magic, xlsRowCount: Object.keys(xlsRows).length,
+          hint: magic.startsWith('d0cf11e0') ? 'CFB detected, Workbook stream not found' :
+                magic.startsWith('504b0304') ? 'ZIP/XLSX file, use .xlsx extension' :
+                'Not a valid BIFF8 XLS file - may be HTML or corrupted',
         });
       }
       holdings = parseHoldingsFromXLS(matrix, scheme || '');
