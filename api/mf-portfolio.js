@@ -439,6 +439,46 @@ function xlsRowsToMatrix(rows) {
   return result;
 }
 
+// --- HTML-as-XLS table parser ---
+// Many Indian AMC sites serve HTML tables with .xls extension (Excel "Save as Web Page")
+function parseHTMLTable(buf) {
+  // Try cp1252 / utf-8 decode
+  let html;
+  try { html = buf.toString('utf8'); } catch { html = buf.toString('latin1'); }
+
+  const matrix = [];
+  // Strip scripts/styles
+  html = html.replace(/<script[\s\S]*?<\/script>/gi, '')
+             .replace(/<style[\s\S]*?<\/style>/gi, '');
+
+  // Find all <tr> blocks
+  const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  let trMatch;
+  while ((trMatch = trRegex.exec(html)) !== null) {
+    const trContent = trMatch[1];
+    const cells = [];
+    // Find all <td> and <th> cells
+    const tdRegex = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi;
+    let tdMatch;
+    while ((tdMatch = tdRegex.exec(trContent)) !== null) {
+      // Strip inner tags, decode entities
+      let cellText = tdMatch[1]
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n)))
+        .replace(/\s+/g, ' ')
+        .trim();
+      cells.push(cellText);
+    }
+    if (cells.length > 0) matrix.push(cells);
+  }
+  return matrix;
+}
+
 // --- Holdings parser for XLS matrix ---
 function parseHoldingsFromXLS(matrix, schemeName) {
   const holdings = [];
@@ -667,15 +707,20 @@ export default async function handler(req, res) {
     const magic = fileBuf.slice(0, 8).toString('hex');
     const isCFB = magic.startsWith('d0cf11e0');
     const isZIP = magic.startsWith('504b0304');
-    const isHTML = fileBuf.slice(0, 50).toString('utf8').toLowerCase().includes('<html');
-    const xlsRows = parseXLS(fileBuf);
-    const rowCount = Object.keys(xlsRows).length;
-    const matrix = xlsRowsToMatrix(xlsRows);
-    // Return first 15 rows as sample
-    const sample = matrix.slice(0, 15).map(row => row.slice(0, 8));
+    const first100 = fileBuf.slice(0, 100).toString('utf8').toLowerCase();
+    const isHTML = magic.startsWith('3c68746d') || magic.startsWith('3c48544d') ||
+                   first100.includes('<html') || first100.includes('<table');
+    let matrix = [];
+    if (isHTML) {
+      matrix = parseHTMLTable(fileBuf);
+    } else {
+      const xlsRows = parseXLS(fileBuf);
+      matrix = xlsRowsToMatrix(xlsRows);
+    }
+    const sample = matrix.slice(0, 20).map(row => row.slice(0, 8));
     return res.json({
       url: found.url, fileSize: fileBuf.length, magic, isCFB, isZIP, isHTML,
-      xlsRowCount: rowCount, matrixRows: matrix.length, sampleRows: sample,
+      matrixRows: matrix.length, sampleRows: sample,
     });
   }
 
@@ -729,15 +774,26 @@ export default async function handler(req, res) {
 
     if (fileType === 'xls' || fileType === 'xlsx') {
       const magic = fileBuf.slice(0, 4).toString('hex');
-      const xlsRows = parseXLS(fileBuf);
-      const matrix = xlsRowsToMatrix(xlsRows);
+      const isHTML = magic === '3c68746d' || magic === '3c48544d' ||
+                     fileBuf.slice(0, 100).toString('utf8').toLowerCase().includes('<html') ||
+                     fileBuf.slice(0, 100).toString('utf8').toLowerCase().includes('<table');
+      let matrix = [];
+      if (isHTML) {
+        // HTML-as-XLS (common Indian AMC pattern: "Save as Web Page")
+        matrix = parseHTMLTable(fileBuf);
+      } else {
+        // Try BIFF8 binary XLS
+        const xlsRows = parseXLS(fileBuf);
+        matrix = xlsRowsToMatrix(xlsRows);
+      }
       if (!matrix.length) {
         return res.status(422).json({
           error: 'Could not parse XLS file - check ?action=debug for diagnostics',
-          url: found.url, magic, xlsRowCount: Object.keys(xlsRows).length,
+          url: found.url, magic, isHTML,
           hint: magic.startsWith('d0cf11e0') ? 'CFB detected, Workbook stream not found' :
-                magic.startsWith('504b0304') ? 'ZIP/XLSX file, use .xlsx extension' :
-                'Not a valid BIFF8 XLS file - may be HTML or corrupted',
+                magic.startsWith('504b0304') ? 'ZIP/XLSX - try adding .xlsx to URL candidates' :
+                isHTML ? 'HTML parsed but no table rows found' :
+                'Not a valid BIFF8 XLS or HTML file',
         });
       }
       holdings = parseHoldingsFromXLS(matrix, scheme || '');
