@@ -307,8 +307,7 @@ function parseSheetXml(sheetXml, sst) {
 
 function parseXLSX(buf) {
   // Returns { indexMatrix, sheetFiles, entries, sst }
-  // indexMatrix = sheet1 (index of schemes)
-  // Call parseXLSXSheet(result, sheetNum) to get a specific sheet's matrix
+  // sheetFiles is ordered by workbook.xml display order (not sheetN.xml filename order)
   const entries = extractZipEntries(buf);
   const entryNames = Object.keys(entries);
 
@@ -331,14 +330,45 @@ function parseXLSX(buf) {
     }
   }
 
-  // 2. Sorted sheet list
-  const sheetFiles = entryNames
-    .filter(n => /xl\/worksheets\/sheet\d+\.xml$/.test(n))
-    .sort((a, b) => parseInt(a.match(/sheet(\d+)/)[1]) - parseInt(b.match(/sheet(\d+)/)[1]));
+  // 2. Parse xl/workbook.xml to get sheets in DISPLAY ORDER
+  // <sheet name="..." sheetId="1" r:id="rId1"/> maps to xl/worksheets/sheetN.xml via rels
+  let sheetFiles = [];
+  const wbBuf = entries['xl/workbook.xml'] || entries['xl/Workbook.xml'];
+  const relsBuf = entries['xl/_rels/workbook.xml.rels'] || entries['xl/_rels/Workbook.xml.rels'];
+
+  if (wbBuf && relsBuf) {
+    const wbText = wbBuf.toString('utf8');
+    const relsText = relsBuf.toString('utf8');
+
+    // Parse rels: rId -> target filename
+    const rIdToFile = {};
+    const relRegex = /<Relationship\s[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"/g;
+    let relM;
+    while ((relM = relRegex.exec(relsText)) !== null) {
+      const target = relM[2].replace(/^\.\.\//, 'xl/').replace(/^\/xl\//, 'xl/');
+      rIdToFile[relM[1]] = target;
+    }
+
+    // Parse workbook sheets in order
+    const sheetRegex = /<sheet\s[^>]*r:id="([^"]+)"/g;
+    let sheetM;
+    while ((sheetM = sheetRegex.exec(wbText)) !== null) {
+      const rId = sheetM[1];
+      const file = rIdToFile[rId];
+      if (file && entries[file]) sheetFiles.push(file);
+    }
+  }
+
+  // Fallback: sort by sheetN number if workbook parsing failed
+  if (!sheetFiles.length) {
+    sheetFiles = entryNames
+      .filter(n => /xl\/worksheets\/sheet\d+\.xml$/.test(n))
+      .sort((a, b) => parseInt(a.match(/sheet(\d+)/)[1]) - parseInt(b.match(/sheet(\d+)/)[1]));
+  }
 
   if (!sheetFiles.length) return null;
 
-  // 3. Parse sheet1 as index
+  // 3. Parse sheet1 (index sheet - first in display order)
   const indexMatrix = parseSheetXml(entries[sheetFiles[0]].toString('utf8'), sst);
 
   return { indexMatrix, sheetFiles, entries, sst };
@@ -356,16 +386,21 @@ function findSchemeSheetNum(xlsxResult, schemeName) {
   // Search index sheet for scheme name, return sheet number (2-based since sheet1=index)
   const { indexMatrix } = xlsxResult;
   const norm = schemeName.toLowerCase().replace(/\s+/g,' ').trim();
-  // Try progressively shorter prefixes to handle partial matches
-  for (let prefixLen = Math.min(norm.length, 30); prefixLen >= 10; prefixLen -= 5) {
+
+  // Build list of (rowIndex, combinedText) for all non-header rows
+  const candidates = [];
+  for (let i = 0; i < indexMatrix.length; i++) {
+    const row = indexMatrix[i];
+    const combined = row.join(' ').toLowerCase().replace(/\s+/g,' ');
+    candidates.push({ i, combined });
+  }
+
+  // Try decreasing prefix lengths
+  for (let prefixLen = Math.min(norm.length, 35); prefixLen >= 8; prefixLen -= 3) {
     const prefix = norm.substring(0, prefixLen);
-    for (let i = 0; i < indexMatrix.length; i++) {
-      const row = indexMatrix[i];
-      // Check all cells in the row
-      for (const cell of row) {
-        if (cell && cell.toLowerCase().replace(/\s+/g,' ').includes(prefix)) {
-          return i + 2; // +1 for 1-based, +1 because sheet1=index
-        }
+    for (const { i, combined } of candidates) {
+      if (combined.includes(prefix)) {
+        return i + 2; // +1 for 1-based, +1 because sheetFiles[0]=index, sheetFiles[i+1]=scheme sheet
       }
     }
   }
@@ -571,13 +606,12 @@ function parseHoldingsFromXLS(matrix, schemeName) {
   const mktKws   = ['market value', 'mkt value', 'market val', 'market price'];
   const stopKws  = ['grand total', 'total net assets', 'net assets', 'total of'];
 
-  // Scan for header row
+  // Scan for header row (within first 20 rows)
   for (let r = 0; r < Math.min(matrix.length, 20); r++) {
     const row = matrix[r];
     const rowText = row.join(' ').toLowerCase();
     const hasNameKw = nameKws.some(kw => rowText.includes(kw));
     const hasPctKw  = pctKws.some(kw => rowText.includes(kw));
-    // Header row must have at least a name keyword OR (a pct keyword AND an isin keyword)
     if (hasNameKw || (hasPctKw && rowText.includes('isin'))) {
       headerRow = r;
       row.forEach((cell, ci) => {
@@ -587,7 +621,11 @@ function parseHoldingsFromXLS(matrix, schemeName) {
         if (isinCol  === -1 && isinKws.some(kw => cl.includes(kw)))  isinCol  = ci;
         if (mktValCol=== -1 && mktKws.some(kw => cl.includes(kw)))   mktValCol= ci;
       });
-      if (nameCol === -1) nameCol = 1; // Nippon typical: col0=ISIN, col1=name
+      // Nippon-style fallback: col0=code, col1=ISIN, col2=name, col6=% to NAV
+      if (isinCol  === -1) isinCol  = 1;
+      if (nameCol  === -1) nameCol  = 2;
+      if (pctCol   === -1) pctCol   = 6;
+      if (mktValCol=== -1) mktValCol= 5;
       break;
     }
   }
@@ -820,6 +858,7 @@ export default async function handler(req, res) {
     if (req.query.scheme) foundSheetNum = findSchemeSheetNum(xlsxResult, req.query.scheme);
     return res.json({
       sheetNum, rows: matrix.length,
+      sheetFile: xlsxResult.sheetFiles[sheetNum - 1] || null,
       sampleRows: matrix.slice(0, 20).map(r => r.slice(0, 10)),
       foundSheetNum,
     });
