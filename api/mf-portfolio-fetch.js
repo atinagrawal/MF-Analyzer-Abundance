@@ -1,5 +1,5 @@
 // /api/mf-portfolio-fetch?amcCode=SBI&scheme=SBI+Magnum
-// Fast, hardcoded-template AMC scraper with Web Firewall Bypass and Excel (.xlsx) support
+// Fast, hardcoded-template AMC scraper with Web Firewall Bypass, Excel (.xlsx) support, and correct temporal logic
 
 export const config = { runtime: 'nodejs' };
 
@@ -55,18 +55,15 @@ const AMC_CONFIG = {
     url: (year, mon, mm, yy) => {
       const monLower = mon.toLowerCase();
       const mon3 = mon.substring(0, 3).toLowerCase();
-      // Calculate the last day of the exact month/year
+      // Calculate the exact last day of the reporting month
       const lastDay = new Date(parseInt(year, 10), parseInt(mm, 10), 0).getDate();
       const lastDayOrd = getOrdinal(lastDay);
       
       return [
-        // Optimized URLs without query parameters
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-schemes-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.xlsx`,
-        `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-scheme-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.xlsx`, // Typo handling
+        `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-scheme-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.xlsx`, 
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-schemes-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.pdf`,
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-scheme-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.pdf`,
-        
-        // Legacy fallbacks
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/${monLower}${yy}port.pdf`,
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/${mon3}${yy}port.pdf`,
       ];
@@ -326,7 +323,10 @@ async function findWorkingURL(amcKey, date, collectTriedUrls) {
   const cfg = AMC_CONFIG[amcKey];
   if (!cfg) return null;
 
-  for (let monthOffset = 0; monthOffset <= 2; monthOffset++) {
+  // FIXED LOGIC: Portfolios are published for the PREVIOUS month around the 10th of the current month.
+  // Therefore, we MUST start looking from `monthOffset = 1` (1 month ago), not 0.
+  // We fall back up to 3 months ago in case the AMC is running late on disclosures.
+  for (let monthOffset = 1; monthOffset <= 3; monthOffset++) {
     const d = new Date(date);
     d.setMonth(d.getMonth() - monthOffset);
     const params = getMonthParams(d);
@@ -338,6 +338,8 @@ async function findWorkingURL(amcKey, date, collectTriedUrls) {
       try {
         const status = await httpHead(url);
         if (collectTriedUrls) collectTriedUrls.push({ url, status });
+        
+        // Treat 200 OK or 302 Redirect as a successful find
         if (status === 200 || status === 302) return { url, ...params, monthOffset };
       } catch (e) {
         if (collectTriedUrls) collectTriedUrls.push({ url, status: 0, error: e.message });
