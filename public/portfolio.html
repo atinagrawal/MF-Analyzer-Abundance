@@ -14,8 +14,6 @@
     --text:#162616;--text2:#2e4d2e;--muted:#5e8a5e;
     --g1:#1b5e20;--g2:#2e7d32;--g3:#43a047;--g4:#66bb6a;
     --g-light:#a5d6a7;--g-xlight:#e8f5e9;
-    --neg:#b71c1c;--neg-bg:#ffebee;
-    --pos:#1b5e20;--pos-bg:#e8f5e9;
     --shadow:0 2px 16px rgba(46,125,50,.09);
     --radius:14px;
   }
@@ -24,7 +22,7 @@
   a{color:inherit;text-decoration:none}
   .page{max-width:1160px;margin:0 auto;padding:0 24px 48px}
 
-  /* NAVBAR (Matched) */
+  /* NAVBAR */
   .navbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0 18px;margin-bottom:28px;border-bottom:1.5px solid var(--border);gap:16px;flex-wrap:wrap}
   .logo-wrap{display:flex;align-items:center;gap:12px}
   .logo-icon{width:38px;height:38px;border-radius:8px;background:var(--g2);color:#fff;font-weight:800;font-size:1.1rem;display:flex;align-items:center;justify-content:center}
@@ -35,7 +33,7 @@
   .nav-link:hover{background:var(--surface3);border-color:var(--border2)}
   .nav-tag{padding:7px 14px;border-radius:8px;font-size:.75rem;font-weight:700;background:var(--g2);color:#fff;letter-spacing:.2px}
 
-  /* DARK HERO (Matched to your existing app) */
+  /* DARK HERO */
   .wc-hdr{background:linear-gradient(135deg,#0d2818 0%,#1b4332 45%,#155e38 100%);padding:28px 32px 48px;position:relative;overflow:hidden;border-radius:16px 16px 0 0;margin-bottom:-24px}
   .wc-hdr-grid{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.04) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
   .wc-hdr-inner{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
@@ -49,17 +47,18 @@
 
   /* SEARCH CARD */
   .search-card{background:var(--surface);border-radius:var(--radius);padding:24px 28px;box-shadow:0 8px 30px rgba(46,125,50,.12);border:1.5px solid var(--border);position:relative;z-index:10;margin-bottom:24px}
-  .form-grid{display:grid;grid-template-columns:1.5fr 2fr auto;gap:16px;align-items:end}
-  .sip-field{display:flex;flex-direction:column;gap:7px}
-  .sip-field label{font-size:.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  .form-grid{display:grid;grid-template-columns:1.2fr 2fr auto;gap:16px;align-items:end}
+  .sip-field{display:flex;flex-direction:column;gap:7px;position:relative}
+  .sip-field label{font-size:.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;}
   .sip-input, .sip-select{width:100%;padding:13px 16px;font-family:"Raleway",sans-serif;font-size:.88rem;font-weight:700;border:1.5px solid var(--border2);border-radius:9px;background:var(--surface2);color:var(--text);outline:none;transition:all .2s}
   .sip-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235e8a5e' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;cursor:pointer}
   .sip-input:focus, .sip-select:focus{border-color:var(--g3);background:#fff;box-shadow:0 0 0 3px rgba(67,160,71,.1)}
+  .sip-input:disabled{background:var(--surface3);cursor:not-allowed;opacity:0.7}
+  
   .load-btn{padding:13px 24px;border-radius:9px;background:var(--g2);color:#fff;font-family:'Raleway',sans-serif;font-size:.88rem;font-weight:700;border:none;cursor:pointer;transition:all .15s;letter-spacing:.3px;height:47px}
   .load-btn:hover:not(:disabled){background:var(--g1)}
   .load-btn:disabled{background:var(--border2);cursor:not-allowed}
 
-  /* LOADING & ALERTS */
   .state-box{text-align:center;padding:40px 20px;background:var(--surface);border-radius:var(--radius);border:1.5px solid var(--border);margin-bottom:24px}
   .state-spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--g3);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -84,10 +83,7 @@
   .mono{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--muted)}
   .weight-cell{text-align:right;color:var(--g2);font-weight:800;font-family:'JetBrains Mono',monospace}
 
-  @media(max-width:768px){
-    .form-grid{grid-template-columns:1fr}
-    .load-btn{width:100%}
-  }
+  @media(max-width:768px){ .form-grid{grid-template-columns:1fr} .load-btn{width:100%} }
 </style>
 </head>
 <body>
@@ -143,8 +139,12 @@
         </select>
       </div>
       <div class="sip-field">
-        <label>Scheme Name (Optional)</label>
-        <input type="text" id="schemeInput" class="sip-input" placeholder="e.g. Flexi Cap Fund">
+        <label>
+          <span>Scheme Name</span>
+          <span id="fundLoadingTxt" style="color:var(--g3);display:none;">Loading schemes...</span>
+        </label>
+        <input type="text" id="schemeInput" list="schemeList" class="sip-input" placeholder="Type or select a fund..." disabled required>
+        <datalist id="schemeList"></datalist>
       </div>
       <button type="submit" class="load-btn" id="fetchBtn">Extract Holdings</button>
     </form>
@@ -153,7 +153,7 @@
 
   <div id="loadingBox" class="state-box" style="display:none">
     <div class="state-spinner"></div>
-    <div class="state-msg">Bypassing firewalls & parsing document... This takes 5-15 seconds.</div>
+    <div class="state-msg">Fetching disclosure document & extracting table... This takes 5-15 seconds.</div>
   </div>
 
   <div id="resultBox" style="display:none;">
@@ -189,6 +189,71 @@
 </div>
 
 <script>
+  let allIndiaFunds = [];
+  
+  // Mapping AMC codes to the string found in mfapi.in names
+  const amcSearchKeywords = {
+    'SBI': 'SBI', 'HDFC': 'HDFC', 'ICICI': 'ICICI', 'NIPPON': 'Nippon',
+    'PPFAS': 'Parag Parikh', 'ABSL': 'Aditya Birla', 'MIRAE': 'Mirae',
+    'KOTAK': 'Kotak', 'AXIS': 'Axis', 'UTI': 'UTI', 'DSP': 'DSP', 'BANDHAN': 'Bandhan'
+  };
+
+  // 1. DYNAMIC FUND LIST LOADER
+  document.getElementById('amcSelect').addEventListener('change', async (e) => {
+    const amcCode = e.target.value;
+    const schemeInput = document.getElementById('schemeInput');
+    const dataList = document.getElementById('schemeList');
+    const loadingTxt = document.getElementById('fundLoadingTxt');
+    const searchKeyword = amcSearchKeywords[amcCode].toLowerCase();
+
+    // Reset UI
+    schemeInput.value = '';
+    schemeInput.disabled = true;
+    dataList.innerHTML = '';
+    loadingTxt.style.display = 'inline';
+
+    try {
+      // Fetch 45,000+ schemes from MFAPI only once per session
+      if (allIndiaFunds.length === 0) {
+        const res = await fetch('https://api.mfapi.in/mf');
+        allIndiaFunds = await res.json();
+      }
+
+      // Filter by the selected AMC
+      const filteredFunds = allIndiaFunds.filter(f => f.schemeName.toLowerCase().includes(searchKeyword));
+      
+      const genericNames = new Set();
+
+      filteredFunds.forEach(fund => {
+        // Extract the clean generic name (Removes " - Direct Plan - Growth", etc.)
+        let baseName = fund.schemeName.split('-')[0].split('(')[0];
+        
+        // Strip common unwanted words from the base name just in case
+        baseName = baseName.replace(/\b(Direct|Regular|Growth|IDCW|Dividend|Plan|Option|Payout|Reinvestment)\b/gi, '').trim();
+        
+        // Remove trailing non-alphanumeric chars (like trailing hyphens or spaces)
+        baseName = baseName.replace(/[^a-zA-Z0-9]+$/, '').trim();
+
+        if (baseName.length > 5) {
+          genericNames.add(baseName);
+        }
+      });
+
+      // Populate the Datalist
+      const sortedNames = Array.from(genericNames).sort();
+      dataList.innerHTML = sortedNames.map(name => `<option value="${name}">`).join('');
+      
+      schemeInput.placeholder = `Select from ${sortedNames.length} funds...`;
+      schemeInput.disabled = false;
+    } catch (err) {
+      schemeInput.placeholder = "Failed to load funds. Type manually.";
+      schemeInput.disabled = false;
+    } finally {
+      loadingTxt.style.display = 'none';
+    }
+  });
+
+  // 2. FORM SUBMISSION
   document.getElementById('extractForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const amc = document.getElementById('amcSelect').value;
@@ -198,10 +263,9 @@
     const loadingBox = document.getElementById('loadingBox');
     const resultBox = document.getElementById('resultBox');
     
-    if(!amc) return;
+    if(!amc || !scheme) return;
 
     btn.disabled = true;
-    btn.textContent = 'Extracting...';
     errorBox.style.display = 'none';
     resultBox.style.display = 'none';
     loadingBox.style.display = 'block';
@@ -213,7 +277,7 @@
 
       if (!res.ok) throw new Error(data.error || 'Failed to extract portfolio data.');
 
-      // Update UI
+      // Update UI Table
       document.getElementById('resAmc').textContent = data.amc;
       document.getElementById('resMonth').textContent = `${data.month} ${data.year}`;
       document.getElementById('resCount').textContent = data.holdingsCount;
@@ -229,7 +293,7 @@
           </tr>
         `).join('');
       } else {
-        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:24px">No matching scheme found in the document.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:24px">No matching scheme found in the document. Ensure your scheme name matches exactly.</td></tr>`;
       }
 
       resultBox.style.display = 'block';
@@ -238,7 +302,6 @@
       errorBox.style.display = 'block';
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Extract Holdings';
       loadingBox.style.display = 'none';
     }
   });
