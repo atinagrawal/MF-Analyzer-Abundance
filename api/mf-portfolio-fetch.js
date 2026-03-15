@@ -1,6 +1,4 @@
-// /api/mf-portfolio?amcCode=NIPPON&action=probe
-// Dynamically scrapes AMC disclosure pages with strict JS filtering to guarantee Portfolio files.
-
+// /api/mf-portfolio?amcCode=SBI&action=probe
 export const config = { runtime: 'nodejs' };
 
 const https = require('https');
@@ -8,8 +6,8 @@ const http = require('http');
 
 // --- Helper to extract and strictly filter URLs ---
 function extractAndFilterLinks(html, baseUrl, mon, year, mon3, yy, scheme = '') {
-  // 1. Grab EVERY pdf, xls, and xlsx link on the page
-  const regex = /href=["']([^"']+\.(?:pdf|xlsx|xls))["']/gi;
+  // FIXED REGEX: Now allows query parameters after the extension (e.g., .pdf?sfvrsn=123)
+  const regex = /href=["']([^"']*\.(?:pdf|xlsx|xls|zip)[^"']*)["']/gi;
   let links = [];
   let match;
   
@@ -19,7 +17,6 @@ function extractAndFilterLinks(html, baseUrl, mon, year, mon3, yy, scheme = '') 
     links.push(link);
   }
 
-  // 2. STRICT FILTERING LOGIC
   const schemeSlug = scheme ? scheme.toLowerCase().replace(/\s+/g, '') : '';
 
   const validLinks = links.filter(link => {
@@ -33,7 +30,7 @@ function extractAndFilterLinks(html, baseUrl, mon, year, mon3, yy, scheme = '') 
     const hasPortfolio = lowerLink.includes('portfolio') || lowerLink.includes('port');
     const isFactsheet = lowerLink.includes('factsheet');
     
-    // Scheme constraints (mostly for HDFC which splits files by scheme)
+    // Scheme constraints: Only filter if scheme is explicitly requested
     const matchesScheme = schemeSlug ? lowerLink.replace(/[-_]/g, '').includes(schemeSlug) : true;
 
     // Must match time, must be a portfolio, MUST NOT be a factsheet
@@ -69,10 +66,12 @@ const AMC_CONFIG = {
     name: 'SBI',
     pageUrl: 'https://www.sbimf.com/portfolios',
     findDynamicUrl: (html, mon, year, mon3, yy) => {
-      return extractAndFilterLinks(html, 'https://www.sbimf.com', mon, year, mon3, yy);
+      // Pass '' as scheme because SBI bundles all schemes into one file
+      return extractAndFilterLinks(html, 'https://www.sbimf.com', mon, year, mon3, yy, '');
     },
     fallbackUrls: (year, mon, mm, yy, mon3) => [
-      `https://www.sbimf.com/docs/default-source/scheme-portfolios/${mon3.toLowerCase()}${yy}port.pdf`,
+      `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-schemes-monthly-portfolio---as-on-last-day-of-${mon.toLowerCase()}-${year}.pdf`,
+      `https://www.sbimf.com/docs/default-source/scheme-portfolios/${mon3.toLowerCase()}${yy}port.pdf`
     ]
   },
   HDFC: {
