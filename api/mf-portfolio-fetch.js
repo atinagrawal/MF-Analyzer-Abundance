@@ -1,10 +1,47 @@
-// /api/mf-portfolio?amcCode=NIPPON&scheme=Small+Cap&action=probe
-// Dynamically scrapes AMC disclosure pages for the correct portfolio file URL.
+// /api/mf-portfolio?amcCode=NIPPON&action=probe
+// Dynamically scrapes AMC disclosure pages with strict JS filtering to guarantee Portfolio files.
 
 export const config = { runtime: 'nodejs' };
 
 const https = require('https');
 const http = require('http');
+
+// --- Helper to extract and strictly filter URLs ---
+function extractAndFilterLinks(html, baseUrl, mon, year, mon3, yy, scheme = '') {
+  // 1. Grab EVERY pdf, xls, and xlsx link on the page
+  const regex = /href=["']([^"']+\.(?:pdf|xlsx|xls))["']/gi;
+  let links = [];
+  let match;
+  
+  while ((match = regex.exec(html)) !== null) {
+    let link = match[1];
+    if (link.startsWith('/')) link = baseUrl + link;
+    links.push(link);
+  }
+
+  // 2. STRICT FILTERING LOGIC
+  const schemeSlug = scheme ? scheme.toLowerCase().replace(/\s+/g, '') : '';
+
+  const validLinks = links.filter(link => {
+    const lowerLink = link.toLowerCase();
+    
+    // Time constraints
+    const hasMonth = lowerLink.includes(mon.toLowerCase()) || lowerLink.includes(mon3.toLowerCase());
+    const hasYear = lowerLink.includes(year) || lowerLink.includes(yy);
+    
+    // File type constraints
+    const hasPortfolio = lowerLink.includes('portfolio') || lowerLink.includes('port');
+    const isFactsheet = lowerLink.includes('factsheet');
+    
+    // Scheme constraints (mostly for HDFC which splits files by scheme)
+    const matchesScheme = schemeSlug ? lowerLink.replace(/[-_]/g, '').includes(schemeSlug) : true;
+
+    // Must match time, must be a portfolio, MUST NOT be a factsheet
+    return hasMonth && hasYear && hasPortfolio && !isFactsheet && matchesScheme;
+  });
+
+  return [...new Set(validLinks)]; // Deduplicate
+}
 
 // --- AMC Dynamic Discovery Configuration ---
 const AMC_CONFIG = {
@@ -12,23 +49,17 @@ const AMC_CONFIG = {
     name: 'Nippon India',
     pageUrl: 'https://mf.nipponindiaim.com/investor-service/downloads/factsheet-portfolio-and-other-disclosures',
     findDynamicUrl: (html, mon, year, mon3, yy) => {
-      // Catches: NIMF-MONTHLY-PORTFOLIO-28-Feb-26.xls or Nippon-India-MF-Monthly-Portfolio-February-2026.pdf
-      const regex = new RegExp(`href=["']([^"']*(?:NIMF-MONTHLY-PORTFOLIO|Nippon).*?(?:${mon}|${mon3}).*?(?:${year}|${yy})\\.(?:xls|xlsx|pdf))["']`, 'gi');
-      return extractMatches(html, regex, 'https://mf.nipponindiaim.com');
+      return extractAndFilterLinks(html, 'https://mf.nipponindiaim.com', mon, year, mon3, yy);
     },
     fallbackUrls: (year, mon, mm, yy, mon3) => [
-      // Standard fallback based on your previous file format
       `https://mf.nipponindiaim.com/InvestorServices/FactsheetsDocuments/NIMF-MONTHLY-PORTFOLIO-28-${mon3}-${yy}.xls`,
-      `https://mf.nipponindiaim.com/InvestorServices/Reports/PortfolioMon/Nippon-India-MF-Monthly-Portfolio-${mon}-${year}.pdf`,
     ]
   },
   PPFAS: {
     name: 'Parag Parikh',
     pageUrl: 'https://amc.ppfas.com/downloads/portfolio-disclosure/',
     findDynamicUrl: (html, mon, year, mon3, yy) => {
-      // Catches: ppfas-mf-monthly-portfolio-february-2026.pdf
-      const regex = new RegExp(`href=["']([^"']*portfolio.*?${mon}.*?${year}\\.(?:pdf|xlsx|xls))["']`, 'gi');
-      return extractMatches(html, regex, 'https://amc.ppfas.com');
+      return extractAndFilterLinks(html, 'https://amc.ppfas.com', mon, year, mon3, yy);
     },
     fallbackUrls: (year, mon, mm, yy, mon3) => [
       `https://amc.ppfas.com/downloads/portfolio-disclosure/ppfas-mf-monthly-portfolio-${mon.toLowerCase()}-${year}.pdf`,
@@ -38,21 +69,17 @@ const AMC_CONFIG = {
     name: 'SBI',
     pageUrl: 'https://www.sbimf.com/portfolios',
     findDynamicUrl: (html, mon, year, mon3, yy) => {
-      // Catches: feb26port.pdf OR portfolio-february-2026.xlsx
-      const regex = new RegExp(`href=["']([^"']*(?:${mon3}${yy}port|portfolio.*?${mon3}.*?(?:${year}|${yy}))\\.(?:pdf|xlsx|xls))["']`, 'gi');
-      return extractMatches(html, regex, 'https://www.sbimf.com');
+      return extractAndFilterLinks(html, 'https://www.sbimf.com', mon, year, mon3, yy);
     },
     fallbackUrls: (year, mon, mm, yy, mon3) => [
-      `https://www.sbimf.com/docs/default-source/scheme-portfolios/${mon3}${yy}port.pdf`,
+      `https://www.sbimf.com/docs/default-source/scheme-portfolios/${mon3.toLowerCase()}${yy}port.pdf`,
     ]
   },
   HDFC: {
     name: 'HDFC',
     pageUrl: 'https://www.hdfcfund.com/statutory-disclosure/portfolio/monthly-portfolio',
     findDynamicUrl: (html, mon, year, mon3, yy, scheme) => {
-      const schemeSlug = scheme ? scheme.replace(/\s+/g, '.*?').toLowerCase() : 'portfolio';
-      const regex = new RegExp(`href=["']([^"']*${schemeSlug}.*?${mon}.*?${year}\\.(?:pdf|xlsx|xls))["']`, 'gi');
-      return extractMatches(html, regex, 'https://www.hdfcfund.com');
+      return extractAndFilterLinks(html, 'https://www.hdfcfund.com', mon, year, mon3, yy, scheme);
     },
     fallbackUrls: (year, mon, mm, yy, mon3) => [
       `https://files.hdfcfund.com/s3fs-public/Portfolio/${year}-${mm}/HDFC-MF-Monthly-Portfolio-${mon}-${year}.pdf`,
@@ -73,27 +100,12 @@ function getMonthParams(date) {
     mon: mon,
     mm: String(m + 1).padStart(2, '0'),
     yy: String(y).slice(2),
-    mon3: mon.substring(0, 3) // e.g., 'Feb'
+    mon3: mon.substring(0, 3) 
   };
 }
 
-// Helper to extract URLs from Regex matches and resolve relative paths
-function extractMatches(html, regex, baseUrl) {
-  const links = [];
-  let match;
-  while ((match = regex.exec(html)) !== null) {
-    let link = match[1];
-    if (link.startsWith('/')) {
-      // Resolve relative links (e.g. /downloads/file.pdf -> https://.../downloads/file.pdf)
-      link = baseUrl + link;
-    }
-    links.push(link);
-  }
-  return [...new Set(links)]; // Deduplicate array
-}
-
 // --- HTTP helpers ---
-function httpGet(urlStr, timeout = 25000, asString = false) {
+function httpGet(urlStr, timeout = 25000) {
   return new Promise((resolve, reject) => {
     const u = new URL(urlStr);
     const mod = u.protocol === 'https:' ? https : http;
@@ -101,25 +113,21 @@ function httpGet(urlStr, timeout = 25000, asString = false) {
       hostname: u.hostname, 
       path: u.pathname + u.search,
       headers: { 
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
       },
       timeout,
     }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        // Handle Redirects natively
         let redirectUrl = res.headers.location;
         if (redirectUrl.startsWith('/')) redirectUrl = u.origin + redirectUrl;
-        httpGet(redirectUrl, timeout, asString).then(resolve).catch(reject);
+        httpGet(redirectUrl, timeout).then(resolve).catch(reject);
         return;
       }
       if (res.statusCode !== 200) { reject(new Error(`HTTP ${res.statusCode}`)); return; }
       const chunks = [];
       res.on('data', c => chunks.push(c));
-      res.on('end', () => {
-        const buffer = Buffer.concat(chunks);
-        resolve(asString ? buffer.toString('utf8') : buffer);
-      });
+      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
       res.on('error', reject);
     });
     req.on('error', reject);
@@ -150,7 +158,7 @@ async function findWorkingURL(amcKey, date, scheme, collectTriedUrls) {
   const cfg = AMC_CONFIG[amcKey];
   if (!cfg) return null;
 
-  // Try current month, then fallback to previous 2 months if the AMC hasn't uploaded yet
+  // Try current month, then fallback to previous 2 months
   for (let monthOffset = 0; monthOffset <= 2; monthOffset++) {
     const d = new Date(date);
     d.setMonth(d.getMonth() - monthOffset);
@@ -160,9 +168,16 @@ async function findWorkingURL(amcKey, date, scheme, collectTriedUrls) {
 
     // Strategy 1: Dynamic HTML Scraping
     try {
-      const html = await httpGet(cfg.pageUrl, 15000, true);
-      // Pass the different month formats (e.g. 'February', 'Feb', '26', '2026') to the regex
+      const html = await httpGet(cfg.pageUrl, 15000);
       const dynamicLinks = cfg.findDynamicUrl(html, p.mon, p.year, p.mon3, p.yy, scheme);
+      
+      // Prioritize .xls / .xlsx over .pdf if multiple are found
+      dynamicLinks.sort((a, b) => {
+        if (a.includes('.xls') && !b.includes('.xls')) return -1;
+        if (!a.includes('.xls') && b.includes('.xls')) return 1;
+        return 0;
+      });
+
       potentialUrls.push(...dynamicLinks);
     } catch (e) {
       if (collectTriedUrls) collectTriedUrls.push({ url: cfg.pageUrl, status: 0, error: 'Scraping failed: ' + e.message });
@@ -173,13 +188,12 @@ async function findWorkingURL(amcKey, date, scheme, collectTriedUrls) {
       potentialUrls.push(...cfg.fallbackUrls(p.year, p.mon, p.mm, p.yy, p.mon3));
     }
 
-    // Ping the URLs to see which one returns a 200 OK (exists)
+    // Ping the URLs to see which one returns a 200 OK
     for (const url of potentialUrls) {
       try {
         const status = await httpHead(url);
         if (collectTriedUrls) collectTriedUrls.push({ url, status });
         
-        // Treat 200 OK and 302 Found (redirects to the file) as success
         if (status === 200 || status === 302) {
           return { url, ...p, monthOffset };
         }
@@ -193,23 +207,22 @@ async function findWorkingURL(amcKey, date, scheme, collectTriedUrls) {
 
 // --- Main handler ---
 export default async function handler(req, res) {
-  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
   const { amc, scheme, action } = req.query;
 
-  // Used for debugging the Scraper without actually downloading the files
+  // Debug Probe mode
   if (action === 'probe' && amc) {
     const amcKey = amc.toUpperCase();
-    if (!AMC_CONFIG[amcKey]) return res.status(400).json({ error: `Unknown AMC: ${amc}` });
+    if (!AMC_CONFIG[amcKey]) return res.status(400).json({ error: `Unknown AMC` });
     
     const tried = [];
     const result = await findWorkingURL(amcKey, new Date(), scheme, tried);
     
     if (!result) {
-      return res.status(404).json({ error: 'No working URL found', amc: amcKey, tried });
+      return res.status(404).json({ error: 'No working portfolio URL found', amc: amcKey, tried });
     }
     
     return res.json({
@@ -235,9 +248,6 @@ export default async function handler(req, res) {
     if (!found) {
       return res.status(404).json({ error: 'Could not locate the AMC portfolio file for the recent months.', logs: triedUrls });
     }
-
-    // Important: At this stage `found.url` contains the exact link (e.g., .../NIMF-MONTHLY-PORTFOLIO-28-Feb-26.xls)
-    // You will need to integrate the `xlsx` parser here to actually read the buffer if it's an Excel file.
     
     return res.json({
       success: true,
