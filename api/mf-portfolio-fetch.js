@@ -64,15 +64,39 @@ const AMC_CONFIG = {
   },
   SBI: {
     name: 'SBI',
-    pageUrl: 'https://www.sbimf.com/portfolios',
-    findDynamicUrl: (html, mon, year, mon3, yy) => {
-      // Pass '' as scheme because SBI bundles all schemes into one file
-      return extractAndFilterLinks(html, 'https://www.sbimf.com', mon, year, mon3, yy, '');
+    url: (year, mon, mm, yy) => {
+      const monLower = mon.toLowerCase();
+      const mon3 = mon.substring(0, 3).toLowerCase();
+      
+      // Calculate the last day of the month dynamically
+      const monthIndex = parseInt(mm, 10) - 1; 
+      const lastDay = new Date(parseInt(year, 10), monthIndex + 1, 0).getDate();
+      
+      // Helper to add st, nd, rd, th
+      const getOrdinal = (n) => {
+        const s = ["th", "st", "nd", "rd"];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+      };
+      
+      const lastDayOrd = getOrdinal(lastDay);
+
+      return [
+        // Recent pattern (2023 - 2026+): .xlsx format
+        `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-schemes-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.xlsx`,
+        // Typo variation seen in Sept 2025: "all-scheme" instead of "all-schemes"
+        `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-scheme-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.xlsx`,
+        
+        // Older pattern / fallback if they upload a PDF
+        `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-schemes-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.pdf`,
+        `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-scheme-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.pdf`,
+        
+        // Legacy formats (pre-2023)
+        `https://www.sbimf.com/docs/default-source/scheme-portfolios/${monLower}${yy}port.pdf`,
+        `https://www.sbimf.com/docs/default-source/scheme-portfolios/${mon3}${yy}port.pdf`
+      ];
     },
-    fallbackUrls: (year, mon, mm, yy, mon3) => [
-      `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-schemes-monthly-portfolio---as-on-last-day-of-${mon.toLowerCase()}-${year}.pdf`,
-      `https://www.sbimf.com/docs/default-source/scheme-portfolios/${mon3.toLowerCase()}${yy}port.pdf`
-    ]
+    confidence: 'medium',
   },
   HDFC: {
     name: 'HDFC',
