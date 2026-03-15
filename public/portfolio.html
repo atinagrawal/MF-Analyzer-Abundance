@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live AMC Portfolio Extractor | Abundance Financial Services®</title>
+<meta name="description" content="Dynamically extract mutual fund portfolio holdings directly from official AMC Excel and PDF disclosures.">
+<link rel="icon" type="image/x-icon" href="https://www.getabundance.in/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f0f7f0;--surface:#fff;--surface2:#edf6ed;--surface3:#dff0df;
+    --border:#c2dfc2;--border2:#a8cfa8;
+    --text:#162616;--text2:#2e4d2e;--muted:#5e8a5e;
+    --g1:#1b5e20;--g2:#2e7d32;--g3:#43a047;--g4:#66bb6a;
+    --g-light:#a5d6a7;--g-xlight:#e8f5e9;
+    --neg:#b71c1c;--neg-bg:#ffebee;
+    --pos:#1b5e20;--pos-bg:#e8f5e9;
+    --shadow:0 2px 16px rgba(46,125,50,.09);
+    --radius:14px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+  a{color:inherit;text-decoration:none}
+  .page{max-width:1160px;margin:0 auto;padding:0 24px 48px}
+
+  /* NAVBAR (Matched) */
+  .navbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0 18px;margin-bottom:28px;border-bottom:1.5px solid var(--border);gap:16px;flex-wrap:wrap}
+  .logo-wrap{display:flex;align-items:center;gap:12px}
+  .logo-icon{width:38px;height:38px;border-radius:8px;background:var(--g2);color:#fff;font-weight:800;font-size:1.1rem;display:flex;align-items:center;justify-content:center}
+  .logo-text .brand{font-size:.95rem;font-weight:800;color:var(--g1);letter-spacing:-.3px}
+  .logo-text .sub{font-size:.62rem;font-weight:600;color:var(--muted);letter-spacing:.4px}
+  .nav-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .nav-link{padding:7px 14px;border-radius:8px;font-size:.75rem;font-weight:700;color:var(--g2);background:var(--surface2);border:1.5px solid var(--border);transition:all .15s;letter-spacing:.2px}
+  .nav-link:hover{background:var(--surface3);border-color:var(--border2)}
+  .nav-tag{padding:7px 14px;border-radius:8px;font-size:.75rem;font-weight:700;background:var(--g2);color:#fff;letter-spacing:.2px}
+
+  /* DARK HERO (Matched to your existing app) */
+  .wc-hdr{background:linear-gradient(135deg,#0d2818 0%,#1b4332 45%,#155e38 100%);padding:28px 32px 48px;position:relative;overflow:hidden;border-radius:16px 16px 0 0;margin-bottom:-24px}
+  .wc-hdr-grid{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.04) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
+  .wc-hdr-inner{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+  .wc-eyebrow{display:flex;align-items:center;gap:7px;font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.45);font-family:'JetBrains Mono',monospace}
+  .wr-live-dot{width:7px;height:7px;border-radius:50%;background:#66bb6a;box-shadow:0 0 0 0 rgba(102,187,106,.5);animation:livePulse 2s ease infinite}
+  @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(102,187,106,.5)}70%{box-shadow:0 0 0 6px rgba(102,187,106,0)}100%{box-shadow:0 0 0 0 rgba(102,187,106,0)}}
+  .wc-title-row{display:flex;align-items:center;gap:12px;margin-top:8px}
+  .wc-icon{font-size:1.6rem}
+  .wc-name{font-size:1rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#fff}
+  .wc-sub{font-size:.7rem;color:rgba(255,255,255,.55);margin-top:4px;font-family:'JetBrains Mono',monospace}
+
+  /* SEARCH CARD */
+  .search-card{background:var(--surface);border-radius:var(--radius);padding:24px 28px;box-shadow:0 8px 30px rgba(46,125,50,.12);border:1.5px solid var(--border);position:relative;z-index:10;margin-bottom:24px}
+  .form-grid{display:grid;grid-template-columns:1.5fr 2fr auto;gap:16px;align-items:end}
+  .sip-field{display:flex;flex-direction:column;gap:7px}
+  .sip-field label{font-size:.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  .sip-input, .sip-select{width:100%;padding:13px 16px;font-family:"Raleway",sans-serif;font-size:.88rem;font-weight:700;border:1.5px solid var(--border2);border-radius:9px;background:var(--surface2);color:var(--text);outline:none;transition:all .2s}
+  .sip-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235e8a5e' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;cursor:pointer}
+  .sip-input:focus, .sip-select:focus{border-color:var(--g3);background:#fff;box-shadow:0 0 0 3px rgba(67,160,71,.1)}
+  .load-btn{padding:13px 24px;border-radius:9px;background:var(--g2);color:#fff;font-family:'Raleway',sans-serif;font-size:.88rem;font-weight:700;border:none;cursor:pointer;transition:all .15s;letter-spacing:.3px;height:47px}
+  .load-btn:hover:not(:disabled){background:var(--g1)}
+  .load-btn:disabled{background:var(--border2);cursor:not-allowed}
+
+  /* LOADING & ALERTS */
+  .state-box{text-align:center;padding:40px 20px;background:var(--surface);border-radius:var(--radius);border:1.5px solid var(--border);margin-bottom:24px}
+  .state-spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--g3);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .state-msg{font-size:.85rem;color:var(--muted);font-weight:600}
+  .parse-warn{background:#fff8e1;border:1.5px solid #ffe082;border-radius:10px;padding:12px 16px;font-size:.75rem;color:#7c5c00;margin-top:16px;display:none;font-weight:600}
+
+  /* RESULTS TABLE */
+  .card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .card-header{padding:20px 24px 0}
+  .card-title{font-size:.65rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding-bottom:15px;border-bottom:1px solid var(--surface2);display:flex;align-items:center;gap:10px}
+  .card-title::before{content:"";width:3px;height:13px;background:var(--g3);border-radius:2px}
+  .card-body{padding:20px 24px 24px}
+  
+  .info-bar{display:flex;flex-wrap:wrap;gap:16px;background:var(--surface2);padding:12px 16px;border-radius:8px;margin-bottom:20px;font-size:.75rem;border:1px solid var(--border)}
+  .info-item span{font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-size:.65rem;margin-right:6px}
+  .info-item strong{color:var(--g1);font-family:'JetBrains Mono',monospace}
+
+  .cat-table{width:100%;border-collapse:collapse;font-size:.78rem}
+  .cat-table th{text-align:left;padding:12px 16px;background:var(--surface2);font-size:.6rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+  .cat-table td{padding:12px 16px;border-bottom:1px solid var(--border);font-weight:600;color:var(--text)}
+  .cat-table tr:hover td{background:var(--surface2)}
+  .mono{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--muted)}
+  .weight-cell{text-align:right;color:var(--g2);font-weight:800;font-family:'JetBrains Mono',monospace}
+
+  @media(max-width:768px){
+    .form-grid{grid-template-columns:1fr}
+    .load-btn{width:100%}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="navbar">
+    <a class="logo-wrap" href="/">
+      <div class="logo-icon">A</div>
+      <div class="logo-text">
+        <div class="brand">Abundance</div>
+        <div class="sub">Financial Services<sup style="font-size:.55em;opacity:.75">®</sup></div>
+      </div>
+    </a>
+    <div class="nav-right">
+      <a class="nav-link" href="/">📊 Back to Calculator</a>
+      <div class="nav-tag active">📄 Portfolio Extractor</div>
+    </div>
+  </nav>
+
+  <div class="wc-hdr">
+    <div class="wc-hdr-grid"></div>
+    <div class="wc-hdr-inner">
+      <div>
+        <div class="wc-eyebrow"><span class="wr-live-dot"></span>Direct File Parser</div>
+        <div class="wc-title-row">
+          <span class="wc-icon">🗂️</span>
+          <div>
+            <div class="wc-name">AMC Portfolio Extractor</div>
+            <div class="wc-sub">Extracts live holdings directly from AMC .xls & .pdf disclosures</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-card">
+    <form class="form-grid" id="extractForm">
+      <div class="sip-field">
+        <label>Fund House (AMC)</label>
+        <select id="amcSelect" class="sip-select" required>
+          <option value="" disabled selected>Select AMC...</option>
+          <option value="SBI">SBI Mutual Fund</option>
+          <option value="HDFC">HDFC Mutual Fund</option>
+          <option value="ICICI">ICICI Prudential</option>
+          <option value="NIPPON">Nippon India</option>
+          <option value="PPFAS">Parag Parikh (PPFAS)</option>
+          <option value="ABSL">Aditya Birla Sun Life</option>
+          <option value="MIRAE">Mirae Asset</option>
+          <option value="KOTAK">Kotak Mutual Fund</option>
+          <option value="AXIS">Axis Mutual Fund</option>
+          <option value="UTI">UTI Mutual Fund</option>
+          <option value="DSP">DSP Mutual Fund</option>
+          <option value="BANDHAN">Bandhan Mutual Fund</option>
+        </select>
+      </div>
+      <div class="sip-field">
+        <label>Scheme Name (Optional)</label>
+        <input type="text" id="schemeInput" class="sip-input" placeholder="e.g. Flexi Cap Fund">
+      </div>
+      <button type="submit" class="load-btn" id="fetchBtn">Extract Holdings</button>
+    </form>
+    <div id="errorBox" class="parse-warn"></div>
+  </div>
+
+  <div id="loadingBox" class="state-box" style="display:none">
+    <div class="state-spinner"></div>
+    <div class="state-msg">Bypassing firewalls & parsing document... This takes 5-15 seconds.</div>
+  </div>
+
+  <div id="resultBox" style="display:none;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Extracted Holdings</div>
+      </div>
+      <div class="card-body">
+        <div class="info-bar">
+          <div class="info-item"><span>AMC:</span> <strong id="resAmc"></strong></div>
+          <div class="info-item"><span>Month:</span> <strong id="resMonth"></strong></div>
+          <div class="info-item"><span>Holdings Found:</span> <strong id="resCount"></strong></div>
+          <div class="info-item" style="margin-left:auto">
+            <a id="resUrl" href="#" target="_blank" style="color:var(--g2);font-weight:800;font-family:'JetBrains Mono',monospace;text-decoration:underline">Download Source File</a>
+          </div>
+        </div>
+        
+        <div style="overflow-x:auto">
+          <table class="cat-table">
+            <thead>
+              <tr>
+                <th>Company / Instrument</th>
+                <th>ISIN</th>
+                <th style="text-align:right">% of NAV</th>
+              </tr>
+            </thead>
+            <tbody id="holdingsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('extractForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const amc = document.getElementById('amcSelect').value;
+    const scheme = document.getElementById('schemeInput').value;
+    const btn = document.getElementById('fetchBtn');
+    const errorBox = document.getElementById('errorBox');
+    const loadingBox = document.getElementById('loadingBox');
+    const resultBox = document.getElementById('resultBox');
+    
+    if(!amc) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Extracting...';
+    errorBox.style.display = 'none';
+    resultBox.style.display = 'none';
+    loadingBox.style.display = 'block';
+
+    try {
+      const url = `/api/mf-portfolio-fetch?amc=${amc}&scheme=${encodeURIComponent(scheme)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Failed to extract portfolio data.');
+
+      // Update UI
+      document.getElementById('resAmc').textContent = data.amc;
+      document.getElementById('resMonth').textContent = `${data.month} ${data.year}`;
+      document.getElementById('resCount').textContent = data.holdingsCount;
+      document.getElementById('resUrl').href = data.fileUrl;
+
+      const tbody = document.getElementById('holdingsBody');
+      if (data.holdings && data.holdings.length > 0) {
+        tbody.innerHTML = data.holdings.map(h => `
+          <tr>
+            <td>${h.name}</td>
+            <td class="mono">${h.isin || '-'}</td>
+            <td class="weight-cell">${h.pct}%</td>
+          </tr>
+        `).join('');
+      } else {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:24px">No matching scheme found in the document.</td></tr>`;
+      }
+
+      resultBox.style.display = 'block';
+    } catch (err) {
+      errorBox.textContent = `Error: ${err.message}`;
+      errorBox.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Extract Holdings';
+      loadingBox.style.display = 'none';
+    }
+  });
+</script>
+</body>
+</html>
