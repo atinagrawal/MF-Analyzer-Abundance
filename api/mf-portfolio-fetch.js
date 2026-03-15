@@ -1,7 +1,11 @@
-// /api/mf-portfolio-fetch
+// /api/mf-portfolio-fetch?amc=SBI&scheme=SBI+Bluechip+Fund
+
 export const config = { runtime: 'nodejs' };
 
+const https = require('https');
+const http = require('http');
 const zlib = require('zlib');
+
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
 const getOrdinal = (n) => {
@@ -33,10 +37,12 @@ const AMC_CONFIG = {
   SBI: {
     url: (year, mon, mm, yy) => {
       const monLower = mon.toLowerCase();
+      const mon3 = mon.substring(0, 3).toLowerCase();
       const lastDay = new Date(parseInt(year, 10), parseInt(mm, 10), 0).getDate();
       const lastDayOrd = getOrdinal(lastDay);
       return [
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-schemes-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.xlsx`,
+        `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-schemes-monthly-portfolio---as-on-${lastDayOrd}-${mon3}-${year}.xlsx`,
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-scheme-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.xlsx`, 
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-schemes-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.pdf`,
       ];
@@ -67,34 +73,44 @@ function getMonthParams(date) {
   return { year: String(y), mon: MONTHS[m], mm: String(m + 1).padStart(2, '0'), yy: String(y).slice(2) };
 }
 
-// --- Native Fetch Helpers (Fixes GZIP Compression Corruption) ---
-async function fetchHead(url) {
-  try {
-    const res = await fetch(url, { method: 'HEAD', headers: { 'User-Agent': BROWSER_UA } });
-    return res.ok || res.status === 302;
-  } catch (e) { return false; }
+// --- Native Firewall Bypass Fetchers ---
+function checkUrlExists(urlStr) {
+  // Uses GET with Range bytes=0-1 to bypass Cloudflare HEAD blocking
+  return new Promise((resolve) => {
+    const u = new URL(urlStr);
+    const req = (u.protocol === 'https:' ? https : http).request({ 
+      hostname: u.hostname, path: u.pathname + u.search, method: 'GET', 
+      headers: { 'User-Agent': BROWSER_UA, 'Range': 'bytes=0-1' }, timeout: 7000 
+    }, (res) => {
+      res.destroy(); // Instantly destroy connection to prevent downloading
+      resolve(res.statusCode === 200 || res.statusCode === 206 || res.statusCode === 302);
+    });
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+    req.end();
+  });
 }
 
 async function fetchBuffer(url) {
   const res = await fetch(url, { method: 'GET', headers: { 'User-Agent': BROWSER_UA } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const arrayBuffer = await res.arrayBuffer();
-  return Buffer.from(arrayBuffer); // Native fetch auto-decompresses GZIP!
+  return Buffer.from(arrayBuffer); 
 }
 
-// --- Fuzzy Scheme Matcher ---
+// --- Scheme Name Fuzzy Matcher ---
 function isSchemeMatch(rowStr, schemeName) {
   if (!schemeName) return true;
-  // Strip common words to match heavily variations (e.g. "SBI Bluechip" matches "SBI Blue Chip")
-  const searchWords = schemeName.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\b(fund|plan|direct|regular)\b/g, '').trim().split(/\s+/).filter(w => w.length > 2);
+  const searchWords = schemeName.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\b(fund|plan|direct|regular|growth|idcw)\b/g, '').trim().split(/\s+/).filter(w => w.length > 2);
   if (searchWords.length === 0) return true;
   
-  // Allow matching if almost all core keywords exist in the Excel row
   const matchCount = searchWords.filter(w => rowStr.includes(w)).length;
   return matchCount >= searchWords.length - 1; 
 }
 
-// --- Native Excel Array Parser ---
+// ==========================================
+// 1. NATIVE EXCEL ARRAY PARSER (Handles SBI Master Sheets)
+// ==========================================
 function extractHoldingsFromExcel(buf, schemeName) {
   const xlsx = require('xlsx');
   const workbook = xlsx.read(buf, { type: 'buffer' });
@@ -104,9 +120,12 @@ function extractHoldingsFromExcel(buf, schemeName) {
     const sheet = workbook.Sheets[sheetName];
     const rows = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: false });
 
-    let inScheme = !schemeName;
+    let sheetMatches = schemeName ? isSchemeMatch(sheetName.toLowerCase(), schemeName) : false;
+    let inScheme = !schemeName || sheetMatches; 
     let inHoldings = false;
-    let colMap = { name: -1, isin: -1, pct: -1 };
+    
+    // IMPORTANT: colMap.scheme allows us to detect SBI's master sheet format
+    let colMap = { name: -1, isin: -1, pct: -1, scheme: -1 };
 
     for (let r = 0; r < rows.length; r++) {
       const row = rows[r];
@@ -115,43 +134,53 @@ function extractHoldingsFromExcel(buf, schemeName) {
       const rowStr = row.map(c => String(c || '').trim()).join(' ').toLowerCase();
       if (!rowStr.trim()) continue; 
 
-      if (!inScheme && isSchemeMatch(rowStr, schemeName)) {
-         inScheme = true;
+      if (!inHoldings && (rowStr.includes('isin') || rowStr.includes('%') || rowStr.includes('nav'))) {
+         row.forEach((cell, idx) => {
+            const c = String(cell || '').toLowerCase();
+            if (c.includes('instrument') || c.includes('company') || c.includes('security') || c.includes('name of')) colMap.name = idx;
+            if (c.includes('isin')) colMap.isin = idx;
+            if (c.includes('%') || c.includes('nav') || c.includes('assets')) colMap.pct = idx;
+            if (c.includes('scheme') || c.includes('fund name')) colMap.scheme = idx;
+         });
+         
+         if (colMap.name === -1 && colMap.scheme !== -1) colMap.name = colMap.isin === 0 ? 1 : 2; 
+         if (colMap.name === -1) colMap.name = colMap.isin === 0 ? 1 : 0;
+         if (colMap.pct !== -1) inHoldings = true;
+         continue;
       }
 
-      if (inScheme) {
-         if (!inHoldings && (rowStr.includes('isin') || rowStr.includes('%') || rowStr.includes('nav'))) {
-            row.forEach((cell, idx) => {
-               const c = String(cell || '').toLowerCase();
-               if (c.includes('instrument') || c.includes('company') || c.includes('security') || c.includes('name')) colMap.name = idx;
-               if (c.includes('isin')) colMap.isin = idx;
-               if (c.includes('%') || c.includes('nav') || c.includes('assets')) colMap.pct = idx;
-            });
-            if (colMap.name === -1) colMap.name = colMap.isin === 0 ? 1 : 0;
-            if (colMap.pct !== -1) inHoldings = true;
-            continue;
-         }
-
-         if (inHoldings) {
+      if (inHoldings) {
+         // MASTER SHEET DETECTION: If the AMC put a "Scheme Name" column, filter row-by-row
+         if (colMap.scheme !== -1 && schemeName) {
+            let rowScheme = String(row[colMap.scheme] || '').toLowerCase();
+            if (!isSchemeMatch(rowScheme, schemeName)) continue;
+         } else {
+            // Traditional formatting detection
+            if (!inScheme && isSchemeMatch(rowStr, schemeName)) inScheme = true;
+            if (!inScheme) continue;
+            
             if (rowStr.startsWith('total') || rowStr.includes('grand total') || rowStr.includes('net assets')) {
                if (holdings.length > 5) break; 
             }
+         }
 
-            let name = row[colMap.name];
-            let isin = colMap.isin !== -1 ? row[colMap.isin] : null;
-            let pctRaw = row[colMap.pct];
+         let name = row[colMap.name];
+         let isin = colMap.isin !== -1 ? row[colMap.isin] : null;
+         let pctRaw = row[colMap.pct];
 
-            if (name && pctRaw) {
-               name = String(name).trim();
-               let pctNum = parseFloat(String(pctRaw).replace(/[^0-9.]/g, ''));
-               
-               if (!isNaN(pctNum) && pctNum > 0 && pctNum <= 100 && name.length > 2 && !name.toLowerCase().includes('total')) {
-                  holdings.push({
-                     name: name.replace(/^INE[A-Z0-9]{9}\s*/, ''),
-                     isin: String(isin || '').match(/INE[A-Z0-9]{9}/) ? String(isin).trim() : null,
-                     pct: parseFloat(pctNum.toFixed(2))
-                  });
-               }
+         if (name && pctRaw && String(name).length > 2) {
+            name = String(name).trim();
+            if (name.toLowerCase().includes('total')) continue;
+
+            let pctStr = String(pctRaw).replace(/[^0-9.]/g, '');
+            let pctNum = parseFloat(pctStr);
+            
+            if (!isNaN(pctNum) && pctNum > 0 && pctNum <= 100) {
+               holdings.push({
+                  name: name.replace(/^INE[A-Z0-9]{9}\s*/, ''),
+                  isin: String(isin || '').match(/INE[A-Z0-9]{9}/) ? String(isin).trim() : null,
+                  pct: parseFloat(pctNum.toFixed(2))
+               });
             }
          }
       }
@@ -164,7 +193,9 @@ function extractHoldingsFromExcel(buf, schemeName) {
                  .sort((a, b) => b.pct - a.pct).slice(0, 50);
 }
 
-// --- PDF Extractor ---
+// ==========================================
+// 2. PDF TEXT EXTRACTOR
+// ==========================================
 function extractTextFromPDF(buf) {
   const str = buf.toString('latin1');
   const texts = [];
@@ -267,7 +298,7 @@ async function findWorkingURL(amcKey, date) {
     let urlsToTry = [...new Set(cfg.url(params.year, params.mon, params.mm, params.yy))]; 
 
     for (const url of urlsToTry) {
-      if (await fetchHead(url)) return { url, ...params, monthOffset };
+      if (await checkUrlExists(url)) return { url, ...params, monthOffset };
     }
   }
   return null;
@@ -295,7 +326,7 @@ export default async function handler(req, res) {
     let holdings = isExcel ? extractHoldingsFromExcel(fileBuf, scheme || '') : parseHoldings(extractTextFromPDF(fileBuf), scheme || '');
 
     if (holdings.length === 0) {
-      return res.status(404).json({ error: `Could not extract table for "${scheme || 'this scheme'}".`, url: found.url });
+      return res.status(404).json({ error: `Could not extract table for "${scheme || 'this scheme'}". Make sure the name matches the AMC's exact terminology.`, url: found.url });
     }
 
     res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=604800');
