@@ -36,13 +36,42 @@
   /* SEARCH CARD */
   .search-card{background:var(--surface);border-radius:var(--radius);padding:24px 28px;box-shadow:0 8px 30px rgba(46,125,50,.12);border:1.5px solid var(--border);position:relative;z-index:10;margin-bottom:24px}
   .form-grid{display:grid;grid-template-columns:1.2fr 2fr auto;gap:16px;align-items:end}
-  .sip-field{display:flex;flex-direction:column;gap:7px;}
+  .sip-field{display:flex;flex-direction:column;gap:7px;position:relative;}
   .sip-field label{font-size:.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;}
   
   .sip-input, .sip-select{width:100%;padding:13px 16px;font-family:"Raleway",sans-serif;font-size:.88rem;font-weight:700;border:1.5px solid var(--border2);border-radius:9px;background:var(--surface2);color:var(--text);outline:none;transition:all .2s;}
   .sip-select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235e8a5e' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
   .sip-input:focus, .sip-select:focus{border-color:var(--g3);background:#fff;box-shadow:0 0 0 3px rgba(67,160,71,.1)}
+  .sip-input:disabled{background:var(--surface2);cursor:not-allowed;opacity:0.6}
   
+  /* CUSTOM AUTOCOMPLETE DROPDOWN */
+  .custom-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 100%;
+    background: #fff;
+    border: 1.5px solid var(--g3);
+    border-radius: 9px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    display: none;
+  }
+  .dropdown-item {
+    padding: 12px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    border-bottom: 1px solid var(--surface2);
+    transition: background 0.1s;
+  }
+  .dropdown-item:last-child { border-bottom: none; }
+  .dropdown-item:hover { background: var(--surface2); color: var(--g2); }
+  .dropdown-empty { padding: 12px 16px; font-size: 0.85rem; color: var(--muted); font-style: italic; }
+
   .load-btn{padding:13px 24px;border-radius:9px;background:var(--g2);color:#fff;font-family:'Raleway',sans-serif;font-size:.88rem;font-weight:700;border:none;cursor:pointer;transition:all .15s;letter-spacing:.3px;height:47px}
   .load-btn:hover:not(:disabled){background:var(--g1)}
   .load-btn:disabled{background:var(--border2);cursor:not-allowed}
@@ -107,14 +136,16 @@
           <option value="AXIS">Axis Mutual Fund</option>
         </select>
       </div>
+      
       <div class="sip-field">
         <label>
           <span>Scheme Name</span>
-          <span id="fundLoadingTxt" style="color:var(--g3);display:none;">Loading suggestions...</span>
+          <span id="fundLoadingTxt" style="color:var(--g3);display:none;">Fetching funds...</span>
         </label>
-        <input type="text" id="schemeInput" list="schemeList" class="sip-input" placeholder="Type fund name (e.g. Bluechip Fund)" required>
-        <datalist id="schemeList"></datalist>
+        <input type="text" id="schemeInput" class="sip-input" placeholder="Select an AMC first..." autocomplete="off" disabled required>
+        <div id="customDropdown" class="custom-dropdown"></div>
       </div>
+      
       <button type="submit" class="load-btn" id="fetchBtn">Extract Holdings</button>
     </form>
     <div id="errorBox" class="parse-warn"></div>
@@ -156,21 +187,27 @@
 
 <script>
   let allIndiaFunds = [];
+  let currentAmcFunds = []; // Holds the cleaned list of funds for the selected AMC
+
   const amcSearchKeywords = {
     'SBI': 'SBI', 'HDFC': 'HDFC', 'ICICI': 'ICICI', 'NIPPON': 'Nippon',
     'PPFAS': 'Parag Parikh', 'ABSL': 'Aditya Birla', 'MIRAE': 'Mirae',
     'KOTAK': 'Kotak', 'AXIS': 'Axis'
   };
 
+  const schemeInput = document.getElementById('schemeInput');
+  const customDropdown = document.getElementById('customDropdown');
+
+  // --- 1. AMC SELECTION LOGIC ---
   document.getElementById('amcSelect').addEventListener('change', async (e) => {
     const amcCode = e.target.value;
-    const datalist = document.getElementById('schemeList');
     const loadingTxt = document.getElementById('fundLoadingTxt');
-    const schemeInput = document.getElementById('schemeInput');
     const searchKeyword = amcSearchKeywords[amcCode].toLowerCase();
 
-    datalist.innerHTML = '';
     schemeInput.value = '';
+    schemeInput.disabled = true;
+    currentAmcFunds = [];
+    customDropdown.style.display = 'none';
     loadingTxt.style.display = 'inline';
 
     try {
@@ -184,24 +221,77 @@
 
       filteredFunds.forEach(fund => {
         let baseName = fund.schemeName.split('-')[0].split('(')[0];
+        // Strip common fluff words
         baseName = baseName.replace(/\b(Direct|Regular|Growth|IDCW|Dividend|Plan|Option)\b/gi, '').trim();
         baseName = baseName.replace(/[^a-zA-Z0-9]+$/, '').trim();
         if (baseName.length > 5) genericNames.add(baseName);
       });
 
-      const sortedNames = Array.from(genericNames).sort();
-      datalist.innerHTML = sortedNames.map(name => `<option value="${name}">`).join('');
-      schemeInput.placeholder = `Select from ${sortedNames.length} funds, or type...`;
+      // Save the cleaned, sorted list globally for this session
+      currentAmcFunds = Array.from(genericNames).sort();
+      
+      schemeInput.placeholder = `Search among ${currentAmcFunds.length} funds...`;
+      schemeInput.disabled = false;
       
     } catch (err) {
-      schemeInput.placeholder = "Type fund name manually...";
+      schemeInput.placeholder = "Error loading funds. Type manually...";
+      schemeInput.disabled = false;
     } finally {
       loadingTxt.style.display = 'none';
     }
   });
 
+  // --- 2. CUSTOM DROPDOWN LOGIC ---
+  
+  // Render the list based on search text
+  function renderDropdown(searchText) {
+    customDropdown.innerHTML = '';
+    
+    // Filter the funds
+    const filtered = currentAmcFunds.filter(fund => 
+      fund.toLowerCase().includes(searchText.toLowerCase())
+    );
+
+    if (filtered.length === 0) {
+      customDropdown.innerHTML = `<div class="dropdown-empty">No funds found matching "${searchText}"</div>`;
+    } else {
+      filtered.forEach(fund => {
+        const div = document.createElement('div');
+        div.className = 'dropdown-item';
+        div.textContent = fund;
+        // When clicked, fill the input and hide dropdown
+        div.addEventListener('mousedown', () => {
+          schemeInput.value = fund;
+          customDropdown.style.display = 'none';
+        });
+        customDropdown.appendChild(div);
+      });
+    }
+    customDropdown.style.display = 'block';
+  }
+
+  // Show all funds when clicking into the input
+  schemeInput.addEventListener('focus', () => {
+    if (currentAmcFunds.length > 0) renderDropdown(schemeInput.value);
+  });
+
+  // Filter as you type
+  schemeInput.addEventListener('input', (e) => {
+    renderDropdown(e.target.value);
+  });
+
+  // Hide dropdown when clicking outside
+  document.addEventListener('mousedown', (e) => {
+    if (e.target !== schemeInput && e.target !== customDropdown && !customDropdown.contains(e.target)) {
+      customDropdown.style.display = 'none';
+    }
+  });
+
+  // --- 3. FORM SUBMISSION ---
   document.getElementById('extractForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    customDropdown.style.display = 'none'; // Close dropdown on submit
+
     const amc = document.getElementById('amcSelect').value;
     const scheme = document.getElementById('schemeInput').value;
     const btn = document.getElementById('fetchBtn');
