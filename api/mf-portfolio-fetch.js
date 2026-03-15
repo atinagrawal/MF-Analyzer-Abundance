@@ -1,5 +1,5 @@
-// /api/mf-portfolio-fetch?amcCode=SBI&scheme=SBI+Magnum
-// Fast, hardcoded-template AMC scraper with Web Firewall Bypass, Excel (.xlsx) support, and correct temporal logic
+// /api/mf-portfolio-fetch?amc=SBI&scheme=SBI+Bluechip+Fund
+// Fast, hardcoded-template AMC scraper with Native Excel Array Parsing and PDF fallback
 
 export const config = { runtime: 'nodejs' };
 
@@ -7,10 +7,8 @@ const https = require('https');
 const http = require('http');
 const zlib = require('zlib');
 
-// Standard Chrome User-Agent to bypass Cloudflare/Akamai WAFs
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
-// Helper to add st, nd, rd, th to dates (needed for SBI)
 const getOrdinal = (n) => {
   const s = ["th", "st", "nd", "rd"];
   const v = n % 100;
@@ -20,145 +18,79 @@ const getOrdinal = (n) => {
 // --- AMC URL Templates ---
 const AMC_CONFIG = {
   NIPPON: {
-    name: 'Nippon India',
     url: (year, mon, mm, yy) => [
       `https://mf.nipponindiaim.com/InvestorServices/FactsheetsDocuments/NIMF-MONTHLY-PORTFOLIO-28-${mon.substring(0,3)}-${yy}.xls`,
       `https://mf.nipponindiaim.com/InvestorServices/Reports/PortfolioMon/Nippon-India-MF-Monthly-Portfolio-${mon}-${year}.pdf`,
-      `https://mf.nipponindiaim.com/InvestorServices/FactSheets/NipponIndia-Factsheet-${mon}-${year}.pdf`,
-    ],
-    confidence: 'medium',
+    ]
   },
   PPFAS: {
-    name: 'Parag Parikh',
-    url: (year, mon, mm, yy) => {
-      const monLower = mon.toLowerCase();
-      const mon3 = mon.substring(0, 3).toLowerCase();
-      return [
-        `https://amc.ppfas.com/downloads/portfolio-disclosure/ppfas-mf-monthly-portfolio-${monLower}-${year}.pdf`,
-        `https://amc.ppfas.com/schemes/scheme-financials/${monLower}-${year}/monthly-portfolio-disclosure-${monLower}-${year}.pdf`,
-        `https://amc.ppfas.com/downloads/portfolio-disclosure/ppfas-portfolio-${mon3}${yy}.pdf`,
-      ];
-    },
-    confidence: 'medium',
+    url: (year, mon, mm, yy) => [
+      `https://amc.ppfas.com/downloads/portfolio-disclosure/ppfas-mf-monthly-portfolio-${mon.toLowerCase()}-${year}.pdf`,
+      `https://amc.ppfas.com/schemes/scheme-financials/${mon.toLowerCase()}-${year}/monthly-portfolio-disclosure-${mon.toLowerCase()}-${year}.pdf`,
+    ]
   },
   HDFC: {
-    name: 'HDFC',
     url: (year, mon, mm, yy) => [
       `https://files.hdfcfund.com/s3fs-public/Portfolio/${year}-${mm}/HDFC-MF-Monthly-Portfolio-${mon}-${year}.xlsx`,
       `https://files.hdfcfund.com/s3fs-public/Portfolio/${year}-${mm}/HDFC-MF-Monthly-Portfolio-${mon}-${year}.pdf`,
-      `https://files.hdfcfund.com/s3fs-public/Portfolio/${year}-${mm}/HDFC-MF-Portfolio-${mon}-${year}.pdf`,
-    ],
-    confidence: 'medium',
+    ]
   },
   SBI: {
-    name: 'SBI',
     url: (year, mon, mm, yy) => {
       const monLower = mon.toLowerCase();
-      const mon3 = mon.substring(0, 3).toLowerCase();
-      // Calculate the exact last day of the reporting month
       const lastDay = new Date(parseInt(year, 10), parseInt(mm, 10), 0).getDate();
       const lastDayOrd = getOrdinal(lastDay);
-      
       return [
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-schemes-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.xlsx`,
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-scheme-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.xlsx`, 
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-schemes-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.pdf`,
-        `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-scheme-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.pdf`,
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/${monLower}${yy}port.pdf`,
-        `https://www.sbimf.com/docs/default-source/scheme-portfolios/${mon3}${yy}port.pdf`,
       ];
-    },
-    confidence: 'medium',
+    }
   },
   ABSL: {
-    name: 'Aditya Birla Sun Life',
     url: (year, mon, mm, yy) => [
       `https://mutualfund.adityabirlacapital.com/downloads/portfolio/monthly-portfolio-${mon.toLowerCase()}-${yy}.pdf`,
-      `https://mutualfund.adityabirlacapital.com/downloads/portfolio/monthly-portfolio-${mon.substring(0,3).toLowerCase()}-${yy}.pdf`,
-    ],
-    confidence: 'medium',
+    ]
   },
   ICICI: {
-    name: 'ICICI Prudential',
     url: (year, mon, mm, yy) => [
       `https://www.icicipruamc.com/docs/default-source/monthly-portfolio/portfolio-${mon.toLowerCase()}${year}.pdf`,
-      `https://www.icicipruamc.com/docs/default-source/monthly-portfolio/portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-    ],
-    confidence: 'medium',
+    ]
   },
   MIRAE: {
-    name: 'Mirae Asset',
     url: (year, mon, mm, yy) => [
       `https://www.miraeassetmf.co.in/docs/default-source/monthly-portfolio/portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-      `https://www.miraeassetmf.co.in/docs/default-source/monthly-portfolio/mirae-asset-mf-portfolio-${mon.toLowerCase()}-${year}.pdf`,
-    ],
-    confidence: 'medium',
+    ]
   },
   KOTAK: {
-    name: 'Kotak',
     url: (year, mon, mm, yy) => [
       `https://www.kotakmf.com/docs/default-source/portfolio/monthly-portfolio/portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-      `https://www.kotakmf.com/getmedia/monthly-portfolio-${mon.toLowerCase()}-${year}.pdf`,
-    ],
-    confidence: 'low',
+    ]
   },
   AXIS: {
-    name: 'Axis',
     url: (year, mon, mm, yy) => [
       `https://www.axismf.com/downloads/portfolio/${mon.substring(0,3).toLowerCase()}-${year}-monthly-portfolio.pdf`,
-      `https://www.axismf.com/downloads/portfolio/monthly-portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-    ],
-    confidence: 'low',
+    ]
   },
   UTI: {
-    name: 'UTI',
     url: (year, mon, mm, yy) => [
       `https://www.utimf.com/portfolio-disclosure/monthly-portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-      `https://www.utimf.com/content/dam/uti/downloads/portfolio/monthly-portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-    ],
-    confidence: 'low',
+    ]
   },
   DSP: {
-    name: 'DSP',
     url: (year, mon, mm, yy) => [
       `https://www.dspim.com/content/dam/dsp/portfolio/monthly-portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-      `https://www.dspim.com/downloads/portfolio/dsp-monthly-portfolio-${mon.toLowerCase()}-${year}.pdf`,
-    ],
-    confidence: 'low',
-  },
-  FRANKLIN: {
-    name: 'Franklin Templeton',
-    url: (year, mon, mm, yy) => [
-      `https://www.franklintempletonindia.com/downloadsServlet/pdf/monthly-portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-    ],
-    confidence: 'low',
-  },
-  TATA: {
-    name: 'Tata',
-    url: (year, mon, mm, yy) => [
-      `https://www.tatamutualfund.com/docs/default-source/portfolio/monthly-portfolio/monthly-portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-    ],
-    confidence: 'low',
-  },
-  INVESCO: {
-    name: 'Invesco',
-    url: (year, mon, mm, yy) => [
-      `https://www.invescomutualfund.com/docs/default-source/portfolio/monthly-portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-    ],
-    confidence: 'low',
+    ]
   },
   BANDHAN: {
-    name: 'Bandhan',
     url: (year, mon, mm, yy) => [
       `https://www.bandhanmf.com/uploads/monthly-portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-    ],
-    confidence: 'low',
+    ]
   },
 };
 
-// --- Month helpers ---
-const MONTHS = ['January','February','March','April','May','June',
-                'July','August','September','October','November','December'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 function getMonthParams(date) {
   const y = date.getFullYear();
@@ -166,7 +98,7 @@ function getMonthParams(date) {
   return { year: String(y), mon: MONTHS[m], mm: String(m + 1).padStart(2, '0'), yy: String(y).slice(2) };
 }
 
-// --- HTTP helpers ---
+// --- HTTP Helpers ---
 function httpHead(urlStr, timeout = 7000) {
   return new Promise((resolve) => {
     const u = new URL(urlStr);
@@ -204,28 +136,97 @@ function httpGet(urlStr, timeout = 25000) {
   });
 }
 
-// --- Excel Text Extractor (Translates Excel sheets to Plain Text for Regex) ---
-function extractTextFromExcel(buf) {
-  try {
-    const xlsx = require('xlsx'); // Requires npm install xlsx
-    const workbook = xlsx.read(buf, { type: 'buffer' });
-    let text = '';
-    
-    for (const sheetName of workbook.SheetNames) {
-      const sheet = workbook.Sheets[sheetName];
-      const rows = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      for (const row of rows) {
-        text += row.map(cell => String(cell).trim()).filter(Boolean).join(' ') + '\n';
+// ==========================================
+// 1. NATIVE EXCEL ARRAY PARSER (Highly Robust)
+// ==========================================
+function extractHoldingsFromExcel(buf, schemeName) {
+  const xlsx = require('xlsx');
+  const workbook = xlsx.read(buf, { type: 'buffer' });
+  const holdings = [];
+  
+  // Clean the scheme name to match it easily
+  const schemeNorm = schemeName ? schemeName.toLowerCase().replace(/\s+/g, ' ').trim() : '';
+
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    // raw: false ensures we read percentages formatted (e.g., "8.45%") instead of decimals
+    const rows = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: false });
+
+    let inScheme = !schemeNorm;
+    let inHoldings = false;
+    let colMap = { name: -1, isin: -1, pct: -1 };
+
+    for (let r = 0; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row || !row.length) continue;
+      
+      const rowStr = row.map(c => String(c || '').trim()).join(' ').toLowerCase();
+      if (!rowStr.trim()) continue; // Skip entirely empty rows
+
+      // A. Hunt for the specific scheme section
+      if (!inScheme && schemeNorm && rowStr.includes(schemeNorm)) {
+         inScheme = true;
+      }
+
+      if (inScheme) {
+         // B. Map the table headers for this scheme
+         if (!inHoldings && (rowStr.includes('isin') || rowStr.includes('%') || rowStr.includes('nav'))) {
+            row.forEach((cell, idx) => {
+               const c = String(cell || '').toLowerCase();
+               if (c.includes('instrument') || c.includes('company') || c.includes('security') || c.includes('name')) colMap.name = idx;
+               if (c.includes('isin')) colMap.isin = idx;
+               if (c.includes('%') || c.includes('nav') || c.includes('assets')) colMap.pct = idx;
+            });
+            
+            // Fallbacks if columns aren't explicitly named
+            if (colMap.name === -1) colMap.name = colMap.isin === 0 ? 1 : 0;
+            if (colMap.pct !== -1) inHoldings = true;
+            continue;
+         }
+
+         // C. Extract the rows based on the mapped columns
+         if (inHoldings) {
+            // Stop parsing if we hit the end of the scheme's holdings table
+            if (rowStr.startsWith('total') || rowStr.includes('grand total') || rowStr.includes('net assets')) {
+               if (holdings.length > 5) break; 
+            }
+
+            let name = row[colMap.name];
+            let isin = colMap.isin !== -1 ? row[colMap.isin] : null;
+            let pctRaw = row[colMap.pct];
+
+            if (name && pctRaw) {
+               name = String(name).trim();
+               pctRaw = String(pctRaw).trim();
+               
+               // Extract only the numbers/decimals from the cell
+               let pctNum = parseFloat(pctRaw.replace(/[^0-9.]/g, ''));
+               
+               // Validate that it's a real holding and not a random header/footer
+               if (!isNaN(pctNum) && pctNum > 0 && pctNum <= 100 && name.length > 2 && !name.toLowerCase().includes('total')) {
+                  holdings.push({
+                     name: name.replace(/^INE[A-Z0-9]{9}\s*/, ''), // Remove ISIN from name if combined
+                     isin: String(isin || '').match(/INE[A-Z0-9]{9}/) ? String(isin).trim() : null,
+                     pct: parseFloat(pctNum.toFixed(2))
+                  });
+               }
+            }
+         }
       }
     }
-    return text;
-  } catch (e) {
-    console.error("Excel parse error:", e.message);
-    return null;
+    // If we successfully found holdings in this sheet, no need to check other sheets
+    if (holdings.length > 0) break; 
   }
+  
+  // Deduplicate and sort by weight
+  const seen = new Set();
+  return holdings.filter(h => { if (seen.has(h.name)) return false; seen.add(h.name); return true; })
+                 .sort((a, b) => b.pct - a.pct).slice(0, 50);
 }
 
-// --- PDF text extractor ---
+// ==========================================
+// 2. PDF TEXT EXTRACTOR & PARSER
+// ==========================================
 function extractTextFromPDF(buf) {
   const str = buf.toString('latin1');
   const texts = [];
@@ -264,7 +265,6 @@ function extractTextFromPDF(buf) {
   return texts.join('\n').replace(/\r/g, '').replace(/[ \t]+/g, ' ');
 }
 
-// --- Holdings parser ---
 function parseHoldings(text, schemeName) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const holdings = [];
@@ -273,7 +273,7 @@ function parseHoldings(text, schemeName) {
   let inHoldings = false;
   let headerFound = false;
 
-  const headerKeywords = ['name of instrument', 'security name', 'name of security', 'issuer', 'company name', 'scrip name', 'instrument'];
+  const headerKeywords = ['name of instrument', 'security name', 'issuer', 'company name', 'scrip name', 'instrument'];
   const stopKeywords = ['total', 'grand total', 'sub total', 'net assets'];
 
   for (let i = 0; i < lines.length; i++) {
@@ -294,7 +294,7 @@ function parseHoldings(text, schemeName) {
       if (ll.includes('grand total') || ll.includes('net assets')) break;
     }
 
-    const pctMatch = line.match(/(\d{1,3}\.\d{1,4})\s*$/);
+    const pctMatch = line.match(/(\d{1,3}\.\d{1,4})\s*%?\s*$/);
     if (!pctMatch) continue;
 
     const pct = parseFloat(pctMatch[1]);
@@ -319,56 +319,38 @@ function parseHoldings(text, schemeName) {
 }
 
 // --- URL discovery ---
-async function findWorkingURL(amcKey, date, collectTriedUrls) {
+async function findWorkingURL(amcKey, date) {
   const cfg = AMC_CONFIG[amcKey];
   if (!cfg) return null;
 
-  // FIXED LOGIC: Portfolios are published for the PREVIOUS month around the 10th of the current month.
-  // Therefore, we MUST start looking from `monthOffset = 1` (1 month ago), not 0.
-  // We fall back up to 3 months ago in case the AMC is running late on disclosures.
+  // Search up to 3 months backward
   for (let monthOffset = 1; monthOffset <= 3; monthOffset++) {
     const d = new Date(date);
     d.setMonth(d.getMonth() - monthOffset);
     const params = getMonthParams(d);
     
     let urlsToTry = cfg.url(params.year, params.mon, params.mm, params.yy);
-    urlsToTry = [...new Set(urlsToTry)]; // Deduplicate
+    urlsToTry = [...new Set(urlsToTry)]; 
 
     for (const url of urlsToTry) {
       try {
         const status = await httpHead(url);
-        if (collectTriedUrls) collectTriedUrls.push({ url, status });
-        
-        // Treat 200 OK or 302 Redirect as a successful find
         if (status === 200 || status === 302) return { url, ...params, monthOffset };
-      } catch (e) {
-        if (collectTriedUrls) collectTriedUrls.push({ url, status: 0, error: e.message });
-      }
+      } catch (e) { }
     }
   }
   return null;
 }
 
-// --- Main handler ---
+// ==========================================
+// 3. MAIN ROUTER HANDLER
+// ==========================================
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { amc, scheme, action } = req.query;
-
-  if (action === 'list') {
-    return res.json({ amcs: Object.keys(AMC_CONFIG) });
-  }
-
-  if (action === 'probe' && amc) {
-    const amcKey = amc.toUpperCase();
-    if (!AMC_CONFIG[amcKey]) return res.status(400).json({ error: `Unknown AMC: ${amc}` });
-    const tried = [];
-    const result = await findWorkingURL(amcKey, new Date(), tried);
-    if (!result) return res.status(404).json({ error: 'No working URL found', tried });
-    return res.json({ amc: amcKey, url: result.url, tried });
-  }
+  const { amc, scheme } = req.query;
 
   if (!amc) return res.status(400).json({ error: 'Missing ?amc= parameter' });
 
@@ -376,20 +358,32 @@ export default async function handler(req, res) {
   if (!AMC_CONFIG[amcKey]) return res.status(400).json({ error: `Unknown AMC` });
 
   try {
-    const found = await findWorkingURL(amcKey, new Date(), null);
-    if (!found) return res.status(503).json({ error: 'Could not find portfolio file for this AMC' });
+    const found = await findWorkingURL(amcKey, new Date());
+    if (!found) return res.status(503).json({ error: 'Could not find a valid portfolio document for this AMC.' });
 
     const fileBuf = await httpGet(found.url, 25000);
     if (fileBuf.length > 20 * 1024 * 1024) return res.status(413).json({ error: 'File too large (>20MB)' });
 
     const isExcel = found.url.includes('.xls') || found.url.includes('.xlsx');
-    const text = isExcel ? extractTextFromExcel(fileBuf) : extractTextFromPDF(fileBuf);
+    let holdings = [];
 
-    if (!text || text.length < 500) {
-      return res.status(422).json({ error: 'Could not extract text from document', url: found.url });
+    // Route to the correct parser based on file extension
+    if (isExcel) {
+      holdings = extractHoldingsFromExcel(fileBuf, scheme || '');
+    } else {
+      const text = extractTextFromPDF(fileBuf);
+      if (!text || text.length < 500) {
+        return res.status(422).json({ error: 'Failed to extract text streams from PDF.', url: found.url });
+      }
+      holdings = parseHoldings(text, scheme || '');
     }
 
-    const holdings = parseHoldings(text, scheme || '');
+    if (holdings.length === 0) {
+      return res.status(404).json({ 
+        error: `File downloaded, but could not locate holdings for "${scheme || 'this scheme'}". Ensure the scheme name matches perfectly.`, 
+        url: found.url 
+      });
+    }
 
     res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=604800');
 
