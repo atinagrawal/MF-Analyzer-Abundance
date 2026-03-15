@@ -1,9 +1,12 @@
 {
   "name": "mfcalc-abundance",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MF Risk & Return Analyzer — Abundance Financial Services®",
   "private": true,
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
   }
 }
