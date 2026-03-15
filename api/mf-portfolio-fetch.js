@@ -1,12 +1,7 @@
-// /api/mf-portfolio-fetch?amc=SBI&scheme=SBI+Bluechip+Fund
-// Fast, hardcoded-template AMC scraper with Native Excel Array Parsing and PDF fallback
-
+// /api/mf-portfolio-fetch
 export const config = { runtime: 'nodejs' };
 
-const https = require('https');
-const http = require('http');
 const zlib = require('zlib');
-
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
 const getOrdinal = (n) => {
@@ -44,50 +39,24 @@ const AMC_CONFIG = {
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-schemes-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.xlsx`,
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-scheme-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.xlsx`, 
         `https://www.sbimf.com/docs/default-source/scheme-portfolios/all-schemes-monthly-portfolio---as-on-${lastDayOrd}-${monLower}-${year}.pdf`,
-        `https://www.sbimf.com/docs/default-source/scheme-portfolios/${monLower}${yy}port.pdf`,
       ];
     }
   },
   ABSL: {
-    url: (year, mon, mm, yy) => [
-      `https://mutualfund.adityabirlacapital.com/downloads/portfolio/monthly-portfolio-${mon.toLowerCase()}-${yy}.pdf`,
-    ]
+    url: (year, mon, mm, yy) => [ `https://mutualfund.adityabirlacapital.com/downloads/portfolio/monthly-portfolio-${mon.toLowerCase()}-${yy}.pdf` ]
   },
   ICICI: {
-    url: (year, mon, mm, yy) => [
-      `https://www.icicipruamc.com/docs/default-source/monthly-portfolio/portfolio-${mon.toLowerCase()}${year}.pdf`,
-    ]
+    url: (year, mon, mm, yy) => [ `https://www.icicipruamc.com/docs/default-source/monthly-portfolio/portfolio-${mon.toLowerCase()}${year}.pdf` ]
   },
   MIRAE: {
-    url: (year, mon, mm, yy) => [
-      `https://www.miraeassetmf.co.in/docs/default-source/monthly-portfolio/portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-    ]
+    url: (year, mon, mm, yy) => [ `https://www.miraeassetmf.co.in/docs/default-source/monthly-portfolio/portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf` ]
   },
   KOTAK: {
-    url: (year, mon, mm, yy) => [
-      `https://www.kotakmf.com/docs/default-source/portfolio/monthly-portfolio/portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-    ]
+    url: (year, mon, mm, yy) => [ `https://www.kotakmf.com/docs/default-source/portfolio/monthly-portfolio/portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf` ]
   },
   AXIS: {
-    url: (year, mon, mm, yy) => [
-      `https://www.axismf.com/downloads/portfolio/${mon.substring(0,3).toLowerCase()}-${year}-monthly-portfolio.pdf`,
-    ]
-  },
-  UTI: {
-    url: (year, mon, mm, yy) => [
-      `https://www.utimf.com/portfolio-disclosure/monthly-portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-    ]
-  },
-  DSP: {
-    url: (year, mon, mm, yy) => [
-      `https://www.dspim.com/content/dam/dsp/portfolio/monthly-portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-    ]
-  },
-  BANDHAN: {
-    url: (year, mon, mm, yy) => [
-      `https://www.bandhanmf.com/uploads/monthly-portfolio-${mon.substring(0,3).toLowerCase()}-${year}.pdf`,
-    ]
-  },
+    url: (year, mon, mm, yy) => [ `https://www.axismf.com/downloads/portfolio/${mon.substring(0,3).toLowerCase()}-${year}-monthly-portfolio.pdf` ]
+  }
 };
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -98,61 +67,44 @@ function getMonthParams(date) {
   return { year: String(y), mon: MONTHS[m], mm: String(m + 1).padStart(2, '0'), yy: String(y).slice(2) };
 }
 
-// --- HTTP Helpers ---
-function httpHead(urlStr, timeout = 7000) {
-  return new Promise((resolve) => {
-    const u = new URL(urlStr);
-    const req = (u.protocol === 'https:' ? https : http).request({ 
-      hostname: u.hostname, path: u.pathname + u.search, method: 'HEAD', 
-      headers: { 'User-Agent': BROWSER_UA, 'Accept': '*/*' }, timeout 
-    }, (res) => resolve(res.statusCode));
-    req.on('error', () => resolve(0));
-    req.on('timeout', () => { req.destroy(); resolve(0); });
-    req.end();
-  });
+// --- Native Fetch Helpers (Fixes GZIP Compression Corruption) ---
+async function fetchHead(url) {
+  try {
+    const res = await fetch(url, { method: 'HEAD', headers: { 'User-Agent': BROWSER_UA } });
+    return res.ok || res.status === 302;
+  } catch (e) { return false; }
 }
 
-function httpGet(urlStr, timeout = 25000) {
-  return new Promise((resolve, reject) => {
-    const u = new URL(urlStr);
-    const req = (u.protocol === 'https:' ? https : http).get({
-      hostname: u.hostname, path: u.pathname + u.search,
-      headers: { 'User-Agent': BROWSER_UA, 'Accept': '*/*' }, timeout,
-    }, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        let redir = res.headers.location;
-        if (redir.startsWith('/')) redir = u.origin + redir;
-        httpGet(redir, timeout).then(resolve).catch(reject);
-        return;
-      }
-      if (res.statusCode !== 200) { reject(new Error(`HTTP ${res.statusCode}`)); return; }
-      const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve(Buffer.concat(chunks)));
-      res.on('error', reject);
-    });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
-  });
+async function fetchBuffer(url) {
+  const res = await fetch(url, { method: 'GET', headers: { 'User-Agent': BROWSER_UA } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const arrayBuffer = await res.arrayBuffer();
+  return Buffer.from(arrayBuffer); // Native fetch auto-decompresses GZIP!
 }
 
-// ==========================================
-// 1. NATIVE EXCEL ARRAY PARSER (Highly Robust)
-// ==========================================
+// --- Fuzzy Scheme Matcher ---
+function isSchemeMatch(rowStr, schemeName) {
+  if (!schemeName) return true;
+  // Strip common words to match heavily variations (e.g. "SBI Bluechip" matches "SBI Blue Chip")
+  const searchWords = schemeName.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\b(fund|plan|direct|regular)\b/g, '').trim().split(/\s+/).filter(w => w.length > 2);
+  if (searchWords.length === 0) return true;
+  
+  // Allow matching if almost all core keywords exist in the Excel row
+  const matchCount = searchWords.filter(w => rowStr.includes(w)).length;
+  return matchCount >= searchWords.length - 1; 
+}
+
+// --- Native Excel Array Parser ---
 function extractHoldingsFromExcel(buf, schemeName) {
   const xlsx = require('xlsx');
   const workbook = xlsx.read(buf, { type: 'buffer' });
   const holdings = [];
-  
-  // Clean the scheme name to match it easily
-  const schemeNorm = schemeName ? schemeName.toLowerCase().replace(/\s+/g, ' ').trim() : '';
 
   for (const sheetName of workbook.SheetNames) {
     const sheet = workbook.Sheets[sheetName];
-    // raw: false ensures we read percentages formatted (e.g., "8.45%") instead of decimals
     const rows = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: false });
 
-    let inScheme = !schemeNorm;
+    let inScheme = !schemeName;
     let inHoldings = false;
     let colMap = { name: -1, isin: -1, pct: -1 };
 
@@ -161,15 +113,13 @@ function extractHoldingsFromExcel(buf, schemeName) {
       if (!row || !row.length) continue;
       
       const rowStr = row.map(c => String(c || '').trim()).join(' ').toLowerCase();
-      if (!rowStr.trim()) continue; // Skip entirely empty rows
+      if (!rowStr.trim()) continue; 
 
-      // A. Hunt for the specific scheme section
-      if (!inScheme && schemeNorm && rowStr.includes(schemeNorm)) {
+      if (!inScheme && isSchemeMatch(rowStr, schemeName)) {
          inScheme = true;
       }
 
       if (inScheme) {
-         // B. Map the table headers for this scheme
          if (!inHoldings && (rowStr.includes('isin') || rowStr.includes('%') || rowStr.includes('nav'))) {
             row.forEach((cell, idx) => {
                const c = String(cell || '').toLowerCase();
@@ -177,16 +127,12 @@ function extractHoldingsFromExcel(buf, schemeName) {
                if (c.includes('isin')) colMap.isin = idx;
                if (c.includes('%') || c.includes('nav') || c.includes('assets')) colMap.pct = idx;
             });
-            
-            // Fallbacks if columns aren't explicitly named
             if (colMap.name === -1) colMap.name = colMap.isin === 0 ? 1 : 0;
             if (colMap.pct !== -1) inHoldings = true;
             continue;
          }
 
-         // C. Extract the rows based on the mapped columns
          if (inHoldings) {
-            // Stop parsing if we hit the end of the scheme's holdings table
             if (rowStr.startsWith('total') || rowStr.includes('grand total') || rowStr.includes('net assets')) {
                if (holdings.length > 5) break; 
             }
@@ -197,15 +143,11 @@ function extractHoldingsFromExcel(buf, schemeName) {
 
             if (name && pctRaw) {
                name = String(name).trim();
-               pctRaw = String(pctRaw).trim();
+               let pctNum = parseFloat(String(pctRaw).replace(/[^0-9.]/g, ''));
                
-               // Extract only the numbers/decimals from the cell
-               let pctNum = parseFloat(pctRaw.replace(/[^0-9.]/g, ''));
-               
-               // Validate that it's a real holding and not a random header/footer
                if (!isNaN(pctNum) && pctNum > 0 && pctNum <= 100 && name.length > 2 && !name.toLowerCase().includes('total')) {
                   holdings.push({
-                     name: name.replace(/^INE[A-Z0-9]{9}\s*/, ''), // Remove ISIN from name if combined
+                     name: name.replace(/^INE[A-Z0-9]{9}\s*/, ''),
                      isin: String(isin || '').match(/INE[A-Z0-9]{9}/) ? String(isin).trim() : null,
                      pct: parseFloat(pctNum.toFixed(2))
                   });
@@ -214,19 +156,15 @@ function extractHoldingsFromExcel(buf, schemeName) {
          }
       }
     }
-    // If we successfully found holdings in this sheet, no need to check other sheets
     if (holdings.length > 0) break; 
   }
   
-  // Deduplicate and sort by weight
   const seen = new Set();
   return holdings.filter(h => { if (seen.has(h.name)) return false; seen.add(h.name); return true; })
                  .sort((a, b) => b.pct - a.pct).slice(0, 50);
 }
 
-// ==========================================
-// 2. PDF TEXT EXTRACTOR & PARSER
-// ==========================================
+// --- PDF Extractor ---
 function extractTextFromPDF(buf) {
   const str = buf.toString('latin1');
   const texts = [];
@@ -268,19 +206,17 @@ function extractTextFromPDF(buf) {
 function parseHoldings(text, schemeName) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const holdings = [];
-  const schemeNorm = schemeName.toLowerCase().replace(/\s+/g, ' ').trim();
-  let inScheme = !schemeNorm; 
+  let inScheme = !schemeName; 
   let inHoldings = false;
   let headerFound = false;
 
   const headerKeywords = ['name of instrument', 'security name', 'issuer', 'company name', 'scrip name', 'instrument'];
-  const stopKeywords = ['total', 'grand total', 'sub total', 'net assets'];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const ll = line.toLowerCase();
 
-    if (!inScheme && schemeNorm && ll.includes(schemeNorm.substring(0, 20))) inScheme = true;
+    if (!inScheme && isSchemeMatch(ll, schemeName)) inScheme = true;
 
     if (headerKeywords.some(kw => ll.includes(kw))) {
       headerFound = true;
@@ -290,8 +226,8 @@ function parseHoldings(text, schemeName) {
 
     if (!inHoldings && !headerFound) continue;
 
-    if (stopKeywords.some(kw => ll.startsWith(kw)) && holdings.length > 0) {
-      if (ll.includes('grand total') || ll.includes('net assets')) break;
+    if (ll.startsWith('total') || ll.includes('grand total') || ll.includes('net assets')) {
+      if (holdings.length > 0) break;
     }
 
     const pctMatch = line.match(/(\d{1,3}\.\d{1,4})\s*%?\s*$/);
@@ -323,35 +259,26 @@ async function findWorkingURL(amcKey, date) {
   const cfg = AMC_CONFIG[amcKey];
   if (!cfg) return null;
 
-  // Search up to 3 months backward
   for (let monthOffset = 1; monthOffset <= 3; monthOffset++) {
     const d = new Date(date);
     d.setMonth(d.getMonth() - monthOffset);
     const params = getMonthParams(d);
     
-    let urlsToTry = cfg.url(params.year, params.mon, params.mm, params.yy);
-    urlsToTry = [...new Set(urlsToTry)]; 
+    let urlsToTry = [...new Set(cfg.url(params.year, params.mon, params.mm, params.yy))]; 
 
     for (const url of urlsToTry) {
-      try {
-        const status = await httpHead(url);
-        if (status === 200 || status === 302) return { url, ...params, monthOffset };
-      } catch (e) { }
+      if (await fetchHead(url)) return { url, ...params, monthOffset };
     }
   }
   return null;
 }
 
-// ==========================================
-// 3. MAIN ROUTER HANDLER
-// ==========================================
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { amc, scheme } = req.query;
-
   if (!amc) return res.status(400).json({ error: 'Missing ?amc= parameter' });
 
   const amcKey = amc.toUpperCase();
@@ -361,28 +288,14 @@ export default async function handler(req, res) {
     const found = await findWorkingURL(amcKey, new Date());
     if (!found) return res.status(503).json({ error: 'Could not find a valid portfolio document for this AMC.' });
 
-    const fileBuf = await httpGet(found.url, 25000);
+    const fileBuf = await fetchBuffer(found.url);
     if (fileBuf.length > 20 * 1024 * 1024) return res.status(413).json({ error: 'File too large (>20MB)' });
 
     const isExcel = found.url.includes('.xls') || found.url.includes('.xlsx');
-    let holdings = [];
-
-    // Route to the correct parser based on file extension
-    if (isExcel) {
-      holdings = extractHoldingsFromExcel(fileBuf, scheme || '');
-    } else {
-      const text = extractTextFromPDF(fileBuf);
-      if (!text || text.length < 500) {
-        return res.status(422).json({ error: 'Failed to extract text streams from PDF.', url: found.url });
-      }
-      holdings = parseHoldings(text, scheme || '');
-    }
+    let holdings = isExcel ? extractHoldingsFromExcel(fileBuf, scheme || '') : parseHoldings(extractTextFromPDF(fileBuf), scheme || '');
 
     if (holdings.length === 0) {
-      return res.status(404).json({ 
-        error: `File downloaded, but could not locate holdings for "${scheme || 'this scheme'}". Ensure the scheme name matches perfectly.`, 
-        url: found.url 
-      });
+      return res.status(404).json({ error: `Could not extract table for "${scheme || 'this scheme'}".`, url: found.url });
     }
 
     res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=604800');
