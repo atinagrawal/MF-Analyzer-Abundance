@@ -991,14 +991,15 @@ export default async function handler(req, res) {
                      fileBuf.slice(0, 100).toString('utf8').toLowerCase().includes('<html') ||
                      fileBuf.slice(0, 100).toString('utf8').toLowerCase().includes('<table');
       let matrix = [];
+      let xlsxSheetNum = -1, xlsxSheetFile = null;
       if (isZIP) {
         const xlsxResult = parseXLSX(fileBuf);
         if (xlsxResult) {
           if (scheme) {
-            // Find the sheet for this scheme via index search
-            const sheetNum = findSchemeSheetNum(xlsxResult, scheme);
-            if (sheetNum > 0) {
-              matrix = parseXLSXSheet(xlsxResult, sheetNum);
+            xlsxSheetNum = findSchemeSheetNum(xlsxResult, scheme);
+            if (xlsxSheetNum > 0) {
+              xlsxSheetFile = xlsxResult.sheetFiles[xlsxSheetNum - 1] || null;
+              matrix = parseXLSXSheet(xlsxResult, xlsxSheetNum);
             } else {
               return res.status(404).json({
                 error: `Scheme not found in portfolio file: "${scheme}"`,
@@ -1007,7 +1008,6 @@ export default async function handler(req, res) {
               });
             }
           } else {
-            // No scheme specified - return index list
             return res.json({
               amc: amcKey, amcName: AMC_CONFIG[amcKey].name,
               month: found.mon, year: found.year,
@@ -1058,6 +1058,8 @@ export default async function handler(req, res) {
       confidence: AMC_CONFIG[amcKey].confidence,
       holdingsCount: holdings.length, holdings,
       fileSize: fileBuf.length,
+      _debug: { xlsxSheetNum, xlsxSheetFile, matrixRows: matrix.length,
+                sampleRows: matrix.slice(0, 5).map(r => r.slice(0, 8)) },
     });
 
   } catch (e) {
