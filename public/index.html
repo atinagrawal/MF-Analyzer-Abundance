@@ -410,7 +410,7 @@ function switchMainTab(name,btn){
 
 
 </script>
-<!-- html2canvas loaded lazily on first export -->
+<!-- jsPDF loaded lazily on first PDF export -->
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -2351,9 +2351,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
     <button class="period-btn" onclick="setPeriod('10Y',this)" aria-label="Show 10 years performance">10Y</button>
     <button class="period-btn" onclick="setPeriod('MAX',this)" aria-label="Show maximum available history">Max</button>
   </div>
-  <button class="export-btn" onclick="exportPNG()" aria-label="Export chart as PNG image">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-    Export PNG
+  <button class="export-btn" onclick="exportPDF()" aria-label="Export fund briefing as PDF">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Export PDF
   </button>
 </div>
 
@@ -4345,155 +4345,596 @@ function chartOpts(){
     }};
 }
 
-function exportPNG(){
-  if (typeof html2canvas === 'undefined') {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    s.onload = () => _doExportPNG();
+// ════════════════════════════════════════
+//  FUND BRIEFING — PDF EXPORT  (jsPDF)
+//  Multi-section, device-agnostic, A4 portrait
+//  No html2canvas — 100% vector/text PDF
+// ════════════════════════════════════════
+
+function exportPDF(){
+  if(typeof window.jspdf === 'undefined'){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload=()=>_doExportPDF();
     document.head.appendChild(s);
     return;
   }
-  _doExportPNG();
+  _doExportPDF();
 }
-async function _doExportPNG(){
-  const btn=document.querySelector(".export-btn"),orig=btn.innerHTML;
-  btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Exporting…';
+
+async function _doExportPDF(){
+  const btn=document.querySelector('.export-btn');
+  const orig=btn.innerHTML;
+  btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Building PDF…';
   btn.disabled=true;
+
   try{
-    const SCALE=2, PAD=32;
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const PW=210, PH=297; // A4 mm
+    const ML=14, MR=14, MT=14;
+    const CW=PW-ML-MR; // content width = 182mm
 
-    // ── 1. Capture live chart canvas (Chart.js renders to real canvas) ──
-    const liveChart=document.querySelector("#mainContent canvas");
-    const chartDataURL=liveChart?liveChart.toDataURL("image/png"):"";
+    // ── Colour palette ──
+    const GDK=[30,94,32],  // #1e5e20 dark green
+          GMD=[46,125,50], // #2e7d32 mid green
+          GLT=[67,160,71], // #43a047 light green
+          BG =[240,247,240],// page bg
+          SRF=[237,246,237],// card bg
+          BRD=[194,223,194],// border
+          TXT=[30,50,30],   // main text
+          MUT=[100,130,100],// muted
+          POS=[27,94,32],   // positive return
+          NEG=[183,28,28],  // negative return
+          WHT=[255,255,255];
 
-    // ── 2. Capture the rest of mainContent via html2canvas ──
-    //    Temporarily hide the chart canvas so html2canvas renders the
-    //    surrounding card structure cleanly, then we composite the chart back.
-    if(liveChart) liveChart.style.visibility="hidden";
-    const contentEl=document.getElementById("mainContent");
-    const capturedContent=await html2canvas(contentEl,{
-      backgroundColor:"#f0f7f0",scale:SCALE,useCORS:true,logging:false,
-      scrollX:-window.scrollX,scrollY:-window.scrollY,
-      windowWidth:document.documentElement.scrollWidth,
-      width:contentEl.offsetWidth,height:contentEl.offsetHeight
+    // ── COLORS matching app ──
+    const FUND_COLORS=[
+      [46,125,50],[21,101,192],[230,81,0],[106,27,154],[0,131,143]
+    ];
+
+    // ── Collect data ──
+    const {cutoff:commonCutoff}=getCommonCutoff();
+    const funds=selectedFunds.map((f,i)=>({
+      name:f.name, code:f.code,
+      color:FUND_COLORS[i],
+      metrics:calcMetrics(f.rawData,commonCutoff),
+      rawData:f.rawData,
+      category:f.category||'', subCategory:f.subCategory||''
+    }));
+
+    const PERIODS=[{l:'1M',m:1},{l:'3M',m:3},{l:'6M',m:6},{l:'1Y',m:12},{l:'3Y',m:36},{l:'5Y',m:60}];
+    const dateStr=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+    const timeStr=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+
+    // ══════════════════════════════════════
+    // HELPER: page state
+    // ══════════════════════════════════════
+    let pageNum=0;
+    function newPage(bgFill=true){
+      if(pageNum>0) doc.addPage();
+      pageNum++;
+      if(bgFill){
+        doc.setFillColor(...BG);
+        doc.rect(0,0,PW,PH,'F');
+      }
+    }
+
+    function addPageFooter(){
+      const y=PH-8;
+      doc.setFontSize(6.5);
+      doc.setTextColor(...MUT);
+      doc.setFont('helvetica','normal');
+      doc.text(`Generated by Abundance MF Analyzer — mfcalc.getabundance.in  ·  ${dateStr}`,ML,y);
+      doc.text(`Page ${pageNum}`,PW-MR,y,'right');
+    }
+
+    function headerBar(){
+      // Top green gradient bar
+      doc.setFillColor(...GDK);
+      doc.rect(0,0,PW,1.2,'F');
+      doc.setFillColor(...GMD);
+      doc.rect(0,1.2,PW,1.2,'F');
+      doc.setFillColor(...GLT);
+      doc.rect(0,2.4,PW,0.8,'F');
+    }
+
+    function sectionTitle(text,y){
+      doc.setFillColor(...SRF);
+      doc.setDrawColor(...BRD);
+      doc.setLineWidth(0.3);
+      doc.rect(ML,y,CW,7,'FD');
+      // Green left accent
+      doc.setFillColor(...GMD);
+      doc.rect(ML,y,2.5,7,'F');
+      doc.setFontSize(8);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...GDK);
+      doc.text(text.toUpperCase(),ML+5,y+4.7);
+      return y+10;
+    }
+
+    function card(x,y,w,h){
+      doc.setFillColor(...WHT);
+      doc.setDrawColor(...BRD);
+      doc.setLineWidth(0.25);
+      doc.roundedRect(x,y,w,h,2,2,'FD');
+    }
+
+    function colorDot(x,y,color){
+      doc.setFillColor(...color);
+      doc.circle(x,y,1.5,'F');
+    }
+
+    function formatRet(v){
+      if(v===null||v===undefined||v==='null') return '—';
+      const n=parseFloat(v);
+      return(n>=0?'+':'')+n.toFixed(2)+'%';
+    }
+    function retColor(v){
+      if(v===null) return MUT;
+      return parseFloat(v)>=0?POS:NEG;
+    }
+
+    // ══════════════════════════════════════
+    //  PAGE 1 — COVER / SUMMARY
+    // ══════════════════════════════════════
+    newPage();
+    headerBar();
+
+    // Logo area
+    doc.setFillColor(...WHT);
+    doc.roundedRect(ML,6,60,14,2,2,'F');
+    doc.setFontSize(14);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...GMD);
+    doc.text('Abundance',ML+4,14.5);
+    doc.setFontSize(7);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(...MUT);
+    doc.text('Financial Services',ML+4,18.5);
+
+    // ARN badge
+    doc.setFillColor(...SRF);
+    doc.setDrawColor(...BRD);
+    doc.roundedRect(ML+62,6,55,14,2,2,'FD');
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...MUT);
+    doc.text('ARN-251838  ·  AMFI Registered MFD',ML+64,11.5);
+    doc.setFont('helvetica','normal');
+    doc.text('EUIN: E334718',ML+64,15.5);
+
+    // Date badge (right)
+    doc.setFontSize(7);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(...MUT);
+    doc.text(`Generated: ${dateStr}, ${timeStr}`,PW-MR,13,'right');
+
+    // Title block
+    let y=26;
+    doc.setFontSize(18);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...GDK);
+    doc.text('Fund Comparison Briefing',ML,y);
+    y+=6;
+    doc.setFontSize(9);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(...MUT);
+    doc.text(`${funds.length} fund${funds.length>1?'s':''} compared  ·  Period: ${getPeriodLabel()}  ·  Data: AMFI / mfapi.in`,ML,y);
+    y+=2;
+    doc.setDrawColor(...BRD);
+    doc.setLineWidth(0.4);
+    doc.line(ML,y,PW-MR,y);
+    y+=6;
+
+    // ── Fund name chips ──
+    y=sectionTitle('Funds in this comparison',y);
+    funds.forEach((f,i)=>{
+      const cardY=y;
+      card(ML,cardY,CW,10);
+      colorDot(ML+5,cardY+5,f.color);
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...TXT);
+      const nm=f.name.length>80?f.name.slice(0,80)+'…':f.name;
+      doc.text(nm,ML+10,cardY+4);
+      if(f.category){
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica','normal');
+        doc.setTextColor(...MUT);
+        doc.text(f.category+(f.subCategory&&f.subCategory!==f.category?' · '+f.subCategory:''),ML+10,cardY+8);
+      }
+      // Key metric on right: period return
+      const ret=formatRet(f.metrics.totalReturn);
+      doc.setFontSize(10);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...retColor(f.metrics.totalReturn));
+      doc.text(ret,PW-MR-2,cardY+5.5,'right');
+      doc.setFontSize(5.5);
+      doc.setFont('helvetica','normal');
+      doc.setTextColor(...MUT);
+      doc.text(getPeriodLabel()+' Return',PW-MR-2,cardY+8.5,'right');
+      y+=12;
     });
-    if(liveChart) liveChart.style.visibility="";
+    y+=2;
 
-    // ── 3. Load logo as blob URL to bypass CORS ──
-    let logoImg=null;
-    try{
-      const logoResp=await fetch("https://www.getabundance.in/images/logo.png");
-      const logoBlob=await logoResp.blob();
-      const logoURL=URL.createObjectURL(logoBlob);
-      logoImg=await new Promise((res,rej)=>{
-        const img=new Image(); img.onload=()=>res(img); img.onerror=()=>res(null); img.src=logoURL;
+    // ── At-a-Glance Summary Table ──
+    y=sectionTitle('At-a-Glance — Key Metrics',y);
+
+    // Table header
+    const COL_F=ML, COL_CAGR=ML+62, COL_VOL=ML+90, COL_SHP=ML+116, COL_DD=ML+142, COL_PD=ML+166;
+    const HDR_Y=y;
+    doc.setFillColor(...GDK);
+    doc.rect(ML,HDR_Y,CW,6,'F');
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...WHT);
+    doc.text('Fund',COL_F+1,HDR_Y+4);
+    doc.text('CAGR',COL_CAGR,HDR_Y+4,'right');
+    doc.text('Volatility',COL_VOL,HDR_Y+4,'right');
+    doc.text('Sharpe',COL_SHP,HDR_Y+4,'right');
+    doc.text('Max DD',COL_DD,HDR_Y+4,'right');
+    doc.text('% +Days',COL_PD,HDR_Y+4,'right');
+    y=HDR_Y+6;
+
+    funds.forEach((f,i)=>{
+      const rowY=y;
+      doc.setFillColor(i%2===0?WHT:BG);
+      doc.rect(ML,rowY,CW,7.5,'F');
+      // Dot + name
+      colorDot(ML+2.5,rowY+3.75,f.color);
+      doc.setFontSize(7);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...TXT);
+      const shortName=f.name.length>38?f.name.slice(0,38)+'…':f.name;
+      doc.text(shortName,ML+6,rowY+4.5);
+      // Metrics
+      const m=f.metrics;
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...retColor(m.annReturn));
+      doc.text(formatRet(m.annReturn),COL_CAGR,rowY+4.5,'right');
+      doc.setTextColor(...TXT);
+      doc.text(m.annVol+'%',COL_VOL,rowY+4.5,'right');
+      doc.setTextColor(parseFloat(m.sharpe)>1?POS:parseFloat(m.sharpe)<0?NEG:TXT);
+      doc.text(String(m.sharpe),COL_SHP,rowY+4.5,'right');
+      doc.setTextColor(...NEG);
+      doc.text('-'+m.maxDD+'%',COL_DD,rowY+4.5,'right');
+      doc.setTextColor(...TXT);
+      doc.text(m.posDays+'%',COL_PD,rowY+4.5,'right');
+      // Bottom border
+      doc.setDrawColor(...BRD);
+      doc.setLineWidth(0.15);
+      doc.line(ML,rowY+7.5,PW-MR,rowY+7.5);
+      y+=7.5;
+    });
+    y+=6;
+
+    // ── Period Returns Matrix ──
+    y=sectionTitle('Period Returns (Trailing)',y);
+    const COL_P=[ML+46,ML+72,ML+98,ML+120,ML+146,ML+170];
+    // Header
+    doc.setFillColor(...SRF);
+    doc.rect(ML,y,CW,6,'F');
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...GDK);
+    doc.text('Fund',ML+1,y+4);
+    PERIODS.forEach((p,pi)=>doc.text(p.l,COL_P[pi],y+4,'right'));
+    doc.setDrawColor(...BRD);
+    doc.setLineWidth(0.2);
+    doc.line(ML,y+6,PW-MR,y+6);
+    y+=6;
+
+    funds.forEach((f,i)=>{
+      const rowY=y;
+      doc.setFillColor(i%2===0?WHT:BG);
+      doc.rect(ML,rowY,CW,7,'F');
+      colorDot(ML+2.5,rowY+3.5,f.color);
+      doc.setFontSize(6.8);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...TXT);
+      doc.text(f.name.length>34?f.name.slice(0,34)+'…':f.name,ML+6,rowY+4.2);
+      PERIODS.forEach((p,pi)=>{
+        const ret=calcPeriodReturn(f.rawData,p.m);
+        doc.setTextColor(...retColor(ret));
+        doc.setFont('helvetica','bold');
+        doc.text(formatRet(ret),COL_P[pi],rowY+4.2,'right');
       });
-      URL.revokeObjectURL(logoURL);
-    }catch(e){ logoImg=null; }
+      doc.setDrawColor(...BRD);
+      doc.setLineWidth(0.15);
+      doc.line(ML,rowY+7,PW-MR,rowY+7);
+      y+=7;
+    });
 
-    // ── 4. Load chart image ──
-    let chartImg=null;
-    if(chartDataURL){
-      chartImg=await new Promise((res)=>{
-        const img=new Image(); img.onload=()=>res(img); img.onerror=()=>res(null); img.src=chartDataURL;
+    addPageFooter();
+
+    // ══════════════════════════════════════
+    //  PAGE 2 — NAV PERFORMANCE CHART
+    // ══════════════════════════════════════
+    newPage();
+    headerBar();
+
+    y=MT+2;
+    doc.setFontSize(14);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...GDK);
+    doc.text('NAV Performance Chart',ML,y+5);
+    y+=10;
+    doc.setFontSize(8);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(...MUT);
+    doc.text('% change from period start  ·  '+getPeriodLabel()+'  ·  Source: AMFI / mfapi.in',ML,y);
+    y+=4;
+    doc.setDrawColor(...BRD);
+    doc.line(ML,y,PW-MR,y);
+    y+=4;
+
+    // Capture the Chart.js canvas as image
+    const liveCanvas=document.querySelector('#mainContent canvas');
+    let chartAdded=false;
+    if(liveCanvas){
+      try{
+        const dataURL=liveCanvas.toDataURL('image/png',1.0);
+        const CHART_H=100;
+        doc.addImage(dataURL,'PNG',ML,y,CW,CHART_H);
+        y+=CHART_H+6;
+        chartAdded=true;
+      }catch(e){}
+    }
+    if(!chartAdded){
+      // Fallback: draw a simple placeholder
+      doc.setFillColor(...SRF);
+      doc.roundedRect(ML,y,CW,60,2,2,'F');
+      doc.setFontSize(9);
+      doc.setTextColor(...MUT);
+      doc.text('Chart not available (view the NAV tab in the app for the performance chart)',ML+CW/2,y+32,'center');
+      y+=66;
+    }
+
+    // ── Legend ──
+    y=sectionTitle('Legend',y);
+    funds.forEach((f,i)=>{
+      const lx=ML+(i>2?(CW/2):0);
+      const ly=y+(i%3)*7;
+      colorDot(lx+2.5,ly+3,f.color);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...TXT);
+      doc.text(f.name.length>42?f.name.slice(0,42)+'…':f.name,lx+6,ly+4);
+    });
+    y+=Math.ceil(funds.length/2)*7+8;
+
+    // ── Sparkline-style mini data table for each fund ──
+    y=sectionTitle('NAV Data Snapshot',y);
+    funds.forEach((f,i)=>{
+      const raw=f.rawData;
+      if(!raw||!raw.length) return;
+      const last=raw[raw.length-1];
+      const prev1=raw.length>1?raw[raw.length-2]:null;
+      const latestNAV=parseFloat(last.nav);
+      const dayChg=prev1?((latestNAV-parseFloat(prev1.nav))/parseFloat(prev1.nav)*100).toFixed(3):null;
+
+      const fx=i%2===0?ML:ML+CW/2+2;
+      const fw=CW/2-2;
+      const fy=y+Math.floor(i/2)*22;
+      card(fx,fy,fw,20);
+      colorDot(fx+4,fy+5,f.color);
+      doc.setFontSize(7);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...TXT);
+      doc.text(f.name.length>30?f.name.slice(0,30)+'…':f.name,fx+8,fy+5.5);
+      doc.setFontSize(10);
+      doc.setTextColor(...GDK);
+      doc.text('₹'+latestNAV.toFixed(4),fx+4,fy+13);
+      if(dayChg!==null){
+        doc.setFontSize(7.5);
+        doc.setTextColor(...retColor(dayChg));
+        doc.text((parseFloat(dayChg)>=0?'+':'')+dayChg+'% day',fx+4,fy+17.5);
+      }
+      doc.setFontSize(6.5);
+      doc.setTextColor(...MUT);
+      doc.text('as of '+last.date,fx+fw-2,fy+17.5,'right');
+    });
+    y+=Math.ceil(funds.length/2)*22+6;
+
+    addPageFooter();
+
+    // ══════════════════════════════════════
+    //  PAGE 3 — DETAILED FUND PROFILES
+    // ══════════════════════════════════════
+    newPage();
+    headerBar();
+
+    y=MT+2;
+    doc.setFontSize(14);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...GDK);
+    doc.text('Detailed Fund Profiles',ML,y+5);
+    y+=12;
+    doc.setDrawColor(...BRD);
+    doc.line(ML,y,PW-MR,y);
+    y+=5;
+
+    funds.forEach((f,i)=>{
+      if(i>0) y+=5;
+      // Check if we need a new page
+      if(y>220){ doc.addPage(); pageNum++; doc.setFillColor(...BG); doc.rect(0,0,PW,PH,'F'); headerBar(); y=MT+5; }
+
+      const m=f.metrics;
+      const risk=calcRiskMetrics(f.rawData);
+
+      // Fund header card
+      card(ML,y,CW,30);
+      doc.setFillColor(...f.color);
+      doc.rect(ML,y,4,30,'F');
+      doc.setFontSize(10);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...TXT);
+      const lines=doc.splitTextToSize(f.name,CW-60);
+      doc.text(lines,ML+7,y+7);
+      if(f.category){
+        doc.setFontSize(7);
+        doc.setFont('helvetica','normal');
+        doc.setTextColor(...MUT);
+        doc.text(f.category+(f.subCategory&&f.subCategory!==f.category?' · '+f.subCategory:''),ML+7,y+16);
+      }
+      // Large CAGR
+      doc.setFontSize(16);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...retColor(m.annReturn));
+      doc.text(formatRet(m.annReturn),PW-MR-2,y+12,'right');
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica','normal');
+      doc.setTextColor(...MUT);
+      doc.text('CAGR (Ann. Return)',PW-MR-2,y+18,'right');
+
+      y+=33;
+
+      // 4-column metrics grid
+      const GCOLS=4;
+      const GW=CW/GCOLS-1;
+      const metrics2=[
+        ['Period Return',formatRet(m.totalReturn),retColor(m.totalReturn)],
+        ['CAGR',formatRet(m.annReturn),retColor(m.annReturn)],
+        ['Volatility',m.annVol+'%',TXT],
+        ['Sharpe Ratio',String(m.sharpe),parseFloat(m.sharpe)>1?POS:parseFloat(m.sharpe)<0?NEG:TXT],
+        ['Max Drawdown','-'+m.maxDD+'%',NEG],
+        ['Best Day','+'+m.bestDay+'%',POS],
+        ['Worst Day',m.worstDay+'%',NEG],
+        ['Positive Days',m.posDays+'%',TXT],
+      ];
+      metrics2.forEach((row,ri)=>{
+        const ci=ri%GCOLS, row_=Math.floor(ri/GCOLS);
+        const gx=ML+ci*(GW+1);
+        const gy=y+row_*18;
+        doc.setFillColor(ci%2===0?WHT:SRF);
+        doc.setDrawColor(...BRD);
+        doc.setLineWidth(0.2);
+        doc.roundedRect(gx,gy,GW,16,1,1,'FD');
+        doc.setFontSize(6);
+        doc.setFont('helvetica','normal');
+        doc.setTextColor(...MUT);
+        doc.text(row[0],gx+3,gy+5.5);
+        doc.setFontSize(10);
+        doc.setFont('helvetica','bold');
+        doc.setTextColor(...row[2]);
+        doc.text(row[1],gx+3,gy+12.5);
       });
+      y+=Math.ceil(metrics2.length/GCOLS)*18+4;
+
+      // Period returns strip
+      doc.setFillColor(...SRF);
+      doc.setDrawColor(...BRD);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(ML,y,CW,10,1,1,'FD');
+      const PW2=CW/PERIODS.length;
+      PERIODS.forEach((p,pi)=>{
+        const ret=calcPeriodReturn(f.rawData,p.m);
+        const px=ML+pi*PW2;
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica','bold');
+        doc.setTextColor(...MUT);
+        doc.text(p.l,px+PW2/2,y+4,'center');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...retColor(ret));
+        doc.text(formatRet(ret),px+PW2/2,y+8.5,'center');
+        if(pi<PERIODS.length-1){
+          doc.setDrawColor(...BRD);
+          doc.line(px+PW2,y+1,px+PW2,y+9);
+        }
+      });
+      y+=13;
+    });
+
+    addPageFooter();
+
+    // ══════════════════════════════════════
+    //  PAGE 4 — DISCLAIMERS & DISCLOSURES
+    // ══════════════════════════════════════
+    newPage();
+    headerBar();
+
+    y=MT+4;
+    // Header
+    doc.setFontSize(14);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...GDK);
+    doc.text('Disclosures & Regulatory Information',ML,y+5);
+    y+=13;
+    doc.setDrawColor(...BRD);
+    doc.line(ML,y,PW-MR,y);
+    y+=7;
+
+    const disclSection=(title,body)=>{
+      doc.setFillColor(...SRF);
+      doc.setDrawColor(...GMD);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(ML,y,CW,5.5,1,1,'FD');
+      doc.setFillColor(...GMD);
+      doc.rect(ML,y,2,5.5,'F');
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...GDK);
+      doc.text(title,ML+4,y+3.8);
+      y+=7;
+      doc.setFontSize(7);
+      doc.setFont('helvetica','normal');
+      doc.setTextColor(...TXT);
+      const lines=doc.splitTextToSize(body,CW);
+      doc.text(lines,ML,y);
+      y+=lines.length*3.5+5;
+    };
+
+    disclSection('Standard Risk Disclaimer',
+      'Mutual Fund investments are subject to market risks. Please read all scheme-related documents carefully before investing. Past performance is not indicative of future results. The NAV of schemes may go up or down depending upon the factors and forces affecting the securities market including the fluctuations in the interest rates. The Mutual Fund is not guaranteeing or assuring any dividend under any of the schemes and the same is subject to the availability and adequacy of distributable surplus. Investors are requested to review the prospectus carefully and obtain expert professional advice with regard to specific legal, tax and financial implications of the investment/participation in the scheme.');
+
+    disclSection('Distributor Registration & ARN Details',
+      'Abundance Financial Services | ARN: ARN-251838 | EUIN: E334718 | AMFI-Registered Mutual Fund Distributor. This comparison report is prepared for educational/informational purposes only by an AMFI-registered distributor. AMFI registration does not imply that AMFI endorses the product/service or guarantees returns.');
+
+    disclSection('SEBI & AMFI Regulatory Disclosure',
+      'In accordance with SEBI Circular No. SEBI/HO/IMD/DF2/CIR/P/2021/024 and AMFI guidelines: (1) This report is generated using publicly available NAV data sourced from AMFI (mfapi.in). (2) Performance data is trailing returns computed from historical NAVs and may not match officially published fund factsheet data due to difference in computation methodology. (3) Risk metrics (Sharpe Ratio, Volatility, Max Drawdown) are computed using daily NAV data over a 5-year period or maximum available history. Sharpe Ratio uses a risk-free rate of 6.5% p.a. (4) This is not a research report or investment recommendation. Please consult your financial advisor before making any investment decision.');
+
+    disclSection('Data Source & Accuracy',
+      'NAV data is sourced from mfapi.in which aggregates AMFI-published NAVs. Data is provided "as is" without warranty of any kind. Abundance Financial Services and the MF Analyzer tool are not responsible for any inaccuracies in the underlying data. GST Registration: 05AXYPA6954G1Z3. Office: Moradabad, Uttar Pradesh, India.');
+
+    disclSection('Tool Information',
+      'This report was generated using Abundance MF Analyzer (mfcalc.getabundance.in) — a free mutual fund comparison, SIP, SWP, goal planning and EMI calculator tool. The tool uses live AMFI NAV data. No data is stored. All computations are performed client-side in your browser. Contact: +91 98081 05923 | WhatsApp: wa.me/919808105923 | Web: www.getabundance.in');
+
+    // ── Final compliance bar ──
+    if(y<PH-30){
+      doc.setFillColor(...GDK);
+      doc.setDrawColor(...GDK);
+      doc.roundedRect(ML,y,CW,18,2,2,'FD');
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...WHT);
+      doc.text('Abundance Financial Services',ML+4,y+7);
+      doc.setFontSize(7);
+      doc.setFont('helvetica','normal');
+      doc.text('ARN-251838  |  EUIN: E334718  |  AMFI-Registered Mutual Fund Distributor',ML+4,y+12.5);
+      doc.text('www.getabundance.in  |  +91 98081 05923',ML+4,y+16);
+      // GST on right
+      doc.setTextColor(200,230,200);
+      doc.text('GST: 05AXYPA6954G1Z3',PW-MR-2,y+16,'right');
     }
 
-    // ── 5. Composite everything onto final canvas ──
-    const funds=selectedFunds.map(f=>f.name.length>44?f.name.slice(0,44)+"…":f.name);
-    const dateStr=new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
+    addPageFooter();
 
-    const HEADER_H=80*SCALE;
-    const FOOTER_H=36*SCALE;
-    const W=(contentEl.offsetWidth+PAD*2)*SCALE;
-    const H=HEADER_H + capturedContent.height + FOOTER_H + PAD*SCALE;
+    // ── Save ──
+    const safeName=funds.map(f=>f.name.split(' ').slice(0,2).join('-')).join('_vs_').slice(0,60);
+    doc.save(`Abundance-Fund-Briefing_${safeName}_${new Date().toISOString().slice(0,10)}.pdf`);
 
-    const final=document.createElement("canvas");
-    final.width=W; final.height=H;
-    const ctx=final.getContext("2d");
-
-    // Background
-    ctx.fillStyle="#f0f7f0";
-    ctx.fillRect(0,0,W,H);
-
-    // ── Header ──
-    ctx.fillStyle="#ffffff";
-    ctx.fillRect(0,0,W,HEADER_H);
-
-    // Green accent line at top
-    const grad=ctx.createLinearGradient(0,0,W,0);
-    grad.addColorStop(0,"#1b5e20"); grad.addColorStop(0.5,"#43a047"); grad.addColorStop(1,"#1b5e20");
-    ctx.fillStyle=grad;
-    ctx.fillRect(0,0,W,6*SCALE);
-
-    // Logo (left side)
-    if(logoImg){
-      const logoH=40*SCALE, logoW=logoH*(logoImg.naturalWidth/logoImg.naturalHeight);
-      ctx.save();
-      ctx.globalCompositeOperation="multiply";
-      ctx.drawImage(logoImg, PAD*SCALE, 18*SCALE, logoW, logoH);
-      ctx.restore();
-    } else {
-      // Fallback: draw "A" badge
-      ctx.fillStyle="#2e7d32";
-      ctx.beginPath();
-      ctx.roundRect(PAD*SCALE, 16*SCALE, 40*SCALE, 40*SCALE, 8*SCALE);
-      ctx.fill();
-      ctx.fillStyle="#fff";
-      ctx.font=`800 ${22*SCALE}px Raleway,sans-serif`;
-      ctx.textAlign="center";
-      ctx.fillText("A", PAD*SCALE+20*SCALE, 16*SCALE+28*SCALE);
-    }
-
-    // Title + fund names (centre-left)
-    const textX=(logoImg?120:100)*SCALE;
-    ctx.textAlign="left";
-    ctx.fillStyle="#2e7d32";
-    ctx.font=`800 ${13*SCALE}px Raleway,sans-serif`;
-    ctx.fillText("MF Risk & Return Analysis", textX, 30*SCALE);
-    ctx.fillStyle="#5e8a5e";
-    ctx.font=`500 ${9*SCALE}px "JetBrains Mono",monospace`;
-    const fundLine=funds.join("  ·  ");
-    ctx.fillText(fundLine.length>90?fundLine.slice(0,90)+"…":fundLine, textX, 46*SCALE);
-
-    // Abundance info (right side)
-    ctx.textAlign="right";
-    ctx.fillStyle="#2e7d32";
-    ctx.font=`700 ${10*SCALE}px Raleway,sans-serif`;
-    ctx.fillText("Abundance Financial Services", W-PAD*SCALE, 30*SCALE);
-    ctx.fillStyle="#5e8a5e";
-    ctx.font=`500 ${8.5*SCALE}px "JetBrains Mono",monospace`;
-    ctx.fillText("ARN-251838 · AMFI Regd. Mutual Funds Distributor · "+dateStr, W-PAD*SCALE, 46*SCALE);
-
-    // Divider line
-    ctx.strokeStyle="#c2dfc2"; ctx.lineWidth=1.5*SCALE;
-    ctx.beginPath(); ctx.moveTo(PAD*SCALE,HEADER_H-8*SCALE); ctx.lineTo(W-PAD*SCALE,HEADER_H-8*SCALE); ctx.stroke();
-
-    // ── Main content snapshot ──
-    ctx.drawImage(capturedContent, PAD*SCALE, HEADER_H, capturedContent.width, capturedContent.height);
-
-    // ── Composite live chart over cloned chart area ──
-    if(chartImg && liveChart){
-      const rect=liveChart.getBoundingClientRect();
-      const contentRect=contentEl.getBoundingClientRect();
-      const relX=(rect.left-contentRect.left)*SCALE;
-      const relY=(rect.top-contentRect.top)*SCALE;
-      ctx.drawImage(chartImg, PAD*SCALE+relX, HEADER_H+relY, rect.width*SCALE, rect.height*SCALE);
-    }
-
-    // ── Footer watermark ──
-    ctx.textAlign="center";
-    ctx.fillStyle="rgba(46,125,50,0.25)";
-    ctx.font=`500 ${8*SCALE}px Raleway,sans-serif`;
-    ctx.fillText("getabundance.in · ARN-251838 · AMFI Registered Mutual Funds Distributor & SIF Distributor", W/2, H-12*SCALE);
-
-    const link=document.createElement("a");
-    link.download=`MF-Analysis-${selectedFunds.map(f=>f.code).join("-")}-${new Date().toISOString().slice(0,10)}.png`;
-    link.href=final.toDataURL("image/png",1.0);
-    link.click();
-  }catch(e){console.error(e);alert("Export failed: "+e.message);}
-  btn.innerHTML=orig;btn.disabled=false;
+  } catch(e){
+    console.error('PDF export failed:',e);
+    alert('PDF export failed: '+e.message);
+  }
+  btn.innerHTML=orig;
+  btn.disabled=false;
 }
+
+
 
 /* ════════════════════════════════════════
    PRINT CALCULATOR
