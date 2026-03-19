@@ -2958,7 +2958,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
           <div class="sip-field" style="grid-column:1/-1;position:relative">
             <label>Search Fund</label>
             <input class="sip-input" id="btFundInput" type="text" placeholder="Type fund name…" autocomplete="off" oninput="btOnSearch(this.value)">
-            <div id="btDropdown" class="dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:2000"></div>
+            <div id="btDropdown" class="dropdown" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:2000"></div>
           </div>
           <div class="sip-field" style="grid-column:1/-1;display:none" id="btFundChipWrap">
             <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--g-xlight);border:1.5px solid var(--g-light);border-radius:20px;font-size:.72rem;font-weight:700;color:var(--g2)">
@@ -6261,7 +6261,7 @@ document.addEventListener('click', e=>{
 });
 
 async function btSelectFund(code, name){
-  document.getElementById('btDropdown').style.display='none';
+  document.getElementById('btDropdown').classList.remove('open');
   document.getElementById('btFundInput').value = '';
   document.getElementById('btFundName').textContent = name;
   document.getElementById('btFundChipWrap').style.display = 'block';
