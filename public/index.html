@@ -2827,6 +2827,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
       <div class="swp-mode-tabs">
         <button class="swp-mode-tab active" onclick="setSWPMode('haveCorpus',this)" role="tab" aria-selected="true">I Have a Corpus</button>
         <button class="swp-mode-tab" onclick="setSWPMode('needIncome',this)" role="tab" aria-selected="false">I Need ₹X/Month</button>
+        <button class="swp-mode-tab" onclick="setSWPMode('backtest',this)" role="tab" aria-selected="false">📊 NAV Backtester</button>
       </div>
     </div>
   </div>
@@ -2949,6 +2950,115 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         </div>
       </div>
     </div>
+
+      <!-- ═══ BACKTESTER PANEL ═══ -->
+      <div id="swpPanelBacktest" class="swp-phase-panel">
+        <div class="swp-section-head">📊 NAV Backtester — Real Fund Data</div>
+        <div class="swp-params">
+          <div class="sip-field" style="grid-column:1/-1">
+            <label>Search Fund</label>
+            <input class="sip-input" id="btFundInput" type="text" placeholder="Type fund name…" autocomplete="off" oninput="btOnSearch(this.value)">
+            <div id="btDropdown" class="dropdown" style="display:none"></div>
+          </div>
+          <div class="sip-field" style="grid-column:1/-1;display:none" id="btFundChipWrap">
+            <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--g-xlight);border:1.5px solid var(--g-light);border-radius:20px;font-size:.72rem;font-weight:700;color:var(--g2)">
+              <span id="btFundName">—</span>
+              <span onclick="btClearFund()" style="cursor:pointer;color:var(--muted);font-size:.85rem;line-height:1">✕</span>
+            </div>
+          </div>
+          <div class="sip-field">
+            <label>Initial Corpus (₹)</label>
+            <input class="sip-input" id="btCorpus" type="number" value="5000000" min="10000" step="10000" oninput="dBtRun()">
+          </div>
+          <div class="sip-field">
+            <label>Monthly Withdrawal (₹)</label>
+            <input class="sip-input" id="btWithdrawal" type="number" value="30000" min="100" step="500" oninput="dBtRun()">
+          </div>
+          <div class="sip-field">
+            <label>Annual Step-up (%)</label>
+            <input class="sip-input" id="btStepup" type="number" value="0" min="0" max="30" step="0.5" oninput="dBtRun()">
+          </div>
+          <div class="sip-field">
+            <label>Inflation Rate (%)</label>
+            <input class="sip-input" id="btInflation" type="number" value="6" min="0" max="15" step="0.5" oninput="dBtRun()">
+          </div>
+          <div class="sip-field">
+            <label>Start Month</label>
+            <select class="sip-input" id="btStartMonth" onchange="dBtRun()"></select>
+          </div>
+          <div class="sip-field">
+            <label>Start Year</label>
+            <select class="sip-input" id="btStartYear" onchange="btUpdateMonths();dBtRun()"></select>
+          </div>
+        </div>
+
+        <!-- Delay toggle -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,105,92,.08);border-radius:9px;margin-top:10px;cursor:pointer" onclick="btToggleDelay()">
+          <div>
+            <div style="font-size:.72rem;font-weight:800;color:var(--g2)">⏳ Delay Period (Accumulation Phase)</div>
+            <div style="font-size:.62rem;color:var(--muted);margin-top:2px">Corpus stays invested — grows at actual NAVs before withdrawals start</div>
+          </div>
+          <label class="swp-delay-toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" id="btDelayToggle" onchange="btToggleDelay()">
+            <span class="swp-delay-slider"></span>
+          </label>
+        </div>
+        <div id="btDelayPanel" style="display:none;margin-top:8px">
+          <div class="swp-params" style="padding:0">
+            <div class="sip-field">
+              <label>Delay Duration</label>
+              <input class="sip-input" id="btDelayVal" type="number" value="3" min="1" max="30" step="1" oninput="dBtRun()">
+            </div>
+            <div class="sip-field">
+              <label>Unit</label>
+              <select class="sip-input" id="btDelayUnit" onchange="dBtRun()">
+                <option value="years">Years</option>
+                <option value="months">Months</option>
+              </select>
+            </div>
+          </div>
+          <div style="font-size:.62rem;color:var(--muted);margin-top:6px;padding:0 2px">
+            Units accumulate at real NAV movements during delay. Withdrawal starts after delay ends.
+          </div>
+        </div>
+        <div id="btEmpty" style="text-align:center;padding:32px 0;color:var(--muted);font-size:.8rem;display:block">
+          Search and select a fund to run the backtest
+        </div>
+
+        <!-- ─── BACKTESTER OWN RESULTS ─── -->
+        <div id="btResults" style="display:none">
+          <!-- Fuel gauge -->
+          <div class="swp-fuel" id="btFuel">
+            <div class="swp-fuel-label">🔋 Corpus Health Monitor</div>
+            <div class="swp-fuel-track"><div class="swp-fuel-fill" id="btFuelFill" style="width:0%"></div></div>
+            <div class="swp-fuel-bottom">
+              <div class="swp-fuel-stats" id="btFuelStats"></div>
+              <div class="swp-fuel-pct" id="btFuelPct">0%</div>
+            </div>
+          </div>
+
+          <!-- Stat grid -->
+          <div class="swp-stat-grid" id="btStatGrid" style="margin-top:14px"></div>
+
+          <!-- Result cards -->
+          <div class="swp-result-grid" id="btResultCards" style="margin-top:14px"></div>
+
+          <!-- What-if -->
+          <div id="btWhatIfWrap" style="display:none;margin-top:16px">
+            <div class="swp-section-head" style="margin-bottom:10px">🔀 What-if: Same inputs, 3 different start years</div>
+            <div id="btWhatIfBars"></div>
+          </div>
+
+          <!-- Chart -->
+          <div style="margin-top:14px">
+            <div class="swp-section-head" style="margin-bottom:10px">📈 Corpus vs Withdrawals — Real NAV Data</div>
+            <div style="position:relative;height:260px">
+              <canvas id="btChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
 
     <!-- ─── DELAY PERIOD BOX (shared) ─── -->
     <div class="swp-delay-box off" id="swpDelayBox">
@@ -5635,15 +5745,6 @@ const SWPFREQ = {
   annually:  {n:1,   lbl:'Year',    plbl:'Annual',     months:12},
 };
 
-function setSWPMode(mode, btn){
-  swpCurrentMode = mode;
-  document.querySelectorAll('.swp-mode-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('swpPanelCorpus').classList.toggle('active', mode==='haveCorpus');
-  document.getElementById('swpPanelIncome').classList.toggle('active', mode==='needIncome');
-  calcSWP();
-}
-
 function toggleSWPDelay(){
   const cb = document.getElementById('swpDelayToggle');
   const fields = document.getElementById('swpDelayFields');
@@ -6086,6 +6187,488 @@ ${chartImg?`<div class="sec">Projection</div><div class="ci"><img src="${chartIm
   win.onload = ()=>setTimeout(()=>{win.focus();win.print();},600);
   setTimeout(()=>{try{win.focus();win.print();}catch(e){}},1200);
 }
+
+
+
+// ════════════════════════════════════════
+//  SWP NAV BACKTESTER
+// ════════════════════════════════════════
+let btFundData = null;   // {code, name, navMap: {YYYY-MM: navValue}}
+let btChartInst = null;
+let btSearchTimer = null;
+
+// ── Override setSWPMode to handle backtest tab ──
+function setSWPMode(mode, btn){
+  swpCurrentMode = mode;
+  document.querySelectorAll('.swp-mode-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('swpPanelCorpus').classList.toggle('active', mode==='haveCorpus');
+  document.getElementById('swpPanelIncome').classList.toggle('active', mode==='needIncome');
+  document.getElementById('swpPanelBacktest').classList.toggle('active', mode==='backtest');
+
+  const isBacktest = mode === 'backtest';
+
+  // Shared sections (journey strip, delay box, all results): hide in backtest mode
+  const SHARED = ['swpDelayBox','swpJourney','swpFuel','swpStatGrid','swpResultCards','swpRunwaySection','swpInsights','swpChartSection'];
+  SHARED.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+
+  if(isBacktest){
+    btRun();
+  } else {
+    // Restore journey and delay box visibility for projected modes
+    const journey=document.getElementById('swpJourney'); if(journey) journey.style.display='';
+    const delayBox=document.getElementById('swpDelayBox'); if(delayBox) delayBox.style.display='';
+    calcSWP();
+  }
+}
+
+// ── Delay toggle ──
+function btToggleDelay(){
+  const on = document.getElementById('btDelayToggle').checked;
+  document.getElementById('btDelayPanel').style.display = on ? 'block' : 'none';
+  dBtRun();
+}
+
+// ── Debounce ──
+function dBtRun(){ clearTimeout(btSearchTimer); btSearchTimer = setTimeout(btRun, 300); }
+
+// ── Fund search for backtester ──
+async function btOnSearch(q){
+  const dd = document.getElementById('btDropdown');
+  if(!q || q.length < 2){ dd.style.display='none'; return; }
+  dd.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:.75rem">Searching…</div>';
+  dd.style.display = 'block';
+  try{
+    const res = await fetch('https://api.mfapi.in/mf/search?q='+encodeURIComponent(q));
+    const data = await res.json();
+    if(!data.length){ dd.innerHTML='<div style="padding:10px;color:var(--muted);font-size:.75rem">No results</div>'; return; }
+    dd.innerHTML = data.slice(0,10).map(f=>`
+      <div class="dropdown-item" onclick="btSelectFund(${f.schemeCode},'${f.schemeName.replace(/'/g,"\\'")}')">
+        ${f.schemeName}
+      </div>`).join('');
+  }catch(e){ dd.innerHTML='<div style="padding:10px;color:var(--muted);font-size:.75rem">Search failed</div>'; }
+}
+
+async function btSelectFund(code, name){
+  document.getElementById('btDropdown').style.display='none';
+  document.getElementById('btFundInput').value = '';
+  document.getElementById('btFundName').textContent = name;
+  document.getElementById('btFundChipWrap').style.display = 'block';
+  document.getElementById('btEmpty').textContent = 'Loading NAV data…';
+  document.getElementById('btEmpty').style.display = 'block';
+  document.getElementById('btWhatIfWrap').style.display = 'none';
+
+  try{
+    const res = await fetch('https://api.mfapi.in/mf/'+code);
+    const json = await res.json();
+    const navRaw = json.data; // [{date:'DD-MM-YYYY', nav:'123.45'}, ...]
+    // Build navMap: YYYY-MM → last NAV of that month
+    const navMap = {};
+    navRaw.forEach(d=>{
+      const [dd,mm,yyyy] = d.date.split('-');
+      const key = yyyy+'-'+mm;
+      // mfapi returns newest first; we want last available NAV per month
+      // Since it's newest-first, first occurrence of each month is the last trading day
+      if(!navMap[key]) navMap[key] = parseFloat(d.nav);
+    });
+    btFundData = {code, name, navMap};
+    btBuildDateDropdowns();
+    btRun();
+  }catch(e){
+    document.getElementById('btEmpty').textContent = 'Failed to load NAV data. Try again.';
+  }
+}
+
+function btClearFund(){
+  btFundData = null;
+  document.getElementById('btFundChipWrap').style.display = 'none';
+  document.getElementById('btFundName').textContent = '—';
+  document.getElementById('btEmpty').textContent = 'Search and select a fund to run the backtest';
+  document.getElementById('btEmpty').style.display = 'block';
+  document.getElementById('btWhatIfWrap').style.display = 'none';
+  // Hide SWP result sections
+  ['swpFuel','swpStatGrid','swpResultCards','swpRunwaySection','swpInsights','swpChartSection'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
+  });
+  if(btChartInst){btChartInst.destroy();btChartInst=null;}
+}
+
+// Build year + month dropdowns constrained to available NAV data
+function btBuildDateDropdowns(){
+  if(!btFundData) return;
+  const keys = Object.keys(btFundData.navMap).sort(); // YYYY-MM ascending
+  const years = [...new Set(keys.map(k=>k.slice(0,4)))];
+
+  const ySel = document.getElementById('btStartYear');
+  ySel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  // Default to ~3 years before last available
+  const lastYear = parseInt(years[years.length-1]);
+  const defaultYear = Math.max(parseInt(years[0]), lastYear - 5);
+  ySel.value = String(defaultYear);
+  btUpdateMonths();
+}
+
+function btUpdateMonths(){
+  if(!btFundData) return;
+  const year = document.getElementById('btStartYear').value;
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const availableMonths = Object.keys(btFundData.navMap)
+    .filter(k=>k.startsWith(year))
+    .map(k=>parseInt(k.slice(5))-1); // 0-indexed
+
+  const mSel = document.getElementById('btStartMonth');
+  mSel.innerHTML = availableMonths.map(m=>`<option value="${m+1}">${MONTHS[m]}</option>`).join('');
+}
+
+// ── Core backtest engine ──
+// Returns snaps array + stats, using actual monthly NAVs
+function runNAVBacktest(navMap, startYear, startMonth, corpus, monthlyWithdrawal, stepupPct, inflationPct, delayMonths){
+  // delayMonths: 0 = no delay, N = N months of accumulation before withdrawals start
+  delayMonths = delayMonths || 0;
+
+  let units = null;
+  let currentWithdrawal = monthlyWithdrawal;
+  const snaps = [];
+  let totalWithdrawn = 0;
+  let depleted = null;
+  let month = startMonth, year = startYear;
+  let monthsRun = 0;
+
+  // Get NAV for a YYYY-MM, walking forward up to 5 months if missing
+  function getNAV(y, m){
+    for(let offset=0; offset<5; offset++){
+      let mm = m + offset, yy = y;
+      if(mm > 12){ mm -= 12; yy++; }
+      const key = yy+'-'+String(mm).padStart(2,'0');
+      if(navMap[key]) return {nav: navMap[key], key};
+    }
+    return null;
+  }
+
+  // Buy units at start — real NAV on start date
+  const startEntry = getNAV(year, month);
+  if(!startEntry) return null;
+  units = corpus / startEntry.nav;
+  snaps.push({
+    label: startEntry.key, corpus: Math.round(corpus),
+    withdrawn: 0, nav: startEntry.nav,
+    units: Math.round(units*100)/100, payout: 0,
+    phase: delayMonths > 0 ? 'delay' : 'withdraw'
+  });
+
+  const maxMonths = 50 * 12;
+  while(monthsRun < maxMonths){
+    month++; if(month > 12){ month = 1; year++; }
+    monthsRun++;
+
+    const entry = getNAV(year, month);
+    if(!entry) break;
+
+    if(monthsRun <= delayMonths){
+      // ── DELAY PHASE: units just sit invested, NAV changes, no selling ──
+      snaps.push({
+        label: entry.key,
+        corpus: Math.round(units * entry.nav),
+        withdrawn: 0, nav: entry.nav,
+        units: Math.round(units*100)/100, payout: 0,
+        phase: 'delay'
+      });
+      continue;
+    }
+
+    // ── WITHDRAWAL PHASE ──
+    // Step-up counts from first withdrawal month
+    const withdrawalMonth = monthsRun - delayMonths;
+    if(withdrawalMonth % 12 === 0 && stepupPct > 0)
+      currentWithdrawal *= (1 + stepupPct/100);
+
+    const corpusNow = units * entry.nav;
+    const actualWithdrawal = Math.min(corpusNow, currentWithdrawal);
+    const unitsToSell = actualWithdrawal / entry.nav;
+    units -= unitsToSell;
+    totalWithdrawn += actualWithdrawal;
+
+    snaps.push({
+      label: entry.key,
+      corpus: Math.round(units * entry.nav),
+      withdrawn: Math.round(totalWithdrawn),
+      nav: entry.nav,
+      units: Math.round(units*100)/100,
+      payout: Math.round(actualWithdrawal),
+      phase: 'withdraw'
+    });
+
+    if(units <= 0){ depleted = withdrawalMonth; break; }
+  }
+
+  const finalCorpus = units > 0 ? Math.round(units * snaps[snaps.length-1].nav) : 0;
+  const totalMonths = monthsRun;
+  const withdrawalMonths = Math.max(0, totalMonths - delayMonths);
+  const durationYrs = totalMonths / 12;
+
+  // XIRR: corpus out at t=0, each monthly payout in, final corpus in at end
+  const cashflows = [{t: 0, v: -corpus}];
+  snaps.slice(1).forEach((s, i) => {
+    if(s.payout > 0) cashflows.push({t: (i+1)/12, v: s.payout});
+  });
+  if(finalCorpus > 0) cashflows.push({t: durationYrs, v: finalCorpus});
+  const xirr = cashflows.length > 1 ? calcXIRR(cashflows) : null;
+
+  // Corpus at end of delay (for display)
+  const delayEndSnap = delayMonths > 0 ? snaps[Math.min(delayMonths, snaps.length-1)] : null;
+  const corpusAfterDelay = delayEndSnap ? delayEndSnap.corpus : corpus;
+
+  return {
+    snaps, depleted, totalWithdrawn: Math.round(totalWithdrawn),
+    finalCorpus, durationYrs, withdrawalMonths, delayMonths,
+    xirr, startNAV: startEntry.nav, corpusAfterDelay
+  };
+}
+
+// XIRR via Newton-Raphson
+function calcXIRR(cashflows, guess=0.1){
+  function npv(r){
+    return cashflows.reduce((s,cf)=> s + cf.v / Math.pow(1+r, cf.t), 0);
+  }
+  function dnpv(r){
+    return cashflows.reduce((s,cf)=> s - cf.t * cf.v / Math.pow(1+r, cf.t+1), 0);
+  }
+  let r = guess;
+  for(let i=0; i<100; i++){
+    const n = npv(r), d = dnpv(r);
+    if(Math.abs(d) < 1e-12) break;
+    const nr = r - n/d;
+    if(Math.abs(nr-r) < 1e-8){ r = nr; break; }
+    r = nr;
+    if(r < -0.99) r = -0.99;
+  }
+  return isFinite(r) ? (r*100).toFixed(2) : null;
+}
+
+
+// ── Main backtester render ──
+function btRun(){
+  if(!btFundData){
+    // No fund loaded yet — just ensure shared results stay hidden
+    ['swpFuel','swpStatGrid','swpResultCards','swpRunwaySection','swpInsights','swpChartSection']
+      .forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+    return;
+  }
+
+  const corpus     = Math.max(10000, parseFloat(document.getElementById('btCorpus').value)||5000000);
+  const withdrawal = Math.max(100,   parseFloat(document.getElementById('btWithdrawal').value)||30000);
+  const stepup     = Math.max(0,     parseFloat(document.getElementById('btStepup').value)||0);
+  const inflation  = Math.max(0,     parseFloat(document.getElementById('btInflation').value)||6);
+  const startYear  = parseInt(document.getElementById('btStartYear').value);
+  const startMonth = parseInt(document.getElementById('btStartMonth').value||1);
+  // Delay: read from backtester's own delay inputs — real NAV accumulation
+  const delayOn    = document.getElementById('btDelayToggle').checked;
+  const delayVal   = delayOn ? Math.max(1, parseFloat(document.getElementById('btDelayVal').value)||3) : 0;
+  const delayUnit  = delayOn ? document.getElementById('btDelayUnit').value : 'years';
+  const delayMonths = delayOn ? (delayUnit==='months' ? delayVal : delayVal*12) : 0;
+
+  // Make sure shared SWP result sections remain hidden
+  ['swpFuel','swpStatGrid','swpResultCards','swpRunwaySection','swpInsights','swpChartSection']
+    .forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+
+  document.getElementById('btEmpty').style.display = 'none';
+
+  const result = runNAVBacktest(btFundData.navMap, startYear, startMonth, corpus, withdrawal, stepup, inflation, delayMonths);
+  if(!result){
+    document.getElementById('btEmpty').textContent = 'No NAV data for selected period';
+    document.getElementById('btEmpty').style.display = 'block';
+    document.getElementById('btResults').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('btResults').style.display = 'block';
+
+  const {snaps, depleted, totalWithdrawn, finalCorpus, durationYrs, withdrawalMonths, xirr, startNAV, corpusAfterDelay} = result;
+  const survives = depleted === null;
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const startLabel = MONTHS[startMonth-1]+' '+startYear;
+  const endSnap = snaps[snaps.length-1];
+  const endLabel = endSnap.label.slice(0,4)+' '+MONTHS[parseInt(endSnap.label.slice(5))-1];
+  const withdrawalStartLabel = delayMonths > 0
+    ? (()=>{ const s=snaps[Math.min(delayMonths,snaps.length-1)]; return s.label.slice(0,4)+' '+MONTHS[parseInt(s.label.slice(5))-1]; })()
+    : startLabel;
+
+  // ── Fuel gauge — write into #btFuel ──
+  const healthPct = survives ? Math.min(100, finalCorpus/corpus*100) : 0;
+  const fuelColor = survives
+    ? 'linear-gradient(90deg,#00897b,#26a69a,#4db6ac)'
+    : 'linear-gradient(90deg,#b71c1c,#e53935,#ef5350)';
+  document.getElementById('btFuelFill').style.width   = Math.max(2, healthPct)+'%';
+  document.getElementById('btFuelFill').style.background = fuelColor;
+  document.getElementById('btFuelPct').textContent    = Math.round(healthPct)+'%';
+  document.getElementById('btFuelStats').innerHTML    = [
+    {v:'₹'+fmtINR(corpus),             l:'Starting Corpus'},
+    {v:'₹'+fmtINR(withdrawal)+'/mo',   l:'Monthly Withdrawal'},
+    {v:survives?'✅ Still going':'⚠️ Depleted mo '+(depleted), l:'Status'},
+    {v:'₹'+fmtINR(totalWithdrawn),     l:'Total Withdrawn'},
+    {v:survives?'₹'+fmtINR(finalCorpus):'₹0', l:'Remaining'},
+  ].map(s=>`<div class="swp-fuel-stat"><div class="swp-fuel-stat-val">${s.v}</div><div class="swp-fuel-stat-lbl">${s.l}</div></div>`).join('');
+
+  // ── Stat grid — write into #btStatGrid ──
+  const annualIncome = withdrawal * 12;
+  const yieldPct = (annualIncome/corpus*100).toFixed(2);
+  const statItems = [
+    {l:'Backtest Period',  v:startLabel+' → '+endLabel,          s:durationYrs.toFixed(1)+' yrs of actual NAV', c:''},
+    {l:'XIRR',            v:xirr!==null?xirr+'% p.a.':'N/A',    s:'actual return on this SWP',                 c:xirr&&parseFloat(xirr)>0?'highlight':'warn'},
+    delayMonths>0 ? {l:'Delay Phase',   v:(delayMonths/12).toFixed(1)+' yrs ('+delayMonths+' mo)', s:'corpus grew: ₹'+fmtINR(corpus)+' → ₹'+fmtINR(corpusAfterDelay)+' at real NAV', c:'highlight'} : null,
+    delayMonths>0 ? {l:'Withdrawals From', v:withdrawalStartLabel, s:(withdrawalMonths/12).toFixed(1)+' yrs of actual withdrawals', c:''} : null,
+    {l:'Start NAV',       v:'₹'+startNAV.toFixed(4),             s:btFundData.name.slice(0,30),                 c:''},
+    {l:'End NAV',         v:'₹'+snaps[snaps.length-1].nav.toFixed(4), s:endLabel,                              c:''},
+    {l:survives?'Corpus Remaining':'Depleted Month',
+                          v:survives?'₹'+fmtINR(finalCorpus):'Month '+depleted,
+                                                                  s:survives?'after '+(withdrawalMonths/12).toFixed(1)+' yrs withdrawals':'corpus hit ₹0', c:survives?'highlight':'danger'},
+    {l:'Total Withdrawn', v:'₹'+fmtINR(totalWithdrawn),          s:'over '+(withdrawalMonths/12).toFixed(1)+' years',    c:''},
+    {l:'Wealth Multiple', v:((totalWithdrawn+finalCorpus)/corpus).toFixed(2)+'x', s:'(withdrawn+remaining)/corpus', c:''},
+    {l:'Units Remaining', v:survives?snaps[snaps.length-1].units.toLocaleString('en-IN'):'0', s:'fund units left', c:''},
+  ].filter(Boolean);
+  document.getElementById('btStatGrid').innerHTML = statItems
+    .map(s=>`<div class="swp-stat ${s.c}"><div class="swp-stat-label">${s.l}</div><div class="swp-stat-val" style="font-size:${s.v.length>14?'.78rem':'.9rem'}">${s.v}</div><div class="swp-stat-sub">${s.s}</div></div>`).join('');
+
+  // ── Result cards — write into #btResultCards ──
+  document.getElementById('btResultCards').innerHTML = [
+    {bg:'#e0f2f1',border:'#80cbc4',accent:'#00695c',tc:'#004d40',icon:'📊',lbl:'Backtest Summary',
+     val:durationYrs.toFixed(1)+' years',sub:startLabel+' → '+endLabel,
+     rows:[['Total Withdrawn','₹'+fmtINR(totalWithdrawn)],['Monthly Withdrawal','₹'+fmtINR(withdrawal)],['Step-up',stepup>0?stepup+'% p.a.':'None']]},
+    {bg:survives?'#e8f5e9':'#fbe9e7',border:survives?'#a5d6a7':'#ffab91',accent:survives?'#2e7d32':'#bf360c',tc:survives?'#1b5e20':'#b71c1c',
+     icon:survives?'🏆':'⚠️',lbl:survives?'Corpus Survived':'Corpus Depleted',
+     val:survives?'₹'+fmtINR(finalCorpus):'Month '+depleted,
+     sub:survives?'intact after full period':'ran out of funds',
+     rows:[['Starting Corpus','₹'+fmtINR(corpus)],['Remaining','₹'+fmtINR(finalCorpus)],['Wealth Multiple',((totalWithdrawn+finalCorpus)/corpus).toFixed(2)+'x']]},
+    {bg:'#fff8e1',border:'#ffe082',accent:'#f57f17',tc:'#e65100',icon:'📈',lbl:'XIRR on this SWP',
+     val:xirr!==null?xirr+'% p.a.':'N/A',sub:'actual annualised return',
+     rows:[['Withdrawal Yield',yieldPct+'% p.a.'],['Start NAV','₹'+startNAV.toFixed(3)],['End NAV','₹'+snaps[snaps.length-1].nav.toFixed(3)]]},
+  ].map(c=>`
+    <div class="swp-rcard" style="background:${c.bg};border-color:${c.border}">
+      <div class="swp-rcard-accent" style="background:${c.accent}"></div>
+      <div class="swp-rc-label" style="color:${c.accent}">${c.icon} ${c.lbl}</div>
+      <div class="swp-rc-val" style="color:${c.tc};font-size:${c.val.length>14?'1.1rem':'1.5rem'}">${c.val}</div>
+      <div class="swp-rc-sub" style="color:${c.accent}">${c.sub}</div>
+      ${c.rows.map(([k,v])=>`<div class="swp-row"><span class="swp-row-key" style="color:${c.tc};opacity:.75">${k}</span><span class="swp-row-val" style="color:${c.tc}">${v}</span></div>`).join('')}
+    </div>`).join('');
+
+  // ── Chart — write into #btChart ──
+  btDrawChart(snaps, corpus, delayMonths);
+
+  // ── What-if ──
+  btRenderWhatIf(corpus, withdrawal, stepup, startMonth);
+}
+
+function btDrawChart(snaps, startCorpus, delayMonths){
+  if(btChartInst){btChartInst.destroy();btChartInst=null;}
+  const ctx = document.getElementById('btChart').getContext('2d');
+  const labels = snaps.map(s=>s.label);
+  delayMonths = delayMonths || 0;
+
+  // Annotation plugin isn't loaded — draw delay boundary via a vertical line dataset
+  const delayLineData = Array(snaps.length).fill(null);
+  if(delayMonths > 0 && delayMonths < snaps.length){
+    // Put a tall value at the delay boundary point to mark it
+    delayLineData[delayMonths] = Math.max(...snaps.map(s=>s.corpus)) * 1.05;
+    delayLineData[delayMonths-1] = delayLineData[delayMonths];
+  }
+
+  const datasets = [
+    {label:'Corpus Value', data:snaps.map(s=>s.corpus),
+     borderColor:'#00897b', backgroundColor:'rgba(0,137,123,.08)',
+     borderWidth:2, pointRadius:0, pointHoverRadius:4, tension:.2, fill:true},
+    {label:'Total Withdrawn', data:snaps.map(s=>s.withdrawn),
+     borderColor:'#e65100', backgroundColor:'transparent',
+     borderWidth:1.5, borderDash:[5,4], pointRadius:0, tension:.2},
+    {label:'Starting Corpus', data:Array(snaps.length).fill(startCorpus),
+     borderColor:'#90a4ae', backgroundColor:'transparent',
+     borderWidth:1, borderDash:[3,3], pointRadius:0},
+  ];
+  if(delayMonths > 0){
+    datasets.push({
+      label:'← Accumulation | Withdrawal →',
+      data: delayLineData,
+      borderColor:'rgba(63,81,181,.5)',
+      backgroundColor:'transparent',
+      borderWidth:1.5, borderDash:[4,4],
+      pointRadius:0, tension:0,
+    });
+  }
+
+  btChartInst = new Chart(ctx, {type:'line', data:{labels, datasets}, options:{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{
+      legend:{position:'top',labels:{color:'#2e4d2e',font:{family:'Raleway',weight:'700',size:11},usePointStyle:true,padding:18,boxWidth:8}},
+      tooltip:{backgroundColor:'#162616',borderColor:'#00695c',borderWidth:1,
+        titleFont:{family:'JetBrains Mono',size:11},bodyFont:{family:'JetBrains Mono',size:12},padding:12,cornerRadius:8,
+        callbacks:{
+          label:c=>{
+            if(c.dataset.label.includes('Accumulation')) return null;
+            return `  ${c.dataset.label}: ₹${fmtINR(c.parsed.y)}`;
+          },
+          afterTitle: items => {
+            if(delayMonths>0 && items[0]){
+              const idx = items[0].dataIndex;
+              const phase = idx <= delayMonths ? '⏳ Accumulation phase' : '💸 Withdrawal phase';
+              return phase;
+            }
+          }
+        }
+      }
+    },
+    scales:{
+      x:{grid:{display:false},border:{color:'#b2dfdb'},
+         ticks:{font:{family:'JetBrains Mono',size:9},color:'#5e8a5e',maxTicksLimit:12}},
+      y:{grid:{color:'rgba(178,223,219,.4)'},border:{color:'#b2dfdb'},
+         ticks:{font:{family:'JetBrains Mono',size:9},color:'#5e8a5e',callback:v=>'₹'+fmtINR(v)}}
+    }
+  }});
+}
+
+function btRenderWhatIf(corpus, withdrawal, stepup, startMonth){
+  if(!btFundData) return;
+  const navKeys    = Object.keys(btFundData.navMap).sort();
+  const availYears = [...new Set(navKeys.map(k=>k.slice(0,4)))].map(Number);
+  if(availYears.length < 2){ document.getElementById('btWhatIfWrap').style.display='none'; return; }
+
+  const last  = availYears[availYears.length-1];
+  const first = availYears[0];
+  const spread= last - first;
+  const candidates = spread >= 6
+    ? [first, Math.round(first+spread/3), Math.round(first+2*spread/3)]
+    : availYears.slice(0,3);
+
+  const selectedYear = parseInt(document.getElementById('btStartYear').value);
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  const rows = candidates.map(yr=>{
+    const r = runNAVBacktest(btFundData.navMap, yr, startMonth, corpus, withdrawal, stepup, 0);
+    return r ? {yr, r} : null;
+  }).filter(Boolean);
+
+  if(!rows.length){ document.getElementById('btWhatIfWrap').style.display='none'; return; }
+
+  const maxDur = Math.max(...rows.map(r=>r.r.durationYrs));
+  document.getElementById('btWhatIfWrap').style.display = 'block';
+  document.getElementById('btWhatIfBars').innerHTML = rows.map(({yr,r})=>{
+    const survives = r.depleted===null;
+    const pct = Math.min(100, r.durationYrs/Math.max(maxDur,1)*100);
+    const col = survives?'#2e7d32':r.durationYrs>10?'#f57f17':'#b71c1c';
+    const isSel = yr===selectedYear;
+    const durStr = survives?r.durationYrs.toFixed(1)+' yrs (ongoing)':r.durationYrs.toFixed(1)+' yrs (depleted)';
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="min-width:90px;font-size:.66rem;font-weight:${isSel?800:600};color:${isSel?'var(--g1)':'var(--text2)'}">
+        ${MONTHS[startMonth-1]} ${yr}${isSel?' ◀':''}
+      </div>
+      <div style="flex:1;height:10px;background:var(--g-xlight);border-radius:5px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${col};border-radius:5px"></div>
+      </div>
+      <div style="min-width:160px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:.66rem;font-weight:700;color:${col}">${durStr}</div>
+      <div style="min-width:80px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--muted)">XIRR: ${r.xirr||'—'}%</div>
+    </div>`;
+  }).join('');
+}
+
 
 calcSWP();
 // Pre-init SIP so big result is ready when tab is first opened
