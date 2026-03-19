@@ -2955,10 +2955,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
       <div id="swpPanelBacktest" class="swp-phase-panel">
         <div class="swp-section-head">📊 NAV Backtester — Real Fund Data</div>
         <div class="swp-params">
-          <div class="sip-field" style="grid-column:1/-1">
+          <div class="sip-field" style="grid-column:1/-1;position:relative">
             <label>Search Fund</label>
             <input class="sip-input" id="btFundInput" type="text" placeholder="Type fund name…" autocomplete="off" oninput="btOnSearch(this.value)">
-            <div id="btDropdown" class="dropdown" style="display:none"></div>
+            <div id="btDropdown" class="dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:2000"></div>
           </div>
           <div class="sip-field" style="grid-column:1/-1;display:none" id="btFundChipWrap">
             <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--g-xlight);border:1.5px solid var(--g-light);border-radius:20px;font-size:.72rem;font-weight:700;color:var(--g2)">
@@ -6233,21 +6233,32 @@ function btToggleDelay(){
 function dBtRun(){ clearTimeout(btSearchTimer); btSearchTimer = setTimeout(btRun, 300); }
 
 // ── Fund search for backtester ──
-async function btOnSearch(q){
+let btSearchTimer2=null, btSearchAbort=null;
+function btOnSearch(q){
   const dd = document.getElementById('btDropdown');
-  if(!q || q.length < 2){ dd.style.display='none'; return; }
-  dd.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:.75rem">Searching…</div>';
-  dd.style.display = 'block';
-  try{
-    const res = await fetch('https://api.mfapi.in/mf/search?q='+encodeURIComponent(q));
-    const data = await res.json();
-    if(!data.length){ dd.innerHTML='<div style="padding:10px;color:var(--muted);font-size:.75rem">No results</div>'; return; }
-    dd.innerHTML = data.slice(0,10).map(f=>`
-      <div class="dropdown-item" onclick="btSelectFund(${f.schemeCode},'${f.schemeName.replace(/'/g,"\\'")}')">
-        ${f.schemeName}
-      </div>`).join('');
-  }catch(e){ dd.innerHTML='<div style="padding:10px;color:var(--muted);font-size:.75rem">Search failed</div>'; }
+  if(!q || q.length < 2){ dd.classList.remove('open'); return; }
+  clearTimeout(btSearchTimer2);
+  btSearchTimer2 = setTimeout(()=>btDoSearch(q), 300);
 }
+async function btDoSearch(q){
+  const dd = document.getElementById('btDropdown');
+  dd.innerHTML = '<div class="dropdown-loading">Searching…</div>';
+  dd.classList.add('open');
+  if(btSearchAbort){ btSearchAbort.abort(); }
+  btSearchAbort = new AbortController();
+  try{
+    const res = await fetch('https://api.mfapi.in/mf/search?q='+encodeURIComponent(q), {signal:btSearchAbort.signal});
+    const data = await res.json();
+    if(!data || !data.length){ dd.innerHTML='<div class="dropdown-loading">No results found</div>'; return; }
+    dd.innerHTML = data.slice(0,15).map(f=>`<div class="dropdown-item" onclick="btSelectFund(${f.schemeCode},'${f.schemeName.replace(/'/g,"\'")}')"><span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${f.schemeName}</span><span class="di-code">${f.schemeCode}</span></div>`).join('');
+  }catch(e){
+    if(e.name!=='AbortError') dd.innerHTML='<div class="dropdown-loading">⚠️ Search failed. Check connection.</div>';
+  }
+}
+document.addEventListener('click', e=>{
+  if(!e.target.closest('#swpPanelBacktest'))
+    document.getElementById('btDropdown')?.classList.remove('open');
+});
 
 async function btSelectFund(code, name){
   document.getElementById('btDropdown').style.display='none';
