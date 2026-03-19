@@ -4369,271 +4369,137 @@ async function _doExportPDF(){
   btn.disabled=true;
 
   try{
-    // ── Pre-fetch logo (same as SIP/Goal/SWP/EMI) ──
+    // ── Same pattern as SWP / Goal / EMI ──
     const logoDataUrl=await _fetchLogoDataURL();
-
-    // ── Use shared _makePDF scaffold ──
     const b=_makePDF();
-    const {doc,ML,MR,PH,PW,CW,SRF,BRD,TXT,MUT,WHT,POS,NEG,GMD,GDK,BG,S,fmtINR_,
-           newPage,topBar,footer,pageHeader,secTitle,paramsBox,
-           bigResultBox,metricsGrid,disclaimerBox,complianceBar,addChartImg}=b;
-
+    const {doc,ML,MR,PH,PW,CW,SRF,BRD,TXT,MUT,WHT,POS,NEG,GMD,GDK,BG,S,fmtINR_}=b;
     const dateStr=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
     const timeStr=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
     const periodLabel=getPeriodLabel()||'Selected Period';
-
-    const formatRet=(v)=>{
-      if(v===null||v===undefined||v===''||v==='null') return '—';
-      const n=parseFloat(v); if(isNaN(n)) return '—';
-      return(n>=0?'+':'')+n.toFixed(2)+'%';
-    };
-    const retColor=(v)=>{
-      if(v===null||v===undefined) return MUT;
-      const n=parseFloat(v); if(isNaN(n)) return MUT;
-      return n>=0?POS:NEG;
-    };
-    const fmtNum=(v,suffix='',fb='—')=>{
-      if(v===null||v===undefined||v===''||v==='null') return fb;
-      const n=parseFloat(v); if(isNaN(n)) return fb;
-      return n.toFixed(2)+suffix;
-    };
-    const dot=(x,y,color)=>{doc.setFillColor(...color);doc.circle(x,y,1.5,'F');};
     const FUND_COLORS=[[46,125,50],[21,101,192],[230,81,0],[106,27,154],[0,131,143]];
-    const PERIODS=[{l:'1M',m:1},{l:'3M',m:3},{l:'6M',m:6},{l:'1Y',m:12},{l:'3Y',m:36},{l:'5Y',m:60}];
 
-    // ── Collect fund data ──
-    const {cutoff:commonCutoff}=getCommonCutoff();
-    const funds=selectedFunds.map((f,i)=>({
-      name:f.name||'Unknown Fund',
-      code:f.code||'',
-      color:FUND_COLORS[i]||FUND_COLORS[0],
-      metrics:calcMetrics(f.rawData,commonCutoff),
-      rawData:f.rawData||[],
-      category:f.category||'',
-      subCategory:f.subCategory||''
-    }));
-
-    // ════════════════════════════════════════
+    // ════════════════════
     //  PAGE 1 — SUMMARY
-    // ════════════════════════════════════════
-    newPage();
-    let y=pageHeader(
+    // ════════════════════
+    b.newPage();
+    let y=b.pageHeader(
       'Fund Comparison Briefing',
-      funds.length+' fund'+(funds.length>1?'s':'')+' compared  ·  Period: '+periodLabel+'  ·  Source: AMFI / mfapi.in',
-      dateStr, timeStr, logoDataUrl
+      selectedFunds.length+' fund'+(selectedFunds.length>1?'s':'')+' compared  ·  Period: '+periodLabel+'  ·  Source: AMFI / mfapi.in',
+      dateStr,timeStr,logoDataUrl
     );
 
-    // ── Fund chips ──
-    y=secTitle('Funds in this comparison', y);
-    funds.forEach((f,i)=>{
-      const nmLines=doc.splitTextToSize(f.name, CW-38);
-      const chipH=Math.max(13, nmLines.length*4.5+6);
+    // ── Fund chips (read names from selectedFunds, same source as DOM) ──
+    y=b.secTitle('Funds in this comparison',y);
+    selectedFunds.forEach((f,i)=>{
+      const color=FUND_COLORS[i]||FUND_COLORS[0];
+      const nmLines=doc.splitTextToSize(f.name||'',CW-38);
+      const chipH=Math.max(12,nmLines.length*4.5+5);
       doc.setFillColor(...WHT);doc.setDrawColor(...BRD);doc.setLineWidth(0.25);
       doc.roundedRect(ML,y,CW,chipH,2,2,'FD');
-      dot(ML+5,y+chipH/2,f.color);
+      doc.setFillColor(...color);doc.circle(ML+5,y+chipH/2,1.5,'F');
       doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(...TXT);
       doc.text(nmLines.slice(0,2),ML+10,y+5);
-      if(f.category){
-        const catY=y+5+Math.min(nmLines.length,2)*4.2;
+      const cat=(f.category||'')+(f.subCategory&&f.subCategory!==f.category?' · '+f.subCategory:'');
+      if(cat){
         doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-        doc.text(f.category+(f.subCategory&&f.subCategory!==f.category?' · '+f.subCategory:''),ML+10,catY);
+        doc.text(cat,ML+10,y+5+Math.min(nmLines.length,2)*4.2);
       }
-      const ret=formatRet(f.metrics.totalReturn);
-      doc.setFontSize(10);doc.setFont('helvetica','bold');
-      doc.setTextColor(...retColor(f.metrics.totalReturn));
-      doc.text(ret,PW-MR-2,y+chipH/2+1,{align:'right'});
-      doc.setFontSize(5.5);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-      doc.text(periodLabel+' Return',PW-MR-2,y+chipH/2+5,{align:'right'});
       y+=chipH+2;
     });
     y+=3;
 
-    // ── At-a-Glance metrics table ──
-    y=secTitle('At-a-Glance — Key Metrics', y);
-    const NAME_W2=62;
-    const COL_W2=(CW-NAME_W2)/5;
-    const C={
-      CAGR:ML+NAME_W2+COL_W2,
-      VOL: ML+NAME_W2+COL_W2*2,
-      SHP: ML+NAME_W2+COL_W2*3,
-      DD:  ML+NAME_W2+COL_W2*4,
-      PD:  ML+NAME_W2+COL_W2*5-1
-    };
-    doc.setFillColor(...GDK);doc.rect(ML,y,CW,6.5,'F');
-    doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...WHT);
-    doc.text('Fund',ML+6,y+4.3);
-    doc.text('CAGR',C.CAGR,y+4.3,{align:'right'});
-    doc.text('Volatility',C.VOL,y+4.3,{align:'right'});
-    doc.text('Sharpe',C.SHP,y+4.3,{align:'right'});
-    doc.text('Max DD',C.DD,y+4.3,{align:'right'});
-    doc.text('% +Days',C.PD,y+4.3,{align:'right'});
-    y+=6.5;
-    funds.forEach((f,i)=>{
-      const nameLines=doc.splitTextToSize(f.name,NAME_W2-9);
-      const rowH=nameLines.length>1?11:8;
-      doc.setFillColor(...(i%2===0?WHT:BG));doc.rect(ML,y,CW,rowH,'F');
-      dot(ML+2.5,y+rowH/2,f.color);
-      doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...TXT);
-      doc.text(nameLines.slice(0,2),ML+6,y+4);
-      const metY=y+rowH/2+1.5;
-      const m=f.metrics;
-      doc.setFontSize(7);
-      doc.setTextColor(...retColor(m.annReturn));doc.text(formatRet(m.annReturn),C.CAGR,metY,{align:'right'});
-      doc.setTextColor(...TXT);doc.text(fmtNum(m.annVol,'%'),C.VOL,metY,{align:'right'});
-      const shp=parseFloat(m.sharpe);
-      doc.setTextColor(...(isNaN(shp)?TXT:shp>1?POS:shp<0?NEG:TXT));
-      doc.text(S(m.sharpe),C.SHP,metY,{align:'right'});
-      doc.setTextColor(...NEG);doc.text('-'+fmtNum(m.maxDD,'%','—'),C.DD,metY,{align:'right'});
-      doc.setTextColor(...TXT);doc.text(fmtNum(m.posDays,'%'),C.PD,metY,{align:'right'});
-      doc.setDrawColor(...BRD);doc.setLineWidth(0.15);doc.line(ML,y+rowH,PW-MR,y+rowH);
-      y+=rowH;
-    });
-    y+=5;
-
-    // ── Trailing Period Returns ──
-    y=secTitle('Trailing Period Returns', y);
-    const NAME_END=ML+68;
-    const RET_START=NAME_END+2;
-    const RET_STEP=(PW-MR-RET_START)/PERIODS.length;
-    const PC=PERIODS.map((_,pi)=>RET_START+RET_STEP*(pi+1)-2);
-    doc.setFillColor(...GDK);doc.rect(ML,y,CW,6.5,'F');
-    doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...WHT);
-    doc.text('Fund',ML+6,y+4.3);
-    PERIODS.forEach((p,pi)=>doc.text(p.l,PC[pi],y+4.3,{align:'right'}));
-    doc.setDrawColor(...BRD);doc.setLineWidth(0.2);doc.line(ML,y+6.5,PW-MR,y+6.5);
-    y+=6.5;
-    funds.forEach((f,i)=>{
-      const nameLines=doc.splitTextToSize(f.name,NAME_END-ML-9);
-      const rowH=nameLines.length>1?11:8;
-      doc.setFillColor(...(i%2===0?WHT:BG));doc.rect(ML,y,CW,rowH,'F');
-      dot(ML+2.5,y+rowH/2,f.color);
-      doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...TXT);
-      doc.text(nameLines.slice(0,2),ML+6,y+4);
-      const retY=y+rowH/2+1.5;
-      PERIODS.forEach((p,pi)=>{
-        const ret=calcPeriodReturn(f.rawData,p.m);
-        doc.setFontSize(7);doc.setTextColor(...retColor(ret));
-        doc.text(formatRet(ret),PC[pi],retY,{align:'right'});
+    // ── Risk table — read directly from live DOM like EMI reads its table ──
+    const riskTbl=document.getElementById('riskTable');
+    if(riskTbl && riskTbl.querySelector('tbody tr')){
+      y=b.secTitle('Fund Metrics & Returns',y);
+      // Read headers
+      const ths=[...riskTbl.querySelectorAll('thead th')].map(th=>th.childNodes[0]?.textContent?.trim()||th.textContent?.trim()||'');
+      const colCount=Math.min(ths.length,9);
+      const colW=CW/colCount;
+      // Header row
+      doc.setFillColor(...GDK);doc.rect(ML,y,CW,6.5,'F');
+      doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...WHT);
+      ths.slice(0,colCount).forEach((h,ci)=>{
+        doc.text(h.slice(0,12), ci===0?ML+2:ML+ci*colW+colW-2, y+4.3, {align:ci===0?'left':'right'});
       });
-      doc.setDrawColor(...BRD);doc.setLineWidth(0.15);doc.line(ML,y+rowH,PW-MR,y+rowH);
-      y+=rowH;
-    });
+      y+=6.5;
+      // Data rows
+      [...riskTbl.querySelectorAll('tbody tr')].forEach((row,ri)=>{
+        const tds=[...row.querySelectorAll('td')];
+        const rowH=8;
+        doc.setFillColor(...(ri%2===0?WHT:BG));doc.rect(ML,y,CW,rowH,'F');
+        // Color dot for fund column
+        const dotColor=FUND_COLORS[ri]||FUND_COLORS[0];
+        doc.setFillColor(...dotColor);doc.circle(ML+2.5,y+rowH/2,1.3,'F');
+        tds.slice(0,colCount).forEach((td,ci)=>{
+          const raw=td.textContent?.trim()||'';
+          // Skip the dot span content in fund name cell
+          const text=ci===0?(td.querySelector('.fund-name-text')?.textContent?.trim()||raw):raw;
+          const shortened=ci===0?text.slice(0,28):text.slice(0,10);
+          const isNeg=raw.startsWith('-')&&ci>0;
+          const isPos=raw.startsWith('+')&&ci>0;
+          doc.setFontSize(ci===0?6.5:7);
+          doc.setFont('helvetica',ci>0?'bold':'bold');
+          doc.setTextColor(...(isPos?POS:isNeg?NEG:TXT));
+          doc.text(shortened, ci===0?ML+6:ML+ci*colW+colW-2, y+rowH/2+1.5, {align:ci===0?'left':'right'});
+        });
+        doc.setDrawColor(...BRD);doc.setLineWidth(0.1);doc.line(ML,y+rowH,ML+CW,y+rowH);
+        y+=rowH;
+      });
+      y+=4;
+    }
 
-    footer(dateStr);
+    // ── Chart — same as SWP reads swpChart ──
+    y=b.secTitle('NAV Performance Chart',y);
+    y=b.addChartImg(document.querySelector('#mainContent canvas'),y,85);
 
-    // ════════════════════════════════════════
-    //  PAGE 2 — NAV CHART + SNAPSHOTS
-    // ════════════════════════════════════════
-    newPage();
-    y=pageHeader('NAV Performance Chart',
-      '% change from period start  ·  '+periodLabel+'  ·  Source: AMFI / mfapi.in',
-      dateStr,timeStr,logoDataUrl);
+    b.disclaimerBox(y+2);
+    b.complianceBar(y+28);
+    b.footer(dateStr);
 
-    y=addChartImg(document.querySelector('#mainContent canvas'),y,100);
+    // ════════════════════
+    //  PAGE 2 — DETAILS
+    // ════════════════════
+    b.newPage();
+    y=b.pageHeader('Detailed Fund Profiles','Individual risk metrics per fund  ·  Source: AMFI / mfapi.in',dateStr,timeStr,logoDataUrl);
 
-    // Legend
-    y=secTitle('Chart Legend', y);
-    const ledCols=funds.length>3?2:1;
-    funds.forEach((f,i)=>{
-      const lx=ML+(i>=Math.ceil(funds.length/ledCols)?CW/2+3:0);
-      const ly=y+(i%Math.ceil(funds.length/ledCols))*7;
-      dot(lx+2.5,ly+3,f.color);
-      doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(...TXT);
-      doc.text(f.name.length>44?f.name.slice(0,44)+'…':f.name,lx+7,ly+4);
-    });
-    y+=Math.ceil(funds.length/ledCols)*7+6;
+    // ── Per-fund metric cards — read from live DOM metrics ──
+    const {cutoff:commonCutoff}=getCommonCutoff();
+    const PERIODS=[{l:'1M',m:1},{l:'3M',m:3},{l:'6M',m:6},{l:'1Y',m:12},{l:'3Y',m:36},{l:'5Y',m:60}];
 
-    // NAV snapshots
-    y=secTitle('Latest NAV Snapshot', y);
-    const snapW=(CW-(Math.min(funds.length,3)-1)*3)/Math.min(funds.length,3);
-    funds.forEach((f,i)=>{
-      const ci=i%3,ri=Math.floor(i/3);
-      const cx=ML+ci*(snapW+3),cy=y+ri*24;
-      doc.setFillColor(...WHT);doc.setDrawColor(...BRD);doc.setLineWidth(0.25);
-      doc.roundedRect(cx,cy,snapW,22,2,2,'FD');
-      doc.setFillColor(...f.color);doc.rect(cx,cy,3,22,'F');
-      doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...TXT);
-      doc.text(f.name.length>26?f.name.slice(0,26)+'…':f.name,cx+5,cy+5);
-      const raw=f.rawData;
-      if(raw&&raw.length){
-        const last=raw[raw.length-1];
-        const prev=raw.length>1?raw[raw.length-2]:null;
-        const nav=parseFloat(last.nav);
-        const dayChg=prev?((nav-parseFloat(prev.nav))/parseFloat(prev.nav)*100):null;
-        doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(...GDK);
-        doc.text('₹'+nav.toFixed(4),cx+5,cy+14);
-        if(dayChg!==null){
-          doc.setFontSize(7);doc.setTextColor(...retColor(dayChg));
-          doc.text((dayChg>=0?'+':'')+dayChg.toFixed(3)+'% day',cx+5,cy+19);
-        }
-        doc.setFontSize(5.5);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-        doc.text('as of '+S(last.date),cx+snapW-2,cy+19,{align:'right'});
-      }
-    });
-    y+=Math.ceil(funds.length/3)*24+4;
-
-    footer(dateStr);
-
-    // ════════════════════════════════════════
-    //  PAGE 3 — DETAILED FUND PROFILES
-    // ════════════════════════════════════════
-    newPage();
-    y=pageHeader('Detailed Fund Profiles',
-      'Individual metrics, risk analysis and trailing returns per fund',
-      dateStr,timeStr,logoDataUrl);
-
-    funds.forEach((f,i)=>{
+    selectedFunds.forEach((f,i)=>{
       if(i>0) y+=4;
-      if(y>215){
-        newPage();
-        topBar();
-        doc.setFillColor(...BG);doc.rect(0,0,PW,PH,'F');
-        topBar();
-        y=19; // MT+5
-      }
-      const m=f.metrics;
-      // Fund header
-      doc.setFillColor(...WHT);doc.setDrawColor(...BRD);doc.setLineWidth(0.25);
-      doc.roundedRect(ML,y,CW,28,2,2,'FD');
-      doc.setFillColor(...f.color);doc.rect(ML,y,4,28,'F');
-      const nameLines2=doc.splitTextToSize(f.name,CW-65);
-      doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(...TXT);
-      doc.text(nameLines2,ML+7,y+7);
-      if(f.category){
-        doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-        doc.text(f.category+(f.subCategory&&f.subCategory!==f.category?' · '+f.subCategory:''),ML+7,y+7+nameLines2.length*5);
-      }
-      doc.setFontSize(15);doc.setFont('helvetica','bold');
-      doc.setTextColor(...retColor(m.annReturn));
-      doc.text(formatRet(m.annReturn),PW-MR-2,y+11,{align:'right'});
-      doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-      doc.text('CAGR (Ann. Return)',PW-MR-2,y+17,{align:'right'});
-      y+=31;
+      if(y>215){b.newPage();doc.setFillColor(...BG);doc.rect(0,0,PW,PH,'F');b.topBar();y=19;}
+      const m=calcMetrics(f.rawData,commonCutoff);
+      const color=FUND_COLORS[i]||FUND_COLORS[0];
 
-      // 4-col metrics grid
-      const GW=(CW/4)-1;
-      const mRows=[
-        ['Period Return',formatRet(m.totalReturn),retColor(m.totalReturn)],
-        ['CAGR',formatRet(m.annReturn),retColor(m.annReturn)],
-        ['Volatility',fmtNum(m.annVol,'%'),TXT],
+      // Fund header card
+      doc.setFillColor(...WHT);doc.setDrawColor(...BRD);doc.setLineWidth(0.25);
+      doc.roundedRect(ML,y,CW,24,2,2,'FD');
+      doc.setFillColor(...color);doc.rect(ML,y,4,24,'F');
+      const nameLines=doc.splitTextToSize(f.name||'',CW-60);
+      doc.setFontSize(9.5);doc.setFont('helvetica','bold');doc.setTextColor(...TXT);
+      doc.text(nameLines.slice(0,2),ML+7,y+7);
+      // CAGR on right
+      const cagr=(m.annReturn>=0?'+':'')+m.annReturn+'%';
+      doc.setFontSize(14);doc.setFont('helvetica','bold');
+      doc.setTextColor(...(parseFloat(m.annReturn)>=0?POS:NEG));
+      doc.text(cagr,PW-MR-2,y+11,{align:'right'});
+      doc.setFontSize(6);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
+      doc.text('CAGR',PW-MR-2,y+16,{align:'right'});
+      y+=27;
+
+      // Metrics grid — same structure as EMI's loan summary
+      y=b.metricsGrid([
+        [getPeriodLabel()+' Return',(parseFloat(m.totalReturn)>=0?'+':'')+m.totalReturn+'%',parseFloat(m.totalReturn)>=0?POS:NEG],
+        ['CAGR',cagr,parseFloat(m.annReturn)>=0?POS:NEG],
+        ['Volatility',m.annVol+'%',TXT],
         ['Sharpe Ratio',S(m.sharpe),parseFloat(m.sharpe)>1?POS:parseFloat(m.sharpe)<0?NEG:TXT],
-        ['Max Drawdown','-'+fmtNum(m.maxDD,'%','—'),NEG],
-        ['Best Day','+'+fmtNum(m.bestDay,'%','—'),POS],
-        ['Worst Day',fmtNum(m.worstDay,'%'),NEG],
-        ['Positive Days',fmtNum(m.posDays,'%'),TXT],
-      ];
-      mRows.forEach((row,ri)=>{
-        const ci=ri%4,rr=Math.floor(ri/4);
-        const gx=ML+ci*(GW+1.33),gy=y+rr*17;
-        doc.setFillColor(...(ci%2===0?WHT:SRF));
-        doc.setDrawColor(...BRD);doc.setLineWidth(0.2);
-        doc.roundedRect(gx,gy,GW,15,1,1,'FD');
-        doc.setFontSize(5.8);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-        doc.text(row[0],gx+2.5,gy+5);
-        doc.setFontSize(9.5);doc.setFont('helvetica','bold');doc.setTextColor(...row[2]);
-        doc.text(row[1],gx+2.5,gy+12);
-      });
-      y+=Math.ceil(mRows.length/4)*17+3;
+        ['Max Drawdown','-'+m.maxDD+'%',NEG],
+        ['Best Day','+'+m.bestDay+'%',POS],
+        ['Worst Day',m.worstDay+'%',NEG],
+        ['Positive Days',m.posDays+'%',TXT],
+      ],y,4);
 
       // Trailing returns strip
       doc.setFillColor(...SRF);doc.setDrawColor(...BRD);doc.setLineWidth(0.2);
@@ -4642,55 +4508,23 @@ async function _doExportPDF(){
       PERIODS.forEach((p,pi)=>{
         const ret=calcPeriodReturn(f.rawData,p.m);
         const px=ML+pi*pw2;
+        const retStr=ret===null?'—':(parseFloat(ret)>=0?'+':'')+ret+'%';
         doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...MUT);
         doc.text(p.l,px+pw2/2,y+4.5,{align:'center'});
-        doc.setFontSize(7.5);doc.setTextColor(...retColor(ret));
-        doc.text(formatRet(ret),px+pw2/2,y+9.5,{align:'center'});
+        doc.setFontSize(7.5);
+        doc.setTextColor(...(ret===null?MUT:parseFloat(ret)>=0?POS:NEG));
+        doc.text(retStr,px+pw2/2,y+9.5,{align:'center'});
         if(pi<PERIODS.length-1){doc.setDrawColor(...BRD);doc.line(px+pw2,y+1,px+pw2,y+10);}
       });
       y+=14;
     });
 
-    footer(dateStr);
-
-    // ════════════════════════════════════════
-    //  PAGE 4 — DISCLOSURES
-    // ════════════════════════════════════════
-    newPage();
-    y=pageHeader('Disclosures & Regulatory Information',
-      'Mandatory disclosures as per SEBI and AMFI guidelines',
-      dateStr,timeStr,logoDataUrl);
-
-    const discl=(title,body)=>{
-      doc.setFillColor(...SRF);doc.setDrawColor(...GMD);doc.setLineWidth(0.3);
-      doc.roundedRect(ML,y,CW,6,1,1,'FD');
-      doc.setFillColor(...GMD);doc.rect(ML,y,2.5,6,'F');
-      doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(...GDK);
-      doc.text(title,ML+4.5,y+4.2);
-      y+=8;
-      doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(...TXT);
-      const lines=doc.splitTextToSize(body,CW);
-      doc.text(lines,ML,y);
-      y+=lines.length*3.2+5;
-    };
-
-    discl('Standard Risk Disclaimer',
-      'Mutual Fund investments are subject to market risks. Please read all scheme-related documents carefully before investing. Past performance is not indicative of future results. The NAV of schemes may go up or down depending upon the factors and forces affecting the securities market including fluctuations in interest rates. The Mutual Fund is not guaranteeing or assuring any dividend under any of the schemes and the same is subject to the availability and adequacy of distributable surplus. Investors are requested to review the prospectus carefully and obtain expert professional advice with regard to specific legal, tax and financial implications of the investment/participation in the scheme.');
-
-    discl('Distributor Registration & AMFI Disclosure',
-      'Abundance Financial Services  |  ARN: ARN-251838  |  EUIN: E334718  |  GST: 05AXYPA6954G1Z3  |  AMFI-Registered Mutual Fund Distributor. This comparison report is prepared for educational and informational purposes only. AMFI registration does not imply that AMFI endorses the product or service or guarantees returns.');
-
-    discl('SEBI & AMFI Regulatory Compliance',
-      'In accordance with SEBI and AMFI guidelines: (1) This report uses publicly available NAV data from AMFI (via mfapi.in). (2) Period returns are trailing returns computed from historical NAVs and may differ from officially published factsheet data. (3) Risk metrics use daily NAV data over 5-year or maximum available history. Sharpe Ratio uses risk-free rate of 6.5% p.a. (4) This is not a research report or investment recommendation. Please consult a SEBI-registered investment advisor before making any investment decision.');
-
-    discl('Data Accuracy & About This Tool',
-      'NAV data sourced from mfapi.in (AMFI-aggregated). Abundance MF Analyzer (mfcalc.getabundance.in) — free tool for fund comparison, SIP, SWP, goal planning and EMI. All computations are client-side. No personal data collected or stored. Contact: +91 98081 05923  |  www.getabundance.in  |  Moradabad, Uttar Pradesh.');
-
-    complianceBar(Math.min(y+4,PH-28));
-    footer(dateStr);
+    y=b.disclaimerBox(y+2);
+    b.complianceBar(y+4);
+    b.footer(dateStr);
 
     // ── Save ──
-    const safeName=funds.map(f=>f.name.split(' ').slice(0,2).join('-')).join('_vs_').slice(0,55);
+    const safeName=selectedFunds.map(f=>(f.name||'').split(' ').slice(0,2).join('-')).join('_vs_').slice(0,55);
     doc.save('Abundance-Fund-Briefing_'+safeName+'_'+new Date().toISOString().slice(0,10)+'.pdf');
 
   }catch(e){
@@ -4718,17 +4552,45 @@ function _loadJsPDF(cb){
 // ── Logo loader: fetches logo as dataURL for embedding in PDFs ──
 // Uses fetch + blob URL to bypass CORS, falls back silently to text
 async function _fetchLogoDataURL(){
-  try{
-    const resp = await fetch('https://www.getabundance.in/images/logo.png', {cache:'force-cache'});
-    if(!resp.ok) return null;
-    const blob = await resp.blob();
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
+  // Try three methods in order: Image+canvas (no CORS), fetch+blob, silent fail
+  const LOGO_URL = 'https://www.getabundance.in/images/logo.png';
+
+  // Method 1: HTMLImageElement -> canvas -> dataURL (works if server allows img cross-origin)
+  try {
+    const dataUrl = await new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      const timer = setTimeout(() => resolve(null), 4000);
+      img.onload = () => {
+        clearTimeout(timer);
+        try {
+          const cv = document.createElement('canvas');
+          cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+          cv.getContext('2d').drawImage(img, 0, 0);
+          resolve(cv.toDataURL('image/png'));
+        } catch(e) { resolve(null); }
+      };
+      img.onerror = () => { clearTimeout(timer); resolve(null); };
+      img.src = LOGO_URL + '?_=' + Date.now(); // cache-bust to force fresh CORS headers
     });
-  } catch(e){ return null; }
+    if (dataUrl && dataUrl.length > 100) return dataUrl;
+  } catch(e) {}
+
+  // Method 2: fetch + FileReader
+  try {
+    const resp = await fetch(LOGO_URL, { cache: 'no-store', mode: 'cors' });
+    if (resp.ok) {
+      const blob = await resp.blob();
+      return await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    }
+  } catch(e) {}
+
+  return null; // Both methods failed — caller will use text fallback
 }
 
 
@@ -4910,7 +4772,7 @@ async function _doPrintSIP(){
     const dateStr=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
     const timeStr=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
 
-    // Collect live params
+    // ── Read params directly from DOM (same approach as SWP/Goal/EMI) ──
     const freq=document.getElementById('sipFreq')?.value||'monthly';
     const freqLabel={daily:'Daily',weekly:'Weekly',monthly:'Monthly',quarterly:'Quarterly',annually:'Annual'}[freq]||'Monthly';
     const amount=parseFloat(document.getElementById('sipAmount')?.value||0);
@@ -4921,92 +4783,90 @@ async function _doPrintSIP(){
     const stepup=parseFloat(document.getElementById('sipStepup')?.value||0);
     const modeLabel={sip:'SIP Returns',lump:'Lumpsum Returns',both:'SIP + Lumpsum'}[calcMode]||'SIP Returns';
 
-    // Read computed values from DOM
-    const corpusEl=document.querySelector('.sbr-corpus');
-    const investedEl=document.querySelector('.sbr-invested');
-    const corpus=corpusEl?corpusEl.textContent.trim():'—';
-    const invested=investedEl?investedEl.textContent.trim():'—';
+    // ── Read computed results from live DOM ──
+    const corpus=document.querySelector('.sbr-corpus')?.textContent?.trim()||'—';
+    const invested=document.querySelector('.sbr-invested')?.textContent?.trim()||'—';
+    const gain=document.querySelector('.sbr-gain')?.textContent?.trim()||'';
 
     b.newPage();
     let y=b.pageHeader(modeLabel+' Calculator','Projection based on inputs below — for illustrative purposes only',dateStr,timeStr,logoDataUrl);
 
-    // Params
+    // ── Params box ──
     const paramItems=[
-      ['Mode',modeLabel],
       calcMode!=='lump'?['SIP Amount','₹'+fmtINR_(amount)]:['Lumpsum','₹'+fmtINR_(lumpAmt)],
       calcMode==='both'?['Lumpsum','₹'+fmtINR_(lumpAmt)]:null,
       ['Duration',dur+' '+durUnit],
       ['Expected Return',rate+'% p.a.'],
+      freqLabel!=='Monthly'?['Frequency',freqLabel]:null,
       stepup>0?['Annual Step-up',stepup+'%']:null,
     ].filter(Boolean);
     y=b.paramsBox(paramItems,y);
     y+=2;
 
-    // Big result
-    y=b.bigResultBox('Estimated Corpus',corpus,'Total Invested: '+invested,[30,94,32],y);
+    // ── Big result box ──
+    y=b.bigResultBox('Estimated Corpus (Base Case)',corpus,invested,[30,94,32],y);
     y+=4;
 
-    // Scenario cards (3 columns)
-    y=b.secTitle('Scenario Analysis (Conservative / Base / Optimistic)',y);
-    const scenarios=[
-      {label:'Conservative',rate:Math.max(1,parseFloat(rate)-4),color:[21,101,192]},
-      {label:'Base Case',rate:parseFloat(rate),color:[46,125,50]},
-      {label:'Optimistic',rate:Math.min(50,parseFloat(rate)+4),color:[230,81,0]},
-    ];
-    const p=getSIPParams();
-    const cw2=(CW-4)/3;
-    scenarios.forEach((sc,i)=>{
-      const sp={...p,annualRate:sc.rate,ratePerPeriod:Math.pow(1+sc.rate/100,1/p.cfg.perYear)-1};
-      const sd=simulate(sp);
-      const corp2=sd[sd.length-1].corpus;
-      const inv2=sd[sd.length-1].invested;
-      const gain=corp2-inv2;
-      const wg=inv2>0?((gain/inv2)*100).toFixed(1):'0';
-      const x=ML+i*(cw2+2);
-      doc.setFillColor(...WHT);doc.setDrawColor(...BRD);doc.setLineWidth(0.3);
-      doc.roundedRect(x,y,cw2,42,2,2,'FD');
-      doc.setFillColor(...sc.color);doc.rect(x,y,cw2,3,'F');
-      doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(...sc.color);
-      doc.text(sc.label,x+cw2/2,y+8,{align:'center'});
-      doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-      doc.text(sc.rate+'% p.a.',x+cw2/2,y+12,{align:'center'});
-      doc.setFontSize(12);doc.setFont('helvetica','bold');doc.setTextColor(...GDK);
-      doc.text('₹'+fmtINR_(corp2),x+cw2/2,y+21,{align:'center'});
-      doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-      doc.text('Corpus',x+cw2/2,y+25,{align:'center'});
-      doc.setFontSize(7);doc.setFont('helvetica','bold');
-      doc.setTextColor(...(gain>=0?POS:NEG));
-      doc.text('Gain: ₹'+fmtINR_(Math.abs(gain)),x+cw2/2,y+31,{align:'center'});
-      doc.setTextColor(...MUT);
-      doc.text('Wealth: '+wg+'%',x+cw2/2,y+36,{align:'center'});
-    });
-    y+=46;
-
-    // Chart
-    y=b.secTitle('Growth Projection Chart',y);
-    const cvs=document.getElementById('sipChart');
-    y=b.addChartImg(cvs,y,75);
-
-    // Summary metrics grid
+    // ── Summary strip — read from DOM like SWP reads #swpFuel ──
     const summaryItems=document.querySelectorAll('#sipSummary .sip-sum-item');
     if(summaryItems.length){
       y=b.secTitle('Summary',y);
-      const items=[...summaryItems].map(el=>{
-        const lbl=el.querySelector('.sip-sum-label')?.textContent||'';
-        const val=el.querySelector('.sip-sum-val')?.textContent||'';
-        return[lbl,val,TXT];
-      });
+      const items=[...summaryItems].map(el=>[
+        el.querySelector('.sip-sum-label')?.textContent||'',
+        el.querySelector('.sip-sum-val')?.textContent||'',
+        TXT
+      ]);
       y=b.metricsGrid(items,y,Math.min(items.length,4));
+    }
+
+    // ── Chart ──
+    y=b.secTitle('Growth Projection Chart',y);
+    y=b.addChartImg(document.getElementById('sipChart'),y,80);
+
+    // ── Result cards — read from live DOM like SWP reads #swpResultCards ──
+    const cardEls=document.querySelectorAll('#sipResultCards .sip-result-card');
+    if(cardEls.length){
+      y=b.secTitle('Scenario Analysis',y);
+      const ccw=(CW-(Math.min(cardEls.length,3)-1)*2)/Math.min(cardEls.length,3);
+      [...cardEls].slice(0,3).forEach((card,i)=>{
+        const cx=ML+i*(ccw+2);
+        const title=card.querySelector('.src-name')?.textContent||'Scenario '+(i+1);
+        const corpusVal=card.querySelector('.src-corpus')?.textContent||'—';
+        const accentColor=[[21,101,192],[46,125,50],[230,81,0]][i]||[46,125,50];
+        doc.setFillColor(...WHT);doc.setDrawColor(...BRD);doc.setLineWidth(0.3);
+        doc.roundedRect(cx,y,ccw,42,2,2,'FD');
+        doc.setFillColor(...accentColor);doc.rect(cx,y,ccw,3,'F');
+        doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...accentColor);
+        doc.text(title.slice(0,28),cx+ccw/2,y+9,{align:'center'});
+        doc.setFontSize(13);doc.setFont('helvetica','bold');doc.setTextColor(...GDK);
+        doc.text(S(corpusVal),cx+ccw/2,y+20,{align:'center'});
+        doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
+        doc.text('Estimated Corpus',cx+ccw/2,y+25,{align:'center'});
+        // Read all src-row key/value pairs from the card
+        const rows=card.querySelectorAll('.src-row');
+        let ry=y+29;
+        [...rows].slice(0,3).forEach(row=>{
+          const k=row.querySelector('.src-key')?.textContent||'';
+          const v=row.querySelector('.src-val')?.textContent||'';
+          if(!k||!v) return;
+          doc.setFontSize(6);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
+          doc.text(k.slice(0,18),cx+3,ry);
+          doc.setFont('helvetica','bold');doc.setTextColor(...TXT);
+          doc.text(v.slice(0,14),cx+ccw-3,ry,{align:'right'});
+          ry+=4.5;
+        });
+      });
+      y+=46;
     }
 
     y=b.disclaimerBox(y+2);
     b.complianceBar(y+4);
     b.footer(dateStr);
-
     doc.save('Abundance-SIP-Projection_'+new Date().toISOString().slice(0,10)+'.pdf');
   }catch(e){console.error(e);alert('PDF export failed: '+e.message);}
   if(btn){btn.disabled=false;btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Save PDF';}
 }
+
 
 // ════════════════════════════════════════
 //  GOAL PLANNER PDF
