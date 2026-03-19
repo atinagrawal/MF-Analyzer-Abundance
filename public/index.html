@@ -1298,16 +1298,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   /* ── Fuel gauge → dark compact strip ── */
   .swp-fuel{padding:14px 12px}
   .swp-fuel-label{font-size:.54rem;margin-bottom:10px}
-  .swp-fuel-stats{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:6px;
-  }
+  .swp-fuel-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px}
   .swp-fuel-stat{
     background:rgba(255,255,255,.04);
     border-radius:7px;padding:6px 8px;
   }
-  .swp-fuel-stat-val{font-size:.72rem}
+  .swp-fuel-stat-val{font-size:.72rem;overflow-wrap:break-word;word-break:break-word;max-width:100%}
   .swp-fuel-stat-lbl{font-size:.45rem;letter-spacing:.5px}
 
   /* ── Stat grid → 2-col ── */
@@ -1947,7 +1943,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .swp-stat::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:transparent;transition:background .2s}
 .swp-stat:hover::after{background:linear-gradient(90deg,var(--g2),var(--g4))}
 .swp-stat-label{font-size:.55rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:5px}
-.swp-stat-val{font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--text);line-height:1.1}
+.swp-stat-val{font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--text);line-height:1.1;overflow-wrap:break-word;word-break:break-word;min-width:0}
 .swp-stat-sub{font-size:.57rem;color:var(--muted);margin-top:3px}
 .swp-stat.highlight{background:linear-gradient(135deg,var(--g-xlight),var(--surface2));border-color:var(--g-light)}
 .swp-stat.highlight .swp-stat-val{color:var(--g1)}
@@ -2989,6 +2985,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
           <div class="sip-field">
             <label>Start Year</label>
             <select class="sip-input" id="btStartYear" onchange="btUpdateMonths();dBtRun()"></select>
+          </div>
+          <div class="sip-field">
+            <label>End Month</label>
+            <select class="sip-input" id="btEndMonth" onchange="dBtRun()"></select>
+          </div>
+          <div class="sip-field">
+            <label>End Year</label>
+            <select class="sip-input" id="btEndYear" onchange="btUpdateEndMonths();dBtRun()"></select>
           </div>
         </div>
 
@@ -6309,14 +6313,20 @@ function btBuildDateDropdowns(){
   if(!btFundData) return;
   const keys = Object.keys(btFundData.navMap).sort(); // YYYY-MM ascending
   const years = [...new Set(keys.map(k=>k.slice(0,4)))];
+  const lastYear = parseInt(years[years.length-1]);
+  const defaultStartYear = Math.max(parseInt(years[0]), lastYear - 5);
 
+  // Start year
   const ySel = document.getElementById('btStartYear');
   ySel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
-  // Default to ~3 years before last available
-  const lastYear = parseInt(years[years.length-1]);
-  const defaultYear = Math.max(parseInt(years[0]), lastYear - 5);
-  ySel.value = String(defaultYear);
+  ySel.value = String(defaultStartYear);
   btUpdateMonths();
+
+  // End year — all available years, default = last
+  const yeYSel = document.getElementById('btEndYear');
+  yeYSel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  yeYSel.value = String(lastYear);
+  btUpdateEndMonths();
 }
 
 function btUpdateMonths(){
@@ -6325,15 +6335,27 @@ function btUpdateMonths(){
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const availableMonths = Object.keys(btFundData.navMap)
     .filter(k=>k.startsWith(year))
-    .map(k=>parseInt(k.slice(5))-1); // 0-indexed
-
+    .map(k=>parseInt(k.slice(5))-1);
   const mSel = document.getElementById('btStartMonth');
   mSel.innerHTML = availableMonths.map(m=>`<option value="${m+1}">${MONTHS[m]}</option>`).join('');
 }
 
+function btUpdateEndMonths(){
+  if(!btFundData) return;
+  const year = document.getElementById('btEndYear').value;
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const availableMonths = Object.keys(btFundData.navMap)
+    .filter(k=>k.startsWith(year))
+    .map(k=>parseInt(k.slice(5))-1);
+  const mSel = document.getElementById('btEndMonth');
+  mSel.innerHTML = availableMonths.map(m=>`<option value="${m+1}">${MONTHS[m]}</option>`).join('');
+  // Default to last available month of the year
+  if(mSel.options.length) mSel.selectedIndex = mSel.options.length - 1;
+}
+
 // ── Core backtest engine ──
 // Returns snaps array + stats, using actual monthly NAVs
-function runNAVBacktest(navMap, startYear, startMonth, corpus, monthlyWithdrawal, stepupPct, inflationPct, delayMonths){
+function runNAVBacktest(navMap, startYear, startMonth, corpus, monthlyWithdrawal, stepupPct, inflationPct, delayMonths, endYear, endMonth){
   // delayMonths: 0 = no delay, N = N months of accumulation before withdrawals start
   delayMonths = delayMonths || 0;
 
@@ -6372,6 +6394,10 @@ function runNAVBacktest(navMap, startYear, startMonth, corpus, monthlyWithdrawal
     month++; if(month > 12){ month = 1; year++; }
     monthsRun++;
 
+    // Stop if we've passed the requested end date
+    if(endYear && endMonth){
+      if(year > endYear || (year === endYear && month > endMonth)) break;
+    }
     const entry = getNAV(year, month);
     if(!entry) break;
 
@@ -6477,6 +6503,9 @@ function btRun(){
   const delayVal   = delayOn ? Math.max(1, parseFloat(document.getElementById('btDelayVal').value)||3) : 0;
   const delayUnit  = delayOn ? document.getElementById('btDelayUnit').value : 'years';
   const delayMonths = delayOn ? (delayUnit==='months' ? delayVal : delayVal*12) : 0;
+  // End date — default is today (last available NAV)
+  const endYear  = parseInt(document.getElementById('btEndYear')?.value) || null;
+  const endMonth = parseInt(document.getElementById('btEndMonth')?.value) || null;
 
   // Make sure shared SWP result sections remain hidden
   ['swpFuel','swpStatGrid','swpResultCards','swpRunwaySection','swpInsights','swpChartSection']
@@ -6484,7 +6513,7 @@ function btRun(){
 
   document.getElementById('btEmpty').style.display = 'none';
 
-  const result = runNAVBacktest(btFundData.navMap, startYear, startMonth, corpus, withdrawal, stepup, inflation, delayMonths);
+  const result = runNAVBacktest(btFundData.navMap, startYear, startMonth, corpus, withdrawal, stepup, inflation, delayMonths, endYear, endMonth);
   if(!result){
     document.getElementById('btEmpty').textContent = 'No NAV data for selected period';
     document.getElementById('btEmpty').style.display = 'block';
@@ -6666,16 +6695,20 @@ function btRenderWhatIf(corpus, withdrawal, stepup, startMonth){
     const pct = Math.min(100, r.durationYrs/Math.max(maxDur,1)*100);
     const col = survives?'#2e7d32':r.durationYrs>10?'#f57f17':'#b71c1c';
     const isSel = yr===selectedYear;
-    const durStr = survives?r.durationYrs.toFixed(1)+' yrs (ongoing)':r.durationYrs.toFixed(1)+' yrs (depleted)';
-    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <div style="min-width:90px;font-size:.66rem;font-weight:${isSel?800:600};color:${isSel?'var(--g1)':'var(--text2)'}">
-        ${MONTHS[startMonth-1]} ${yr}${isSel?' ◀':''}
+    const durStr = survives ? r.durationYrs.toFixed(1)+' yrs' : r.durationYrs.toFixed(1)+' yrs ⚠️';
+    const remCorpus = survives ? '₹'+fmtINR(r.finalCorpus) : '₹0';
+    return `<div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;gap:6px;flex-wrap:wrap">
+        <span style="font-size:.68rem;font-weight:${isSel?800:600};color:${isSel?'var(--g1)':'var(--text2)'};white-space:nowrap">
+          ${MONTHS[startMonth-1]} ${yr}${isSel?' ◀':''}
+        </span>
+        <span style="font-size:.63rem;font-family:'JetBrains Mono',monospace;font-weight:700;color:${col};white-space:nowrap">${durStr}</span>
+        <span style="font-size:.63rem;font-family:'JetBrains Mono',monospace;color:var(--g2);white-space:nowrap">Rem: ${remCorpus}</span>
+        <span style="font-size:.63rem;font-family:'JetBrains Mono',monospace;color:var(--muted);white-space:nowrap">XIRR: ${r.xirr||'—'}%</span>
       </div>
-      <div style="flex:1;height:10px;background:var(--g-xlight);border-radius:5px;overflow:hidden">
-        <div style="width:${pct}%;height:100%;background:${col};border-radius:5px"></div>
+      <div style="height:8px;background:var(--g-xlight);border-radius:5px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${col};border-radius:5px;transition:width .4s"></div>
       </div>
-      <div style="min-width:160px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:.66rem;font-weight:700;color:${col}">${durStr}</div>
-      <div style="min-width:80px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--muted)">XIRR: ${r.xirr||'—'}%</div>
     </div>`;
   }).join('');
 }
