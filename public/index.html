@@ -4352,160 +4352,62 @@ function chartOpts(){
 // ════════════════════════════════════════
 
 function exportPDF(){
-  if(typeof window.jspdf === 'undefined'){
-    const s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-    s.onload=()=>_doExportPDF();
-    document.head.appendChild(s);
-    return;
-  }
-  _doExportPDF();
+  const chartImg = document.getElementById('navChart') ? document.getElementById('navChart').toDataURL('image/png') : '';
+  const mainHTML  = document.getElementById('mainContent').innerHTML;
+  const chipsHTML = document.getElementById('chips').outerHTML;
+  const periodLabel = getPeriodLabel()||'Selected Period';
+  const fundsCount = selectedFunds.length;
+
+  const win = window.open('','_blank','width=960,height=760');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Fund Comparison | Abundance Financial Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px 36px}
+.ph{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:2.5px solid #2e7d32;margin-bottom:18px}
+.pt{font-size:1.05rem;font-weight:800;color:#2e7d32}.pa{font-size:.6rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:2px}
+.logo{height:44px;object-fit:contain;mix-blend-mode:multiply}
+.sec{font-size:.56rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#5e8a5e;margin:14px 0 7px;display:flex;align-items:center;gap:7px}
+.sec::after{content:"";flex:1;height:1px;background:#c2dfc2}
+/* Fund chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px}
+.fund-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:20px;border:1.5px solid #c2dfc2;background:#edf6ed;font-size:.68rem;font-weight:700}
+/* Banner / at-a-glance */
+.banner-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px}
+.banner-cell{background:#edf6ed;border:1.5px solid #c2dfc2;border-radius:8px;padding:10px 12px;text-align:center}
+.banner-lbl{font-size:.52rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#5e8a5e;margin-bottom:3px}
+.banner-val{font-family:"JetBrains Mono",monospace;font-size:.88rem;font-weight:700;color:#1b5e20}
+/* Risk table */
+.risk-table{width:100%;border-collapse:collapse;font-size:.62rem}
+.risk-table th{background:#1e4d20;color:#fff;font-size:.58rem;font-weight:700;letter-spacing:.5px;padding:6px 8px;text-align:right}
+.risk-table th:first-child{text-align:left}
+.risk-table td{padding:5px 8px;border-bottom:1px solid #e8f5e9;text-align:right;font-family:"JetBrains Mono",monospace;font-size:.65rem;font-weight:600}
+.risk-table td:first-child{text-align:left;font-family:"Raleway",sans-serif;font-weight:700;max-width:140px}
+.risk-table tr:nth-child(even) td{background:#f5fbf5}
+.pos{color:#1b5e20}.neg{color:#b71c1c}
+/* Chart */
+.ci img{width:100%;border-radius:8px;border:1px solid #c2dfc2;margin-bottom:12px}
+/* Disclaimer */
+.dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:14px}
+@media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}
+</style></head><body>
+<div class="ph">
+  <div><div class="pt">Fund Comparison — ${fundsCount} Fund${fundsCount>1?'s':''} · ${periodLabel}</div>
+  <div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds Distributor &amp; SIF Distributor</div></div>
+  <img class="logo" src="https://www.getabundance.in/images/logo.png" onerror="this.style.display='none'">
+</div>
+<div class="sec">Funds Selected</div>
+${chipsHTML}
+<div class="sec">Performance &amp; Risk</div>
+${mainHTML}
+${chartImg?`<div class="sec">NAV Chart</div><div class="ci"><img src="${chartImg}"></div>`:''}
+<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. Data sourced from AMFI / mfapi.in. This is for illustrative purposes only and does not constitute financial advice. Consult your financial advisor before investing. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
+</body></html>`);
+  win.document.close();
+  win.onload = ()=>setTimeout(()=>{win.focus();win.print();},600);
+  setTimeout(()=>{try{win.focus();win.print();}catch(e){}},1200);
 }
-
-async function _doExportPDF(){
-  const btn=document.querySelector('.export-btn');
-  const orig=btn.innerHTML;
-  btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Building PDF…';
-  btn.disabled=true;
-  try{
-    // ── Identical opening to SWP/EMI/Goal/SIP ──
-    const logoDataUrl=await _fetchLogoDataURL();
-    const b=_makePDF();
-    const {doc,ML,MR,PH,PW,CW,SRF,BRD,TXT,MUT,WHT,POS,NEG,GMD,GDK,BG,S,fmtINR_}=b;
-    const dateStr=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
-    const timeStr=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-    const periodLabel=getPeriodLabel()||'Selected Period';
-    const FUND_COLORS=[[46,125,50],[21,101,192],[230,81,0],[106,27,154],[0,131,143]];
-    const PERIODS=[{l:'1M',m:1},{l:'3M',m:3},{l:'6M',m:6},{l:'1Y',m:12},{l:'3Y',m:36},{l:'5Y',m:60}];
-
-    // ════════════════════════════════
-    //  PAGE 1
-    // ════════════════════════════════
-    b.newPage();
-    let y=b.pageHeader(
-      'Fund Comparison Briefing',
-      selectedFunds.length+' fund'+(selectedFunds.length>1?'s':'')+' compared  ·  Period: '+periodLabel+'  ·  Source: AMFI / mfapi.in',
-      dateStr,timeStr,logoDataUrl
-    );
-
-    // ── Fund list — using b.metricsGrid like SWP uses it for stat grid ──
-    y=b.secTitle('Funds in this comparison',y);
-    const fundItems=selectedFunds.map((f,i)=>[
-      String(i+1)+'. '+f.name,
-      (f.category||''),
-      TXT
-    ]);
-    y=b.metricsGrid(fundItems,y,1);
-
-    // ── Key metrics table — using b.metricsGrid like EMI uses it for Loan Summary ──
-    y=b.secTitle('At-a-Glance Key Metrics',y);
-    const {cutoff:commonCutoff}=getCommonCutoff();
-    const allMetrics=selectedFunds.map((f,i)=>({...calcMetrics(f.rawData,commonCutoff),name:f.name,color:FUND_COLORS[i]}));
-
-    // One metricsGrid per fund (same way EMI has one grid for the loan)
-    allMetrics.forEach((m,i)=>{
-      const items=[
-        [selectedFunds[i].name.length>32?selectedFunds[i].name.slice(0,32)+'…':selectedFunds[i].name,'',TXT],
-        [periodLabel+' Return',(parseFloat(m.totalReturn)>=0?'+':'')+m.totalReturn+'%',parseFloat(m.totalReturn)>=0?POS:NEG],
-        ['CAGR',(parseFloat(m.annReturn)>=0?'+':'')+m.annReturn+'%',parseFloat(m.annReturn)>=0?POS:NEG],
-        ['Volatility',m.annVol+'%',TXT],
-        ['Sharpe',S(m.sharpe),parseFloat(m.sharpe)>1?POS:parseFloat(m.sharpe)<0?NEG:TXT],
-        ['Max DD','-'+m.maxDD+'%',NEG],
-      ];
-      // First cell is the fund name header — draw it as a coloured bar
-      doc.setFillColor(...(allMetrics[i].color||[46,125,50]));
-      doc.roundedRect(ML,y,CW,6,1,1,'F');
-      doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(...WHT);
-      doc.text(items[0][0],ML+4,y+4.2);
-      y+=7;
-      y=b.metricsGrid(items.slice(1),y,5);
-      y+=1;
-    });
-
-    // ── Chart — identical to SWP's chart section ──
-    y=b.secTitle('NAV Performance Chart',y);
-    y=b.addChartImg(document.querySelector('#mainContent canvas'),y,80);
-
-    // ── Period returns — b.metricsGrid per fund like SWP's stat grid ──
-    y=b.secTitle('Trailing Period Returns',y);
-    selectedFunds.forEach((f,i)=>{
-      // Fund name bar
-      doc.setFillColor(...(FUND_COLORS[i]||[46,125,50]));
-      doc.roundedRect(ML,y,CW,6,1,1,'F');
-      doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(...WHT);
-      const shortName=f.name.length>55?f.name.slice(0,55)+'…':f.name;
-      doc.text(shortName,ML+4,y+4.2);
-      y+=7;
-      const retItems=PERIODS.map(p=>{
-        const ret=calcPeriodReturn(f.rawData,p.m);
-        const str=ret===null?'—':(parseFloat(ret)>=0?'+':'')+ret+'%';
-        return[p.l,str,ret===null?MUT:parseFloat(ret)>=0?POS:NEG];
-      });
-      y=b.metricsGrid(retItems,y,6);
-      y+=2;
-    });
-
-    b.disclaimerBox(y+2);
-    b.complianceBar(y+28);
-    b.footer(dateStr);
-
-    // ════════════════════════════════
-    //  PAGE 2 — DETAILED PROFILES
-    // ════════════════════════════════
-    b.newPage();
-    y=b.pageHeader('Detailed Fund Profiles','Individual risk metrics per fund  ·  Source: AMFI / mfapi.in',dateStr,timeStr,logoDataUrl);
-
-    selectedFunds.forEach((f,i)=>{
-      if(y>230){b.newPage();doc.setFillColor(...BG);doc.rect(0,0,PW,PH,'F');b.topBar();y=19;}
-      const m=allMetrics[i];
-
-      // Big result box — same as EMI's "Monthly EMI" box
-      y=b.bigResultBox(
-        f.name.length>55?f.name.slice(0,55)+'…':f.name,
-        (parseFloat(m.annReturn)>=0?'+':'')+m.annReturn+'% CAGR',
-        (parseFloat(m.totalReturn)>=0?'+':'')+m.totalReturn+'% '+periodLabel+' return',
-        FUND_COLORS[i]||[46,125,50],
-        y
-      );
-      y+=3;
-
-      // Metrics grid — identical to EMI's Loan Summary grid
-      y=b.metricsGrid([
-        [periodLabel+' Return',(parseFloat(m.totalReturn)>=0?'+':'')+m.totalReturn+'%',parseFloat(m.totalReturn)>=0?POS:NEG],
-        ['CAGR',(parseFloat(m.annReturn)>=0?'+':'')+m.annReturn+'%',parseFloat(m.annReturn)>=0?POS:NEG],
-        ['Volatility',m.annVol+'%',TXT],
-        ['Sharpe Ratio',S(m.sharpe),parseFloat(m.sharpe)>1?POS:parseFloat(m.sharpe)<0?NEG:TXT],
-        ['Max Drawdown','-'+m.maxDD+'%',NEG],
-        ['Best Day','+'+m.bestDay+'%',POS],
-        ['Worst Day',m.worstDay+'%',NEG],
-        ['Positive Days',m.posDays+'%',TXT],
-      ],y,4);
-
-      // Returns strip as metricsGrid (6 cols)
-      y=b.metricsGrid(
-        PERIODS.map(p=>{
-          const ret=calcPeriodReturn(f.rawData,p.m);
-          const str=ret===null?'—':(parseFloat(ret)>=0?'+':'')+ret+'%';
-          return[p.l,str,ret===null?MUT:parseFloat(ret)>=0?POS:NEG];
-        }),
-        y,6
-      );
-      y+=4;
-    });
-
-    y=b.disclaimerBox(y+2);
-    b.complianceBar(y+4);
-    b.footer(dateStr);
-
-    // ── Save ──
-    const safeName=selectedFunds.map(f=>(f.name||'').split(' ').slice(0,2).join('-')).join('_vs_').slice(0,55);
-    doc.save('Abundance-Fund-Briefing_'+safeName+'_'+new Date().toISOString().slice(0,10)+'.pdf');
-
-  }catch(e){console.error('PDF export error:',e);alert('PDF export failed: '+e.message);}
-  btn.innerHTML=orig;
-  btn.disabled=false;
-}
-
 
 
 // ════════════════════════════════════════
@@ -4732,110 +4634,71 @@ function _makePDF(){
 // ════════════════════════════════════════
 //  SIP / LUMPSUM PDF
 // ════════════════════════════════════════
-function printCalc(){_loadJsPDF(_doPrintSIP);}
-async function _doPrintSIP(){
-  const btn=document.querySelector('.sip-print-btn');
-  if(btn){btn.disabled=true;btn.textContent='Building PDF…';}
-  try{
-    const logoDataUrl=await _fetchLogoDataURL();
-    const b=_makePDF();
-    const {doc,ML,MR,PH,CW,SRF,BRD,TXT,MUT,WHT,POS,NEG,GMD,GDK,BG,S,fmtINR_}=b;
-    const dateStr=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
-    const timeStr=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+function printCalc(){
+  const summaryHTML  = document.getElementById('sipSummary').outerHTML;
+  const cardsHTML    = document.getElementById('sipResultCards').outerHTML;
+  const bigResultHTML= document.getElementById('sipBigResult').outerHTML;
+  const chartImg     = document.getElementById('sipChart') ? document.getElementById('sipChart').toDataURL('image/png') : '';
+  const modeLabel    = {sip:'SIP Returns',lump:'Lumpsum Returns',both:'SIP + Lumpsum'}[calcMode]||'SIP Returns';
 
-    // ── Read params directly from DOM (same approach as SWP/Goal/EMI) ──
-    const freq=document.getElementById('sipFreq')?.value||'monthly';
-    const freqLabel={daily:'Daily',weekly:'Weekly',monthly:'Monthly',quarterly:'Quarterly',annually:'Annual'}[freq]||'Monthly';
-    const amount=parseFloat(document.getElementById('sipAmount')?.value||0);
-    const lumpAmt=parseFloat(document.getElementById('lumpAmount')?.value||0);
-    const dur=document.getElementById('sipDuration')?.value||'10';
-    const durUnit=document.getElementById('sipDurationUnit')?.value||'years';
-    const rate=document.getElementById('sipRate')?.value||'12';
-    const stepup=parseFloat(document.getElementById('sipStepup')?.value||0);
-    const modeLabel={sip:'SIP Returns',lump:'Lumpsum Returns',both:'SIP + Lumpsum'}[calcMode]||'SIP Returns';
-
-    // ── Read computed results from live DOM ──
-    const corpus=document.querySelector('.sbr-corpus')?.textContent?.trim()||'—';
-    const invested=document.querySelector('.sbr-invested')?.textContent?.trim()||'—';
-    const gain=document.querySelector('.sbr-gain')?.textContent?.trim()||'';
-
-    b.newPage();
-    let y=b.pageHeader(modeLabel+' Calculator','Projection based on inputs below — for illustrative purposes only',dateStr,timeStr,logoDataUrl);
-
-    // ── Params box ──
-    const paramItems=[
-      calcMode!=='lump'?['SIP Amount','₹'+fmtINR_(amount)]:['Lumpsum','₹'+fmtINR_(lumpAmt)],
-      calcMode==='both'?['Lumpsum','₹'+fmtINR_(lumpAmt)]:null,
-      ['Duration',dur+' '+durUnit],
-      ['Expected Return',rate+'% p.a.'],
-      freqLabel!=='Monthly'?['Frequency',freqLabel]:null,
-      stepup>0?['Annual Step-up',stepup+'%']:null,
-    ].filter(Boolean);
-    y=b.paramsBox(paramItems,y);
-    y+=2;
-
-    // ── Big result box ──
-    y=b.bigResultBox('Estimated Corpus (Base Case)',corpus,invested,[30,94,32],y);
-    y+=4;
-
-    // ── Summary strip — read from DOM like SWP reads #swpFuel ──
-    const summaryItems=document.querySelectorAll('#sipSummary .sip-sum-item');
-    if(summaryItems.length){
-      y=b.secTitle('Summary',y);
-      const items=[...summaryItems].map(el=>[
-        el.querySelector('.sip-sum-label')?.textContent||'',
-        el.querySelector('.sip-sum-val')?.textContent||'',
-        TXT
-      ]);
-      y=b.metricsGrid(items,y,Math.min(items.length,4));
-    }
-
-    // ── Chart ──
-    y=b.secTitle('Growth Projection Chart',y);
-    y=b.addChartImg(document.getElementById('sipChart'),y,80);
-
-    // ── Result cards — read from live DOM like SWP reads #swpResultCards ──
-    const cardEls=document.querySelectorAll('#sipResultCards .sip-result-card');
-    if(cardEls.length){
-      y=b.secTitle('Scenario Analysis',y);
-      const ccw=(CW-(Math.min(cardEls.length,3)-1)*2)/Math.min(cardEls.length,3);
-      [...cardEls].slice(0,3).forEach((card,i)=>{
-        const cx=ML+i*(ccw+2);
-        const title=card.querySelector('.src-name')?.textContent||'Scenario '+(i+1);
-        const corpusVal=card.querySelector('.src-corpus')?.textContent||'—';
-        const accentColor=[[21,101,192],[46,125,50],[230,81,0]][i]||[46,125,50];
-        doc.setFillColor(...WHT);doc.setDrawColor(...BRD);doc.setLineWidth(0.3);
-        doc.roundedRect(cx,y,ccw,42,2,2,'FD');
-        doc.setFillColor(...accentColor);doc.rect(cx,y,ccw,3,'F');
-        doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...accentColor);
-        doc.text(title.slice(0,28),cx+ccw/2,y+9,{align:'center'});
-        doc.setFontSize(13);doc.setFont('helvetica','bold');doc.setTextColor(...GDK);
-        doc.text(S(corpusVal),cx+ccw/2,y+20,{align:'center'});
-        doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-        doc.text('Estimated Corpus',cx+ccw/2,y+25,{align:'center'});
-        // Read all src-row key/value pairs from the card
-        const rows=card.querySelectorAll('.src-row');
-        let ry=y+29;
-        [...rows].slice(0,3).forEach(row=>{
-          const k=row.querySelector('.src-key')?.textContent||'';
-          const v=row.querySelector('.src-val')?.textContent||'';
-          if(!k||!v) return;
-          doc.setFontSize(6);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-          doc.text(k.slice(0,18),cx+3,ry);
-          doc.setFont('helvetica','bold');doc.setTextColor(...TXT);
-          doc.text(v.slice(0,14),cx+ccw-3,ry,{align:'right'});
-          ry+=4.5;
-        });
-      });
-      y+=46;
-    }
-
-    y=b.disclaimerBox(y+2);
-    b.complianceBar(y+4);
-    b.footer(dateStr);
-    doc.save('Abundance-SIP-Projection_'+new Date().toISOString().slice(0,10)+'.pdf');
-  }catch(e){console.error(e);alert('PDF export failed: '+e.message);}
-  if(btn){btn.disabled=false;btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Save PDF';}
+  const win = window.open('','_blank','width=940,height=720');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>SIP Calculator | Abundance Financial Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px 36px}
+.ph{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:2.5px solid #2e7d32;margin-bottom:18px}
+.pt{font-size:1.05rem;font-weight:800;color:#2e7d32}.pa{font-size:.6rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:2px}
+.logo{height:44px;object-fit:contain;mix-blend-mode:multiply}
+.sec{font-size:.56rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#5e8a5e;margin:14px 0 7px;display:flex;align-items:center;gap:7px}
+.sec::after{content:"";flex:1;height:1px;background:#c2dfc2}
+/* Big result */
+#sipBigResult{background:linear-gradient(135deg,#1a3a2a,#2e7d32);border-radius:12px;padding:18px 24px;margin-bottom:12px;color:#fff;text-align:center}
+.sbr-eyebrow{font-size:.58rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.75;margin-bottom:6px}
+.sbr-corpus{font-family:"JetBrains Mono",monospace;font-size:2rem;font-weight:800;line-height:1.1;margin-bottom:6px}
+.sbr-sub-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.sbr-chip{font-family:"JetBrains Mono",monospace;font-size:.68rem;font-weight:600;padding:3px 10px;border-radius:12px;background:rgba(255,255,255,.12)}
+.sbr-gain{color:#a5d6a7}
+/* Summary strip */
+#sipSummary{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.sip-sum-item{flex:1;min-width:110px;background:#edf6ed;border:1.5px solid #c2dfc2;border-radius:8px;padding:9px 12px;text-align:center}
+.sip-sum-label{font-size:.52rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#5e8a5e;margin-bottom:3px}
+.sip-sum-val{font-family:"JetBrains Mono",monospace;font-size:.88rem;font-weight:700;color:#1b5e20}
+/* Result cards */
+#sipResultCards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.sip-result-card{background:#fff;border:1.5px solid #c2dfc2;border-radius:10px;padding:14px;position:relative;overflow:hidden}
+.src-accent{position:absolute;top:0;left:0;width:3px;bottom:0}
+.src-header{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.src-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.src-name{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.src-corpus-label{font-size:.52rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#5e8a5e;margin-bottom:2px}
+.src-corpus{font-family:"JetBrains Mono",monospace;font-size:1.1rem;font-weight:800;color:#1b5e20}
+.src-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #e8f5e9;font-size:.62rem}
+.src-row:last-child{border-bottom:none}
+.src-key{color:#5e8a5e}.src-val{font-family:"JetBrains Mono",monospace;font-weight:700}
+/* Chart */
+.ci img{width:100%;border-radius:8px;border:1px solid #c2dfc2;margin-bottom:12px}
+.dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:12px}
+@media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}
+</style></head><body>
+<div class="ph">
+  <div><div class="pt">${modeLabel} Calculator</div>
+  <div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds Distributor &amp; SIF Distributor</div></div>
+  <img class="logo" src="https://www.getabundance.in/images/logo.png" onerror="this.style.display='none'">
+</div>
+<div class="sec">Result</div>
+${bigResultHTML}
+<div class="sec">Summary</div>
+${summaryHTML}
+${chartImg?`<div class="sec">Growth Chart</div><div class="ci"><img src="${chartImg}"></div>`:''}
+<div class="sec">Scenarios</div>
+${cardsHTML}
+<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Projections are illustrative only and do not constitute financial advice. Consult your financial advisor before investing. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
+</body></html>`);
+  win.document.close();
+  win.onload = ()=>setTimeout(()=>{win.focus();win.print();},600);
+  setTimeout(()=>{try{win.focus();win.print();}catch(e){}},1200);
 }
 
 
