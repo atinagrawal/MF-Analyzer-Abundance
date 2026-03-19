@@ -2086,9 +2086,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 }
 @media(max-width:480px){
   .main-tab-label{display:none}
-  .main-tab{padding:12px 16px;justify-content:center}
-  .main-tab-icon{font-size:1.15rem}
+  .main-tab-short{display:none}
+  .main-tab{padding:10px 6px;justify-content:center;flex-direction:column;gap:3px;min-width:0;flex:1}
+  .main-tab-icon{font-size:1.2rem}
+  .main-tab.active .main-tab-short{display:block;font-size:.52rem;font-weight:800;letter-spacing:.3px;color:var(--g1);text-align:center;line-height:1}
 }
+.main-tab-short{display:none}
 
 
 /* ════════════════════════════════════════
@@ -2238,20 +2241,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 <!-- ═══ MAIN NAVIGATION TABS ═══ -->
 <div class="main-tabs-wrap" id="mainTabsWrap">
   <nav class="main-tabs-bar" role="tablist" aria-label="Calculator sections">
-    <button class="main-tab active" id="mtab-fund" role="tab" aria-selected="true" aria-controls="mpanel-fund" onclick="switchMainTab('fund',this)">
-      <span class="main-tab-icon">📈</span><span class="main-tab-label">Fund Compare</span>
+    <button class="main-tab active" id="mtab-fund" role="tab" aria-selected="true" aria-controls="mpanel-fund" onclick="switchMainTab('fund',this)" title="Fund Comparison">
+      <span class="main-tab-icon">📈</span><span class="main-tab-label">Fund Compare</span><span class="main-tab-short">Funds</span>
     </button>
-    <button class="main-tab" id="mtab-sip" role="tab" aria-selected="false" aria-controls="mpanel-sip" onclick="switchMainTab('sip',this)">
-      <span class="main-tab-icon">🧮</span><span class="main-tab-label">SIP Calculator</span>
+    <button class="main-tab" id="mtab-sip" role="tab" aria-selected="false" aria-controls="mpanel-sip" onclick="switchMainTab('sip',this)" title="SIP & Lumpsum Calculator">
+      <span class="main-tab-icon">🧮</span><span class="main-tab-label">SIP Calculator</span><span class="main-tab-short">SIP</span>
     </button>
-    <button class="main-tab" id="mtab-goal" role="tab" aria-selected="false" aria-controls="mpanel-goal" onclick="switchMainTab('goal',this)">
-      <span class="main-tab-icon">🎯</span><span class="main-tab-label">Goal Planner</span>
+    <button class="main-tab" id="mtab-goal" role="tab" aria-selected="false" aria-controls="mpanel-goal" onclick="switchMainTab('goal',this)" title="Investment Goal Planner">
+      <span class="main-tab-icon">🎯</span><span class="main-tab-label">Goal Planner</span><span class="main-tab-short">Goal</span>
     </button>
-    <button class="main-tab" id="mtab-swp" role="tab" aria-selected="false" aria-controls="mpanel-swp" onclick="switchMainTab('swp',this)">
-      <span class="main-tab-icon">💸</span><span class="main-tab-label">SWP</span>
+    <button class="main-tab" id="mtab-swp" role="tab" aria-selected="false" aria-controls="mpanel-swp" onclick="switchMainTab('swp',this)" title="SWP — Systematic Withdrawal Plan">
+      <span class="main-tab-icon">💸</span><span class="main-tab-label">SWP</span><span class="main-tab-short">SWP</span>
     </button>
-    <button class="main-tab" id="mtab-emi" role="tab" aria-selected="false" aria-controls="mpanel-emi" onclick="switchMainTab('emi',this)">
-      <span class="main-tab-icon"><span aria-hidden="true">🏦</span></span><span class="main-tab-label">EMI</span>
+    <button class="main-tab" id="mtab-emi" role="tab" aria-selected="false" aria-controls="mpanel-emi" onclick="switchMainTab('emi',this)" title="EMI & Loan Calculator">
+      <span class="main-tab-icon"><span aria-hidden="true">🏦</span></span><span class="main-tab-label">EMI</span><span class="main-tab-short">EMI</span>
     </button>
   </nav>
 </div>
@@ -3027,6 +3030,18 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         </div>
         <div id="btEmpty" style="text-align:center;padding:32px 0;color:var(--muted);font-size:.8rem;display:block">
           Search and select a fund to run the backtest
+        </div>
+
+        <!-- ─── ACTION BUTTONS ─── -->
+        <div id="btActions" style="display:none;display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button onclick="btShareURL()" class="swp-hdr-btn" style="flex:1;min-width:120px;justify-content:center;gap:6px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share URL
+          </button>
+          <button onclick="btPrint()" class="swp-hdr-btn" style="flex:1;min-width:120px;justify-content:center;gap:6px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Save PDF
+          </button>
         </div>
 
         <!-- ─── BACKTESTER OWN RESULTS ─── -->
@@ -6254,7 +6269,20 @@ async function btDoSearch(q){
     const res = await fetch('https://api.mfapi.in/mf/search?q='+encodeURIComponent(q), {signal:btSearchAbort.signal});
     const data = await res.json();
     if(!data || !data.length){ dd.innerHTML='<div class="dropdown-loading">No results found</div>'; return; }
-    dd.innerHTML = data.slice(0,15).map(f=>`<div class="dropdown-item" onclick="btSelectFund(${f.schemeCode},'${f.schemeName.replace(/'/g,"\'")}')"><span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${f.schemeName}</span><span class="di-code">${f.schemeCode}</span></div>`).join('');
+    // Same filter + rank as Fund Comparison renderSearchResults
+    const hideDeadAMC = !deadAMCQueried(q);
+    const filtered = data.filter(f=>!/direct/i.test(f.schemeName)&&(!hideDeadAMC||!isDeadAMC(f.schemeName)));
+    const ranked   = filtered.slice().sort((a,b)=>fundRank(a)-fundRank(b));
+    const results  = ranked.slice(0,25);
+    const ql = q.toLowerCase();
+    function btHighlight(name){
+      const i=name.toLowerCase().indexOf(ql);
+      if(i<0) return name;
+      return name.slice(0,i)+'<mark style="background:rgba(67,160,71,.18);color:var(--g1);border-radius:2px;padding:0 1px">'+name.slice(i,i+q.length)+'</mark>'+name.slice(i+q.length);
+    }
+    if(!results.length){ dd.innerHTML='<div class="dropdown-loading">No results (try without "Regular")</div>'; return; }
+    dd.innerHTML = '<div class="dd-count">'+results.length+' of '+filtered.length+' results</div>'+
+      results.map(f=>`<div class="dropdown-item" onclick="btSelectFund(${f.schemeCode},'${f.schemeName.replace(/'/g,"\'")}')"><span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${btHighlight(f.schemeName)}</span><span class="di-code">${f.schemeCode}</span></div>`).join('');
   }catch(e){
     if(e.name!=='AbortError') dd.innerHTML='<div class="dropdown-loading">⚠️ Search failed. Check connection.</div>';
   }
@@ -6301,6 +6329,7 @@ function btClearFund(){
   document.getElementById('btEmpty').textContent = 'Search and select a fund to run the backtest';
   document.getElementById('btEmpty').style.display = 'block';
   document.getElementById('btWhatIfWrap').style.display = 'none';
+  document.getElementById('btActions').style.display = 'none';
   // Hide SWP result sections
   ['swpFuel','swpStatGrid','swpResultCards','swpRunwaySection','swpInsights','swpChartSection'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.display='none';
@@ -6522,6 +6551,7 @@ function btRun(){
   }
 
   document.getElementById('btResults').style.display = 'block';
+  document.getElementById('btActions').style.display = 'flex';
 
   const {snaps, depleted, totalWithdrawn, finalCorpus, durationYrs, withdrawalMonths, xirr, startNAV, corpusAfterDelay} = result;
   const survives = depleted === null;
@@ -6674,43 +6704,242 @@ function btRenderWhatIf(corpus, withdrawal, stepup, startMonth){
   const last  = availYears[availYears.length-1];
   const first = availYears[0];
   const spread= last - first;
-  const candidates = spread >= 6
-    ? [first, Math.round(first+spread/3), Math.round(first+2*spread/3)]
-    : availYears.slice(0,3);
+  // Pick 5 evenly spread start years for richer comparison
+  const count = Math.min(5, availYears.length);
+  const candidates = count <= 3 ? availYears.slice(0, count)
+    : Array.from({length:count}, (_,i)=> availYears[Math.round(i*(availYears.length-1)/(count-1))]);
 
   const selectedYear = parseInt(document.getElementById('btStartYear').value);
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const endYear  = parseInt(document.getElementById('btEndYear')?.value) || null;
+  const endMonth = parseInt(document.getElementById('btEndMonth')?.value) || null;
 
   const rows = candidates.map(yr=>{
-    const r = runNAVBacktest(btFundData.navMap, yr, startMonth, corpus, withdrawal, stepup, 0);
+    const r = runNAVBacktest(btFundData.navMap, yr, startMonth, corpus, withdrawal, stepup, 0, 0, endYear, endMonth);
     return r ? {yr, r} : null;
   }).filter(Boolean);
 
   if(!rows.length){ document.getElementById('btWhatIfWrap').style.display='none'; return; }
 
-  const maxDur = Math.max(...rows.map(r=>r.r.durationYrs));
   document.getElementById('btWhatIfWrap').style.display = 'block';
-  document.getElementById('btWhatIfBars').innerHTML = rows.map(({yr,r})=>{
-    const survives = r.depleted===null;
-    const pct = Math.min(100, r.durationYrs/Math.max(maxDur,1)*100);
-    const col = survives?'#2e7d32':r.durationYrs>10?'#f57f17':'#b71c1c';
-    const isSel = yr===selectedYear;
-    const durStr = survives ? r.durationYrs.toFixed(1)+' yrs' : r.durationYrs.toFixed(1)+' yrs ⚠️';
-    const remCorpus = survives ? '₹'+fmtINR(r.finalCorpus) : '₹0';
-    return `<div style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;gap:6px;flex-wrap:wrap">
-        <span style="font-size:.68rem;font-weight:${isSel?800:600};color:${isSel?'var(--g1)':'var(--text2)'};white-space:nowrap">
-          ${MONTHS[startMonth-1]} ${yr}${isSel?' ◀':''}
-        </span>
-        <span style="font-size:.63rem;font-family:'JetBrains Mono',monospace;font-weight:700;color:${col};white-space:nowrap">${durStr}</span>
-        <span style="font-size:.63rem;font-family:'JetBrains Mono',monospace;color:var(--g2);white-space:nowrap">Rem: ${remCorpus}</span>
-        <span style="font-size:.63rem;font-family:'JetBrains Mono',monospace;color:var(--muted);white-space:nowrap">XIRR: ${r.xirr||'—'}%</span>
-      </div>
-      <div style="height:8px;background:var(--g-xlight);border-radius:5px;overflow:hidden">
-        <div style="width:${pct}%;height:100%;background:${col};border-radius:5px;transition:width .4s"></div>
-      </div>
+  // Table view
+  document.getElementById('btWhatIfBars').innerHTML = `
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+    <table style="width:100%;border-collapse:collapse;font-size:.68rem">
+      <thead>
+        <tr style="background:var(--g2);color:#fff">
+          <th style="padding:7px 10px;text-align:left;font-weight:800;letter-spacing:.5px;white-space:nowrap">Start</th>
+          <th style="padding:7px 10px;text-align:center;font-weight:800;letter-spacing:.5px;white-space:nowrap">Status</th>
+          <th style="padding:7px 10px;text-align:right;font-weight:800;letter-spacing:.5px;white-space:nowrap">Duration</th>
+          <th style="padding:7px 10px;text-align:right;font-weight:800;letter-spacing:.5px;white-space:nowrap">Remaining</th>
+          <th style="padding:7px 10px;text-align:right;font-weight:800;letter-spacing:.5px;white-space:nowrap">Withdrawn</th>
+          <th style="padding:7px 10px;text-align:right;font-weight:800;letter-spacing:.5px;white-space:nowrap">XIRR</th>
+          <th style="padding:7px 10px;text-align:right;font-weight:800;letter-spacing:.5px;white-space:nowrap">Multiple</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(({yr,r},ri)=>{
+          const survives = r.depleted===null;
+          const isSel = yr===selectedYear;
+          const col = survives?'#1b5e20':r.durationYrs>10?'#e65100':'#b71c1c';
+          const bg = isSel ? 'rgba(46,125,50,.08)' : ri%2===0?'var(--surface2)':'#fff';
+          const multiple = ((r.totalWithdrawn + r.finalCorpus)/corpus).toFixed(2);
+          return `<tr style="background:${bg};${isSel?'outline:1.5px solid var(--g3);outline-offset:-1px':''}">
+            <td style="padding:7px 10px;font-weight:${isSel?800:600};color:${isSel?'var(--g1)':'var(--text)'}">
+              ${MONTHS[startMonth-1]} ${yr}${isSel?' ◀':''}
+            </td>
+            <td style="padding:7px 10px;text-align:center">
+              <span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:.6rem;font-weight:800;
+                background:${survives?'rgba(46,125,50,.12)':'rgba(183,28,28,.1)'};
+                color:${survives?'#1b5e20':'#b71c1c'}">
+                ${survives?'✅ Survives':'⚠️ Depleted'}
+              </span>
+            </td>
+            <td style="padding:7px 10px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:${col}">
+              ${r.durationYrs.toFixed(1)} yrs
+            </td>
+            <td style="padding:7px 10px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:${survives?'var(--g1)':'var(--muted)'}">
+              ${survives?'₹'+fmtINR(r.finalCorpus):'₹0'}
+            </td>
+            <td style="padding:7px 10px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--text2)">
+              ₹${fmtINR(r.totalWithdrawn)}
+            </td>
+            <td style="padding:7px 10px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;
+              color:${r.xirr&&parseFloat(r.xirr)>0?'var(--g1)':'#b71c1c'}">
+              ${r.xirr||'—'}%
+            </td>
+            <td style="padding:7px 10px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--text2)">
+              ${multiple}x
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
     </div>`;
-  }).join('');
+}
+
+
+// ── Backtester: Share URL ──
+function btShareURL(){
+  if(!btFundData){ alert('Select a fund first'); return; }
+  const params = new URLSearchParams({
+    tab:'swp',
+    btMode:'1',
+    btCode: btFundData.code,
+    btName: btFundData.name,
+    btCorpus: document.getElementById('btCorpus').value,
+    btWithdrawal: document.getElementById('btWithdrawal').value,
+    btStepup: document.getElementById('btStepup').value,
+    btInflation: document.getElementById('btInflation').value,
+    btSY: document.getElementById('btStartYear').value,
+    btSM: document.getElementById('btStartMonth').value,
+    btEY: document.getElementById('btEndYear')?.value||'',
+    btEM: document.getElementById('btEndMonth')?.value||'',
+    btDelay: document.getElementById('btDelayToggle').checked?'1':'0',
+    btDV: document.getElementById('btDelayVal')?.value||'',
+    btDU: document.getElementById('btDelayUnit')?.value||'',
+  });
+  const url = location.origin + location.pathname + '?' + params.toString();
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>btToast('🔗 Link copied to clipboard!'));
+  } else {
+    prompt('Copy this link:', url);
+  }
+}
+
+function btToast(msg){
+  let t = document.getElementById('btToast');
+  if(!t){ t=document.createElement('div'); t.id='btToast';
+    t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e4d20;color:#fff;padding:10px 20px;border-radius:24px;font-size:.78rem;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);transition:opacity .3s';
+    document.body.appendChild(t); }
+  t.textContent=msg; t.style.opacity='1';
+  clearTimeout(t._tid);
+  t._tid=setTimeout(()=>t.style.opacity='0',2500);
+}
+
+// ── Backtester: Read URL params on load ──
+function btReadURL(){
+  const p = new URLSearchParams(location.search);
+  if(!p.get('btMode')) return;
+  // Switch to SWP tab then backtester tab
+  const swpBtn = document.getElementById('mtab-swp');
+  if(swpBtn) switchMainTab('swp', swpBtn);
+  const btBtn = document.querySelector('.swp-mode-tab:nth-child(3)');
+  if(btBtn) setSWPMode('backtest', btBtn);
+  // Fill inputs
+  const setV=(id,v)=>{ const el=document.getElementById(id); if(el&&v) el.value=v; };
+  setV('btCorpus', p.get('btCorpus'));
+  setV('btWithdrawal', p.get('btWithdrawal'));
+  setV('btStepup', p.get('btStepup'));
+  setV('btInflation', p.get('btInflation'));
+  if(p.get('btDelay')==='1'){
+    const tog=document.getElementById('btDelayToggle');
+    if(tog){ tog.checked=true; btToggleDelay(); }
+    setV('btDelayVal', p.get('btDV'));
+    setV('btDelayUnit', p.get('btDU'));
+  }
+  // Load fund then set dates
+  const code=p.get('btCode'), name=p.get('btName');
+  if(code){
+    document.getElementById('btFundName').textContent=name||code;
+    document.getElementById('btFundChipWrap').style.display='block';
+    document.getElementById('btEmpty').textContent='Loading fund from shared link…';
+    document.getElementById('btEmpty').style.display='block';
+    fetch('https://api.mfapi.in/mf/'+code)
+      .then(r=>r.json()).then(json=>{
+        const navMap={};
+        json.data.forEach(d=>{
+          const [dd,mm,yyyy]=d.date.split('-');
+          const key=yyyy+'-'+mm;
+          if(!navMap[key]) navMap[key]=parseFloat(d.nav);
+        });
+        btFundData={code,name:name||json.meta.scheme_name,navMap};
+        btBuildDateDropdowns();
+        // Now override with URL dates
+        setV('btStartYear', p.get('btSY'));
+        btUpdateMonths();
+        setV('btStartMonth', p.get('btSM'));
+        setV('btEndYear', p.get('btEY'));
+        btUpdateEndMonths();
+        setV('btEndMonth', p.get('btEM'));
+        btRun();
+      }).catch(()=>{ document.getElementById('btEmpty').textContent='Failed to load shared fund.'; });
+  }
+}
+
+// ── Backtester: Print/PDF (same window.open pattern as printSWP) ──
+function btPrint(){
+  if(!btFundData){ alert('Run a backtest first'); return; }
+  const fuelHTML    = document.getElementById('btFuel').outerHTML;
+  const statHTML    = document.getElementById('btStatGrid').outerHTML;
+  const cardsHTML   = document.getElementById('btResultCards').outerHTML;
+  const whatifHTML  = document.getElementById('btWhatIfWrap')?.style.display!=='none'
+                      ? document.getElementById('btWhatIfWrap').outerHTML : '';
+  const chartImg    = document.getElementById('btChart')
+                      ? document.getElementById('btChart').toDataURL('image/png') : '';
+  const win = window.open('','_blank','width=960,height=760');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>SWP Backtest | Abundance Financial Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px 36px}
+.ph{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:2.5px solid #00695c;margin-bottom:18px}
+.pt{font-size:1.05rem;font-weight:800;color:#00695c}.pa{font-size:.6rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:2px}
+.logo{height:44px;object-fit:contain;mix-blend-mode:multiply}
+.sec{font-size:.56rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#5e8a5e;margin:14px 0 7px;display:flex;align-items:center;gap:7px}
+.sec::after{content:"";flex:1;height:1px;background:#b2dfdb}
+.swp-fuel{background:linear-gradient(135deg,#1a3a2a,#1e4530);border-radius:12px;padding:16px 20px;margin-bottom:12px}
+.swp-fuel-label{font-size:.55rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#80cbc4;margin-bottom:10px}
+.swp-fuel-track{height:12px;background:rgba(255,255,255,.1);border-radius:6px;overflow:hidden;margin-bottom:8px}
+.swp-fuel-fill{height:100%;border-radius:6px}
+.swp-fuel-bottom{display:flex;justify-content:space-between;align-items:center}
+.swp-fuel-stats{display:flex;flex-wrap:wrap;gap:12px}
+.swp-fuel-stat-val{font-family:"JetBrains Mono",monospace;font-size:.82rem;font-weight:700;color:#e0f2f1}
+.swp-fuel-stat-lbl{font-size:.52rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:rgba(128,203,196,.7)}
+.swp-fuel-pct{font-family:"JetBrains Mono",monospace;font-size:1.2rem;font-weight:800;color:#fff}
+.swp-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.swp-stat{background:#f5f5f5;border:1.5px solid #e0e0e0;border-radius:9px;padding:10px 12px;text-align:center}
+.swp-stat.highlight{background:#e0f2f1;border-color:#80cbc4}.swp-stat.highlight .swp-stat-val{color:#00695c}
+.swp-stat.warn{background:#fff8e1;border-color:#ffe082}.swp-stat.warn .swp-stat-val{color:#e65100}
+.swp-stat.danger{background:#ffebee;border-color:#ef9a9a}.swp-stat.danger .swp-stat-val{color:#b71c1c}
+.swp-stat-label{font-size:.52rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#888;margin-bottom:4px}
+.swp-stat-val{font-family:"JetBrains Mono",monospace;font-size:.88rem;font-weight:700;line-height:1.2;overflow-wrap:break-word;word-break:break-word}
+.swp-stat-sub{font-size:.54rem;color:#999;margin-top:2px}
+.swp-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.swp-rcard{border-radius:10px;padding:14px;position:relative;overflow:hidden;border:1.5px solid}
+.swp-rcard-accent{position:absolute;top:0;left:0;width:3px;bottom:0}
+.swp-rc-label{font-size:.54rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px}
+.swp-rc-val{font-family:"JetBrains Mono",monospace;font-size:1.1rem;font-weight:800;line-height:1.1;margin-bottom:2px}
+.swp-rc-sub{font-size:.56rem;font-family:"JetBrains Mono",monospace;margin-bottom:9px}
+.swp-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:.62rem}
+.swp-row:last-child{border-bottom:none}
+.swp-row-key{opacity:.75}.swp-row-val{font-family:"JetBrains Mono",monospace;font-weight:600}
+.ci img{width:100%;border-radius:8px;border:1px solid #b2dfdb;margin-bottom:12px}
+.dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:14px}
+table{width:100%;border-collapse:collapse;font-size:.68rem}
+th{background:#00695c;color:#fff;padding:7px 10px;font-weight:800;text-align:right}
+th:first-child{text-align:left}
+td{padding:6px 10px;border-bottom:1px solid #e0f2f1;text-align:right;font-family:"JetBrains Mono",monospace}
+td:first-child{text-align:left;font-family:"Raleway",sans-serif}
+tr:nth-child(even) td{background:#f5faf5}
+@media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}
+</style></head><body>
+<div class="ph">
+  <div><div class="pt">SWP Backtester — ${btFundData.name}</div>
+  <div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds Distributor</div></div>
+  <img class="logo" src="https://www.getabundance.in/images/logo.png" onerror="this.style.display='none'">
+</div>
+<div class="sec">Corpus Health</div>${fuelHTML}
+<div class="sec">Statistics</div>${statHTML}
+<div class="sec">Result Cards</div>${cardsHTML}
+${whatifHTML?'<div class="sec">What-if Comparison</div>'+whatifHTML:''}
+${chartImg?'<div class="sec">NAV Chart</div><div class="ci"><img src="'+chartImg+'"></div>':''}
+<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. Backtested results use actual historical NAV data from AMFI / mfapi.in but do not guarantee future performance. This is for illustrative purposes only. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
+</body></html>`);
+  win.document.close();
+  win.onload=()=>setTimeout(()=>{win.focus();win.print();},600);
+  setTimeout(()=>{try{win.focus();win.print();}catch(e){}},1200);
 }
 
 
@@ -7615,6 +7844,7 @@ document.addEventListener('change', () => dWriteURL());
 // Restore on load
 restoreState();
 readURLParams();
+btReadURL();
 
 
 </script>
