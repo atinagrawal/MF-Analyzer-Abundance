@@ -4367,9 +4367,8 @@ async function _doExportPDF(){
   const orig=btn.innerHTML;
   btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Building PDF…';
   btn.disabled=true;
-
   try{
-    // ── Same pattern as SWP / Goal / EMI ──
+    // ── Identical opening to SWP/EMI/Goal/SIP ──
     const logoDataUrl=await _fetchLogoDataURL();
     const b=_makePDF();
     const {doc,ML,MR,PH,PW,CW,SRF,BRD,TXT,MUT,WHT,POS,NEG,GMD,GDK,BG,S,fmtINR_}=b;
@@ -4377,10 +4376,11 @@ async function _doExportPDF(){
     const timeStr=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
     const periodLabel=getPeriodLabel()||'Selected Period';
     const FUND_COLORS=[[46,125,50],[21,101,192],[230,81,0],[106,27,154],[0,131,143]];
+    const PERIODS=[{l:'1M',m:1},{l:'3M',m:3},{l:'6M',m:6},{l:'1Y',m:12},{l:'3Y',m:36},{l:'5Y',m:60}];
 
-    // ════════════════════
-    //  PAGE 1 — SUMMARY
-    // ════════════════════
+    // ════════════════════════════════
+    //  PAGE 1
+    // ════════════════════════════════
     b.newPage();
     let y=b.pageHeader(
       'Fund Comparison Briefing',
@@ -4388,111 +4388,91 @@ async function _doExportPDF(){
       dateStr,timeStr,logoDataUrl
     );
 
-    // ── Fund chips (read names from selectedFunds, same source as DOM) ──
+    // ── Fund list — using b.metricsGrid like SWP uses it for stat grid ──
     y=b.secTitle('Funds in this comparison',y);
-    selectedFunds.forEach((f,i)=>{
-      const color=FUND_COLORS[i]||FUND_COLORS[0];
-      const nmLines=doc.splitTextToSize(f.name||'',CW-38);
-      const chipH=Math.max(12,nmLines.length*4.5+5);
-      doc.setFillColor(...WHT);doc.setDrawColor(...BRD);doc.setLineWidth(0.25);
-      doc.roundedRect(ML,y,CW,chipH,2,2,'FD');
-      doc.setFillColor(...color);doc.circle(ML+5,y+chipH/2,1.5,'F');
-      doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(...TXT);
-      doc.text(nmLines.slice(0,2),ML+10,y+5);
-      const cat=(f.category||'')+(f.subCategory&&f.subCategory!==f.category?' · '+f.subCategory:'');
-      if(cat){
-        doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-        doc.text(cat,ML+10,y+5+Math.min(nmLines.length,2)*4.2);
-      }
-      y+=chipH+2;
+    const fundItems=selectedFunds.map((f,i)=>[
+      String(i+1)+'. '+f.name,
+      (f.category||''),
+      TXT
+    ]);
+    y=b.metricsGrid(fundItems,y,1);
+
+    // ── Key metrics table — using b.metricsGrid like EMI uses it for Loan Summary ──
+    y=b.secTitle('At-a-Glance Key Metrics',y);
+    const {cutoff:commonCutoff}=getCommonCutoff();
+    const allMetrics=selectedFunds.map((f,i)=>({...calcMetrics(f.rawData,commonCutoff),name:f.name,color:FUND_COLORS[i]}));
+
+    // One metricsGrid per fund (same way EMI has one grid for the loan)
+    allMetrics.forEach((m,i)=>{
+      const items=[
+        [selectedFunds[i].name.length>32?selectedFunds[i].name.slice(0,32)+'…':selectedFunds[i].name,'',TXT],
+        [periodLabel+' Return',(parseFloat(m.totalReturn)>=0?'+':'')+m.totalReturn+'%',parseFloat(m.totalReturn)>=0?POS:NEG],
+        ['CAGR',(parseFloat(m.annReturn)>=0?'+':'')+m.annReturn+'%',parseFloat(m.annReturn)>=0?POS:NEG],
+        ['Volatility',m.annVol+'%',TXT],
+        ['Sharpe',S(m.sharpe),parseFloat(m.sharpe)>1?POS:parseFloat(m.sharpe)<0?NEG:TXT],
+        ['Max DD','-'+m.maxDD+'%',NEG],
+      ];
+      // First cell is the fund name header — draw it as a coloured bar
+      doc.setFillColor(...(allMetrics[i].color||[46,125,50]));
+      doc.roundedRect(ML,y,CW,6,1,1,'F');
+      doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(...WHT);
+      doc.text(items[0][0],ML+4,y+4.2);
+      y+=7;
+      y=b.metricsGrid(items.slice(1),y,5);
+      y+=1;
     });
-    y+=3;
 
-    // ── Risk table — read directly from live DOM like EMI reads its table ──
-    const riskTbl=document.getElementById('riskTable');
-    if(riskTbl && riskTbl.querySelector('tbody tr')){
-      y=b.secTitle('Fund Metrics & Returns',y);
-      // Read headers
-      const ths=[...riskTbl.querySelectorAll('thead th')].map(th=>th.childNodes[0]?.textContent?.trim()||th.textContent?.trim()||'');
-      const colCount=Math.min(ths.length,9);
-      const colW=CW/colCount;
-      // Header row
-      doc.setFillColor(...GDK);doc.rect(ML,y,CW,6.5,'F');
-      doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...WHT);
-      ths.slice(0,colCount).forEach((h,ci)=>{
-        doc.text(h.slice(0,12), ci===0?ML+2:ML+ci*colW+colW-2, y+4.3, {align:ci===0?'left':'right'});
-      });
-      y+=6.5;
-      // Data rows
-      [...riskTbl.querySelectorAll('tbody tr')].forEach((row,ri)=>{
-        const tds=[...row.querySelectorAll('td')];
-        const rowH=8;
-        doc.setFillColor(...(ri%2===0?WHT:BG));doc.rect(ML,y,CW,rowH,'F');
-        // Color dot for fund column
-        const dotColor=FUND_COLORS[ri]||FUND_COLORS[0];
-        doc.setFillColor(...dotColor);doc.circle(ML+2.5,y+rowH/2,1.3,'F');
-        tds.slice(0,colCount).forEach((td,ci)=>{
-          const raw=td.textContent?.trim()||'';
-          // Skip the dot span content in fund name cell
-          const text=ci===0?(td.querySelector('.fund-name-text')?.textContent?.trim()||raw):raw;
-          const shortened=ci===0?text.slice(0,28):text.slice(0,10);
-          const isNeg=raw.startsWith('-')&&ci>0;
-          const isPos=raw.startsWith('+')&&ci>0;
-          doc.setFontSize(ci===0?6.5:7);
-          doc.setFont('helvetica',ci>0?'bold':'bold');
-          doc.setTextColor(...(isPos?POS:isNeg?NEG:TXT));
-          doc.text(shortened, ci===0?ML+6:ML+ci*colW+colW-2, y+rowH/2+1.5, {align:ci===0?'left':'right'});
-        });
-        doc.setDrawColor(...BRD);doc.setLineWidth(0.1);doc.line(ML,y+rowH,ML+CW,y+rowH);
-        y+=rowH;
-      });
-      y+=4;
-    }
-
-    // ── Chart — same as SWP reads swpChart ──
+    // ── Chart — identical to SWP's chart section ──
     y=b.secTitle('NAV Performance Chart',y);
-    y=b.addChartImg(document.querySelector('#mainContent canvas'),y,85);
+    y=b.addChartImg(document.querySelector('#mainContent canvas'),y,80);
+
+    // ── Period returns — b.metricsGrid per fund like SWP's stat grid ──
+    y=b.secTitle('Trailing Period Returns',y);
+    selectedFunds.forEach((f,i)=>{
+      // Fund name bar
+      doc.setFillColor(...(FUND_COLORS[i]||[46,125,50]));
+      doc.roundedRect(ML,y,CW,6,1,1,'F');
+      doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(...WHT);
+      const shortName=f.name.length>55?f.name.slice(0,55)+'…':f.name;
+      doc.text(shortName,ML+4,y+4.2);
+      y+=7;
+      const retItems=PERIODS.map(p=>{
+        const ret=calcPeriodReturn(f.rawData,p.m);
+        const str=ret===null?'—':(parseFloat(ret)>=0?'+':'')+ret+'%';
+        return[p.l,str,ret===null?MUT:parseFloat(ret)>=0?POS:NEG];
+      });
+      y=b.metricsGrid(retItems,y,6);
+      y+=2;
+    });
 
     b.disclaimerBox(y+2);
     b.complianceBar(y+28);
     b.footer(dateStr);
 
-    // ════════════════════
-    //  PAGE 2 — DETAILS
-    // ════════════════════
+    // ════════════════════════════════
+    //  PAGE 2 — DETAILED PROFILES
+    // ════════════════════════════════
     b.newPage();
     y=b.pageHeader('Detailed Fund Profiles','Individual risk metrics per fund  ·  Source: AMFI / mfapi.in',dateStr,timeStr,logoDataUrl);
 
-    // ── Per-fund metric cards — read from live DOM metrics ──
-    const {cutoff:commonCutoff}=getCommonCutoff();
-    const PERIODS=[{l:'1M',m:1},{l:'3M',m:3},{l:'6M',m:6},{l:'1Y',m:12},{l:'3Y',m:36},{l:'5Y',m:60}];
-
     selectedFunds.forEach((f,i)=>{
-      if(i>0) y+=4;
-      if(y>215){b.newPage();doc.setFillColor(...BG);doc.rect(0,0,PW,PH,'F');b.topBar();y=19;}
-      const m=calcMetrics(f.rawData,commonCutoff);
-      const color=FUND_COLORS[i]||FUND_COLORS[0];
+      if(y>230){b.newPage();doc.setFillColor(...BG);doc.rect(0,0,PW,PH,'F');b.topBar();y=19;}
+      const m=allMetrics[i];
 
-      // Fund header card
-      doc.setFillColor(...WHT);doc.setDrawColor(...BRD);doc.setLineWidth(0.25);
-      doc.roundedRect(ML,y,CW,24,2,2,'FD');
-      doc.setFillColor(...color);doc.rect(ML,y,4,24,'F');
-      const nameLines=doc.splitTextToSize(f.name||'',CW-60);
-      doc.setFontSize(9.5);doc.setFont('helvetica','bold');doc.setTextColor(...TXT);
-      doc.text(nameLines.slice(0,2),ML+7,y+7);
-      // CAGR on right
-      const cagr=(m.annReturn>=0?'+':'')+m.annReturn+'%';
-      doc.setFontSize(14);doc.setFont('helvetica','bold');
-      doc.setTextColor(...(parseFloat(m.annReturn)>=0?POS:NEG));
-      doc.text(cagr,PW-MR-2,y+11,{align:'right'});
-      doc.setFontSize(6);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-      doc.text('CAGR',PW-MR-2,y+16,{align:'right'});
-      y+=27;
+      // Big result box — same as EMI's "Monthly EMI" box
+      y=b.bigResultBox(
+        f.name.length>55?f.name.slice(0,55)+'…':f.name,
+        (parseFloat(m.annReturn)>=0?'+':'')+m.annReturn+'% CAGR',
+        (parseFloat(m.totalReturn)>=0?'+':'')+m.totalReturn+'% '+periodLabel+' return',
+        FUND_COLORS[i]||[46,125,50],
+        y
+      );
+      y+=3;
 
-      // Metrics grid — same structure as EMI's loan summary
+      // Metrics grid — identical to EMI's Loan Summary grid
       y=b.metricsGrid([
-        [getPeriodLabel()+' Return',(parseFloat(m.totalReturn)>=0?'+':'')+m.totalReturn+'%',parseFloat(m.totalReturn)>=0?POS:NEG],
-        ['CAGR',cagr,parseFloat(m.annReturn)>=0?POS:NEG],
+        [periodLabel+' Return',(parseFloat(m.totalReturn)>=0?'+':'')+m.totalReturn+'%',parseFloat(m.totalReturn)>=0?POS:NEG],
+        ['CAGR',(parseFloat(m.annReturn)>=0?'+':'')+m.annReturn+'%',parseFloat(m.annReturn)>=0?POS:NEG],
         ['Volatility',m.annVol+'%',TXT],
         ['Sharpe Ratio',S(m.sharpe),parseFloat(m.sharpe)>1?POS:parseFloat(m.sharpe)<0?NEG:TXT],
         ['Max Drawdown','-'+m.maxDD+'%',NEG],
@@ -4501,22 +4481,16 @@ async function _doExportPDF(){
         ['Positive Days',m.posDays+'%',TXT],
       ],y,4);
 
-      // Trailing returns strip
-      doc.setFillColor(...SRF);doc.setDrawColor(...BRD);doc.setLineWidth(0.2);
-      doc.roundedRect(ML,y,CW,11,1,1,'FD');
-      const pw2=CW/PERIODS.length;
-      PERIODS.forEach((p,pi)=>{
-        const ret=calcPeriodReturn(f.rawData,p.m);
-        const px=ML+pi*pw2;
-        const retStr=ret===null?'—':(parseFloat(ret)>=0?'+':'')+ret+'%';
-        doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...MUT);
-        doc.text(p.l,px+pw2/2,y+4.5,{align:'center'});
-        doc.setFontSize(7.5);
-        doc.setTextColor(...(ret===null?MUT:parseFloat(ret)>=0?POS:NEG));
-        doc.text(retStr,px+pw2/2,y+9.5,{align:'center'});
-        if(pi<PERIODS.length-1){doc.setDrawColor(...BRD);doc.line(px+pw2,y+1,px+pw2,y+10);}
-      });
-      y+=14;
+      // Returns strip as metricsGrid (6 cols)
+      y=b.metricsGrid(
+        PERIODS.map(p=>{
+          const ret=calcPeriodReturn(f.rawData,p.m);
+          const str=ret===null?'—':(parseFloat(ret)>=0?'+':'')+ret+'%';
+          return[p.l,str,ret===null?MUT:parseFloat(ret)>=0?POS:NEG];
+        }),
+        y,6
+      );
+      y+=4;
     });
 
     y=b.disclaimerBox(y+2);
@@ -4527,10 +4501,7 @@ async function _doExportPDF(){
     const safeName=selectedFunds.map(f=>(f.name||'').split(' ').slice(0,2).join('-')).join('_vs_').slice(0,55);
     doc.save('Abundance-Fund-Briefing_'+safeName+'_'+new Date().toISOString().slice(0,10)+'.pdf');
 
-  }catch(e){
-    console.error('PDF export error:',e);
-    alert('PDF export failed: '+e.message);
-  }
+  }catch(e){console.error('PDF export error:',e);alert('PDF export failed: '+e.message);}
   btn.innerHTML=orig;
   btn.disabled=false;
 }
