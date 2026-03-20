@@ -1,4 +1,22 @@
 User-agent: *
 Allow: /
+Allow: /api/og
+Disallow: /api/amfi-pdf
+Disallow: /api/amfi-industry
+Disallow: /api/mf-portfolio
+Disallow: /api/health
+
+# Allow OG image endpoint for social crawlers
+User-agent: Twitterbot
+Allow: /api/og
+
+User-agent: facebookexternalhit
+Allow: /api/og
+
+User-agent: LinkedInBot
+Allow: /api/og
+
+User-agent: WhatsApp
+Allow: /api/og
 
 Sitemap: https://mfcalc.getabundance.in/sitemap.xml
