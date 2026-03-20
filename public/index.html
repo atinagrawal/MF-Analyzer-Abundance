@@ -2816,7 +2816,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         </div>
         <div class="swp-hdr-badge">Live Calculator</div>
       </div>
-      <button class="swp-hdr-btn" onclick="printSWP()">
+      <button class="swp-hdr-btn" id="swpPrintBtn" onclick="printSWP()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         Save PDF
       </button>
@@ -3032,20 +3032,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
           Search and select a fund to run the backtest
         </div>
 
-        <!-- ─── ACTION BUTTONS ─── -->
-        <div id="btActions" style="display:none;display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-          <button onclick="btShareURL()" class="swp-hdr-btn" style="flex:1;min-width:120px;justify-content:center;gap:6px">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-            Share URL
-          </button>
-          <button onclick="btPrint()" class="swp-hdr-btn" style="flex:1;min-width:120px;justify-content:center;gap:6px">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            Save PDF
-          </button>
-        </div>
-
         <!-- ─── BACKTESTER OWN RESULTS ─── -->
         <div id="btResults" style="display:none">
+
+          <!-- Action buttons at top of results -->
+          <div id="btActions" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+            <button onclick="btShareURL()" class="swp-hdr-btn" style="flex:1;min-width:120px;justify-content:center;gap:6px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              Share URL
+            </button>
+            <button onclick="btPrint()" class="swp-hdr-btn" style="flex:1;min-width:120px;justify-content:center;gap:6px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Save PDF
+            </button>
+          </div>
           <!-- Fuel gauge -->
           <div class="swp-fuel" id="btFuel">
             <div class="swp-fuel-label">🔋 Corpus Health Monitor</div>
@@ -3057,10 +3057,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
           </div>
 
           <!-- Stat grid -->
-          <div class="swp-stat-grid" id="btStatGrid" style="margin-top:14px"></div>
+          <div class="swp-stat-grid" id="btStatGrid" class="swp-stat-grid" style="margin-top:14px"></div>
 
           <!-- Result cards -->
-          <div class="swp-result-grid" id="btResultCards" style="margin-top:14px"></div>
+          <div class="swp-result-grid" id="btResultCards" class="swp-result-grid" style="margin-top:14px"></div>
 
           <!-- What-if -->
           <div id="btWhatIfWrap" style="display:none;margin-top:16px">
@@ -6167,6 +6167,7 @@ function printSWP(){
 .swp-fuel-label{font-size:.55rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#80cbc4;margin-bottom:10px}
 .swp-fuel-track{height:12px;background:rgba(255,255,255,.1);border-radius:6px;overflow:hidden;margin-bottom:8px}.swp-fuel-fill{height:100%;border-radius:6px}
 .swp-fuel-stats{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}.swp-fuel-stat{text-align:center}
+.swp-fuel-stat{text-align:center;min-width:80px}
 .swp-fuel-stat-val{font-family:"JetBrains Mono",monospace;font-size:.82rem;font-weight:700;color:#e0f2f1}.swp-fuel-stat-lbl{font-size:.52rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:rgba(128,203,196,.7);margin-top:1px}
 .swp-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
 .swp-stat{background:#f5f5f5;border:1.5px solid #e0e0e0;border-radius:9px;padding:10px 12px;text-align:center}
@@ -6230,6 +6231,10 @@ function setSWPMode(mode, btn){
   // Shared sections (journey strip, delay box, all results): hide in backtest mode
   const SHARED = ['swpDelayBox','swpJourney','swpFuel','swpStatGrid','swpResultCards','swpRunwaySection','swpInsights','swpChartSection'];
   SHARED.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+
+  // Show/hide top Save PDF button — only relevant for projected modes
+  const swpPrintBtn = document.getElementById('swpPrintBtn');
+  if(swpPrintBtn) swpPrintBtn.style.display = isBacktest ? 'none' : '';
 
   if(isBacktest){
     btRun();
@@ -6329,7 +6334,6 @@ function btClearFund(){
   document.getElementById('btEmpty').textContent = 'Search and select a fund to run the backtest';
   document.getElementById('btEmpty').style.display = 'block';
   document.getElementById('btWhatIfWrap').style.display = 'none';
-  document.getElementById('btActions').style.display = 'none';
   // Hide SWP result sections
   ['swpFuel','swpStatGrid','swpResultCards','swpRunwaySection','swpInsights','swpChartSection'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.display='none';
@@ -6551,7 +6555,6 @@ function btRun(){
   }
 
   document.getElementById('btResults').style.display = 'block';
-  document.getElementById('btActions').style.display = 'flex';
 
   const {snaps, depleted, totalWithdrawn, finalCorpus, durationYrs, withdrawalMonths, xirr, startNAV, corpusAfterDelay} = result;
   const survives = depleted === null;
@@ -6821,71 +6824,74 @@ function btToast(msg){
 function btReadURL(){
   const p = new URLSearchParams(location.search);
   if(!p.get('btMode')) return;
-  // Switch to SWP tab then backtester tab
-  const swpBtn = document.getElementById('mtab-swp');
-  if(swpBtn) switchMainTab('swp', swpBtn);
-  const btBtn = document.querySelector('.swp-mode-tab:nth-child(3)');
-  if(btBtn) setSWPMode('backtest', btBtn);
-  // Fill inputs
-  const setV=(id,v)=>{ const el=document.getElementById(id); if(el&&v) el.value=v; };
-  setV('btCorpus', p.get('btCorpus'));
+
+  // readURLParams already switched to SWP tab via tab=swp param.
+  // Now switch the SWP sub-tab to backtest — find the 3rd mode tab button
+  const modeTabBtns = document.querySelectorAll('.swp-mode-tab');
+  const btModeBtn = modeTabBtns[2]; // 0=haveCorpus, 1=needIncome, 2=backtest
+  if(btModeBtn) setSWPMode('backtest', btModeBtn);
+
+  const setV=(id,v)=>{ const el=document.getElementById(id); if(el&&v!==null&&v!=='') el.value=v; };
+  setV('btCorpus',     p.get('btCorpus'));
   setV('btWithdrawal', p.get('btWithdrawal'));
-  setV('btStepup', p.get('btStepup'));
-  setV('btInflation', p.get('btInflation'));
+  setV('btStepup',     p.get('btStepup'));
+  setV('btInflation',  p.get('btInflation'));
   if(p.get('btDelay')==='1'){
-    const tog=document.getElementById('btDelayToggle');
+    const tog = document.getElementById('btDelayToggle');
     if(tog){ tog.checked=true; btToggleDelay(); }
-    setV('btDelayVal', p.get('btDV'));
+    setV('btDelayVal',  p.get('btDV'));
     setV('btDelayUnit', p.get('btDU'));
   }
-  // Load fund then set dates
-  const code=p.get('btCode'), name=p.get('btName');
-  if(code){
-    document.getElementById('btFundName').textContent=name||code;
-    document.getElementById('btFundChipWrap').style.display='block';
-    document.getElementById('btEmpty').textContent='Loading fund from shared link…';
-    document.getElementById('btEmpty').style.display='block';
-    fetch('https://api.mfapi.in/mf/'+code)
-      .then(r=>r.json()).then(json=>{
-        const navMap={};
-        json.data.forEach(d=>{
-          const [dd,mm,yyyy]=d.date.split('-');
-          const key=yyyy+'-'+mm;
-          if(!navMap[key]) navMap[key]=parseFloat(d.nav);
-        });
-        btFundData={code,name:name||json.meta.scheme_name,navMap};
-        btBuildDateDropdowns();
-        // Now override with URL dates
-        setV('btStartYear', p.get('btSY'));
-        btUpdateMonths();
-        setV('btStartMonth', p.get('btSM'));
-        setV('btEndYear', p.get('btEY'));
-        btUpdateEndMonths();
-        setV('btEndMonth', p.get('btEM'));
-        btRun();
-      }).catch(()=>{ document.getElementById('btEmpty').textContent='Failed to load shared fund.'; });
-  }
+
+  const schemeCode = p.get('btCode');
+  const schemeName = p.get('btName');
+  if(!schemeCode) return;
+
+  document.getElementById('btFundName').textContent = schemeName || schemeCode;
+  document.getElementById('btFundChipWrap').style.display = 'block';
+  document.getElementById('btEmpty').textContent = 'Loading fund from shared link…';
+  document.getElementById('btEmpty').style.display = 'block';
+
+  fetch('https://api.mfapi.in/mf/' + schemeCode)
+    .then(r=>r.json())
+    .then(json=>{
+      const navMap={};
+      (json.data||[]).forEach(d=>{
+        const [dd,mm,yyyy]=d.date.split('-');
+        const key=yyyy+'-'+mm;
+        if(!navMap[key]) navMap[key]=parseFloat(d.nav);
+      });
+      btFundData = {code:schemeCode, name:schemeName||json.meta.scheme_name, navMap};
+      btBuildDateDropdowns();
+      // Override dropdowns with URL dates after btBuildDateDropdowns sets defaults
+      if(p.get('btSY')){ setV('btStartYear', p.get('btSY')); btUpdateMonths(); }
+      if(p.get('btSM')){ setV('btStartMonth', p.get('btSM')); }
+      if(p.get('btEY')){ setV('btEndYear', p.get('btEY')); btUpdateEndMonths(); }
+      if(p.get('btEM')){ setV('btEndMonth', p.get('btEM')); }
+      btRun();
+    })
+    .catch(()=>{
+      if(document.getElementById('btEmpty'))
+        document.getElementById('btEmpty').textContent='Failed to load shared fund. Try again.';
+    });
 }
 
 // ── Backtester: Print/PDF (same window.open pattern as printSWP) ──
 function btPrint(){
   if(!btFundData){ alert('Run a backtest first'); return; }
-  const fuelHTML    = document.getElementById('btFuel').outerHTML;
-  const statHTML    = document.getElementById('btStatGrid').outerHTML;
-  const cardsHTML   = document.getElementById('btResultCards').outerHTML;
-  const whatifHTML  = document.getElementById('btWhatIfWrap')?.style.display!=='none'
-                      ? document.getElementById('btWhatIfWrap').outerHTML : '';
-  const chartImg    = document.getElementById('btChart')
-                      ? document.getElementById('btChart').toDataURL('image/png') : '';
-  const win = window.open('','_blank','width=960,height=760');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-<title>SWP Backtest | Abundance Financial Services</title>
-<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
+  const fuelHTML   = document.getElementById('btFuel').outerHTML;
+  const statHTML   = document.getElementById('btStatGrid').outerHTML;
+  const cardsHTML  = document.getElementById('btResultCards').outerHTML;
+  const whatifEl   = document.getElementById('btWhatIfWrap');
+  const whatifHTML = whatifEl && whatifEl.style.display !== 'none' ? whatifEl.outerHTML : '';
+  const chartEl    = document.getElementById('btChart');
+  const chartImg   = chartEl ? chartEl.toDataURL('image/png') : '';
+
+  const CSS = `*{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px 36px}
 .ph{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:2.5px solid #00695c;margin-bottom:18px}
-.pt{font-size:1.05rem;font-weight:800;color:#00695c}.pa{font-size:.6rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:2px}
+.pt{font-size:1.05rem;font-weight:800;color:#00695c}
+.pa{font-size:.6rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:2px}
 .logo{height:44px;object-fit:contain;mix-blend-mode:multiply}
 .sec{font-size:.56rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#5e8a5e;margin:14px 0 7px;display:flex;align-items:center;gap:7px}
 .sec::after{content:"";flex:1;height:1px;background:#b2dfdb}
@@ -6893,52 +6899,57 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 .swp-fuel-label{font-size:.55rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#80cbc4;margin-bottom:10px}
 .swp-fuel-track{height:12px;background:rgba(255,255,255,.1);border-radius:6px;overflow:hidden;margin-bottom:8px}
 .swp-fuel-fill{height:100%;border-radius:6px}
-.swp-fuel-bottom{display:flex;justify-content:space-between;align-items:center}
+.swp-fuel-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
 .swp-fuel-stats{display:flex;flex-wrap:wrap;gap:12px}
+.swp-fuel-stat{text-align:center;min-width:80px}
 .swp-fuel-stat-val{font-family:"JetBrains Mono",monospace;font-size:.82rem;font-weight:700;color:#e0f2f1}
 .swp-fuel-stat-lbl{font-size:.52rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:rgba(128,203,196,.7)}
 .swp-fuel-pct{font-family:"JetBrains Mono",monospace;font-size:1.2rem;font-weight:800;color:#fff}
 .swp-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
-.swp-stat{background:#f5f5f5;border:1.5px solid #e0e0e0;border-radius:9px;padding:10px 12px;text-align:center}
-.swp-stat.highlight{background:#e0f2f1;border-color:#80cbc4}.swp-stat.highlight .swp-stat-val{color:#00695c}
-.swp-stat.warn{background:#fff8e1;border-color:#ffe082}.swp-stat.warn .swp-stat-val{color:#e65100}
-.swp-stat.danger{background:#ffebee;border-color:#ef9a9a}.swp-stat.danger .swp-stat-val{color:#b71c1c}
+.swp-stat{background:#f5f5f5;border:1.5px solid #e0e0e0;border-radius:9px;padding:10px 12px;text-align:center;position:relative}
+.swp-stat.highlight{background:#e0f2f1;border-color:#80cbc4}
+.swp-stat.highlight .swp-stat-val{color:#00695c}
+.swp-stat.warn{background:#fff8e1;border-color:#ffe082}
+.swp-stat.warn .swp-stat-val{color:#e65100}
+.swp-stat.danger{background:#ffebee;border-color:#ef9a9a}
+.swp-stat.danger .swp-stat-val{color:#b71c1c}
 .swp-stat-label{font-size:.52rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#888;margin-bottom:4px}
 .swp-stat-val{font-family:"JetBrains Mono",monospace;font-size:.88rem;font-weight:700;line-height:1.2;overflow-wrap:break-word;word-break:break-word}
 .swp-stat-sub{font-size:.54rem;color:#999;margin-top:2px}
-.swp-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.swp-result-grid{display:grid!important;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
 .swp-rcard{border-radius:10px;padding:14px;position:relative;overflow:hidden;border:1.5px solid}
 .swp-rcard-accent{position:absolute;top:0;left:0;width:3px;bottom:0}
-.swp-rc-label{font-size:.54rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px}
+.swp-rc-label{font-size:.54rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;display:flex;align-items:center;gap:6px}
 .swp-rc-val{font-family:"JetBrains Mono",monospace;font-size:1.1rem;font-weight:800;line-height:1.1;margin-bottom:2px}
 .swp-rc-sub{font-size:.56rem;font-family:"JetBrains Mono",monospace;margin-bottom:9px}
 .swp-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:.62rem}
 .swp-row:last-child{border-bottom:none}
-.swp-row-key{opacity:.75}.swp-row-val{font-family:"JetBrains Mono",monospace;font-weight:600}
+.swp-row-key{opacity:.75}
+.swp-row-val{font-family:"JetBrains Mono",monospace;font-weight:600}
 .ci img{width:100%;border-radius:8px;border:1px solid #b2dfdb;margin-bottom:12px}
 .dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:14px}
 table{width:100%;border-collapse:collapse;font-size:.68rem}
-th{background:#00695c;color:#fff;padding:7px 10px;font-weight:800;text-align:right}
-th:first-child{text-align:left}
-td{padding:6px 10px;border-bottom:1px solid #e0f2f1;text-align:right;font-family:"JetBrains Mono",monospace}
-td:first-child{text-align:left;font-family:"Raleway",sans-serif}
+th{background:#00695c;color:#fff;padding:7px 10px;font-weight:800}th:first-child{text-align:left}
+td{padding:6px 10px;border-bottom:1px solid #e0f2f1;font-family:"JetBrains Mono",monospace}td:first-child{font-family:"Raleway",sans-serif}
 tr:nth-child(even) td{background:#f5faf5}
-@media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}
-</style></head><body>
-<div class="ph">
-  <div><div class="pt">SWP Backtester — ${btFundData.name}</div>
-  <div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds Distributor</div></div>
-  <img class="logo" src="https://www.getabundance.in/images/logo.png" onerror="this.style.display='none'">
-</div>
-<div class="sec">Corpus Health</div>${fuelHTML}
-<div class="sec">Statistics</div>${statHTML}
-<div class="sec">Result Cards</div>${cardsHTML}
-${whatifHTML?'<div class="sec">What-if Comparison</div>'+whatifHTML:''}
-${chartImg?'<div class="sec">NAV Chart</div><div class="ci"><img src="'+chartImg+'"></div>':''}
-<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. Backtested results use actual historical NAV data from AMFI / mfapi.in but do not guarantee future performance. This is for illustrative purposes only. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
-</body></html>`);
+@media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}`;
+
+  const body = '<div class="ph"><div><div class="pt">SWP Backtester \u2014 ' + btFundData.name + '</div>'
+    + '<div class="pa">Abundance Financial Services\u00ae \u00b7 ARN-251838 \u00b7 AMFI Registered Mutual Funds Distributor</div></div>'
+    + '<img class="logo" src="https://www.getabundance.in/images/logo.png" onerror="this.style.display=\'none\'"></div>'
+    + '<div class="sec">Corpus Health</div>' + fuelHTML
+    + '<div class="sec">Statistics</div>' + statHTML
+    + '<div class="sec">Result Cards</div>' + cardsHTML
+    + (whatifHTML ? '<div class="sec">What-if Comparison</div>' + whatifHTML : '')
+    + (chartImg ? '<div class="sec">NAV Chart</div><div class="ci"><img src="' + chartImg + '"></div>' : '')
+    + '<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. Backtested results use actual historical NAV data from AMFI / mfapi.in but do not guarantee future performance. This is for illustrative purposes only. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>';
+
+  const win = window.open('','_blank','width=960,height=760');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SWP Backtest | Abundance Financial Services</title>'
+    + '<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">'
+    + '<style>' + CSS + '</style></head><body>' + body + '</body></html>');
   win.document.close();
-  win.onload=()=>setTimeout(()=>{win.focus();win.print();},600);
+  win.onload = ()=>setTimeout(()=>{win.focus();win.print();},600);
   setTimeout(()=>{try{win.focus();win.print();}catch(e){}},1200);
 }
 
