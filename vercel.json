@@ -3,24 +3,32 @@
   "name": "mfcalc-abundance",
   "buildCommand": null,
   "outputDirectory": "public",
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/industry",   "destination": "/industry.html" }
+    { "source": "/api/(.*)", "destination": "/api/$1" }
   ],
   "headers": [
     {
+      "source": "/api/og",
+      "headers": [
+        { "key": "Cache-Control", "value": "s-maxage=3600, stale-while-revalidate=86400" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    },
+    {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin",  "value": "*" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS" },
-        { "key": "Cache-Control",                "value": "s-maxage=86400, stale-while-revalidate=604800" }
+        { "key": "Cache-Control", "value": "s-maxage=86400, stale-while-revalidate=604800" }
       ]
     },
     {
       "source": "/(.*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options",        "value": "SAMEORIGIN" }
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
       ]
     }
   ]
