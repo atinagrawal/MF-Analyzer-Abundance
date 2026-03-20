@@ -6561,6 +6561,8 @@ function btRun(){
   }
 
   document.getElementById('btResults').style.display = 'block';
+  // Store raw numbers for btShareURL — avoids parsing formatted strings
+  window._btLastResult = result;
 
   const {snaps, depleted, totalWithdrawn, finalCorpus, durationYrs, withdrawalMonths, xirr, startNAV, corpusAfterDelay} = result;
   const survives = depleted === null;
@@ -6795,19 +6797,7 @@ function btShareURL(){
   // Collect result stats for dynamic OG image
   const xirrEl   = document.querySelector('#btStatGrid .swp-stat.highlight .swp-stat-val');
   const corpusEl = document.querySelector('#btStatGrid .swp-stat.highlight:last-of-type .swp-stat-val');
-  const xirr     = document.getElementById('btStatGrid')?.querySelectorAll?.('.swp-stat')?.length
-                   ? (() => {
-                       const items = [...document.getElementById('btStatGrid').querySelectorAll('.swp-stat')];
-                       const xirrItem = items.find(el => el.querySelector('.swp-stat-label')?.textContent?.includes('XIRR'));
-                       return xirrItem?.querySelector('.swp-stat-val')?.textContent?.replace('%','').replace(' p.a.','').trim() || '';
-                     })() : '';
-  const finalCorpusRaw = (() => {
-    const items = [...(document.getElementById('btStatGrid')?.querySelectorAll?.('.swp-stat') || [])];
-    const remItem = items.find(el => el.querySelector('.swp-stat-label')?.textContent?.includes('Remaining') || el.querySelector('.swp-stat-label')?.textContent?.includes('Corpus'));
-    const val = remItem?.querySelector('.swp-stat-val')?.textContent || '';
-    const num = val.replace(/[₹,\s]/g,'').replace('Cr','e7').replace('L','e5');
-    return isNaN(parseFloat(num)) ? '' : String(Math.round(parseFloat(num) * (val.includes('Cr')?1e7:val.includes('L')?1e5:1)));
-  })();
+  const xirr = window._btLastResult?.xirr || '';
   const survived = document.getElementById('btStatGrid')
     ? (() => {
         const items = [...document.getElementById('btStatGrid').querySelectorAll('.swp-stat')];
@@ -6833,7 +6823,8 @@ function btShareURL(){
     btDelay: document.getElementById('btDelayToggle').checked?'1':'0',
     btDV: document.getElementById('btDelayVal')?.value||'',
     btDU: document.getElementById('btDelayUnit')?.value||'',
-    xirr, survived, finalC: finalCorpusRaw,
+    xirr, survived, finalC: window._btLastResult ? String(window._btLastResult.finalCorpus) : '',
+    withdrawn: window._btLastResult ? String(window._btLastResult.totalWithdrawn) : '',
   });
   const url = location.origin + location.pathname + '?' + params.toString();
   if(navigator.clipboard && navigator.clipboard.writeText){
