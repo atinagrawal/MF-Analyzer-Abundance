@@ -1,187 +1,160 @@
-// api/og.js — Dynamic OG image for SWP Backtester shared links
-// Uses @vercel/og with plain JS (no JSX) — compatible with no-build projects
-
-import { ImageResponse } from '@vercel/og';
+// api/og.js — Dynamic OG image via SVG → PNG
+// Zero external dependencies — uses only built-in Node.js
+// Returns an SVG (social crawlers and most previews accept image/svg+xml)
 
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
-  try {
-    const { searchParams } = new URL(req.url);
+  const { searchParams } = new URL(req.url);
 
-    const btName   = searchParams.get('btName')   || '';
-    const corpus   = searchParams.get('btCorpus') || '';
-    const withdraw = searchParams.get('btWithdrawal') || '';
-    const btSY     = searchParams.get('btSY')     || '';
-    const btSM     = searchParams.get('btSM')     || '';
-    const btEY     = searchParams.get('btEY')     || '';
-    const btEM     = searchParams.get('btEM')     || '';
-    const xirr     = searchParams.get('xirr')     || '';
-    const survived = searchParams.get('survived') || '';
-    const finalC   = searchParams.get('finalC')   || '';
-    const isBT     = !!btName;
+  const tab      = searchParams.get('tab') || '';
+  const btName   = searchParams.get('btName') || '';
+  const corpus   = searchParams.get('btCorpus') || '';
+  const withdraw = searchParams.get('btWithdrawal') || '';
+  const btSY     = searchParams.get('btSY') || '';
+  const btSM     = searchParams.get('btSM') || '';
+  const btEY     = searchParams.get('btEY') || '';
+  const btEM     = searchParams.get('btEM') || '';
+  const xirr     = searchParams.get('xirr') || '';
+  const survived = searchParams.get('survived') || '';
+  const finalC   = searchParams.get('finalC') || '';
 
-    // Format to Indian number system
-    function fmtINR(n) {
-      n = Math.round(parseFloat(n) || 0);
-      if (n >= 10000000) return (n / 10000000).toFixed(2) + ' Cr';
-      if (n >= 100000)   return (n / 100000).toFixed(2) + ' L';
-      return n.toLocaleString('en-IN');
-    }
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const startLabel = (btSY && btSM) ? `${MONTHS[parseInt(btSM)-1]} ${btSY}` : '';
-    const endLabel   = (btEY && btEM) ? `${MONTHS[parseInt(btEM)-1]} ${btEY}` : 'Today';
-    const periodLabel = startLabel ? `${startLabel} → ${endLabel}` : '';
-
-    const survivalOK  = survived === '1';
-    const survivalBad = survived === '0';
-    const survivalBg  = survivalOK  ? 'rgba(0,137,123,.2)'  : survivalBad ? 'rgba(183,28,28,.2)'  : 'transparent';
-    const survivalBdr = survivalOK  ? 'rgba(0,137,123,.5)'  : survivalBad ? 'rgba(183,28,28,.5)'  : 'transparent';
-    const survivalClr = survivalOK  ? '#4db6ac'              : survivalBad ? '#ef9a9a'              : '#fff';
-    const survivalTxt = survivalOK  ? '✅ Corpus Survived'   : survivalBad ? '⚠️ Corpus Depleted'  : '';
-
-    const shortName = btName.length > 52 ? btName.slice(0, 52) + '…' : btName;
-    const xirrNum = parseFloat(xirr);
-    const xirrColor = xirr ? (xirrNum > 0 ? '#66bb6a' : '#ef5350') : '#e0f2f1';
-
-    return new ImageResponse(
-      {
-        type: 'div',
-        props: {
-          style: {
-            width: '1200px', height: '630px',
-            display: 'flex', flexDirection: 'column',
-            background: 'linear-gradient(135deg,#071a07 0%,#0f2d0f 50%,#081a08 100%)',
-            fontFamily: 'sans-serif', overflow: 'hidden', position: 'relative',
-          },
-          children: [
-            // Top accent line
-            { type: 'div', props: { style: { width: '100%', height: '5px', background: 'linear-gradient(90deg,#00897b,#2e7d32,#66bb6a)', flexShrink: 0, display: 'flex' } } },
-
-            // Main content row
-            { type: 'div', props: {
-              style: { display: 'flex', flex: 1, padding: '36px 60px', gap: '40px', alignItems: 'center' },
-              children: [
-                // Left column
-                { type: 'div', props: {
-                  style: { display: 'flex', flexDirection: 'column', flex: 1, gap: '14px' },
-                  children: [
-                    // Brand
-                    { type: 'div', props: {
-                      style: { display: 'flex', alignItems: 'center', gap: '10px' },
-                      children: [
-                        { type: 'div', props: { style: { fontSize: '28px', display: 'flex' }, children: '📊' } },
-                        { type: 'div', props: {
-                          style: { display: 'flex', flexDirection: 'column' },
-                          children: [
-                            { type: 'span', props: { style: { color: '#66bb6a', fontSize: '12px', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase' }, children: 'Abundance Financial Services' } },
-                            { type: 'span', props: { style: { color: 'rgba(255,255,255,.4)', fontSize: '10px', marginTop: '1px' }, children: 'ARN-251838 · AMFI Registered MFD' } },
-                          ]
-                        } }
-                      ]
-                    } },
-                    // Title
-                    { type: 'span', props: { style: { color: '#fff', fontSize: isBT ? '38px' : '46px', fontWeight: 800, lineHeight: 1.1 }, children: isBT ? 'SWP Backtester' : 'MF Risk & Return Analyzer' } },
-                    // Fund name
-                    ...(isBT && shortName ? [{ type: 'span', props: { style: { color: '#80cbc4', fontSize: '20px', fontWeight: 600, lineHeight: 1.3 }, children: shortName } }] : []),
-                    // Not BT subtitle
-                    ...(!isBT ? [{ type: 'span', props: { style: { color: 'rgba(255,255,255,.55)', fontSize: '20px' }, children: 'Fund Compare · SIP · Goal Planner · SWP · EMI' } }] : []),
-                    // Period badge
-                    ...(periodLabel ? [{
-                      type: 'div', props: {
-                        style: { display: 'flex', background: 'rgba(0,137,123,.2)', border: '1px solid rgba(0,137,123,.4)', borderRadius: '8px', padding: '6px 14px', width: 'fit-content' },
-                        children: { type: 'span', props: { style: { color: '#4db6ac', fontSize: '13px', fontWeight: 700 }, children: `📅 ${periodLabel}` } }
-                      }
-                    }] : []),
-                    // Survival badge
-                    ...(survivalTxt ? [{
-                      type: 'div', props: {
-                        style: { display: 'flex', background: survivalBg, border: `1px solid ${survivalBdr}`, borderRadius: '8px', padding: '6px 14px', width: 'fit-content' },
-                        children: { type: 'span', props: { style: { color: survivalClr, fontSize: '14px', fontWeight: 800 }, children: survivalTxt } }
-                      }
-                    }] : []),
-                  ]
-                } },
-
-                // Right: stats card (BT) or feature list (generic)
-                { type: 'div', props: {
-                  style: {
-                    display: 'flex', flexDirection: 'column', gap: '14px',
-                    background: 'rgba(255,255,255,.06)', border: '1.5px solid rgba(255,255,255,.1)',
-                    borderRadius: '16px', padding: '26px 30px', minWidth: '260px',
-                  },
-                  children: isBT ? [
-                    ...(corpus ? [{
-                      type: 'div', props: { style: { display: 'flex', flexDirection: 'column', gap: '2px' },
-                        children: [
-                          { type: 'span', props: { style: { color: 'rgba(255,255,255,.45)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }, children: 'Starting Corpus' } },
-                          { type: 'span', props: { style: { color: '#fff', fontSize: '26px', fontWeight: 800 }, children: `₹${fmtINR(corpus)}` } },
-                        ]
-                      }
-                    }] : []),
-                    ...(withdraw ? [{
-                      type: 'div', props: { style: { display: 'flex', flexDirection: 'column', gap: '2px' },
-                        children: [
-                          { type: 'span', props: { style: { color: 'rgba(255,255,255,.45)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }, children: 'Monthly Withdrawal' } },
-                          { type: 'span', props: { style: { color: '#80cbc4', fontSize: '20px', fontWeight: 800 }, children: `₹${fmtINR(withdraw)}/mo` } },
-                        ]
-                      }
-                    }] : []),
-                    ...(xirr ? [{
-                      type: 'div', props: { style: { display: 'flex', flexDirection: 'column', gap: '2px' },
-                        children: [
-                          { type: 'span', props: { style: { color: 'rgba(255,255,255,.45)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }, children: 'XIRR' } },
-                          { type: 'span', props: { style: { color: xirrColor, fontSize: '20px', fontWeight: 800 }, children: `${xirr}% p.a.` } },
-                        ]
-                      }
-                    }] : []),
-                    ...(finalC && survivalOK ? [{
-                      type: 'div', props: { style: { display: 'flex', flexDirection: 'column', gap: '2px' },
-                        children: [
-                          { type: 'span', props: { style: { color: 'rgba(255,255,255,.45)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }, children: 'Remaining Corpus' } },
-                          { type: 'span', props: { style: { color: '#66bb6a', fontSize: '20px', fontWeight: 800 }, children: `₹${fmtINR(finalC)}` } },
-                        ]
-                      }
-                    }] : []),
-                  ] : [
-                    ...['📈 Fund Comparison','🧮 SIP & Lumpsum','🎯 Goal Planner','💸 SWP + Backtester','🏦 EMI & Loans'].map(f => ({
-                      type: 'div', props: {
-                        style: { display: 'flex', alignItems: 'center', gap: '8px' },
-                        children: [
-                          { type: 'div', props: { style: { width: '5px', height: '5px', borderRadius: '50%', background: '#66bb6a', flexShrink: 0, display: 'flex' } } },
-                          { type: 'span', props: { style: { color: 'rgba(255,255,255,.8)', fontSize: '14px', fontWeight: 600 }, children: f } },
-                        ]
-                      }
-                    })),
-                    { type: 'div', props: {
-                      style: { marginTop: '6px', padding: '7px 12px', background: 'rgba(46,125,50,.2)', borderRadius: '8px', display: 'flex' },
-                      children: { type: 'span', props: { style: { color: '#66bb6a', fontSize: '11px', fontWeight: 700 }, children: 'mfcalc.getabundance.in' } }
-                    } },
-                  ]
-                } },
-              ]
-            } },
-
-            // Bottom bar
-            { type: 'div', props: {
-              style: {
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 60px', background: 'rgba(0,0,0,.35)',
-                borderTop: '1px solid rgba(255,255,255,.07)', flexShrink: 0,
-              },
-              children: [
-                { type: 'span', props: { style: { color: 'rgba(255,255,255,.45)', fontSize: '11px' }, children: 'mfcalc.getabundance.in' } },
-                { type: 'span', props: { style: { color: 'rgba(255,255,255,.25)', fontSize: '10px' }, children: 'MF investments are subject to market risks · Data: AMFI / mfapi.in' } },
-                { type: 'span', props: { style: { color: 'rgba(255,255,255,.45)', fontSize: '11px' }, children: 'Free · No Login Required' } },
-              ]
-            } },
-          ]
-        }
-      },
-      { width: 1200, height: 630 }
-    );
-  } catch (e) {
-    return new Response(`OG image error: ${e.message}`, { status: 500 });
+  function fmtINR(val) {
+    const n = Math.round(parseFloat(val) || 0);
+    if (n >= 1e7) return (n / 1e7).toFixed(2) + ' Cr';
+    if (n >= 1e5) return (n / 1e5).toFixed(2) + ' L';
+    return n.toLocaleString('en-IN');
   }
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  const startLabel = (btSY && btSM) ? `${MONTHS[parseInt(btSM) - 1]} ${btSY}` : '';
+  const endLabel   = (btEY && btEM) ? `${MONTHS[parseInt(btEM) - 1]} ${btEY}` : 'Today';
+  const isBT       = tab === 'swp' && !!btName;
+  const fundShort  = btName.length > 52 ? btName.slice(0, 52) + '…' : btName;
+
+  const surviveColor = survived === '1' ? '#00897b' : survived === '0' ? '#ef5350' : '#2e7d32';
+  const surviveText  = survived === '1' ? '✅  Corpus Survived' : survived === '0' ? '⚠️  Corpus Depleted' : '';
+  const surviveBg    = survived === '1' ? 'rgba(0,137,123,0.22)' : 'rgba(239,83,80,0.18)';
+  const surviveBorder= survived === '1' ? 'rgba(0,137,123,0.5)' : 'rgba(239,83,80,0.5)';
+
+  // ── Stats on the right card ──
+  const statsRows = [
+    corpus   ? { label: 'Starting Corpus',   value: '₹' + fmtINR(corpus),          color: '#ffffff' } : null,
+    withdraw ? { label: 'Monthly Withdrawal', value: '₹' + fmtINR(withdraw) + '/mo', color: '#80cbc4' } : null,
+    xirr     ? { label: 'XIRR',              value: xirr + '% p.a.',                color: parseFloat(xirr) > 0 ? '#66bb6a' : '#ef5350' } : null,
+    (finalC && survived === '1') ? { label: 'Remaining Corpus', value: '₹' + fmtINR(finalC), color: '#66bb6a' } : null,
+  ].filter(Boolean);
+
+  const genericFeatures = ['📈  Fund Comparison', '🧮  SIP & Lumpsum', '🎯  Goal Planner', '💸  SWP + Backtester', '🏦  EMI & Loans'];
+
+  // Build right card SVG content
+  let rightCardContent = '';
+  if (isBT && statsRows.length) {
+    let yPos = 56;
+    statsRows.forEach(row => {
+      rightCardContent += `
+        <text x="28" y="${yPos}" font-family="sans-serif" font-size="11" font-weight="700" fill="rgba(255,255,255,0.5)" letter-spacing="1">${esc(row.label.toUpperCase())}</text>
+        <text x="28" y="${yPos + 28}" font-family="monospace" font-size="22" font-weight="800" fill="${row.color}">${esc(row.value)}</text>`;
+      yPos += 62;
+    });
+  } else if (!isBT) {
+    genericFeatures.forEach((f, i) => {
+      rightCardContent += `
+        <circle cx="20" cy="${46 + i * 38}" r="4" fill="#66bb6a"/>
+        <text x="34" y="${52 + i * 38}" font-family="sans-serif" font-size="15" font-weight="600" fill="rgba(255,255,255,0.88)">${esc(f)}</text>`;
+    });
+    rightCardContent += `
+      <rect x="8" y="${46 + genericFeatures.length * 38 + 8}" width="230" height="32" rx="7" fill="rgba(46,125,50,0.3)"/>
+      <text x="20" y="${46 + genericFeatures.length * 38 + 29}" font-family="sans-serif" font-size="13" font-weight="700" fill="#66bb6a">mfcalc.getabundance.in</text>`;
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a1f0a"/>
+      <stop offset="55%" style="stop-color:#1a3a1a"/>
+      <stop offset="100%" style="stop-color:#0d2b0d"/>
+    </linearGradient>
+    <linearGradient id="topbar" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00897b"/>
+      <stop offset="50%" style="stop-color:#2e7d32"/>
+      <stop offset="100%" style="stop-color:#66bb6a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Grid dots -->
+  <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+    <circle cx="1" cy="1" r="1" fill="rgba(255,255,255,0.04)"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+
+  <!-- Top accent bar -->
+  <rect width="1200" height="5" fill="url(#topbar)"/>
+
+  <!-- ── Brand block ── -->
+  <!-- Icon box -->
+  <rect x="60" y="44" width="46" height="46" rx="11" fill="rgba(46,125,50,0.35)" stroke="rgba(102,187,106,0.4)" stroke-width="1.5"/>
+  <text x="83" y="75" text-anchor="middle" font-size="22">📊</text>
+  <!-- Brand name -->
+  <text x="118" y="63" font-family="sans-serif" font-size="12" font-weight="700" fill="#66bb6a" letter-spacing="1.5">ABUNDANCE FINANCIAL SERVICES</text>
+  <text x="118" y="80" font-family="sans-serif" font-size="11" fill="rgba(255,255,255,0.5)">ARN-251838 · AMFI Registered MFD</text>
+
+  <!-- ── Main title ── -->
+  <text x="60" y="${isBT ? 148 : 158}" font-family="sans-serif" font-size="${isBT ? 46 : 52}" font-weight="800" fill="#ffffff">${isBT ? 'SWP Backtester' : 'MF Risk &amp; Return Analyzer'}</text>
+
+  ${isBT && fundShort ? `<text x="60" y="192" font-family="sans-serif" font-size="19" font-weight="600" fill="#80cbc4">${esc(fundShort)}</text>` : ''}
+  ${!isBT ? `<text x="60" y="196" font-family="sans-serif" font-size="20" fill="rgba(255,255,255,0.6)">Fund Compare · SIP · Goal Planner · SWP · EMI</text>` : ''}
+
+  <!-- ── Period badge (backtest) ── -->
+  ${isBT && startLabel ? `
+  <rect x="60" y="${isBT && fundShort ? 214 : 210}" width="${esc(String((startLabel + ' → ' + endLabel).length * 9 + 56))}" height="36" rx="8" fill="rgba(0,137,123,0.22)" stroke="rgba(0,137,123,0.5)" stroke-width="1"/>
+  <text x="78" y="${isBT && fundShort ? 237 : 233}" font-family="sans-serif" font-size="14" font-weight="700" fill="#4db6ac">📅  ${esc(startLabel)} → ${esc(endLabel)}</text>
+  ` : ''}
+
+  <!-- ── Survival badge (backtest) ── -->
+  ${isBT && surviveText ? `
+  <rect x="60" y="${isBT && fundShort ? 264 : 260}" width="${esc(String(surviveText.length * 9 + 40))}" height="36" rx="8" fill="${surviveBg}" stroke="${surviveBorder}" stroke-width="1"/>
+  <text x="78" y="${isBT && fundShort ? 287 : 283}" font-family="sans-serif" font-size="15" font-weight="800" fill="${surviveColor}">${esc(surviveText)}</text>
+  ` : ''}
+
+  <!-- ── Right card ── -->
+  <rect x="${isBT ? 780 : 820}" y="60" width="${isBT ? 360 : 320}" height="${isBT ? Math.min(statsRows.length * 62 + 72, 440) : genericFeatures.length * 38 + 130}" rx="14" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+
+  <!-- Card header bar -->
+  <rect x="${isBT ? 780 : 820}" y="60" width="${isBT ? 360 : 320}" height="42" rx="14" fill="rgba(255,255,255,0.04)"/>
+  <rect x="${isBT ? 780 : 820}" y="88" width="${isBT ? 360 : 320}" height="14" fill="rgba(255,255,255,0.04)"/>
+  <text x="${isBT ? 800 : 840}" y="88" font-family="sans-serif" font-size="11" font-weight="700" fill="rgba(255,255,255,0.4)" letter-spacing="1">${isBT ? 'BACKTEST RESULTS' : 'FEATURES'}</text>
+
+  <!-- Card inner content (translated) -->
+  <g transform="translate(${isBT ? 780 : 820}, 60)">
+    ${rightCardContent}
+  </g>
+
+  <!-- ── Bottom bar ── -->
+  <rect x="0" y="592" width="1200" height="38" fill="rgba(0,0,0,0.38)"/>
+  <line x1="0" y1="592" x2="1200" y2="592" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <text x="60" y="616" font-family="sans-serif" font-size="12" fill="rgba(255,255,255,0.5)">mfcalc.getabundance.in</text>
+  <text x="600" y="616" text-anchor="middle" font-family="sans-serif" font-size="10" fill="rgba(255,255,255,0.3)">MF investments are subject to market risks · Data: AMFI / mfapi.in</text>
+  <text x="1140" y="616" text-anchor="end" font-family="sans-serif" font-size="12" fill="rgba(255,255,255,0.5)">Free · No Login Required</text>
+</svg>`;
+
+  return new Response(svg, {
+    headers: {
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 's-maxage=3600, stale-while-revalidate=86400',
+      'Access-Control-Allow-Origin': '*',
+    },
+  });
 }
