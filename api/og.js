@@ -1,6 +1,5 @@
-// api/og.js — Dynamic OG PNG image for SWP Backtester share links
-// Uses @vercel/og ImageResponse — returns actual PNG (not SVG)
-// Plain JS object tree — no JSX, no build step needed
+// api/og.js — Dynamic OG PNG image
+// Uses @vercel/og — returns image/png, no fit-content, no unsupported CSS
 
 import { ImageResponse } from '@vercel/og';
 
@@ -21,8 +20,8 @@ export default async function handler(req) {
   const finalC   = searchParams.get('finalC') || '';
   const tab      = searchParams.get('tab') || '';
 
-  const MONTHS   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const isBT     = tab === 'swp' && !!btName;
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const isBT   = tab === 'swp' && !!btName;
 
   function fmtINR(val) {
     const n = Math.round(parseFloat(val) || 0);
@@ -31,130 +30,147 @@ export default async function handler(req) {
     return n.toLocaleString('en-IN');
   }
 
-  const periodLabel = (btSY && btSM && btEY && btEM)
-    ? `${MONTHS[parseInt(btSM)-1]} ${btSY} – ${MONTHS[parseInt(btEM)-1]} ${btEY}`
-    : btSY ? `From ${MONTHS[(parseInt(btSM)||1)-1]} ${btSY}` : '';
+  const period = (btSY && btSM)
+    ? `${MONTHS[parseInt(btSM)-1]} ${btSY} – ${(btEY && btEM) ? MONTHS[parseInt(btEM)-1]+' '+btEY : 'Today'}`
+    : '';
 
-  const fundShort  = btName.length > 44 ? btName.slice(0, 44) + '…' : btName;
-  const survives   = survived === '1';
-  const depleted   = survived === '0';
+  const fundShort = btName.length > 42 ? btName.slice(0, 42) + '…' : btName;
+  const survives  = survived === '1';
+  const depleted  = survived === '0';
 
-  // Stat rows for right panel
+  // Build stat rows for right panel
   const stats = [
-    corpus   ? { label: 'Corpus',      value: '₹' + fmtINR(corpus),          accent: '#fff' }     : null,
-    withdraw ? { label: 'Withdrawal',  value: '₹' + fmtINR(withdraw) + '/mo', accent: '#80cbc4' }  : null,
-    xirr     ? { label: 'XIRR',        value: xirr + '% p.a.',                accent: parseFloat(xirr) > 0 ? '#66bb6a' : '#ef5350' } : null,
-    (finalC && survives) ? { label: 'Remaining', value: '₹' + fmtINR(finalC), accent: '#66bb6a' }  : null,
+    corpus   ? { label: 'Corpus',      value: '₹' + fmtINR(corpus),            color: '#ffffff' } : null,
+    withdraw ? { label: 'Withdrawal',  value: '₹' + fmtINR(withdraw) + '/mo',  color: '#80cbc4' } : null,
+    xirr     ? { label: 'XIRR',        value: xirr + '% p.a.',                  color: parseFloat(xirr) > 0 ? '#a5d6a7' : '#ef9a9a' } : null,
+    (finalC && survives) ? { label: 'Remaining', value: '₹' + fmtINR(finalC),  color: '#a5d6a7' } : null,
   ].filter(Boolean);
 
-  // ── React element tree (plain objects, no JSX) ──
-  const h = (type, props, ...children) => ({ type, props: { ...props, children: children.flat().filter(Boolean) } });
+  const features = ['📈 Fund Comparison', '🧮 SIP & Lumpsum', '🎯 Goal Planner', '💸 SWP + Backtester', '🏦 EMI & Loans'];
 
-  const statItems = stats.map(s =>
-    h('div', { style: { display: 'flex', flexDirection: 'column', marginBottom: '16px' } },
-      h('div', { style: { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '3px' } }, s.label),
-      h('div', { style: { color: s.accent, fontSize: 26, fontWeight: 800, lineHeight: 1.1, fontFamily: 'monospace' } }, s.value)
-    )
-  );
+  return new ImageResponse(
+    {
+      type: 'div',
+      props: {
+        style: {
+          width: '100%', height: '100%',
+          display: 'flex', flexDirection: 'column',
+          background: 'linear-gradient(135deg, #0a1f0a 0%, #1b3d1b 55%, #0d2b0d 100%)',
+          fontFamily: 'sans-serif',
+        },
+        children: [
 
-  const genericItems = ['📈 Fund Comparison', '🧮 SIP & Lumpsum', '🎯 Goal Planner', '💸 SWP Backtester', '🏦 EMI & Loans'].map(f =>
-    h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' } },
-      h('div', { style: { width: 6, height: 6, borderRadius: '50%', background: '#66bb6a', flexShrink: 0 } }),
-      h('div', { style: { color: 'rgba(255,255,255,0.88)', fontSize: 16, fontWeight: 600 } }, f)
-    )
-  );
+          // Top accent bar
+          { type: 'div', props: { style: { width: '100%', height: 5, background: 'linear-gradient(90deg,#00897b,#2e7d32,#66bb6a)', flexShrink: 0, display: 'flex' } } },
 
-  const el = h('div', {
-    style: { width: 1200, height: 630, display: 'flex', flexDirection: 'column',
-             background: 'linear-gradient(135deg, #0a1f0a 0%, #1b3d1b 55%, #0d2b0d 100%)',
-             fontFamily: 'sans-serif', overflow: 'hidden' }
-  },
-    // Top bar
-    h('div', { style: { width: '100%', height: 5, background: 'linear-gradient(90deg, #00897b, #2e7d32, #66bb6a)', flexShrink: 0, display: 'flex' } }),
+          // Main content row
+          { type: 'div', props: {
+            style: { display: 'flex', flex: 1, padding: '36px 56px', gap: 40, alignItems: 'center' },
+            children: [
 
-    // Main row
-    h('div', { style: { display: 'flex', flex: 1, padding: '36px 56px', gap: 40, alignItems: 'center' } },
+              // LEFT column
+              { type: 'div', props: {
+                style: { display: 'flex', flexDirection: 'column', flex: 1 },
+                children: [
 
-      // ── Left ──
-      h('div', { style: { display: 'flex', flexDirection: 'column', flex: 1, gap: 0 } },
+                  // Brand row
+                  { type: 'div', props: {
+                    style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 },
+                    children: [
+                      { type: 'div', props: { style: { width: 40, height: 40, borderRadius: 10, background: 'rgba(46,125,50,0.4)', border: '1.5px solid rgba(102,187,106,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }, children: '📊' } },
+                      { type: 'div', props: {
+                        style: { display: 'flex', flexDirection: 'column' },
+                        children: [
+                          { type: 'div', props: { style: { color: '#66bb6a', fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }, children: 'ABUNDANCE FINANCIAL SERVICES' } },
+                          { type: 'div', props: { style: { color: 'rgba(255,255,255,0.45)', fontSize: 10, marginTop: 1 }, children: 'ARN-251838 · AMFI Registered MFD' } },
+                        ],
+                      } },
+                    ],
+                  } },
 
-        // Brand
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 } },
-          h('div', { style: { width: 40, height: 40, borderRadius: 10, background: 'rgba(46,125,50,0.4)', border: '1.5px solid rgba(102,187,106,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 } }, '📊'),
-          h('div', { style: { display: 'flex', flexDirection: 'column' } },
-            h('div', { style: { color: '#66bb6a', fontSize: 11, fontWeight: 700, letterSpacing: '1.8px', textTransform: 'uppercase' } }, 'ABUNDANCE FINANCIAL SERVICES'),
-            h('div', { style: { color: 'rgba(255,255,255,0.45)', fontSize: 10, marginTop: 1 } }, 'ARN-251838 · AMFI Registered MFD')
-          )
-        ),
+                  // Headline
+                  { type: 'div', props: { style: { color: '#ffffff', fontSize: isBT ? 52 : 58, fontWeight: 800, lineHeight: 1.05, marginBottom: 10 }, children: isBT ? 'SWP Backtester' : 'MF Risk & Return' } },
 
-        // HEADLINE — large, dominant, clear at thumbnail size
-        h('div', { style: { color: '#ffffff', fontSize: isBT ? 52 : 58, fontWeight: 800, lineHeight: 1.05, marginBottom: 10 } },
-          isBT ? 'SWP Backtester' : 'MF Risk & Return'
-        ),
+                  // Fund name or subtitle
+                  isBT && fundShort
+                    ? { type: 'div', props: { style: { color: '#80cbc4', fontSize: 19, fontWeight: 600, lineHeight: 1.3, marginBottom: 14 }, children: fundShort } }
+                    : { type: 'div', props: { style: { color: 'rgba(255,255,255,0.6)', fontSize: 20, marginBottom: 14 }, children: 'Fund Compare · SIP · SWP · EMI' } },
 
-        // Fund name or subtitle
-        isBT && fundShort
-          ? h('div', { style: { color: '#80cbc4', fontSize: 20, fontWeight: 600, lineHeight: 1.3, marginBottom: 14 } }, fundShort)
-          : h('div', { style: { color: 'rgba(255,255,255,0.6)', fontSize: 20, marginBottom: 14 } }, 'Fund Compare · SIP · SWP · EMI'),
+                  // Period badge
+                  ...(isBT && period ? [
+                    { type: 'div', props: {
+                      style: { display: 'flex', alignItems: 'center', background: 'rgba(0,137,123,0.2)', border: '1px solid rgba(0,137,123,0.5)', borderRadius: 8, padding: '6px 14px', marginBottom: 10 },
+                      children: { type: 'div', props: { style: { color: '#4db6ac', fontSize: 14, fontWeight: 700 }, children: '📅 ' + period } },
+                    } },
+                  ] : []),
 
-        // Period badge
-        isBT && periodLabel
-          ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,137,123,0.2)', border: '1px solid rgba(0,137,123,0.5)', borderRadius: 8, padding: '6px 14px', width: 'fit-content', marginBottom: 10 } },
-              h('div', { style: { color: '#4db6ac', fontSize: 14, fontWeight: 700 } }, `📅 ${periodLabel}`)
-            )
-          : null,
+                  // Survival badge
+                  ...(isBT && (survives || depleted) ? [
+                    { type: 'div', props: {
+                      style: { display: 'flex', alignItems: 'center', background: survives ? 'rgba(0,137,123,0.18)' : 'rgba(239,83,80,0.18)', border: '1px solid ' + (survives ? 'rgba(0,137,123,0.5)' : 'rgba(239,83,80,0.5)'), borderRadius: 8, padding: '6px 14px', marginBottom: 10 },
+                      children: { type: 'div', props: { style: { color: survives ? '#4db6ac' : '#ef5350', fontSize: 15, fontWeight: 800 }, children: survives ? '✅  Corpus Survived' : '⚠️  Corpus Depleted' } },
+                    } },
+                  ] : []),
 
-        // Survival status
-        (isBT && (survives || depleted))
-          ? h('div', { style: { display: 'flex', alignItems: 'center', background: survives ? 'rgba(0,137,123,0.18)' : 'rgba(239,83,80,0.18)', border: `1px solid ${survives ? 'rgba(0,137,123,0.5)' : 'rgba(239,83,80,0.5)'}`, borderRadius: 8, padding: '6px 14px', width: 'fit-content', marginBottom: 10 } },
-              h('div', { style: { color: survives ? '#4db6ac' : '#ef5350', fontSize: 16, fontWeight: 800 } },
-                survives ? '✅  Corpus Survived' : '⚠️  Corpus Depleted'
-              )
-            )
-          : null,
+                  // CTA
+                  { type: 'div', props: {
+                    style: { display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 },
+                    children: [
+                      { type: 'div', props: { style: { background: '#2e7d32', borderRadius: 8, padding: '8px 18px', display: 'flex', alignItems: 'center' }, children: { type: 'div', props: { style: { color: '#fff', fontSize: 14, fontWeight: 800 }, children: 'View Full Backtest →' } } } },
+                      { type: 'div', props: { style: { color: 'rgba(255,255,255,0.4)', fontSize: 13 }, children: 'mfcalc.getabundance.in' } },
+                    ],
+                  } },
 
-        // CTA
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 } },
-          h('div', { style: { background: '#2e7d32', borderRadius: 8, padding: '8px 18px', display: 'flex', alignItems: 'center', gap: 6 } },
-            h('div', { style: { color: '#fff', fontSize: 14, fontWeight: 800 } }, 'View Full Backtest →')
-          ),
-          h('div', { style: { color: 'rgba(255,255,255,0.4)', fontSize: 13 } }, 'mfcalc.getabundance.in')
-        )
-      ),
+                ],
+              } },
 
-      // ── Right card ──
-      h('div', {
-        style: { display: 'flex', flexDirection: 'column',
-                 background: 'rgba(255,255,255,0.06)', border: '1.5px solid rgba(255,255,255,0.12)',
-                 borderRadius: 16, padding: '26px 28px', minWidth: 260, flexShrink: 0 }
+              // RIGHT card
+              { type: 'div', props: {
+                style: { display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.06)', border: '1.5px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: '24px 26px', width: 270, flexShrink: 0 },
+                children: [
+                  { type: 'div', props: { style: { color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 8 }, children: isBT ? 'BACKTEST RESULTS' : 'FEATURES' } },
+
+                  // Stats (backtest) or features (generic)
+                  ...(isBT ? stats.map(s =>
+                    ({ type: 'div', props: {
+                      style: { display: 'flex', flexDirection: 'column', marginBottom: 14 },
+                      children: [
+                        { type: 'div', props: { style: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 }, children: s.label } },
+                        { type: 'div', props: { style: { color: s.color, fontSize: 24, fontWeight: 800, lineHeight: 1.1 }, children: s.value } },
+                      ],
+                    } })
+                  ) : features.map(f =>
+                    ({ type: 'div', props: {
+                      style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 },
+                      children: [
+                        { type: 'div', props: { style: { width: 6, height: 6, borderRadius: 3, background: '#66bb6a', flexShrink: 0 } } },
+                        { type: 'div', props: { style: { color: 'rgba(255,255,255,0.88)', fontSize: 15, fontWeight: 600 }, children: f } },
+                      ],
+                    } })
+                  )),
+                ],
+              } },
+
+            ],
+          } },
+
+          // Bottom bar
+          { type: 'div', props: {
+            style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 56px', background: 'rgba(0,0,0,0.4)', borderTop: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 },
+            children: [
+              { type: 'div', props: { style: { color: 'rgba(255,255,255,0.55)', fontSize: 12 }, children: 'mfcalc.getabundance.in' } },
+              { type: 'div', props: { style: { color: 'rgba(255,255,255,0.3)', fontSize: 10 }, children: 'MF investments are subject to market risks · AMFI registered' } },
+              { type: 'div', props: { style: { color: 'rgba(255,255,255,0.55)', fontSize: 12 }, children: 'Free · No Login Required' } },
+            ],
+          } },
+
+        ],
       },
-        h('div', { style: { color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 18, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 10 } },
-          isBT ? 'BACKTEST RESULTS' : 'FEATURES'
-        ),
-        ...(isBT ? statItems : genericItems),
-        !isBT ? h('div', { style: { marginTop: 8, background: 'rgba(46,125,50,0.3)', borderRadius: 7, padding: '7px 12px', display: 'flex' } },
-          h('div', { style: { color: '#66bb6a', fontSize: 13, fontWeight: 700 } }, 'Free · No Login Required')
-        ) : null
-      )
-    ),
-
-    // Bottom bar
-    h('div', {
-      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-               padding: '11px 56px', background: 'rgba(0,0,0,0.4)',
-               borderTop: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }
     },
-      h('div', { style: { color: 'rgba(255,255,255,0.55)', fontSize: 12 } }, 'mfcalc.getabundance.in'),
-      h('div', { style: { color: 'rgba(255,255,255,0.3)', fontSize: 10 } }, 'MF investments are subject to market risks'),
-      h('div', { style: { color: 'rgba(255,255,255,0.55)', fontSize: 12 } }, 'Free · No Login Required')
-    )
+    {
+      width: 1200,
+      height: 630,
+      headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' },
+    }
   );
-
-  return new ImageResponse(el, {
-    width: 1200,
-    height: 630,
-    headers: {
-      'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
-    },
-  });
 }
