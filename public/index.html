@@ -27,11 +27,10 @@
 <link rel="preconnect" href="https://api.mfapi.in">
 
 <!-- ═══ Favicons ═══ -->
+<link rel="icon" type="image/png" sizes="32x32" href="/logo-favicon.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/logo-favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/logo-apple.png">
 <link rel="icon" type="image/x-icon" href="https://www.getabundance.in/favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="https://www.getabundance.in/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="https://www.getabundance.in/favicon-16x16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://www.getabundance.in/apple-touch-icon.png">
-<link rel="manifest" href="https://www.getabundance.in/site.webmanifest">
 
 <!-- ═══ Open Graph (Facebook, WhatsApp, LinkedIn) ═══ -->
 <meta property="og:type" content="website">
@@ -60,10 +59,10 @@
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "SIP Calculator & Mutual Fund Comparison Tool",
+  "name": "MF Analyzer — SIP, SWP Backtester, Fund Compare & EMI",
   "alternateName": "MF Analyzer by Abundance",
   "url": "https://mfcalc.getabundance.in/",
-  "description": "Free all-in-one financial calculator by Abundance Financial Services. Compare mutual fund returns, risk & Sharpe ratio. Calculate SIP & lumpsum corpus. Plan investment goals. Model SWP withdrawals. Compute loan EMI with prepayment analysis and full amortisation schedule. Live AMFI NAV data.",
+  "description": "Free all-in-one financial calculator by Abundance Financial Services. Compare MF returns, risk & Sharpe ratio. SWP NAV Backtester with real historical data & XIRR. SIP & lumpsum corpus. Goal planner. EMI with prepayment & balance transfer analysis. Live AMFI NAV data.",
   "applicationCategory": "FinanceApplication",
   "operatingSystem": "Any",
   "browserRequirements": "Requires JavaScript",
@@ -95,7 +94,9 @@
     "url": "https://www.getabundance.in",
     "logo": {
       "@type": "ImageObject",
-      "url": "https://www.getabundance.in/images/logo.png"
+      "url": "https://mfcalc.getabundance.in/logo-og.png",
+      "width": 90,
+      "height": 90
     },
     "telephone": "+919808105923",
     "email": "contact@getabundance.in",
@@ -146,7 +147,7 @@
   "name": "Abundance Financial Services",
   "alternateName": "Abundance FS",
   "url": "https://www.getabundance.in",
-  "logo": "https://www.getabundance.in/images/logo.png",
+  "logo": "https://mfcalc.getabundance.in/logo-og.png",
   "image": "https://mfcalc.getabundance.in/og-mfcalc.png",
   "description": "AMFI-registered Mutual Fund and SIF Distributor serving investors across India. Registered office in Haldwani, Uttarakhand. Expert advice on SIP, lumpsum, goal-based investing, SWP for retirement income, and loan planning. ARN-251838.",
   "telephone": "+919808105923",
@@ -195,7 +196,7 @@
     "https://www.facebook.com/abundancefinancialservices",
     "https://twitter.com/abundancefinsvs"
   ],
-  "dateModified": "2026-03-11",
+  "dateModified": "2026-03-20",
   "identifier": [
     {"@type": "PropertyValue", "name": "AMFI ARN", "value": "ARN-251838"},
     {"@type": "PropertyValue", "name": "GST", "value": "05AXYPA6954G1Z3"}
@@ -265,7 +266,7 @@
     "url": "https://www.getabundance.in"
   },
   "datePublished": "2024-01-01",
-  "dateModified": "2026-03-11"
+  "dateModified": "2026-03-20"
 }
 </script>
 
@@ -386,6 +387,30 @@
       "acceptedAnswer": {
         "@type": "Answer",
         "text": "Yes. Abundance Financial Services® (ARN-251838) is an AMFI-registered SIF Distributor serving investors across India. You can contact us at +91 98081 05923 or visit getabundance.in to explore SIF investment options tailored to your financial goals and risk profile."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the SWP NAV Backtester and how does it work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The SWP NAV Backtester in this tool lets you replay a Systematic Withdrawal Plan against a mutual fund's actual historical NAV data. You enter a corpus, monthly withdrawal, optional step-up, and date range. The tool simulates month-by-month unit redemption at real NAVs and shows whether the corpus survived, the XIRR earned on actual cashflows, total withdrawn, remaining corpus, and a what-if comparison table for different start years."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is XIRR and why is it used in the SWP backtester?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "XIRR (Extended Internal Rate of Return) calculates the annualised return on irregular cashflows. In a SWP backtest, the initial corpus is invested as a lump sum and monthly withdrawals happen at varying NAVs over time. CAGR cannot handle these intermediate cashflows correctly. XIRR accounts for the timing and size of every withdrawal, giving an accurate annualised return figure. A positive XIRR means the corpus grew faster than withdrawals; negative means withdrawals exceeded growth."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I share my SWP backtest results with others?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. The SWP Backtester has a Share URL button that encodes all inputs and key results into a URL. When shared on WhatsApp, LinkedIn or Telegram, the link generates a rich preview card showing the fund name, backtest period, XIRR, corpus survival status, and key amounts. The recipient opens the same backtest pre-loaded in their browser — no login required."
       }
     }
   ]
@@ -906,8 +931,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .dfc-logo{
   height:52px;width:auto;max-width:150px;
   object-fit:contain;
-  filter:brightness(0) invert(1);
-  opacity:.9;
+  opacity:.95;
   margin-bottom:14px;
   display:block;
 }
@@ -2144,7 +2168,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 <!-- NAVBAR -->
 <nav class="navbar">
   <a class="logo-wrap" href="https://www.getabundance.in" target="_blank" rel="noopener noreferrer">
-    <img class="logo-img" src="https://www.getabundance.in/images/logo.png" alt="Abundance Financial Services® — AMFI Registered Mutual Fund Distributor"
+    <img class="logo-img" src="/logo-navbar.png" alt="Abundance Financial Services® — AMFI Registered Mutual Fund Distributor"
       onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
     <div class="logo-icon">A</div>
     <div class="logo-text"><div class="brand">Abundance</div><div class="sub">Financial Services<sup style="font-size:.55em;letter-spacing:0;vertical-align:super;opacity:.75">®</sup></div><div class="sub" style="font-size:.52rem;letter-spacing:1.2px;margin-top:2px;color:var(--g3)">Serving Investors Across India</div></div>
@@ -3607,6 +3631,18 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         <summary class="faq-q">Can I invest in SIF through Abundance Financial Services, Haldwani?</summary>
         <div class="faq-a">Yes. <strong>Abundance Financial Services®</strong> (ARN-251838) is an <strong>AMFI-registered SIF Distributor serving investors across India</strong>. Call us on <a href="tel:+919808105923">+91 98081 05923</a> or visit <a href="https://www.getabundance.in/contact-us" target="_blank" rel="noopener">getabundance.in</a> to book a free consultation and explore SIF options matching your goals.</div>
       </details>
+      <details class="faq-item">
+        <summary class="faq-q">What is the SWP NAV Backtester and how does it work?</summary>
+        <div class="faq-a">The <strong>SWP NAV Backtester</strong> lets you replay a Systematic Withdrawal Plan against a mutual fund's actual historical NAV data. Enter a starting corpus, monthly withdrawal amount, optional step-up, and a date range — and the tool simulates month-by-month unit redemption at real NAVs. It shows whether your corpus survived, the actual <strong>XIRR</strong> earned, total amount withdrawn, remaining corpus, and a what-if table comparing different start years. This gives a realistic picture of how SWP would have performed on a specific fund — not just a theoretical projection.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">What is XIRR and why does the backtester use it instead of CAGR?</summary>
+        <div class="faq-a"><strong>XIRR (Extended Internal Rate of Return)</strong> calculates the annualised return of irregular cashflows — perfect for SWP where withdrawals happen monthly but the corpus invested lump-sum at the start. CAGR only works for a single start and end value with no intermediate flows. XIRR accounts for the timing and size of every withdrawal, giving a true picture of what the investment actually returned. A positive XIRR means your corpus grew faster than you withdrew; a negative XIRR means withdrawals exceeded growth.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-q">Can I share my SWP backtest results with someone?</summary>
+        <div class="faq-a">Yes — use the <strong>Share URL</strong> button in the SWP Backtester. It generates a link that encodes all your inputs (fund, corpus, withdrawal amount, date range) and key results (XIRR, survival status, remaining corpus). When shared on WhatsApp, LinkedIn or Telegram, the link shows a rich preview card with your backtest summary. The recipient opens the exact same backtest pre-loaded in their browser — no login required.</div>
+      </details>
     </div>
   </div>
 </section>
@@ -3622,7 +3658,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 
       <!-- Col 1: Brand + stats -->
       <div class="dfc dfc-brand">
-        <img class="dfc-logo" src="https://www.getabundance.in/images/logo.png"
+        <img class="dfc-logo" src="/logo-footer-white.png"
              alt="Abundance Financial Services" onerror="this.style.display='none'">
         <div class="dfc-name">Abundance Financial Services<span>®</span></div>
         <div class="dfc-tagline">AMFI Registered Mutual Funds &amp; SIF Distributor · Pan-India</div>
@@ -4530,7 +4566,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 <div class="ph">
   <div><div class="pt">Fund Comparison — ${fundsCount} Fund${fundsCount>1?'s':''} · ${periodLabel}</div>
   <div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds Distributor &amp; SIF Distributor</div></div>
-  <img class="logo" src="https://www.getabundance.in/images/logo.png" onerror="this.style.display='none'">
+  <img class="logo" src="/logo-og.png" onerror="this.style.display='none'">
 </div>
 <div class="sec">Funds Selected</div>
 ${chipsHTML}
@@ -4561,7 +4597,7 @@ function _loadJsPDF(cb){
 // Uses fetch + blob URL to bypass CORS, falls back silently to text
 async function _fetchLogoDataURL(){
   // Try three methods in order: Image+canvas (no CORS), fetch+blob, silent fail
-  const LOGO_URL = 'https://www.getabundance.in/images/logo.png';
+  const LOGO_URL = '/logo-og.png';
 
   // Method 1: HTMLImageElement -> canvas -> dataURL (works if server allows img cross-origin)
   try {
@@ -4820,7 +4856,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 <div class="ph">
   <div><div class="pt">${modeLabel} Calculator</div>
   <div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds Distributor &amp; SIF Distributor</div></div>
-  <img class="logo" src="https://www.getabundance.in/images/logo.png" onerror="this.style.display='none'">
+  <img class="logo" src="/logo-og.png" onerror="this.style.display='none'">
 </div>
 <div class="sec">Result</div>
 ${bigResultHTML}
@@ -5744,7 +5780,7 @@ function printGoalPlan(){
 <div class="print-header">
   <div><div class="print-title">Investment Goal Planner — ${p.goalName}</div>
   <div class="print-arn">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds Distributor &amp; SIF Distributor</div></div>
-  <img class="print-logo" src="https://www.getabundance.in/images/logo.png" onerror="this.style.display='none'">
+  <img class="print-logo" src="/logo-og.png" onerror="this.style.display='none'">
 </div>
 <div class="sec">Goal Summary</div>${bannerHTML}
 <div class="sec">Investment Plans</div>${cardsHTML}
@@ -6201,7 +6237,7 @@ function printSWP(){
 .dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:12px}
 @media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}
 </style></head><body>
-<div class="ph"><div><div class="pt">SWP — Systematic Withdrawal Plan</div><div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds Distributor &amp; SIF Distributor</div></div><img class="logo" src="https://www.getabundance.in/images/logo.png" onerror="this.style.display='none'"></div>
+<div class="ph"><div><div class="pt">SWP — Systematic Withdrawal Plan</div><div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds Distributor &amp; SIF Distributor</div></div><img class="logo" src="/logo-og.png" onerror="this.style.display='none'"></div>
 <div class="sec">Corpus Health</div>${fuelHTML}
 <div class="sec">Statistics</div>${statsHTML}
 <div class="sec">Analysis</div>${cardsHTML}
@@ -6960,7 +6996,7 @@ tr:nth-child(even) td{background:#f5faf5}
 
   const body = '<div class="ph"><div><div class="pt">SWP Backtester \u2014 ' + btFundData.name + '</div>'
     + '<div class="pa">Abundance Financial Services\u00ae \u00b7 ARN-251838 \u00b7 AMFI Registered Mutual Funds Distributor</div></div>'
-    + '<img class="logo" src="https://www.getabundance.in/images/logo.png" onerror="this.style.display=\'none\'"></div>'
+    + '<img class="logo" src="/logo-og.png" onerror="this.style.display=\'none\'"></div>'
     + '<div class="sec">Corpus Health</div>' + fuelHTML
     + '<div class="sec">Statistics</div>' + statHTML
     + '<div class="sec">Result Cards</div>' + cardsHTML
@@ -7678,7 +7714,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#1a0a0a;padding:30px
       <span>Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds Distributor &amp; SIF Distributor</span>
     </div>
   </div>
-  <img class="logo" src="https://www.getabundance.in/images/logo.png" onerror="this.style.display='none'">
+  <img class="logo" src="/logo-og.png" onerror="this.style.display='none'">
 </div>
 
 <div class="sec">Loan Summary</div>
