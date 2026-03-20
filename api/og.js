@@ -1,13 +1,14 @@
-// api/og.js — Dynamic OG image via SVG → PNG
-// Zero external dependencies — uses only built-in Node.js
-// Returns an SVG (social crawlers and most previews accept image/svg+xml)
+// api/og.js — Dynamic OG PNG image for SWP Backtester share links
+// Uses @vercel/og ImageResponse — returns actual PNG (not SVG)
+// Plain JS object tree — no JSX, no build step needed
+
+import { ImageResponse } from '@vercel/og';
 
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
   const { searchParams } = new URL(req.url);
 
-  const tab      = searchParams.get('tab') || '';
   const btName   = searchParams.get('btName') || '';
   const corpus   = searchParams.get('btCorpus') || '';
   const withdraw = searchParams.get('btWithdrawal') || '';
@@ -18,143 +19,142 @@ export default async function handler(req) {
   const xirr     = searchParams.get('xirr') || '';
   const survived = searchParams.get('survived') || '';
   const finalC   = searchParams.get('finalC') || '';
+  const tab      = searchParams.get('tab') || '';
 
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const MONTHS   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const isBT     = tab === 'swp' && !!btName;
 
   function fmtINR(val) {
     const n = Math.round(parseFloat(val) || 0);
-    if (n >= 1e7) return (n / 1e7).toFixed(2) + ' Cr';
-    if (n >= 1e5) return (n / 1e5).toFixed(2) + ' L';
+    if (n >= 1e7) return (n / 1e7).toFixed(1) + ' Cr';
+    if (n >= 1e5) return (n / 1e5).toFixed(1) + ' L';
     return n.toLocaleString('en-IN');
   }
 
-  function esc(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
+  const periodLabel = (btSY && btSM && btEY && btEM)
+    ? `${MONTHS[parseInt(btSM)-1]} ${btSY} – ${MONTHS[parseInt(btEM)-1]} ${btEY}`
+    : btSY ? `From ${MONTHS[(parseInt(btSM)||1)-1]} ${btSY}` : '';
 
-  const startLabel = (btSY && btSM) ? `${MONTHS[parseInt(btSM) - 1]} ${btSY}` : '';
-  const endLabel   = (btEY && btEM) ? `${MONTHS[parseInt(btEM) - 1]} ${btEY}` : 'Today';
-  const isBT       = tab === 'swp' && !!btName;
-  const fundShort  = btName.length > 52 ? btName.slice(0, 52) + '…' : btName;
+  const fundShort  = btName.length > 44 ? btName.slice(0, 44) + '…' : btName;
+  const survives   = survived === '1';
+  const depleted   = survived === '0';
 
-  const surviveColor = survived === '1' ? '#00897b' : survived === '0' ? '#ef5350' : '#2e7d32';
-  const surviveText  = survived === '1' ? '✅  Corpus Survived' : survived === '0' ? '⚠️  Corpus Depleted' : '';
-  const surviveBg    = survived === '1' ? 'rgba(0,137,123,0.22)' : 'rgba(239,83,80,0.18)';
-  const surviveBorder= survived === '1' ? 'rgba(0,137,123,0.5)' : 'rgba(239,83,80,0.5)';
-
-  // ── Stats on the right card ──
-  const statsRows = [
-    corpus   ? { label: 'Starting Corpus',   value: '₹' + fmtINR(corpus),          color: '#ffffff' } : null,
-    withdraw ? { label: 'Monthly Withdrawal', value: '₹' + fmtINR(withdraw) + '/mo', color: '#80cbc4' } : null,
-    xirr     ? { label: 'XIRR',              value: xirr + '% p.a.',                color: parseFloat(xirr) > 0 ? '#66bb6a' : '#ef5350' } : null,
-    (finalC && survived === '1') ? { label: 'Remaining Corpus', value: '₹' + fmtINR(finalC), color: '#66bb6a' } : null,
+  // Stat rows for right panel
+  const stats = [
+    corpus   ? { label: 'Corpus',      value: '₹' + fmtINR(corpus),          accent: '#fff' }     : null,
+    withdraw ? { label: 'Withdrawal',  value: '₹' + fmtINR(withdraw) + '/mo', accent: '#80cbc4' }  : null,
+    xirr     ? { label: 'XIRR',        value: xirr + '% p.a.',                accent: parseFloat(xirr) > 0 ? '#66bb6a' : '#ef5350' } : null,
+    (finalC && survives) ? { label: 'Remaining', value: '₹' + fmtINR(finalC), accent: '#66bb6a' }  : null,
   ].filter(Boolean);
 
-  const genericFeatures = ['📈  Fund Comparison', '🧮  SIP & Lumpsum', '🎯  Goal Planner', '💸  SWP + Backtester', '🏦  EMI & Loans'];
+  // ── React element tree (plain objects, no JSX) ──
+  const h = (type, props, ...children) => ({ type, props: { ...props, children: children.flat().filter(Boolean) } });
 
-  // Build right card SVG content
-  let rightCardContent = '';
-  if (isBT && statsRows.length) {
-    let yPos = 56;
-    statsRows.forEach(row => {
-      rightCardContent += `
-        <text x="28" y="${yPos}" font-family="sans-serif" font-size="11" font-weight="700" fill="rgba(255,255,255,0.5)" letter-spacing="1">${esc(row.label.toUpperCase())}</text>
-        <text x="28" y="${yPos + 28}" font-family="monospace" font-size="22" font-weight="800" fill="${row.color}">${esc(row.value)}</text>`;
-      yPos += 62;
-    });
-  } else if (!isBT) {
-    genericFeatures.forEach((f, i) => {
-      rightCardContent += `
-        <circle cx="20" cy="${46 + i * 38}" r="4" fill="#66bb6a"/>
-        <text x="34" y="${52 + i * 38}" font-family="sans-serif" font-size="15" font-weight="600" fill="rgba(255,255,255,0.88)">${esc(f)}</text>`;
-    });
-    rightCardContent += `
-      <rect x="8" y="${46 + genericFeatures.length * 38 + 8}" width="230" height="32" rx="7" fill="rgba(46,125,50,0.3)"/>
-      <text x="20" y="${46 + genericFeatures.length * 38 + 29}" font-family="sans-serif" font-size="13" font-weight="700" fill="#66bb6a">mfcalc.getabundance.in</text>`;
-  }
+  const statItems = stats.map(s =>
+    h('div', { style: { display: 'flex', flexDirection: 'column', marginBottom: '16px' } },
+      h('div', { style: { color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '3px' } }, s.label),
+      h('div', { style: { color: s.accent, fontSize: 26, fontWeight: 800, lineHeight: 1.1, fontFamily: 'monospace' } }, s.value)
+    )
+  );
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0a1f0a"/>
-      <stop offset="55%" style="stop-color:#1a3a1a"/>
-      <stop offset="100%" style="stop-color:#0d2b0d"/>
-    </linearGradient>
-    <linearGradient id="topbar" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#00897b"/>
-      <stop offset="50%" style="stop-color:#2e7d32"/>
-      <stop offset="100%" style="stop-color:#66bb6a"/>
-    </linearGradient>
-  </defs>
+  const genericItems = ['📈 Fund Comparison', '🧮 SIP & Lumpsum', '🎯 Goal Planner', '💸 SWP Backtester', '🏦 EMI & Loans'].map(f =>
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' } },
+      h('div', { style: { width: 6, height: 6, borderRadius: '50%', background: '#66bb6a', flexShrink: 0 } }),
+      h('div', { style: { color: 'rgba(255,255,255,0.88)', fontSize: 16, fontWeight: 600 } }, f)
+    )
+  );
 
-  <!-- Background -->
-  <rect width="1200" height="630" fill="url(#bg)"/>
+  const el = h('div', {
+    style: { width: 1200, height: 630, display: 'flex', flexDirection: 'column',
+             background: 'linear-gradient(135deg, #0a1f0a 0%, #1b3d1b 55%, #0d2b0d 100%)',
+             fontFamily: 'sans-serif', overflow: 'hidden' }
+  },
+    // Top bar
+    h('div', { style: { width: '100%', height: 5, background: 'linear-gradient(90deg, #00897b, #2e7d32, #66bb6a)', flexShrink: 0, display: 'flex' } }),
 
-  <!-- Grid dots -->
-  <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-    <circle cx="1" cy="1" r="1" fill="rgba(255,255,255,0.04)"/>
-  </pattern>
-  <rect width="1200" height="630" fill="url(#dots)"/>
+    // Main row
+    h('div', { style: { display: 'flex', flex: 1, padding: '36px 56px', gap: 40, alignItems: 'center' } },
 
-  <!-- Top accent bar -->
-  <rect width="1200" height="5" fill="url(#topbar)"/>
+      // ── Left ──
+      h('div', { style: { display: 'flex', flexDirection: 'column', flex: 1, gap: 0 } },
 
-  <!-- ── Brand block ── -->
-  <!-- Icon box -->
-  <rect x="60" y="44" width="46" height="46" rx="11" fill="rgba(46,125,50,0.35)" stroke="rgba(102,187,106,0.4)" stroke-width="1.5"/>
-  <text x="83" y="75" text-anchor="middle" font-size="22">📊</text>
-  <!-- Brand name -->
-  <text x="118" y="63" font-family="sans-serif" font-size="12" font-weight="700" fill="#66bb6a" letter-spacing="1.5">ABUNDANCE FINANCIAL SERVICES</text>
-  <text x="118" y="80" font-family="sans-serif" font-size="11" fill="rgba(255,255,255,0.5)">ARN-251838 · AMFI Registered MFD</text>
+        // Brand
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 } },
+          h('div', { style: { width: 40, height: 40, borderRadius: 10, background: 'rgba(46,125,50,0.4)', border: '1.5px solid rgba(102,187,106,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 } }, '📊'),
+          h('div', { style: { display: 'flex', flexDirection: 'column' } },
+            h('div', { style: { color: '#66bb6a', fontSize: 11, fontWeight: 700, letterSpacing: '1.8px', textTransform: 'uppercase' } }, 'ABUNDANCE FINANCIAL SERVICES'),
+            h('div', { style: { color: 'rgba(255,255,255,0.45)', fontSize: 10, marginTop: 1 } }, 'ARN-251838 · AMFI Registered MFD')
+          )
+        ),
 
-  <!-- ── Main title ── -->
-  <text x="60" y="${isBT ? 148 : 158}" font-family="sans-serif" font-size="${isBT ? 46 : 52}" font-weight="800" fill="#ffffff">${isBT ? 'SWP Backtester' : 'MF Risk &amp; Return Analyzer'}</text>
+        // HEADLINE — large, dominant, clear at thumbnail size
+        h('div', { style: { color: '#ffffff', fontSize: isBT ? 52 : 58, fontWeight: 800, lineHeight: 1.05, marginBottom: 10 } },
+          isBT ? 'SWP Backtester' : 'MF Risk & Return'
+        ),
 
-  ${isBT && fundShort ? `<text x="60" y="192" font-family="sans-serif" font-size="19" font-weight="600" fill="#80cbc4">${esc(fundShort)}</text>` : ''}
-  ${!isBT ? `<text x="60" y="196" font-family="sans-serif" font-size="20" fill="rgba(255,255,255,0.6)">Fund Compare · SIP · Goal Planner · SWP · EMI</text>` : ''}
+        // Fund name or subtitle
+        isBT && fundShort
+          ? h('div', { style: { color: '#80cbc4', fontSize: 20, fontWeight: 600, lineHeight: 1.3, marginBottom: 14 } }, fundShort)
+          : h('div', { style: { color: 'rgba(255,255,255,0.6)', fontSize: 20, marginBottom: 14 } }, 'Fund Compare · SIP · SWP · EMI'),
 
-  <!-- ── Period badge (backtest) ── -->
-  ${isBT && startLabel ? `
-  <rect x="60" y="${isBT && fundShort ? 214 : 210}" width="${esc(String((startLabel + ' → ' + endLabel).length * 9 + 56))}" height="36" rx="8" fill="rgba(0,137,123,0.22)" stroke="rgba(0,137,123,0.5)" stroke-width="1"/>
-  <text x="78" y="${isBT && fundShort ? 237 : 233}" font-family="sans-serif" font-size="14" font-weight="700" fill="#4db6ac">📅  ${esc(startLabel)} → ${esc(endLabel)}</text>
-  ` : ''}
+        // Period badge
+        isBT && periodLabel
+          ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,137,123,0.2)', border: '1px solid rgba(0,137,123,0.5)', borderRadius: 8, padding: '6px 14px', width: 'fit-content', marginBottom: 10 } },
+              h('div', { style: { color: '#4db6ac', fontSize: 14, fontWeight: 700 } }, `📅 ${periodLabel}`)
+            )
+          : null,
 
-  <!-- ── Survival badge (backtest) ── -->
-  ${isBT && surviveText ? `
-  <rect x="60" y="${isBT && fundShort ? 264 : 260}" width="${esc(String(surviveText.length * 9 + 40))}" height="36" rx="8" fill="${surviveBg}" stroke="${surviveBorder}" stroke-width="1"/>
-  <text x="78" y="${isBT && fundShort ? 287 : 283}" font-family="sans-serif" font-size="15" font-weight="800" fill="${surviveColor}">${esc(surviveText)}</text>
-  ` : ''}
+        // Survival status
+        (isBT && (survives || depleted))
+          ? h('div', { style: { display: 'flex', alignItems: 'center', background: survives ? 'rgba(0,137,123,0.18)' : 'rgba(239,83,80,0.18)', border: `1px solid ${survives ? 'rgba(0,137,123,0.5)' : 'rgba(239,83,80,0.5)'}`, borderRadius: 8, padding: '6px 14px', width: 'fit-content', marginBottom: 10 } },
+              h('div', { style: { color: survives ? '#4db6ac' : '#ef5350', fontSize: 16, fontWeight: 800 } },
+                survives ? '✅  Corpus Survived' : '⚠️  Corpus Depleted'
+              )
+            )
+          : null,
 
-  <!-- ── Right card ── -->
-  <rect x="${isBT ? 780 : 820}" y="60" width="${isBT ? 360 : 320}" height="${isBT ? Math.min(statsRows.length * 62 + 72, 440) : genericFeatures.length * 38 + 130}" rx="14" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+        // CTA
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 } },
+          h('div', { style: { background: '#2e7d32', borderRadius: 8, padding: '8px 18px', display: 'flex', alignItems: 'center', gap: 6 } },
+            h('div', { style: { color: '#fff', fontSize: 14, fontWeight: 800 } }, 'View Full Backtest →')
+          ),
+          h('div', { style: { color: 'rgba(255,255,255,0.4)', fontSize: 13 } }, 'mfcalc.getabundance.in')
+        )
+      ),
 
-  <!-- Card header bar -->
-  <rect x="${isBT ? 780 : 820}" y="60" width="${isBT ? 360 : 320}" height="42" rx="14" fill="rgba(255,255,255,0.04)"/>
-  <rect x="${isBT ? 780 : 820}" y="88" width="${isBT ? 360 : 320}" height="14" fill="rgba(255,255,255,0.04)"/>
-  <text x="${isBT ? 800 : 840}" y="88" font-family="sans-serif" font-size="11" font-weight="700" fill="rgba(255,255,255,0.4)" letter-spacing="1">${isBT ? 'BACKTEST RESULTS' : 'FEATURES'}</text>
+      // ── Right card ──
+      h('div', {
+        style: { display: 'flex', flexDirection: 'column',
+                 background: 'rgba(255,255,255,0.06)', border: '1.5px solid rgba(255,255,255,0.12)',
+                 borderRadius: 16, padding: '26px 28px', minWidth: 260, flexShrink: 0 }
+      },
+        h('div', { style: { color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 18, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 10 } },
+          isBT ? 'BACKTEST RESULTS' : 'FEATURES'
+        ),
+        ...(isBT ? statItems : genericItems),
+        !isBT ? h('div', { style: { marginTop: 8, background: 'rgba(46,125,50,0.3)', borderRadius: 7, padding: '7px 12px', display: 'flex' } },
+          h('div', { style: { color: '#66bb6a', fontSize: 13, fontWeight: 700 } }, 'Free · No Login Required')
+        ) : null
+      )
+    ),
 
-  <!-- Card inner content (translated) -->
-  <g transform="translate(${isBT ? 780 : 820}, 60)">
-    ${rightCardContent}
-  </g>
+    // Bottom bar
+    h('div', {
+      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+               padding: '11px 56px', background: 'rgba(0,0,0,0.4)',
+               borderTop: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }
+    },
+      h('div', { style: { color: 'rgba(255,255,255,0.55)', fontSize: 12 } }, 'mfcalc.getabundance.in'),
+      h('div', { style: { color: 'rgba(255,255,255,0.3)', fontSize: 10 } }, 'MF investments are subject to market risks'),
+      h('div', { style: { color: 'rgba(255,255,255,0.55)', fontSize: 12 } }, 'Free · No Login Required')
+    )
+  );
 
-  <!-- ── Bottom bar ── -->
-  <rect x="0" y="592" width="1200" height="38" fill="rgba(0,0,0,0.38)"/>
-  <line x1="0" y1="592" x2="1200" y2="592" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-  <text x="60" y="616" font-family="sans-serif" font-size="12" fill="rgba(255,255,255,0.5)">mfcalc.getabundance.in</text>
-  <text x="600" y="616" text-anchor="middle" font-family="sans-serif" font-size="10" fill="rgba(255,255,255,0.3)">MF investments are subject to market risks · Data: AMFI / mfapi.in</text>
-  <text x="1140" y="616" text-anchor="end" font-family="sans-serif" font-size="12" fill="rgba(255,255,255,0.5)">Free · No Login Required</text>
-</svg>`;
-
-  return new Response(svg, {
+  return new ImageResponse(el, {
+    width: 1200,
+    height: 630,
     headers: {
-      'Content-Type': 'image/svg+xml',
-      'Cache-Control': 's-maxage=3600, stale-while-revalidate=86400',
-      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
     },
   });
 }
