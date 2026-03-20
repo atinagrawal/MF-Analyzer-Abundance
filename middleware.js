@@ -1,24 +1,12 @@
-// middleware.js — Edge Middleware for dynamic OG meta injection
-// Runs BEFORE the HTML is served — bots and crawlers see the injected tags
-// Only activates for requests with ?btMode=1 (SWP Backtester share links)
+// middleware.js — Edge Middleware for server-side OG meta injection
+// Intercepts ALL requests with ?btMode=1 (not just bots)
+// Returns a fast minimal HTML page with correct OG tags — no self-fetch, no recursion
 
 export const config = {
-  matcher: '/',  // only intercept root page requests
+  matcher: '/',
 };
 
-// Known social media / link preview crawlers
-const BOT_PATTERNS = [
-  'twitterbot', 'facebookexternalhit', 'linkedinbot', 'whatsapp',
-  'telegrambot', 'slackbot', 'discordbot', 'googlebot', 'bingbot',
-  'applebot', 'pinterest', 'vkshare', 'w3c_validator', 'curl', 'wget',
-  'python-requests', 'go-http-client', 'opengraph',
-];
-
-function isBot(userAgent) {
-  if (!userAgent) return false;
-  const ua = userAgent.toLowerCase();
-  return BOT_PATTERNS.some(p => ua.includes(p));
-}
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function fmtINR(val) {
   const n = Math.round(parseFloat(val) || 0);
@@ -27,26 +15,22 @@ function fmtINR(val) {
   return n.toLocaleString('en-IN');
 }
 
-export default async function middleware(request) {
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+export default function middleware(request) {
   const url = new URL(request.url);
   const p   = url.searchParams;
 
   // Only activate for backtester share links
-  if (!p.get('btMode')) {
-    return; // pass through normally
-  }
-
-  const ua = request.headers.get('user-agent') || '';
-
-  // For non-bots: pass through — JS will handle meta injection client-side
-  // For bots: inject meta tags server-side
-  if (!isBot(ua)) {
-    return; // pass through, injectBTShareMeta() handles it in browser
-  }
+  if (!p.get('btMode')) return; // pass through to static file
 
   // ── Build dynamic values ──
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
   const btName   = p.get('btName') || 'SWP Backtest';
   const corpus   = p.get('btCorpus') || '';
   const withdraw = p.get('btWithdrawal') || '';
@@ -61,62 +45,75 @@ export default async function middleware(request) {
   const startLabel = (btSY && btSM) ? `${MONTHS[parseInt(btSM)-1]} ${btSY}` : '';
   const endLabel   = (btEY && btEM) ? `${MONTHS[parseInt(btEM)-1]} ${btEY}` : 'Today';
 
-  const pageURL  = url.href;
   const ogParams = new URLSearchParams({
     tab: 'swp', btName, btCorpus: corpus, btWithdrawal: withdraw,
     btSY, btSM, btEY, btEM, xirr, survived, finalC,
   });
   const ogImageURL = `https://mfcalc.getabundance.in/api/og?${ogParams}`;
+  const pageURL    = url.href;
 
   const shortName = btName.length > 50 ? btName.slice(0, 50) + '…' : btName;
   const titleText = `SWP Backtester — ${shortName} | Abundance`;
+
   const descParts = [
-    `SWP backtest on ${btName}`,
+    `SWP backtest: ${btName}`,
     startLabel ? `${startLabel} → ${endLabel}` : '',
     corpus   ? `Corpus ₹${fmtINR(corpus)}` : '',
     withdraw ? `Withdrawal ₹${fmtINR(withdraw)}/mo` : '',
     xirr     ? `XIRR ${xirr}% p.a.` : '',
-    survived === '1' ? 'Corpus survived' : survived === '0' ? 'Corpus depleted' : '',
+    survived === '1' ? '✅ Corpus survived' : survived === '0' ? '⚠️ Corpus depleted' : '',
   ].filter(Boolean).join(' · ');
-  const descText = descParts + ' | Abundance Financial Services ARN-251838';
+  const descText = `${descParts} | Abundance Financial Services ARN-251838`;
 
-  // ── Fetch the static HTML and inject tags ──
-  const staticRes  = await fetch(`https://mfcalc.getabundance.in/`);
-  let   html       = await staticRes.text();
+  // ── Return a minimal HTML page with correct OG tags ──
+  // Bots read <head> only. A <meta http-equiv="refresh"> sends real users
+  // to the actual app immediately (before JS even loads).
+  // This approach is fast (no origin fetch), no recursion, no timeout risk.
 
-  function replaceMeta(prop, val, isName = false) {
-    const attr = isName ? 'name' : 'property';
-    const re = new RegExp(`<meta ${attr}="${prop}"[^>]*>`, 'gi');
-    const escaped = val.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return html.replace(re, `<meta ${attr}="${prop}" content="${escaped}">`);
-  }
+  const html = `<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${esc(titleText)}</title>
+<meta name="description" content="${esc(descText)}">
+<meta name="robots" content="noindex">
 
-  // Replace title
-  html = html.replace(
-    /<title>[^<]*<\/title>/,
-    `<title>${titleText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</title>`
-  );
-  // Replace OG/Twitter tags
-  html = replaceMeta('og:title',       titleText);
-  html = replaceMeta('og:description', descText);
-  html = replaceMeta('og:url',         pageURL);
-  html = replaceMeta('og:image',       ogImageURL);
-  html = replaceMeta('og:image:width', '1200');
-  html = replaceMeta('og:image:height','630');
-  html = replaceMeta('og:image:type',  'image/svg+xml');
-  html = replaceMeta('twitter:title',       titleText,  true);
-  html = replaceMeta('twitter:description', descText,   true);
-  html = replaceMeta('twitter:image',       ogImageURL, true);
-  // Also fix canonical to include the share params
-  html = html.replace(
-    /<link rel="canonical"[^>]*>/,
-    `<link rel="canonical" href="${pageURL.replace(/"/g, '&quot;')}">`
-  );
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Abundance Financial Services">
+<meta property="og:title" content="${esc(titleText)}">
+<meta property="og:description" content="${esc(descText)}">
+<meta property="og:url" content="${esc(pageURL)}">
+<meta property="og:image" content="${esc(ogImageURL)}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/svg+xml">
+<meta property="og:locale" content="en_IN">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@abundancefinsvs">
+<meta name="twitter:title" content="${esc(titleText)}">
+<meta name="twitter:description" content="${esc(descText)}">
+<meta name="twitter:image" content="${esc(ogImageURL)}">
+
+<!-- Redirect real users to the actual app instantly -->
+<meta http-equiv="refresh" content="0; url=${esc(pageURL)}">
+<link rel="canonical" href="${esc(pageURL)}">
+<link rel="icon" type="image/x-icon" href="https://www.getabundance.in/favicon.ico">
+</head>
+<body>
+<p>Loading SWP Backtest... <a href="${esc(pageURL)}">Click here if not redirected</a></p>
+<script>window.location.replace("${pageURL.replace(/"/g, '\\"')}");</script>
+</body>
+</html>`;
 
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-store', // don't cache bot-specific injected HTML
+      // Cache this response so WhatsApp's crawler gets it fast on repeat fetches
+      'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
       'X-OG-Injected': '1',
     },
   });
