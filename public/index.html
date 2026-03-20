@@ -43,6 +43,7 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Abundance Financial Services — MF & Loan Calculator Suite">
+<meta property="og:image:type" content="image/png">
 <meta property="og:locale" content="en_IN">
 
 <!-- ═══ Twitter / X Card ═══ -->
@@ -80,6 +81,11 @@
     "Loan Prepayment Analyser with Interest Savings",
     "Balance Transfer Analyser for Loans",
     "Year-by-Year Amortisation Schedule",
+    "SWP NAV Backtester — replay SWP against real historical fund NAV data",
+    "XIRR calculation on actual SWP cashflows",
+    "What-if start-year comparison table for SWP",
+    "Delay/accumulation phase with real NAV growth before SWP",
+    "Shareable SWP Backtester URLs with dynamic OG image",
     "Discontinued AMC filtering (13 wound-down fund houses hidden by default)"
   ],
   "audience": {"@type": "Audience", "audienceType": "Individual investors, loan seekers, financial planners"},
@@ -6785,6 +6791,32 @@ function btRenderWhatIf(corpus, withdrawal, stepup, startMonth){
 // ── Backtester: Share URL ──
 function btShareURL(){
   if(!btFundData){ alert('Select a fund first'); return; }
+
+  // Collect result stats for dynamic OG image
+  const xirrEl   = document.querySelector('#btStatGrid .swp-stat.highlight .swp-stat-val');
+  const corpusEl = document.querySelector('#btStatGrid .swp-stat.highlight:last-of-type .swp-stat-val');
+  const xirr     = document.getElementById('btStatGrid')?.querySelectorAll?.('.swp-stat')?.length
+                   ? (() => {
+                       const items = [...document.getElementById('btStatGrid').querySelectorAll('.swp-stat')];
+                       const xirrItem = items.find(el => el.querySelector('.swp-stat-label')?.textContent?.includes('XIRR'));
+                       return xirrItem?.querySelector('.swp-stat-val')?.textContent?.replace('%','').replace(' p.a.','').trim() || '';
+                     })() : '';
+  const finalCorpusRaw = (() => {
+    const items = [...(document.getElementById('btStatGrid')?.querySelectorAll?.('.swp-stat') || [])];
+    const remItem = items.find(el => el.querySelector('.swp-stat-label')?.textContent?.includes('Remaining') || el.querySelector('.swp-stat-label')?.textContent?.includes('Corpus'));
+    const val = remItem?.querySelector('.swp-stat-val')?.textContent || '';
+    const num = val.replace(/[₹,\s]/g,'').replace('Cr','e7').replace('L','e5');
+    return isNaN(parseFloat(num)) ? '' : String(Math.round(parseFloat(num) * (val.includes('Cr')?1e7:val.includes('L')?1e5:1)));
+  })();
+  const survived = document.getElementById('btStatGrid')
+    ? (() => {
+        const items = [...document.getElementById('btStatGrid').querySelectorAll('.swp-stat')];
+        const statusItem = items.find(el => el.querySelector('.swp-stat-label')?.textContent?.includes('Status') || el.querySelector('.swp-stat-label')?.textContent?.includes('Remaining'));
+        if(!statusItem) return '';
+        const val = statusItem.querySelector('.swp-stat-val')?.textContent || '';
+        return val.includes('₹') && !val.includes('₹0') ? '1' : val.includes('₹0') ? '0' : '';
+      })() : '';
+
   const params = new URLSearchParams({
     tab:'swp',
     btMode:'1',
@@ -6801,6 +6833,7 @@ function btShareURL(){
     btDelay: document.getElementById('btDelayToggle').checked?'1':'0',
     btDV: document.getElementById('btDelayVal')?.value||'',
     btDU: document.getElementById('btDelayUnit')?.value||'',
+    xirr, survived, finalC: finalCorpusRaw,
   });
   const url = location.origin + location.pathname + '?' + params.toString();
   if(navigator.clipboard && navigator.clipboard.writeText){
@@ -7822,6 +7855,53 @@ function readURLParams() {
   } catch(e) {}
 }
 
+// ── Dynamic OG meta injection for shared backtester URLs ──
+function injectBTShareMeta(){
+  const p = new URLSearchParams(location.search);
+  if(!p.get('btMode')) return;
+  // Build OG image URL pointing to our /api/og endpoint
+  const ogParams = new URLSearchParams({
+    tab: 'swp',
+    btName: p.get('btName')||'',
+    btCorpus: p.get('btCorpus')||'',
+    btWithdrawal: p.get('btWithdrawal')||'',
+    btSY: p.get('btSY')||'',
+    btSM: p.get('btSM')||'',
+    btEY: p.get('btEY')||'',
+    btEM: p.get('btEM')||'',
+    xirr: p.get('xirr')||'',
+    survived: p.get('survived')||'',
+    finalC: p.get('finalC')||'',
+  });
+  const ogImageURL = location.origin + '/api/og?' + ogParams.toString();
+  const pageURL    = location.href;
+  const fundName   = p.get('btName') || 'SWP Backtester';
+  const titleText  = 'SWP Backtester — ' + (fundName.length>50?fundName.slice(0,50)+'…':fundName) + ' | Abundance';
+  const descText   = 'SWP backtest on ' + fundName
+    + (p.get('btSY') ? ' from ' + p.get('btSY') : '')
+    + (p.get('btCorpus') ? ' · Corpus ₹' + Number(p.get('btCorpus')).toLocaleString('en-IN') : '')
+    + (p.get('xirr') ? ' · XIRR ' + p.get('xirr') + '% p.a.' : '')
+    + ' | Abundance Financial Services ARN-251838';
+
+  // Update or create OG meta tags
+  function setMeta(prop, val, isName){
+    const attr = isName ? 'name' : 'property';
+    let el = document.querySelector('meta['+attr+'="'+prop+'"]');
+    if(!el){ el = document.createElement('meta'); el.setAttribute(attr, prop); document.head.appendChild(el); }
+    el.setAttribute('content', val);
+  }
+  document.title = titleText;
+  setMeta('og:title', titleText);
+  setMeta('og:description', descText);
+  setMeta('og:url', pageURL);
+  setMeta('og:image', ogImageURL);
+  setMeta('og:image:width', '1200');
+  setMeta('og:image:height', '630');
+  setMeta('twitter:title', titleText, true);
+  setMeta('twitter:description', descText, true);
+  setMeta('twitter:image', ogImageURL, true);
+}
+
 function writeURLParams() {
   try {
     const activeTab = document.querySelector('.main-tab.active')?.id?.replace('mtab-','') || 'fund';
@@ -7855,6 +7935,7 @@ document.addEventListener('change', () => dWriteURL());
 // Restore on load
 restoreState();
 readURLParams();
+injectBTShareMeta();
 btReadURL();
 
 
