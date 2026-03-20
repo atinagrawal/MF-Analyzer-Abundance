@@ -52,8 +52,8 @@ export default function middleware(request) {
   const ogImageURL = `https://mfcalc.getabundance.in/api/og?${ogParams}`;
   const pageURL    = url.href;
 
-  const shortName = btName.length > 50 ? btName.slice(0, 50) + '…' : btName;
-  const titleText = `SWP Backtester — ${shortName} | Abundance`;
+  const shortName = btName.length > 32 ? btName.slice(0, 32) + '…' : btName;
+  const titleText = `SWP Backtester: ${shortName} | Abundance`;
 
   const descParts = [
     `SWP backtest: ${btName}`,
@@ -62,8 +62,8 @@ export default function middleware(request) {
     withdraw ? `Withdrawal ₹${fmtINR(withdraw)}/mo` : '',
     xirr     ? `XIRR ${xirr}% p.a.` : '',
     survived === '1' ? '✅ Corpus survived' : survived === '0' ? '⚠️ Corpus depleted' : '',
-  ].filter(Boolean).join(' · ');
-  const descText = `${descParts} | Abundance Financial Services ARN-251838`;
+  ].filter(Boolean).slice(0,4).join(' · ');
+  const descText = (descParts + ' | Abundance ARN-251838').slice(0, 160);
 
   // ── Return a minimal HTML page with correct OG tags ──
   // Bots read <head> only. A <meta http-equiv="refresh"> sends real users
