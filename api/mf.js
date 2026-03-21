@@ -1,64 +1,57 @@
 /**
  * /api/mf — Proxy for api.mfapi.in
- * Routes:
- *   /api/mf/search?q=HDFC        → https://api.mfapi.in/mf/search?q=HDFC
- *   /api/mf/[scheme_code]         → https://api.mfapi.in/mf/[scheme_code]
- *   /api/mf/[scheme_code]/latest  → https://api.mfapi.in/mf/[scheme_code]/latest
  *
- * Benefits: solves CORS, adds caching, insulates from mfapi.in availability
- * Cache: search = 5 min, NAV history = 4 hours, latest NAV = 15 min
+ * Routes (via vercel.json rewrite /api/mf/:path* → /api/mf?_path=:path*):
+ *   /api/mf/search?q=HDFC     → https://api.mfapi.in/mf/search?q=HDFC
+ *   /api/mf/125497             → https://api.mfapi.in/mf/125497
+ *   /api/mf/125497/latest      → https://api.mfapi.in/mf/125497/latest
  */
 
 export const config = { runtime: 'nodejs' };
 
 export default async function handler(req, res) {
-  // Parse the path after /api/mf
-  const url = new URL(req.url, 'https://x');
-  // url.pathname will be like /api/mf/search or /api/mf/125497
-  const afterMf = url.pathname.replace(/^\/api\/mf\/?/, '');
-  const query   = url.search; // e.g. ?q=hdfc
+  const url  = new URL(req.url, 'https://x');
+  const path = url.searchParams.get('_path') || '';  // from rewrite
+  const q    = url.searchParams.get('q')    || '';
 
-  // Build upstream URL
+  // Rebuild the upstream URL
   let upstream;
-  if (afterMf === '' || afterMf === 'search') {
-    upstream = `https://api.mfapi.in/mf${afterMf ? '/' + afterMf : ''}${query}`;
+  if (path === 'search' || path.startsWith('search')) {
+    upstream = `https://api.mfapi.in/mf/search?q=${encodeURIComponent(q)}`;
+  } else if (path) {
+    // scheme code, maybe with /latest suffix
+    upstream = `https://api.mfapi.in/mf/${path}`;
+    if (q) upstream += `?${url.searchParams.toString().replace(`_path=${encodeURIComponent(path)}&`,'')}`;
   } else {
-    upstream = `https://api.mfapi.in/mf/${afterMf}${query}`;
+    // Direct call like /api/mf?q=xxx — treat as search
+    upstream = q
+      ? `https://api.mfapi.in/mf/search?q=${encodeURIComponent(q)}`
+      : `https://api.mfapi.in/mf`;
   }
 
-  // Cache headers based on endpoint type
-  let cacheHeader;
-  if (afterMf === 'search' || afterMf === '') {
-    cacheHeader = 's-maxage=300, stale-while-revalidate=600';       // 5 min search
-  } else if (afterMf.endsWith('/latest')) {
-    cacheHeader = 's-maxage=900, stale-while-revalidate=1800';      // 15 min latest
-  } else {
-    cacheHeader = 's-maxage=14400, stale-while-revalidate=86400';   // 4 hr full history
-  }
+  // Cache TTL
+  const isSearch = path === 'search' || path.startsWith('search') || (!path && q);
+  const isLatest = path.endsWith('/latest');
+  const cache    = isSearch ? 's-maxage=300, stale-while-revalidate=600'
+                 : isLatest ? 's-maxage=900, stale-while-revalidate=1800'
+                 :             's-maxage=14400, stale-while-revalidate=86400';
 
   try {
-    const upstream_res = await fetch(upstream, {
-      headers: {
-        'User-Agent': 'MFCalc-Abundance/1.0 (https://mfcalc.getabundance.in)',
-        'Accept': 'application/json',
-      },
+    const r = await fetch(upstream, {
+      headers: { 'Accept': 'application/json' },
       signal: AbortSignal.timeout(10000),
     });
-
-    if (!upstream_res.ok) {
-      res.status(upstream_res.status).json({ error: `Upstream returned ${upstream_res.status}` });
+    if (!r.ok) {
+      res.status(r.status).json({ error: `Upstream ${r.status}` });
       return;
     }
-
-    const data = await upstream_res.json();
-
+    const data = await r.json();
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Cache-Control', cacheHeader);
+    res.setHeader('Cache-Control', cache);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.status(200).json(data);
-
   } catch (err) {
-    res.status(502).json({ error: 'Proxy error: ' + err.message });
+    res.status(502).json({ error: err.message });
   }
 }
