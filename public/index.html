@@ -3905,21 +3905,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 /* ════════════════════════════════════════
    QUICK PICKS — live API, random per category
 ════════════════════════════════════════ */
+// 2 verified search queries per category.
+// We search the proxy — API picks the current regular-growth plan dynamically.
 const QP_CATEGORIES = [
-  { label: 'Small Cap',   keywords: ['small cap'] },
-  { label: 'Flexi Cap',   keywords: ['flexi cap'] },
-  { label: 'Multi Asset', keywords: ['multi asset'] },
-  { label: 'Mid Cap',     keywords: ['midcap', 'mid cap'] },
-  { label: 'ELSS',        keywords: ['elss', 'tax saver'] },
-];
-
-// Top AMCs — shuffled at runtime so picks vary on each load
-const TRUSTED_AMCS = [
-  'sbi', 'hdfc', 'icici', 'nippon', 'axis',
-  'kotak', 'mirae', 'parag parikh', 'uti', 'aditya birla',
-  'dsp', 'franklin', 'tata', 'canara robeco', 'quant',
-  'baroda bnp', 'edelweiss', 'hsbc', 'invesco', 'nj ',
-  'whiteoak', 'bajaj', 'motilal oswal',
+  { label: 'Small Cap',   queries: ['sbi small cap',          'nippon small cap'] },
+  { label: 'Flexi Cap',   queries: ['parag parikh flexi cap', 'hdfc flexi cap'] },
+  { label: 'Multi Asset', queries: ['hdfc multi asset',       'quant multi asset'] },
+  { label: 'Mid Cap',     queries: ['axis midcap',            'nippon india mid cap'] },
+  { label: 'ELSS',        queries: ['mirae asset elss',       'axis elss'] },
 ];
 
 // Resolved picks — populated on load, reused for "Try" pairs
@@ -3945,7 +3938,7 @@ function isEligible(name) {
   return true;
 }
 
-// From a result array, pick the best regular-growth plan
+// From results, pick the best regular-growth fund
 function pickBestFund(results) {
   const eligible = results.filter(f => isEligible(f.schemeName));
   const growth = eligible.filter(f => /growth/i.test(f.schemeName));
@@ -3953,33 +3946,25 @@ function pickBestFund(results) {
   return pool.length ? pool[0] : null;
 }
 
-// Search one "AMC keyword" combo, return best matching fund or null
-async function tryAMCFund(amc, kw) {
+// Fetch one query via proxy, return best fund or null
+async function fetchQuickFund(query) {
   try {
-    const r = await fetch('/api/mf?q=' + encodeURIComponent(amc + ' ' + kw),
-                          { signal: AbortSignal.timeout(5000) });
+    const r = await fetch('/api/mf?q=' + encodeURIComponent(query),
+                          { signal: AbortSignal.timeout(8000) });
     if (!r.ok) return null;
     const results = await r.json();
     return pickBestFund(Array.isArray(results) ? results : []);
   } catch(e) { return null; }
 }
 
-// Pick 2 funds for a category: shuffle AMC list, try pairs in parallel until we have 2 distinct
+// Fetch both queries in parallel, return 2 distinct funds
 async function resolveQuickPick(cat) {
-  const amcs = [...TRUSTED_AMCS].sort(() => Math.random() - 0.5);
-  const kw = cat.keywords[0];
-  // Fetch all AMCs in parallel — accumulate results across all batches
-  const found = [];
-  const allResults = await Promise.all(amcs.map(amc => tryAMCFund(amc, kw)));
-  for (const fund of allResults) {
-    if (fund && !found.some(f => f.schemeCode === fund.schemeCode)) {
-      found.push(fund);
-      if (found.length >= 2) break;
-    }
-  }
-  if (!found.length) throw new Error('No picks for ' + cat.label);
+  const [f1, f2] = await Promise.all(cat.queries.map(fetchQuickFund));
+  const primary   = f1 || f2;
+  const secondary = (f2 && f2.schemeCode !== (f1 && f1.schemeCode)) ? f2 : f1;
+  if (!primary) throw new Error('No picks for ' + cat.label);
   const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
-  return { primary: make(found[0]), secondary: make(found[1] || found[0]) };
+  return { primary: make(primary), secondary: make(secondary) };
 }
 
 function renderQAChip(pick) {
@@ -3988,6 +3973,7 @@ function renderQAChip(pick) {
   const shortName = pick.name
     .replace(/\s*-\s*regular\s*plan\s*-\s*growth\s*/i, '')
     .replace(/\s*-\s*growth\s*plan\s*-\s*growth\s*option\s*/i, '')
+    .replace(/\s*-\s*growth\s*plan\s*/i, '')
     .replace(/\s*-\s*growth\s*/i, '')
     .trim();
   btn.innerHTML = `<span class="qa-chip-cat">${pick.label}</span>
@@ -4006,8 +3992,6 @@ async function loadQuickPicks() {
     if (result.status === 'fulfilled') {
       _resolvedPicks[i] = result.value;
       chips.appendChild(renderQAChip(result.value.primary));
-    } else {
-      console.warn('Quick pick failed:', QP_CATEGORIES[i]?.label, result.reason);
     }
   });
   populateTryRow();
