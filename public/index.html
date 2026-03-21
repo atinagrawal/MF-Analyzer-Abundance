@@ -3913,10 +3913,19 @@ const QP_CATEGORIES = [
   { label: 'ELSS',        keywords: ['elss', 'tax saver'] },
 ];
 
+// Top AMCs — shuffled at runtime so picks vary on each load
+const TRUSTED_AMCS = [
+  'sbi', 'hdfc', 'icici', 'nippon', 'axis',
+  'kotak', 'mirae', 'parag parikh', 'uti', 'aditya birla',
+  'dsp', 'franklin', 'tata', 'canara robeco', 'quant',
+  'baroda bnp', 'edelweiss', 'hsbc', 'invesco', 'nj ',
+  'whiteoak', 'bajaj', 'motilal oswal',
+];
+
 // Resolved picks — populated on load, reused for "Try" pairs
 const _resolvedPicks = [];
 
-// Words that disqualify a fund from quick-picks
+// Words that disqualify a fund
 const QP_BLOCKED = [
   'institutional','discontinued','debt','insurance',
   'fmp','liquid','overnight','arbitrage','interval',
@@ -3936,7 +3945,7 @@ function isEligible(name) {
   return true;
 }
 
-// Given a list of results, pick the best regular-growth plan
+// From a result array, pick the best regular-growth plan
 function pickBestFund(results) {
   const eligible = results.filter(f => isEligible(f.schemeName));
   const growth = eligible.filter(f => /growth/i.test(f.schemeName));
@@ -3944,34 +3953,39 @@ function pickBestFund(results) {
   return pool.length ? pool[0] : null;
 }
 
-// Try one AMC + keyword combination via proxy, return a fund or null
-async function tryAMCFund(amc, keyword) {
+// Search one "AMC keyword" combo, return best matching fund or null
+async function tryAMCFund(amc, kw) {
   try {
-    const q = amc + ' ' + keyword;
-    const r = await fetch('/api/mf?q=' + encodeURIComponent(q), { signal: AbortSignal.timeout(5000) });
+    const r = await fetch('/api/mf?q=' + encodeURIComponent(amc + ' ' + kw),
+                          { signal: AbortSignal.timeout(5000) });
     if (!r.ok) return null;
     const results = await r.json();
     return pickBestFund(Array.isArray(results) ? results : []);
   } catch(e) { return null; }
 }
 
-// For a category, shuffle TRUSTED_AMCS and try each until we find 2 distinct funds
+// Pick 2 funds for a category: shuffle AMC list, try pairs in parallel until we have 2 distinct
 async function resolveQuickPick(cat) {
   const amcs = [...TRUSTED_AMCS].sort(() => Math.random() - 0.5);
-  const found = [];
-  for (const amc of amcs) {
-    if (found.length >= 2) break;
-    for (const kw of cat.keywords) {
-      const fund = await tryAMCFund(amc, kw);
-      if (fund && !found.some(f => f.schemeCode === fund.schemeCode)) {
-        found.push(fund);
-        break; // Got one from this AMC, move to next AMC
-      }
+  // Try pairs of AMCs in parallel to be faster
+  for (let i = 0; i < amcs.length; i += 2) {
+    const batch = amcs.slice(i, i + 2);
+    const kw = cat.keywords[0];
+    const results = await Promise.all(batch.map(amc => tryAMCFund(amc, kw)));
+    const found = results.filter(Boolean).filter((f, idx, arr) =>
+      arr.findIndex(x => x && x.schemeCode === f.schemeCode) === idx
+    );
+    if (found.length >= 2) {
+      const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
+      return { primary: make(found[0]), secondary: make(found[1]) };
+    }
+    if (found.length === 1 && i + 2 >= amcs.length) {
+      // Only 1 found across all AMCs — use it for both
+      const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
+      return { primary: make(found[0]), secondary: make(found[0]) };
     }
   }
-  if (!found.length) throw new Error('No picks for ' + cat.label);
-  const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
-  return { primary: make(found[0]), secondary: make(found[1] || found[0]) };
+  throw new Error('No picks for ' + cat.label);
 }
 
 function renderQAChip(pick) {
@@ -3979,8 +3993,8 @@ function renderQAChip(pick) {
   btn.className = 'qa-chip';
   const shortName = pick.name
     .replace(/\s*-\s*regular\s*plan\s*-\s*growth\s*/i, '')
+    .replace(/\s*-\s*growth\s*plan\s*-\s*growth\s*option\s*/i, '')
     .replace(/\s*-\s*growth\s*/i, '')
-    .replace(/\s*-\s*growth\s*plan\s*/i, '')
     .trim();
   btn.innerHTML = `<span class="qa-chip-cat">${pick.label}</span>
     <span class="qa-chip-name">${shortName.length > 28 ? shortName.slice(0,26)+'…' : shortName}</span>`;
