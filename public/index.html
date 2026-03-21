@@ -25,11 +25,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="preconnect" href="https://api.mfapi.in">
+<link rel="preload" as="image" href="/logo-navbar.png" fetchpriority="high">
 
 <!-- ═══ Favicons ═══ -->
 <link rel="icon" type="image/png" sizes="32x32" href="/logo-favicon.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/logo-favicon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/logo-apple.png">
+<link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/x-icon" href="https://www.getabundance.in/favicon.ico">
 
 <!-- ═══ Open Graph (Facebook, WhatsApp, LinkedIn) ═══ -->
@@ -416,7 +418,7 @@
   ]
 }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer>
 /* ════════════════════════════════════════
    MAIN TAB CONTROLLER
 ════════════════════════════════════════ */
@@ -2162,13 +2164,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 <body>
 <div class="accent-line"></div>
 <a href="#mpanel-fund" class="skip-link">Skip to main content</a>
-<h1 class="sr-only">Free SIP Calculator, Mutual Fund Comparison, EMI &amp; Goal Planner — Abundance Financial Services®</h1>
+<h1 class="sr-only">Free MF Comparison, SIP Calculator &amp; SWP Backtester — Abundance Financial Services®</h1>
 <div class="page">
 
 <!-- NAVBAR -->
 <nav class="navbar">
   <a class="logo-wrap" href="https://www.getabundance.in" target="_blank" rel="noopener noreferrer">
-    <img class="logo-img" src="/logo-navbar.png" alt="Abundance Financial Services® — AMFI Registered Mutual Fund Distributor"
+    <img class="logo-img" src="/logo-navbar.png" alt="Abundance Financial Services® — AMFI Registered Mutual Fund Distributor" width="140" height="56" loading="eager"
       onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
     <div class="logo-icon">A</div>
     <div class="logo-text"><div class="brand">Abundance</div><div class="sub">Financial Services<sup style="font-size:.55em;letter-spacing:0;vertical-align:super;opacity:.75">®</sup></div><div class="sub" style="font-size:.52rem;letter-spacing:1.2px;margin-top:2px;color:var(--g3)">Serving Investors Across India</div></div>
@@ -3658,7 +3660,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 
       <!-- Col 1: Brand + stats -->
       <div class="dfc dfc-brand">
-        <img class="dfc-logo" src="/logo-footer-white.png"
+        <img class="dfc-logo" src="/logo-footer-white.png" loading="lazy" width="150" height="52"
              alt="Abundance Financial Services" onerror="this.style.display='none'">
         <div class="dfc-name">Abundance Financial Services<span>®</span></div>
         <div class="dfc-tagline">AMFI Registered Mutual Funds &amp; SIF Distributor · Pan-India</div>
