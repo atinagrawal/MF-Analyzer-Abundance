@@ -5364,21 +5364,23 @@ async function _doPrintEMI(){
 let sipChartInst=null, calcMode='sip';
 
 function setCalcMode(mode){
-  // Update aria-checked for screen readers
-  ['modeSIP','modeLump','modeBoth'].forEach(id => {
+  // Deactivate ALL 4 toggle buttons (SIP/Lump/Both/Backtest) using CSS class only
+  ['modeSIP','modeLump','modeBoth','modeBacktest'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.setAttribute('aria-checked', 'false');
+    if (!el) return;
+    el.classList.remove('active');
+    el.setAttribute('aria-checked', 'false');
+    el.style.background = '';  // clear any lingering inline style
+    el.style.color = '';
   });
+  // Activate the chosen mode button
   const modeMap = {sip:'modeSIP', lump:'modeLump', both:'modeBoth'};
   const activeBtn = document.getElementById(modeMap[mode]);
-  if (activeBtn) activeBtn.setAttribute('aria-checked', 'true');
-  calcMode=mode;
-  ['modeSIP','modeLump','modeBoth'].forEach(id=>{
-    const btn=document.getElementById(id); if(!btn) return;
-    const active=(id==='modeSIP'&&mode==='sip')||(id==='modeLump'&&mode==='lump')||(id==='modeBoth'&&mode==='both');
-    btn.style.background=active?'var(--g1)':'#fff';
-    btn.style.color=active?'#fff':'var(--g2)';
-  });
+  if (activeBtn) {
+    activeBtn.classList.add('active');
+    activeBtn.setAttribute('aria-checked', 'true');
+  }
+  calcMode = mode;
   document.querySelectorAll('.sip-only').forEach(el=>el.style.display=(mode==='sip'||mode==='both')?'':'none');
   document.querySelectorAll('.lump-only').forEach(el=>el.style.display=(mode==='lump'||mode==='both')?'':'none');
   const titles={sip:'SIP Returns Calculator',lump:'Lumpsum Returns Calculator',both:'SIP + Lumpsum Calculator'};
@@ -5388,10 +5390,6 @@ function setCalcMode(mode){
   const _sb  = document.querySelector('#mpanel-sip .sip-split-body');
   if (_btP) _btP.style.display = 'none';
   if (_sb && _sb.style.display === 'none') _sb.style.display = '';
-  // Reset modeBacktest button state
-  const _mbtn = document.getElementById('modeBacktest');
-  if (_mbtn) { _mbtn.classList.remove('active'); _mbtn.setAttribute('aria-checked','false');
-    _mbtn.style.background=''; _mbtn.style.color='var(--g2)'; }
   calcSIP();
 }
 
@@ -7226,10 +7224,12 @@ function setSIPMode(mode, btn) {
   if (!btPanel || !splitBody) return;
   btPanel.style.display   = isBacktest ? 'block' : 'none';
   splitBody.style.display = isBacktest ? 'none'  : '';
-  // Update calc mode button states
+  // Update calc mode button states — clear all, then activate chosen
   document.querySelectorAll('#mpanel-sip .smt-btn').forEach(b => {
     b.classList.remove('active');
     b.setAttribute('aria-checked','false');
+    b.style.background = '';  // clear any lingering inline styles
+    b.style.color = '';
   });
   if (btn) { btn.classList.add('active'); btn.setAttribute('aria-checked','true'); }
   // Also update calcModeTitle
