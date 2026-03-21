@@ -2386,11 +2386,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   <div class="quick-add-wrap" id="quickAddWrap">
     <div class="qa-label">⚡ Popular picks — click to add instantly</div>
     <div class="qa-chips" id="qaChips">
-      <button class="qa-chip" title="SBI Small Cap Fund - Regular Plan - Growth" onclick="quickAddFund(125497,'SBI Small Cap Fund - Regular Plan - Growth','Small Cap',this)"><span class="qa-chip-cat">Small Cap</span><span class="qa-chip-name">SBI Small Cap</span></button>
-      <button class="qa-chip" title="Parag Parikh Flexi Cap Fund - Regular Plan - Growth" onclick="quickAddFund(122639,'Parag Parikh Flexi Cap Fund - Regular Plan - Growth','Flexi Cap',this)"><span class="qa-chip-cat">Flexi Cap</span><span class="qa-chip-name">Parag Parikh Flexi Cap</span></button>
-      <button class="qa-chip" title="HDFC Multi-Asset Fund - Regular Plan - Growth" onclick="quickAddFund(120492,'HDFC Multi-Asset Fund - Regular Plan - Growth','Multi Asset',this)"><span class="qa-chip-cat">Multi Asset</span><span class="qa-chip-name">HDFC Multi-Asset</span></button>
-      <button class="qa-chip" title="HDFC Mid-Cap Opportunities Fund - Regular Plan - Growth" onclick="quickAddFund(120465,'HDFC Mid-Cap Opportunities Fund - Regular Plan - Growth','Mid Cap',this)"><span class="qa-chip-cat">Mid Cap</span><span class="qa-chip-name">HDFC Mid-Cap Opp.</span></button>
-      <button class="qa-chip" title="Axis Long Term Equity Fund - Regular Plan - Growth" onclick="quickAddFund(125354,'Axis Long Term Equity Fund - Regular Plan - Growth','ELSS',this)"><span class="qa-chip-cat">ELSS</span><span class="qa-chip-name">Axis Long Term Equity</span></button>
+      <span class="qa-skeleton"></span>
+      <span class="qa-skeleton"></span>
+      <span class="qa-skeleton"></span>
+      <span class="qa-skeleton"></span>
+      <span class="qa-skeleton"></span>
     </div>
   </div>
 </div>
@@ -3906,32 +3906,15 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
    QUICK PICKS — live API, random per category
 ════════════════════════════════════════ */
 const QP_CATEGORIES = [
-  { label: 'Small Cap',   queries: ['sbi small cap',      'nippon small cap'] },
-  { label: 'Flexi Cap',   queries: ['parag parikh flexi', 'hdfc flexi cap'] },
-  { label: 'Multi Asset', queries: ['hdfc multi asset',   'quant multi asset'] },
-  { label: 'Mid Cap',     queries: ['axis midcap',        'nippon india mid cap'] },
-  { label: 'ELSS',        queries: ['mirae asset elss',   'axis elss'] },
-];
-
-// Only pick from these trusted AMCs
-const TRUSTED_AMCS = [
-  'sbi','hdfc','icici','axis','nippon','kotak','mirae','uti',
-  'parag parikh','quant','dsp','franklin','tata','canara',
-  'aditya birla','invesco','motilal',
-  'groww','bandhan','edelweiss','hsbc','nj ',
+  { label: 'Small Cap',   keywords: ['small cap'] },
+  { label: 'Flexi Cap',   keywords: ['flexi cap'] },
+  { label: 'Multi Asset', keywords: ['multi asset'] },
+  { label: 'Mid Cap',     keywords: ['midcap', 'mid cap'] },
+  { label: 'ELSS',        keywords: ['elss', 'tax saver'] },
 ];
 
 // Resolved picks — populated on load, reused for "Try" pairs
 const _resolvedPicks = [];
-
-function isTrustedAMC(name) {
-  const n = name.toLowerCase();
-  return TRUSTED_AMCS.some(a => n.includes(a));
-}
-
-function pickRandom(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
 
 // Words that disqualify a fund from quick-picks
 const QP_BLOCKED = [
@@ -3948,62 +3931,56 @@ function isEligible(name) {
   const n = name.toLowerCase();
   if (n.includes('direct')) return false;
   if (n.includes('institutional')) return false;
-  // Exclude dividend/idcw payout variants (growth variants preferred, but if
-  // none come back we still want regular plans)
   if (/\bidcw\b|dividend payout/i.test(n)) return false;
   if (QP_BLOCKED.some(b => n.includes(b))) return false;
   return true;
 }
 
-// Prefer growth variant — sort growth plans to top
-function growthFirst(a, b) {
-  const ag = /growth/i.test(a.schemeName) ? 0 : 1;
-  const bg = /growth/i.test(b.schemeName) ? 0 : 1;
-  return ag - bg;
-}
-
-// Resolve TWO random picks per category (for same-category Try pairs)
-
-// Pick the best regular-growth plan from a search result array
+// Given a list of results, pick the best regular-growth plan
 function pickBestFund(results) {
-  const eligible = results.filter(f => {
-    const n = f.schemeName.toLowerCase();
-    return !n.includes('direct')
-        && !n.includes('institutional')
-        && !/\bidcw\b/i.test(n)
-        && !n.includes('dividend')
-        && !n.includes('bonus');
-  });
-  // Prefer names containing 'growth'
+  const eligible = results.filter(f => isEligible(f.schemeName));
   const growth = eligible.filter(f => /growth/i.test(f.schemeName));
-  const best = growth.length ? growth : eligible;
-  return best.length ? best[0] : null;
+  const pool = growth.length ? growth : eligible;
+  return pool.length ? pool[0] : null;
 }
 
+// Try one AMC + keyword combination via proxy, return a fund or null
+async function tryAMCFund(amc, keyword) {
+  try {
+    const q = amc + ' ' + keyword;
+    const r = await fetch('/api/mf?q=' + encodeURIComponent(q), { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) return null;
+    const results = await r.json();
+    return pickBestFund(Array.isArray(results) ? results : []);
+  } catch(e) { return null; }
+}
+
+// For a category, shuffle TRUSTED_AMCS and try each until we find 2 distinct funds
 async function resolveQuickPick(cat) {
-  // Run both specific queries in parallel
-  const fetches = cat.queries.map(q =>
-    fetch('/api/mf?q=' + encodeURIComponent(q), { signal: AbortSignal.timeout(8000) })
-      .then(r => r.ok ? r.json() : [])
-      .then(results => pickBestFund(results))
-      .catch(() => null)
-  );
-  const [f1, f2] = await Promise.all(fetches);
-  if (!f1 && !f2) throw new Error('No results for ' + cat.label);
-  const primary   = f1 || f2;
-  const secondary = f2 || f1;
+  const amcs = [...TRUSTED_AMCS].sort(() => Math.random() - 0.5);
+  const found = [];
+  for (const amc of amcs) {
+    if (found.length >= 2) break;
+    for (const kw of cat.keywords) {
+      const fund = await tryAMCFund(amc, kw);
+      if (fund && !found.some(f => f.schemeCode === fund.schemeCode)) {
+        found.push(fund);
+        break; // Got one from this AMC, move to next AMC
+      }
+    }
+  }
+  if (!found.length) throw new Error('No picks for ' + cat.label);
   const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
-  return { primary: make(primary), secondary: make(secondary) };
+  return { primary: make(found[0]), secondary: make(found[1] || found[0]) };
 }
-
 
 function renderQAChip(pick) {
   const btn = document.createElement('button');
   btn.className = 'qa-chip';
-  // Shorten name: strip "- Regular Plan - Growth" suffix
   const shortName = pick.name
     .replace(/\s*-\s*regular\s*plan\s*-\s*growth\s*/i, '')
     .replace(/\s*-\s*growth\s*/i, '')
+    .replace(/\s*-\s*growth\s*plan\s*/i, '')
     .trim();
   btn.innerHTML = `<span class="qa-chip-cat">${pick.label}</span>
     <span class="qa-chip-name">${shortName.length > 28 ? shortName.slice(0,26)+'…' : shortName}</span>`;
@@ -4022,11 +3999,12 @@ async function loadQuickPicks() {
       _resolvedPicks[i] = result.value;
       chips.appendChild(renderQAChip(result.value.primary));
     } else {
-      console.warn('Quick pick failed:', QP_CATEGORIES[i].label, result.reason);
+      console.warn('Quick pick failed:', QP_CATEGORIES[i]?.label, result.reason);
     }
   });
   populateTryRow();
 }
+
 
 function populateTryRow() {
   const tryRow = document.getElementById('esTryRow');
