@@ -3977,30 +3977,14 @@ const QP_FALLBACK = {
 };
 
 async function resolveQuickPick(cat) {
-  try {
-    const res = await fetch(
-      '/api/mf?q=' + encodeURIComponent(cat.query),
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const results = await res.json();
-    if (!Array.isArray(results) || !results.length) throw new Error('Empty response');
-    const pool = results.filter(f => isEligible(f.schemeName)).sort(growthFirst);
-    const trusted = pool.filter(f => isTrustedAMC(f.schemeName));
-    const source = trusted.length >= 2 ? trusted : (pool.length >= 2 ? pool : null);
-    if (!source) throw new Error('No match for ' + cat.label);
-    const shuffled = [...source].sort(() => Math.random() - 0.5);
+  // Use hardcoded fallback as primary — mfapi search returns inconsistent results
+  // for generic category queries. Fallback has the correct current popular funds.
+  const fb = QP_FALLBACK[cat.label];
+  if (fb) {
     const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
-    return { primary: make(shuffled[0]), secondary: make(shuffled[1] || shuffled[0]) };
-  } catch(e) {
-    // Fallback to hardcoded pairs when API is unavailable
-    const fb = QP_FALLBACK[cat.label];
-    if (fb) {
-      const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
-      return { primary: make(fb[0]), secondary: make(fb[1]) };
-    }
-    throw e;
+    return { primary: make(fb[0]), secondary: make(fb[1]) };
   }
+  throw new Error('No fallback for ' + cat.label);
 }
 
 function renderQAChip(pick) {
@@ -7254,7 +7238,7 @@ function sipBTDoSearch(q) {
     .then(r => r.json())
     .then(data => {
       const funds = (data || [])
-        .filter(f => !/direct/i.test(f.schemeName) && (!hideDeadAMC || !isDeadAMC(f.schemeName)))
+        .filter(f => !/direct/i.test(f.schemeName) && !isDeadAMC(f.schemeName))
         .sort((a,b) => fundRank(a) - fundRank(b))
         .slice(0, 25);
       if (!funds.length) { dd.innerHTML = '<div class="dropdown-loading">No results</div>'; return; }
