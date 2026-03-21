@@ -1,30 +1,89 @@
 {
-  "name": "MF Analyzer — Abundance Financial Services",
+  "name": "MF Analyzer \u2014 Abundance Financial Services",
   "short_name": "MF Analyzer",
-  "description": "Free SIP, SWP Backtester, Fund Compare & EMI tool by Abundance Financial Services. Live AMFI NAV data.",
-  "start_url": "/",
+  "description": "Free SIP & SWP NAV Backtester, Fund Compare, Goal Planner & EMI tool. Live AMFI NAV data. By Abundance Financial Services ARN-251838.",
+  "start_url": "/?source=pwa",
   "display": "standalone",
   "background_color": "#f0f7f0",
   "theme_color": "#2e7d32",
   "orientation": "portrait-primary",
   "lang": "en-IN",
-  "categories": ["finance", "utilities"],
+  "categories": [
+    "finance",
+    "utilities"
+  ],
   "icons": [
     {
-      "src": "/logo-favicon.png",
+      "src": "/logo-16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo-32.png",
       "sizes": "32x32",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
-      "src": "/logo-apple.png",
+      "src": "/logo-48.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo-72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo-96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo-128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo-144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo-152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo-180.png",
       "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo-og.png",
-      "sizes": "90x90",
+      "src": "/logo-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/logo-256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-maskable-512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }
@@ -34,37 +93,57 @@
       "src": "/og-mfcalc.png",
       "sizes": "1200x630",
       "type": "image/png",
-      "label": "MF Analyzer — Fund Comparison & Calculator Suite"
+      "label": "MF Analyzer \u2014 Fund Comparison, SIP & SWP Backtester Suite"
     }
   ],
   "shortcuts": [
     {
+      "name": "SIP NAV Backtester",
+      "short_name": "SIP Backtest",
+      "description": "Backtest monthly SIP on real historical NAV data",
+      "url": "/?tab=sip&sipBTMode=1",
+      "icons": [
+        {
+          "src": "/logo-32.png",
+          "sizes": "32x32"
+        }
+      ]
+    },
+    {
       "name": "Fund Compare",
       "short_name": "Compare",
-      "description": "Compare up to 5 mutual funds",
+      "description": "Compare up to 5 mutual funds with Sharpe ratio & XIRR",
       "url": "/?tab=fund",
-      "icons": [{ "src": "/logo-favicon.png", "sizes": "32x32" }]
+      "icons": [
+        {
+          "src": "/logo-32.png",
+          "sizes": "32x32"
+        }
+      ]
     },
     {
       "name": "SWP Backtester",
-      "short_name": "Backtest",
-      "description": "Test SWP on real historical NAV data",
+      "short_name": "SWP Backtest",
+      "description": "Test Systematic Withdrawal Plan on real fund NAV history",
       "url": "/?tab=swp",
-      "icons": [{ "src": "/logo-favicon.png", "sizes": "32x32" }]
-    },
-    {
-      "name": "SIP Calculator",
-      "short_name": "SIP",
-      "description": "Calculate SIP & lumpsum returns",
-      "url": "/?tab=sip",
-      "icons": [{ "src": "/logo-favicon.png", "sizes": "32x32" }]
+      "icons": [
+        {
+          "src": "/logo-32.png",
+          "sizes": "32x32"
+        }
+      ]
     },
     {
       "name": "EMI Calculator",
       "short_name": "EMI",
-      "description": "Calculate loan EMI & amortisation",
+      "description": "Calculate loan EMI with amortisation schedule",
       "url": "/?tab=emi",
-      "icons": [{ "src": "/logo-favicon.png", "sizes": "32x32" }]
+      "icons": [
+        {
+          "src": "/logo-32.png",
+          "sizes": "32x32"
+        }
+      ]
     }
   ],
   "related_applications": [],
