@@ -7,6 +7,10 @@
   "trailingSlash": false,
   "rewrites": [
     {
+      "source": "/api/mf/:path*",
+      "destination": "/api/mf?_path=:path*"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     }
