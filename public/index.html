@@ -3963,46 +3963,22 @@ function growthFirst(a, b) {
 }
 
 // Resolve TWO random picks per category (for same-category Try pairs)
-// Hardcoded fallback pairs — used only if live search fails completely
-const QP_FALLBACK = {
-  'Small Cap':   [{ schemeCode: 125497, schemeName: 'SBI Small Cap Fund - Regular Plan - Growth' },
-                  { schemeCode: 118989, schemeName: 'Nippon India Small Cap Fund - Regular Plan - Growth' }],
-  'Flexi Cap':   [{ schemeCode: 122639, schemeName: 'Parag Parikh Flexi Cap Fund - Regular Plan - Growth' },
-                  { schemeCode: 120503, schemeName: 'HDFC Flexi Cap Fund - Regular Plan - Growth' }],
-  'Multi Asset': [{ schemeCode: 120492, schemeName: 'HDFC Multi-Asset Fund - Regular Plan - Growth' },
-                  { schemeCode: 147622, schemeName: 'Quant Multi Asset Fund - Regular Plan - Growth' }],
-  'Mid Cap':     [{ schemeCode: 120465, schemeName: 'HDFC Mid-Cap Opportunities Fund - Regular Plan - Growth' },
-                  { schemeCode: 120841, schemeName: 'Kotak Emerging Equity Fund - Regular Plan - Growth' }],
-  'ELSS':        [{ schemeCode: 120503, schemeName: 'Mirae Asset ELSS Tax Saver Fund - Regular Plan - Growth' },
-                  { schemeCode: 125354, schemeName: 'Axis Long Term Equity Fund - Regular Plan - Growth' }],
-};
 
 async function resolveQuickPick(cat) {
-  try {
-    const res = await fetch(
-      '/api/mf?q=' + encodeURIComponent(cat.query),
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const results = await res.json();
-    if (!Array.isArray(results) || !results.length) throw new Error('Empty');
-    const pool = results.filter(f => isEligible(f.schemeName)).sort(growthFirst);
-    const trusted = pool.filter(f => isTrustedAMC(f.schemeName));
-    const source = trusted.length >= 2 ? trusted : (pool.length >= 2 ? pool : null);
-    if (!source) throw new Error('No eligible funds for ' + cat.label);
-    const shuffled = [...source].sort(() => Math.random() - 0.5);
-    const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
-    return { primary: make(shuffled[0]), secondary: make(shuffled[1] || shuffled[0]) };
-  } catch(e) {
-    // Fallback to hardcoded pairs only when proxy/API is unavailable
-    const fb = QP_FALLBACK[cat.label];
-    if (fb) {
-      const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
-      return { primary: make(fb[0]), secondary: make(fb[1]) };
-    }
-    throw e;
-  }
+  const res = await fetch('/api/mf?q=' + encodeURIComponent(cat.query),
+    { signal: AbortSignal.timeout(8000) });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const results = await res.json();
+  if (!Array.isArray(results) || !results.length) throw new Error('No results for ' + cat.label);
+  const pool = results.filter(f => isEligible(f.schemeName)).sort(growthFirst);
+  const trusted = pool.filter(f => isTrustedAMC(f.schemeName));
+  const source = trusted.length >= 2 ? trusted : (pool.length >= 2 ? pool : null);
+  if (!source) throw new Error('No eligible funds for ' + cat.label);
+  const shuffled = [...source].sort(() => Math.random() - 0.5);
+  const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
+  return { primary: make(shuffled[0]), secondary: make(shuffled[1] || shuffled[0]) };
 }
+
 
 function renderQAChip(pick) {
   const btn = document.createElement('button');
@@ -4533,7 +4509,6 @@ function renderAll(){
     </div>`;
     // Re-populate Try row with resolved picks
     setTimeout(populateTryRow, 0);
-    loadQuickPicks(); // ensure chips always show
     return;
   }
   toolbar.style.display="flex";tabsRow.style.display="flex";
@@ -8541,8 +8516,6 @@ ${tableHTML   ? `<div class="sec">Amortisation Schedule</div><table class="emi-t
   win.document.close();
 }
 
-loadQuickPicks();
-
 // ══════════════════════════════════════════════
 // localStorage persistence — remember last inputs
 // ══════════════════════════════════════════════
@@ -8754,7 +8727,7 @@ readURLParams();
 injectBTShareMeta();
 btReadURL();
 sipBTReadURL();
-loadQuickPicks();
+setTimeout(loadQuickPicks, 0); // run after all sync init completes
 
 
 </script>
