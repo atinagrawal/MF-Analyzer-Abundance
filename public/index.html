@@ -3977,15 +3977,31 @@ const QP_FALLBACK = {
                   { schemeCode: 125354, schemeName: 'Axis Long Term Equity Fund - Regular Plan - Growth' }],
 };
 
-function resolveQuickPick(cat) {
-  // Use hardcoded fallback as primary — mfapi search returns inconsistent results
-  // for generic category queries. Fallback has the correct current popular funds.
-  const fb = QP_FALLBACK[cat.label];
-  if (fb) {
+async function resolveQuickPick(cat) {
+  try {
+    const res = await fetch(
+      '/api/mf?q=' + encodeURIComponent(cat.query),
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const results = await res.json();
+    if (!Array.isArray(results) || !results.length) throw new Error('Empty');
+    const pool = results.filter(f => isEligible(f.schemeName)).sort(growthFirst);
+    const trusted = pool.filter(f => isTrustedAMC(f.schemeName));
+    const source = trusted.length >= 2 ? trusted : (pool.length >= 2 ? pool : null);
+    if (!source) throw new Error('No eligible funds for ' + cat.label);
+    const shuffled = [...source].sort(() => Math.random() - 0.5);
     const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
-    return { primary: make(fb[0]), secondary: make(fb[1]) };
+    return { primary: make(shuffled[0]), secondary: make(shuffled[1] || shuffled[0]) };
+  } catch(e) {
+    // Fallback to hardcoded pairs only when proxy/API is unavailable
+    const fb = QP_FALLBACK[cat.label];
+    if (fb) {
+      const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
+      return { primary: make(fb[0]), secondary: make(fb[1]) };
+    }
+    throw e;
   }
-  throw new Error('No fallback for ' + cat.label);
 }
 
 function renderQAChip(pick) {
@@ -4003,13 +4019,18 @@ function renderQAChip(pick) {
   return btn;
 }
 
-function loadQuickPicks() {
-  // Chips are hardcoded in HTML — just populate _resolvedPicks for the Try: row
-  QP_CATEGORIES.forEach((cat, i) => {
-    const fb = QP_FALLBACK[cat.label];
-    if (!fb) return;
-    const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
-    _resolvedPicks[i] = { primary: make(fb[0]), secondary: make(fb[1]) };
+async function loadQuickPicks() {
+  const settled = await Promise.allSettled(QP_CATEGORIES.map(resolveQuickPick));
+  const chips = document.getElementById('qaChips');
+  if (!chips) return;
+  chips.innerHTML = '';
+  settled.forEach((result, i) => {
+    if (result.status === 'fulfilled') {
+      _resolvedPicks[i] = result.value;
+      chips.appendChild(renderQAChip(result.value.primary));
+    } else {
+      console.warn('Quick pick failed:', QP_CATEGORIES[i].label, result.reason);
+    }
   });
   populateTryRow();
 }
