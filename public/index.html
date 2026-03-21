@@ -3906,11 +3906,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
    QUICK PICKS — live API, random per category
 ════════════════════════════════════════ */
 const QP_CATEGORIES = [
-  { label: 'Small Cap',   query: 'small cap fund' },
-  { label: 'Flexi Cap',   query: 'flexi cap fund' },
-  { label: 'Multi Asset', query: 'multi asset fund' },
-  { label: 'Mid Cap',     query: 'mid cap fund' },
-  { label: 'ELSS',        query: 'ELSS tax saver' },
+  { label: 'Small Cap',   queries: ['sbi small cap',      'nippon small cap'] },
+  { label: 'Flexi Cap',   queries: ['parag parikh flexi', 'hdfc flexi cap'] },
+  { label: 'Multi Asset', queries: ['hdfc multi asset',   'quant multi asset'] },
+  { label: 'Mid Cap',     queries: ['axis midcap',        'nippon india mid cap'] },
+  { label: 'ELSS',        queries: ['mirae asset elss',   'axis elss'] },
 ];
 
 // Only pick from these trusted AMCs
@@ -3964,19 +3964,36 @@ function growthFirst(a, b) {
 
 // Resolve TWO random picks per category (for same-category Try pairs)
 
+// Pick the best regular-growth plan from a search result array
+function pickBestFund(results) {
+  const eligible = results.filter(f => {
+    const n = f.schemeName.toLowerCase();
+    return !n.includes('direct')
+        && !n.includes('institutional')
+        && !/\bidcw\b/i.test(n)
+        && !n.includes('dividend')
+        && !n.includes('bonus');
+  });
+  // Prefer names containing 'growth'
+  const growth = eligible.filter(f => /growth/i.test(f.schemeName));
+  const best = growth.length ? growth : eligible;
+  return best.length ? best[0] : null;
+}
+
 async function resolveQuickPick(cat) {
-  const res = await fetch('/api/mf?q=' + encodeURIComponent(cat.query),
-    { signal: AbortSignal.timeout(8000) });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const results = await res.json();
-  if (!Array.isArray(results) || !results.length) throw new Error('No results for ' + cat.label);
-  const pool = results.filter(f => isEligible(f.schemeName)).sort(growthFirst);
-  const trusted = pool.filter(f => isTrustedAMC(f.schemeName));
-  const source = trusted.length >= 2 ? trusted : (pool.length >= 2 ? pool : null);
-  if (!source) throw new Error('No eligible funds for ' + cat.label);
-  const shuffled = [...source].sort(() => Math.random() - 0.5);
+  // Run both specific queries in parallel
+  const fetches = cat.queries.map(q =>
+    fetch('/api/mf?q=' + encodeURIComponent(q), { signal: AbortSignal.timeout(8000) })
+      .then(r => r.ok ? r.json() : [])
+      .then(results => pickBestFund(results))
+      .catch(() => null)
+  );
+  const [f1, f2] = await Promise.all(fetches);
+  if (!f1 && !f2) throw new Error('No results for ' + cat.label);
+  const primary   = f1 || f2;
+  const secondary = f2 || f1;
   const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
-  return { primary: make(shuffled[0]), secondary: make(shuffled[1] || shuffled[0]) };
+  return { primary: make(primary), secondary: make(secondary) };
 }
 
 
