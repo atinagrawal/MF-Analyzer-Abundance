@@ -2475,7 +2475,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
             <button id="modeBoth" onclick="setCalcMode('both')" class="smt-btn" role="radio" aria-checked="false" aria-label="SIP plus Lumpsum combined mode">SIP + Lumpsum</button>
             <button id="modeBacktest" onclick="setSIPMode('backtest',this)" class="smt-btn" role="radio" aria-checked="false" aria-label="SIP NAV Backtester">&#x1F4CA; NAV Backtest</button>
           </div>
-          <button onclick="printCalc()" class="swp-hdr-btn" style="margin-left:auto">
+          <button id="sipPrintBtn" onclick="printCalc()" class="swp-hdr-btn" style="margin-left:auto">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
             Save PDF
           </button>
@@ -3976,7 +3976,7 @@ const QP_FALLBACK = {
                   { schemeCode: 125354, schemeName: 'Axis Long Term Equity Fund - Regular Plan - Growth' }],
 };
 
-async function resolveQuickPick(cat) {
+function resolveQuickPick(cat) {
   // Use hardcoded fallback as primary — mfapi search returns inconsistent results
   // for generic category queries. Fallback has the correct current popular funds.
   const fb = QP_FALLBACK[cat.label];
@@ -4002,22 +4002,18 @@ function renderQAChip(pick) {
   return btn;
 }
 
-async function loadQuickPicks() {
-  const settled = await Promise.allSettled(QP_CATEGORIES.map(resolveQuickPick));
+function loadQuickPicks() {
+  // Fully synchronous — uses QP_FALLBACK directly, no async timing issues
   const chips = document.getElementById('qaChips');
   if (!chips) return;
   chips.innerHTML = '';
-
-  settled.forEach((result, i) => {
-    if (result.status === 'fulfilled') {
-      // Store both picks; show primary as the chip
-      _resolvedPicks[i] = result.value;
-      chips.appendChild(renderQAChip(result.value.primary));
-    } else {
-      console.warn('Quick pick failed:', QP_CATEGORIES[i].label, result.reason);
-    }
+  QP_CATEGORIES.forEach((cat, i) => {
+    const fb = QP_FALLBACK[cat.label];
+    if (!fb) return;
+    const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
+    _resolvedPicks[i] = { primary: make(fb[0]), secondary: make(fb[1]) };
+    chips.appendChild(renderQAChip(_resolvedPicks[i].primary));
   });
-
   populateTryRow();
 }
 
@@ -7216,6 +7212,9 @@ function setSIPMode(mode, btn) {
     b.style.color = '';
   });
   if (btn) { btn.classList.add('active'); btn.setAttribute('aria-checked','true'); }
+  // Show/hide Save PDF button — hidden in backtest mode (has its own print)
+  const sipPrintBtn = document.getElementById('sipPrintBtn');
+  if (sipPrintBtn) sipPrintBtn.style.display = isBacktest ? 'none' : '';
   // Also update calcModeTitle
   const titleEl = document.getElementById('calcModeTitle');
   if (titleEl) titleEl.textContent = isBacktest ? 'SIP NAV Backtester' : 'SIP Returns Calculator';
