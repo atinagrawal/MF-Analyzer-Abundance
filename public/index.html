@@ -2386,11 +2386,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   <div class="quick-add-wrap" id="quickAddWrap">
     <div class="qa-label">⚡ Popular picks — click to add instantly</div>
     <div class="qa-chips" id="qaChips">
-      <span class="qa-skeleton"></span>
-      <span class="qa-skeleton"></span>
-      <span class="qa-skeleton"></span>
-      <span class="qa-skeleton"></span>
-      <span class="qa-skeleton"></span>
+      <button class="qa-chip" title="SBI Small Cap Fund - Regular Plan - Growth" onclick="quickAddFund(125497,'SBI Small Cap Fund - Regular Plan - Growth','Small Cap',this)"><span class="qa-chip-cat">Small Cap</span><span class="qa-chip-name">SBI Small Cap</span></button>
+      <button class="qa-chip" title="Parag Parikh Flexi Cap Fund - Regular Plan - Growth" onclick="quickAddFund(122639,'Parag Parikh Flexi Cap Fund - Regular Plan - Growth','Flexi Cap',this)"><span class="qa-chip-cat">Flexi Cap</span><span class="qa-chip-name">Parag Parikh Flexi Cap</span></button>
+      <button class="qa-chip" title="HDFC Multi-Asset Fund - Regular Plan - Growth" onclick="quickAddFund(120492,'HDFC Multi-Asset Fund - Regular Plan - Growth','Multi Asset',this)"><span class="qa-chip-cat">Multi Asset</span><span class="qa-chip-name">HDFC Multi-Asset</span></button>
+      <button class="qa-chip" title="HDFC Mid-Cap Opportunities Fund - Regular Plan - Growth" onclick="quickAddFund(120465,'HDFC Mid-Cap Opportunities Fund - Regular Plan - Growth','Mid Cap',this)"><span class="qa-chip-cat">Mid Cap</span><span class="qa-chip-name">HDFC Mid-Cap Opp.</span></button>
+      <button class="qa-chip" title="Axis Long Term Equity Fund - Regular Plan - Growth" onclick="quickAddFund(125354,'Axis Long Term Equity Fund - Regular Plan - Growth','ELSS',this)"><span class="qa-chip-cat">ELSS</span><span class="qa-chip-name">Axis Long Term Equity</span></button>
     </div>
   </div>
 </div>
@@ -3947,6 +3947,7 @@ const QP_BLOCKED = [
 function isEligible(name) {
   const n = name.toLowerCase();
   if (n.includes('direct')) return false;
+  if (n.includes('institutional')) return false;
   // Exclude dividend/idcw payout variants (growth variants preferred, but if
   // none come back we still want regular plans)
   if (/\bidcw\b|dividend payout/i.test(n)) return false;
@@ -4003,16 +4004,12 @@ function renderQAChip(pick) {
 }
 
 function loadQuickPicks() {
-  // Fully synchronous — uses QP_FALLBACK directly, no async timing issues
-  const chips = document.getElementById('qaChips');
-  if (!chips) return;
-  chips.innerHTML = '';
+  // Chips are hardcoded in HTML — just populate _resolvedPicks for the Try: row
   QP_CATEGORIES.forEach((cat, i) => {
     const fb = QP_FALLBACK[cat.label];
     if (!fb) return;
     const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
     _resolvedPicks[i] = { primary: make(fb[0]), secondary: make(fb[1]) };
-    chips.appendChild(renderQAChip(_resolvedPicks[i].primary));
   });
   populateTryRow();
 }
@@ -4282,7 +4279,7 @@ function fundRank(f){
 function renderSearchResults(q,data,dd){
     if(!data.length){dd.innerHTML='<div class="dropdown-loading">No results found</div>';return;}
     const hideDeadAMC=!deadAMCQueried(q);
-    const filtered=data.filter(f=>!/direct/i.test(f.schemeName)&&(!hideDeadAMC||!isDeadAMC(f.schemeName)));
+    const filtered=data.filter(f=>!/direct/i.test(f.schemeName)&&!/institutional/i.test(f.schemeName)&&(!hideDeadAMC||!isDeadAMC(f.schemeName)));
     const ranked=filtered.slice().sort((a,b)=>fundRank(a)-fundRank(b));
     const results=ranked.slice(0,25);
     const ql=q.toLowerCase();
@@ -4515,6 +4512,7 @@ function renderAll(){
     </div>`;
     // Re-populate Try row with resolved picks
     setTimeout(populateTryRow, 0);
+    loadQuickPicks(); // ensure chips always show
     return;
   }
   toolbar.style.display="flex";tabsRow.style.display="flex";
@@ -7237,7 +7235,7 @@ function sipBTDoSearch(q) {
     .then(r => r.json())
     .then(data => {
       const funds = (data || [])
-        .filter(f => !/direct/i.test(f.schemeName) && !isDeadAMC(f.schemeName))
+        .filter(f => !/direct/i.test(f.schemeName) && !/institutional/i.test(f.schemeName) && !isDeadAMC(f.schemeName))
         .sort((a,b) => fundRank(a) - fundRank(b))
         .slice(0, 25);
       if (!funds.length) { dd.innerHTML = '<div class="dropdown-loading">No results</div>'; return; }
@@ -8735,6 +8733,7 @@ readURLParams();
 injectBTShareMeta();
 btReadURL();
 sipBTReadURL();
+loadQuickPicks();
 
 
 </script>
