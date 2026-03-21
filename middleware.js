@@ -1,10 +1,8 @@
 // middleware.js — Edge Middleware for server-side OG meta injection
-// Only intercepts ?btMode=1 requests from known social crawlers.
-// Regular browser users pass through to the static HTML unchanged.
+// Handles both SWP Backtester (?btMode=1) and SIP Backtester (?sipBTMode=1)
+// Only intercepts bot crawlers — regular browsers pass through unchanged
 
-export const config = {
-  matcher: '/',
-};
+export const config = { matcher: '/' };
 
 const BOT_UA = [
   'twitterbot','facebookexternalhit','facebot','linkedinbot','whatsapp',
@@ -36,52 +34,83 @@ export default function middleware(request) {
   const url = new URL(request.url);
   const p   = url.searchParams;
 
-  // Only activate for backtester share links
-  if (!p.get('btMode')) return; // pass through to static file
+  const isSWPBT = !!p.get('btMode');
+  const isSIPBT = !!p.get('sipBTMode');
 
-  // For regular browsers — pass through, injectBTShareMeta() handles it in JS
+  if (!isSWPBT && !isSIPBT) return; // pass through
+
   const ua = request.headers.get('user-agent') || '';
-  if (!isBot(ua)) return; // pass through unchanged
+  if (!isBot(ua)) return; // let browser handle it via injectBTShareMeta()
 
-  // ── Bot detected + btMode=1 → return minimal HTML with injected OG tags ──
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  const btName   = p.get('btName') || 'SWP Backtest';
-  const corpus   = p.get('btCorpus') || '';
-  const withdraw = p.get('btWithdrawal') || '';
-  const btSY     = p.get('btSY') || '';
-  const btSM     = p.get('btSM') || '';
-  const btEY     = p.get('btEY') || '';
-  const btEM     = p.get('btEM') || '';
-  const xirr     = p.get('xirr') || '';
-  const survived = p.get('survived') || '';
-  const finalC   = p.get('finalC') || '';
-  const withdrawn= p.get('withdrawn') || '';
+  let titleText, descText, ogImageURL;
+  const pageURL = url.href;
 
-  const startLabel = (btSY && btSM) ? `${MONTHS[parseInt(btSM)-1]} ${btSY}` : '';
-  const endLabel   = (btEY && btEM) ? `${MONTHS[parseInt(btEM)-1]} ${btEY}` : 'Today';
+  if (isSIPBT) {
+    // ── SIP Backtester ──
+    const sipBTName   = p.get('sipBTName') || 'SIP Backtest';
+    const sipBTAmount = p.get('sipBTAmount') || '';
+    const sipBTSY     = p.get('sipBTSY') || '';
+    const sipBTSM     = p.get('sipBTSM') || '';
+    const sipBTEY     = p.get('sipBTEY') || '';
+    const sipBTEM     = p.get('sipBTEM') || '';
+    const sipXirr     = p.get('sipXirr') || '';
+    const sipCorpus   = p.get('sipCorpus') || '';
+    const sipInvested = p.get('sipInvested') || '';
+    const sipGain     = p.get('sipGain') || '';
 
-  const ogParams = new URLSearchParams({
-    tab: 'swp', btName, btCorpus: corpus, btWithdrawal: withdraw,
-    btSY, btSM, btEY, btEM, xirr, survived, finalC, withdrawn,
-  });
-  const ogImageURL = `https://mfcalc.getabundance.in/api/og?${ogParams}`;
-  const pageURL    = url.href;
+    const startLabel = (sipBTSY && sipBTSM) ? `${MONTHS[parseInt(sipBTSM)-1]} ${sipBTSY}` : '';
+    const endLabel   = (sipBTEY && sipBTEM) ? `${MONTHS[parseInt(sipBTEM)-1]} ${sipBTEY}` : 'Today';
 
-  const shortName = btName.length > 32 ? btName.slice(0, 32) + '...' : btName;
-  const titleText = `SWP Backtester: ${shortName} | Abundance`;
+    const ogParams = new URLSearchParams({ sipBTMode:'1', sipBTName, sipBTAmount, sipBTSY, sipBTSM, sipBTEY, sipBTEM, sipXirr, sipCorpus, sipInvested, sipGain });
+    ogImageURL = `https://mfcalc.getabundance.in/api/og?${ogParams}`;
 
-  const descParts = [
-    `SWP backtest: ${btName}`,
-    startLabel ? `${startLabel} to ${endLabel}` : '',
-    corpus   ? `Corpus Rs${fmtINR(corpus)}` : '',
-    withdraw ? `Withdrawal Rs${fmtINR(withdraw)}/mo` : '',
-    xirr     ? `XIRR ${xirr}% p.a.` : '',
-    survived === '1' ? 'Corpus survived' : survived === '0' ? 'Corpus depleted' : '',
-  ].filter(Boolean).slice(0, 4).join(' | ');
-  const descText = (descParts + ' — Abundance ARN-251838').slice(0, 160);
+    const shortName = sipBTName.length > 32 ? sipBTName.slice(0, 32) + '...' : sipBTName;
+    titleText = `SIP Backtest: ${shortName} | Abundance`;
 
-  // Return minimal HTML — bots only read <head>, no redirect needed
+    const parts = [
+      `SIP backtest: ${sipBTName}`,
+      startLabel ? `${startLabel} to ${endLabel}` : '',
+      sipBTAmount ? `SIP Rs${fmtINR(sipBTAmount)}/mo` : '',
+      sipXirr    ? `XIRR ${sipXirr}% p.a.` : '',
+      sipCorpus  ? `Corpus Rs${fmtINR(sipCorpus)}` : '',
+    ].filter(Boolean).slice(0, 4).join(' | ');
+    descText = (parts + ' — Abundance ARN-251838').slice(0, 160);
+
+  } else {
+    // ── SWP Backtester ──
+    const btName   = p.get('btName') || 'SWP Backtest';
+    const corpus   = p.get('btCorpus') || '';
+    const withdraw = p.get('btWithdrawal') || '';
+    const btSY     = p.get('btSY') || '';
+    const btSM     = p.get('btSM') || '';
+    const btEY     = p.get('btEY') || '';
+    const btEM     = p.get('btEM') || '';
+    const xirr     = p.get('xirr') || '';
+    const survived = p.get('survived') || '';
+    const finalC   = p.get('finalC') || '';
+    const withdrawn= p.get('withdrawn') || '';
+
+    const startLabel = (btSY && btSM) ? `${MONTHS[parseInt(btSM)-1]} ${btSY}` : '';
+    const endLabel   = (btEY && btEM) ? `${MONTHS[parseInt(btEM)-1]} ${btEY}` : 'Today';
+
+    const ogParams = new URLSearchParams({ tab:'swp', btName, btCorpus:corpus, btWithdrawal:withdraw, btSY, btSM, btEY, btEM, xirr, survived, finalC, withdrawn });
+    ogImageURL = `https://mfcalc.getabundance.in/api/og?${ogParams}`;
+
+    const shortName = btName.length > 32 ? btName.slice(0, 32) + '...' : btName;
+    titleText = `SWP Backtester: ${shortName} | Abundance`;
+
+    const parts = [
+      `SWP backtest: ${btName}`,
+      startLabel ? `${startLabel} to ${endLabel}` : '',
+      corpus   ? `Corpus Rs${fmtINR(corpus)}` : '',
+      xirr     ? `XIRR ${xirr}% p.a.` : '',
+      survived === '1' ? 'Corpus survived' : survived === '0' ? 'Corpus depleted' : '',
+    ].filter(Boolean).slice(0, 4).join(' | ');
+    descText = (parts + ' — Abundance ARN-251838').slice(0, 160);
+  }
+
   const html = `<!DOCTYPE html>
 <html lang="en-IN">
 <head>
@@ -107,16 +136,14 @@ export default function middleware(request) {
 <meta name="twitter:image" content="${esc(ogImageURL)}">
 <link rel="canonical" href="${esc(pageURL)}">
 </head>
-<body>
-<p>Loading...</p>
-</body>
+<body><p>Loading...</p></body>
 </html>`;
 
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
-      'X-OG-Injected': '1',
+      'X-OG-Injected': isSIPBT ? 'sipbt' : 'swpbt',
     },
   });
 }
