@@ -247,13 +247,6 @@
     "price": "0",
     "priceCurrency": "INR"
   },
-  "aggregateRating": {
-    "@type": "AggregateRating",
-    "ratingValue": "4.8",
-    "ratingCount": "124",
-    "bestRating": "5",
-    "worstRating": "1"
-  },
   "featureList": [
     "Mutual Fund Comparison with live AMFI NAV data",
     "Sharpe Ratio and Max Drawdown analysis",
@@ -462,7 +455,7 @@ function switchMainTab(name,btn){
   document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('mpanel-'+name).classList.add('active');
   btn.classList.add('active');
-  const _tabTitles = {"fund": "Mutual Fund Comparison — War Room | Abundance MF Calculator", "sip": "SIP & Lumpsum Calculator — Wealth Clock | Abundance", "goal": "Investment Goal Planner — Mission Control | Abundance", "swp": "SWP Retirement Calculator | Abundance Financial Services", "emi": "EMI & Loan Calculator — Debt Decoder | Abundance"};
+  const _tabTitles = {"fund": "Mutual Fund Comparison — War Room | Abundance MF Calculator", "sip": "SIP Calculator & NAV Backtester — Wealth Clock | Abundance", "goal": "Investment Goal Planner — Mission Control | Abundance", "swp": "SWP NAV Backtester & Retirement Calculator | Abundance Financial Services", "emi": "EMI & Loan Calculator — Debt Decoder | Abundance"};
   if (_tabTitles[name]) document.title = _tabTitles[name];
   if(!_tabInited[name]){
     _tabInited[name]=true;
@@ -2678,14 +2671,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 </div><!-- /.sip-split-card -->
 
   <!-- SIP NAV BACKTESTER PANEL -->
-  <div id="sipBTPanel" class="sip-card-body" style="display:none;padding:22px 26px 28px">
+  <div id="sipBTPanel" class="sip-card-body" style="display:none;padding:22px 26px 28px;overflow:visible">
     <div class="swp-section-head">📊 SIP NAV Backtester — Real Fund Data</div>
     <div class="swp-params">
       <div class="sip-field" style="grid-column:1/-1;position:relative">
         <label>Search Fund</label>
         <input class="search-input" id="sipBTFundInput" type="text" placeholder="Type fund name or AMC…"
           autocomplete="off" oninput="sipBTOnSearch(this.value)" onclick="this.select()">
-        <div class="dropdown" id="sipBTDropdown"></div>
+        <div class="dropdown" id="sipBTDropdown" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:2000"></div>
         <div id="sipBTFundChipWrap" style="display:none;margin-top:10px">
           <span class="chip chip-0">
             <span class="chip-name" id="sipBTFundName"></span>
@@ -3953,31 +3946,61 @@ const QP_BLOCKED = [
 
 function isEligible(name) {
   const n = name.toLowerCase();
-  // Must not be direct plan
   if (n.includes('direct')) return false;
-  // Must be growth (not dividend/idcw)
-  if (!n.includes('growth')) return false;
-  // Must not contain any blocked keyword
+  // Exclude dividend/idcw payout variants (growth variants preferred, but if
+  // none come back we still want regular plans)
+  if (/\bidcw\b|dividend payout/i.test(n)) return false;
   if (QP_BLOCKED.some(b => n.includes(b))) return false;
   return true;
 }
 
+// Prefer growth variant — sort growth plans to top
+function growthFirst(a, b) {
+  const ag = /growth/i.test(a.schemeName) ? 0 : 1;
+  const bg = /growth/i.test(b.schemeName) ? 0 : 1;
+  return ag - bg;
+}
+
 // Resolve TWO random picks per category (for same-category Try pairs)
+// Hardcoded fallback pairs — used only if live search fails completely
+const QP_FALLBACK = {
+  'Small Cap':   [{ schemeCode: 125497, schemeName: 'SBI Small Cap Fund - Regular Plan - Growth' },
+                  { schemeCode: 118989, schemeName: 'Nippon India Small Cap Fund - Regular Plan - Growth' }],
+  'Flexi Cap':   [{ schemeCode: 122639, schemeName: 'Parag Parikh Flexi Cap Fund - Regular Plan - Growth' },
+                  { schemeCode: 120503, schemeName: 'HDFC Flexi Cap Fund - Regular Plan - Growth' }],
+  'Multi Asset': [{ schemeCode: 120492, schemeName: 'HDFC Multi-Asset Fund - Regular Plan - Growth' },
+                  { schemeCode: 147622, schemeName: 'Quant Multi Asset Fund - Regular Plan - Growth' }],
+  'Mid Cap':     [{ schemeCode: 120465, schemeName: 'HDFC Mid-Cap Opportunities Fund - Regular Plan - Growth' },
+                  { schemeCode: 120841, schemeName: 'Kotak Emerging Equity Fund - Regular Plan - Growth' }],
+  'ELSS':        [{ schemeCode: 120503, schemeName: 'Mirae Asset ELSS Tax Saver Fund - Regular Plan - Growth' },
+                  { schemeCode: 125354, schemeName: 'Axis Long Term Equity Fund - Regular Plan - Growth' }],
+};
+
 async function resolveQuickPick(cat) {
-  const res = await fetch(
-    'https://api.mfapi.in/mf/search?q=' + encodeURIComponent(cat.query)
-  );
-  const results = await res.json();
-  const pool = results.filter(f => isEligible(f.schemeName));
-  const trusted = pool.filter(f => isTrustedAMC(f.schemeName));
-  const source = trusted.length >= 2 ? trusted : (pool.length ? pool : null);
-  if (!source) throw new Error('No match for ' + cat.label);
-  // Pick two distinct random funds
-  const shuffled = [...source].sort(() => Math.random() - 0.5);
-  const pick1 = shuffled[0];
-  const pick2 = shuffled[1] || shuffled[0]; // fallback if only 1 result
-  const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
-  return { primary: make(pick1), secondary: make(pick2) };
+  try {
+    const res = await fetch(
+      'https://api.mfapi.in/mf/search?q=' + encodeURIComponent(cat.query),
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const results = await res.json();
+    if (!Array.isArray(results) || !results.length) throw new Error('Empty response');
+    const pool = results.filter(f => isEligible(f.schemeName)).sort(growthFirst);
+    const trusted = pool.filter(f => isTrustedAMC(f.schemeName));
+    const source = trusted.length >= 2 ? trusted : (pool.length >= 2 ? pool : null);
+    if (!source) throw new Error('No match for ' + cat.label);
+    const shuffled = [...source].sort(() => Math.random() - 0.5);
+    const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
+    return { primary: make(shuffled[0]), secondary: make(shuffled[1] || shuffled[0]) };
+  } catch(e) {
+    // Fallback to hardcoded pairs when API is unavailable
+    const fb = QP_FALLBACK[cat.label];
+    if (fb) {
+      const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
+      return { primary: make(fb[0]), secondary: make(fb[1]) };
+    }
+    throw e;
+  }
 }
 
 function renderQAChip(pick) {
@@ -6489,6 +6512,8 @@ async function btDoSearch(q){
 document.addEventListener('click', e=>{
   if(!e.target.closest('#swpPanelBacktest'))
     document.getElementById('btDropdown')?.classList.remove('open');
+  if(!e.target.closest('#sipBTPanel'))
+    document.getElementById('sipBTDropdown')?.classList.remove('open');
 });
 
 async function btSelectFund(code, name){
@@ -7230,7 +7255,7 @@ function sipBTDoSearch(q) {
     .then(data => {
       const funds = (data || [])
         .filter(f => !/direct/i.test(f.schemeName) && (!hideDeadAMC || !isDeadAMC(f.schemeName)))
-        .sort((a,b) => fundRank(a.schemeName) - fundRank(b.schemeName))
+        .sort((a,b) => fundRank(a) - fundRank(b))
         .slice(0, 25);
       if (!funds.length) { dd.innerHTML = '<div class="dropdown-loading">No results</div>'; return; }
       const q2 = q.toLowerCase();
