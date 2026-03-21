@@ -1,0 +1,72 @@
+{
+  "name": "MF Analyzer — Abundance Financial Services",
+  "short_name": "MF Analyzer",
+  "description": "Free SIP, SWP Backtester, Fund Compare & EMI tool by Abundance Financial Services. Live AMFI NAV data.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f7f0",
+  "theme_color": "#2e7d32",
+  "orientation": "portrait-primary",
+  "lang": "en-IN",
+  "categories": ["finance", "utilities"],
+  "icons": [
+    {
+      "src": "/logo-favicon.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-apple.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-og.png",
+      "sizes": "90x90",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/og-mfcalc.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "label": "MF Analyzer — Fund Comparison & Calculator Suite"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Fund Compare",
+      "short_name": "Compare",
+      "description": "Compare up to 5 mutual funds",
+      "url": "/?tab=fund",
+      "icons": [{ "src": "/logo-favicon.png", "sizes": "32x32" }]
+    },
+    {
+      "name": "SWP Backtester",
+      "short_name": "Backtest",
+      "description": "Test SWP on real historical NAV data",
+      "url": "/?tab=swp",
+      "icons": [{ "src": "/logo-favicon.png", "sizes": "32x32" }]
+    },
+    {
+      "name": "SIP Calculator",
+      "short_name": "SIP",
+      "description": "Calculate SIP & lumpsum returns",
+      "url": "/?tab=sip",
+      "icons": [{ "src": "/logo-favicon.png", "sizes": "32x32" }]
+    },
+    {
+      "name": "EMI Calculator",
+      "short_name": "EMI",
+      "description": "Calculate loan EMI & amortisation",
+      "url": "/?tab=emi",
+      "icons": [{ "src": "/logo-favicon.png", "sizes": "32x32" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
