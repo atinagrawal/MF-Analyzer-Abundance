@@ -3979,7 +3979,7 @@ const QP_FALLBACK = {
 async function resolveQuickPick(cat) {
   try {
     const res = await fetch(
-      'https://api.mfapi.in/mf/search?q=' + encodeURIComponent(cat.query),
+      '/api/mf/search?q=' + encodeURIComponent(cat.query),
       { signal: AbortSignal.timeout(6000) }
     );
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -4094,7 +4094,7 @@ function quickAddFund(schemeCode, name, category, btn){
   if(selectedFunds.find(f=>f.code===schemeCode)){return;}
   if(btn) btn.classList.add('added');
   setLoading(true);
-  fetch('https://api.mfapi.in/mf/'+schemeCode)
+  fetch('/api/mf/'+schemeCode)
     .then(r=>r.json())
     .then(res=>{
       if(!res.data||!res.data.length) throw new Error('No data');
@@ -4328,7 +4328,7 @@ async function doSearch(q){
   const signal=searchAbortCtrl.signal;
   try{
     if(searchCache.has(q)){renderSearchResults(q,searchCache.get(q),dd);return;}
-    const r=await fetch(`https://api.mfapi.in/mf/search?q=${encodeURIComponent(q)}`,{signal});
+    const r=await fetch(`/api/mf/search?q=${encodeURIComponent(q)}`,{signal});
     const data=await r.json();
     searchCache.set(q,data);
     renderSearchResults(q,data,dd);
@@ -4344,7 +4344,7 @@ async function addFund(code){
   document.getElementById("mfInput").value="";
   setLoading(true);
   try{
-    const r=await fetch(`https://api.mfapi.in/mf/${code}`);
+    const r=await fetch(`/api/mf/${code}`);
     const res=await r.json();
     if(!res.data||!res.data.length)throw new Error();
     // Clean: remove zero/invalid NAVs, then sort ascending by date
@@ -6486,7 +6486,7 @@ async function btDoSearch(q){
   if(btSearchAbort){ btSearchAbort.abort(); }
   btSearchAbort = new AbortController();
   try{
-    const res = await fetch('https://api.mfapi.in/mf/search?q='+encodeURIComponent(q), {signal:btSearchAbort.signal});
+    const res = await fetch('/api/mf/search?q='+encodeURIComponent(q), {signal:btSearchAbort.signal});
     const data = await res.json();
     if(!data || !data.length){ dd.innerHTML='<div class="dropdown-loading">No results found</div>'; return; }
     // Same filter + rank as Fund Comparison renderSearchResults
@@ -6524,7 +6524,7 @@ async function btSelectFund(code, name){
   document.getElementById('btWhatIfWrap').style.display = 'none';
 
   try{
-    const res = await fetch('https://api.mfapi.in/mf/'+code);
+    const res = await fetch('/api/mf/'+code);
     const json = await res.json();
     const navRaw = json.data; // [{date:'DD-MM-YYYY', nav:'123.45'}, ...]
     // Build navMap: YYYY-MM → last NAV of that month
@@ -7103,7 +7103,7 @@ function btReadURL(){
   document.getElementById('btEmpty').textContent = 'Loading fund from shared link…';
   document.getElementById('btEmpty').style.display = 'block';
 
-  fetch('https://api.mfapi.in/mf/' + schemeCode)
+  fetch('/api/mf/' + schemeCode)
     .then(r=>r.json())
     .then(json=>{
       const navMap={};
@@ -7250,7 +7250,7 @@ function sipBTDoSearch(q) {
   const dd = document.getElementById('sipBTDropdown');
   dd.innerHTML = '<div class="dropdown-loading">Searching…</div>';
   dd.classList.add('open');
-  fetch('https://api.mfapi.in/mf/search?q=' + encodeURIComponent(q), { signal: _sipBTSearchCtrl.signal })
+  fetch('/api/mf/search?q=' + encodeURIComponent(q), { signal: _sipBTSearchCtrl.signal })
     .then(r => r.json())
     .then(data => {
       const funds = (data || [])
@@ -7280,7 +7280,7 @@ function sipBTSelectFund(code, name) {
   document.getElementById('sipBTEmpty').style.display = 'block';
   document.getElementById('sipBTResults').style.display = 'none';
 
-  fetch('https://api.mfapi.in/mf/' + code)
+  fetch('/api/mf/' + code)
     .then(r => r.json())
     .then(json => {
       const navMap = {};
@@ -7670,7 +7670,7 @@ function sipBTReadURL() {
   document.getElementById('sipBTEmpty').textContent = 'Loading fund from shared link…';
   document.getElementById('sipBTEmpty').style.display = 'block';
 
-  fetch('https://api.mfapi.in/mf/' + code)
+  fetch('/api/mf/' + code)
     .then(r => r.json())
     .then(json => {
       const navMap = {};
