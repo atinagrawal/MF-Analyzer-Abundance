@@ -3948,7 +3948,7 @@ function isEligible(name) {
 // Fetch one fund by code, return {code, name} or null
 async function fetchFundByCode(code) {
   try {
-    const r = await fetch('/api/mf?code=' + code, { signal: AbortSignal.timeout(8000) });
+    const r = await fetch('/api/mf?code=' + code + '&latest=1', { signal: AbortSignal.timeout(8000) });
     if (!r.ok) return null;
     const data = await r.json();
     const name = data?.meta?.scheme_name;
