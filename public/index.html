@@ -3907,18 +3907,25 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 ════════════════════════════════════════ */
 // 2 verified search queries per category.
 // We search the proxy — API picks the current regular-growth plan dynamically.
-const QP_CATEGORIES = [
-  { label: 'Small Cap',   queries: ['sbi small cap',          'nippon small cap'] },
-  { label: 'Flexi Cap',   queries: ['parag parikh flexi cap', 'hdfc flexi cap'] },
-  { label: 'Multi Asset', queries: ['hdfc multi asset',       'quant multi asset'] },
-  { label: 'Mid Cap',     queries: ['axis midcap',            'nippon india mid cap'] },
-  { label: 'ELSS',        queries: ['mirae asset elss',       'axis elss'] },
+// ── Popular fund codes (permanent AMFI codes; names fetched live from API) ──
+// To update picks: change codes only. Names are always fetched at runtime.
+const POPULAR_FUND_CODES = [
+  125494,  // SBI Small Cap
+  113177,  // Nippon India Small Cap
+  122640,  // Parag Parikh Flexi Cap
+  101762,  // HDFC Flexi Cap
+  140225,  // Edelweiss Mid Cap
+  105758,  // HDFC Mid Cap
+  103131,  // HDFC Multi-Asset
+  101072,  // Quant Multi Asset
+  108466,  // ICICI Prudential Large Cap
+  103504,  // SBI Large Cap
 ];
 
 // Resolved picks — populated on load, reused for "Try" pairs
 const _resolvedPicks = [];
 
-// Words that disqualify a fund
+// Words that disqualify a fund from search results
 const QP_BLOCKED = [
   'institutional','discontinued','debt','insurance',
   'fmp','liquid','overnight','arbitrage','interval',
@@ -3931,40 +3938,22 @@ const QP_BLOCKED = [
 
 function isEligible(name) {
   const n = name.toLowerCase();
-  if (n.includes('direct')) return false;
+  if (n.includes('direct'))        return false;
   if (n.includes('institutional')) return false;
   if (/\bidcw\b|dividend payout/i.test(n)) return false;
   if (QP_BLOCKED.some(b => n.includes(b))) return false;
   return true;
 }
 
-// From results, pick the best regular-growth fund
-function pickBestFund(results) {
-  const eligible = results.filter(f => isEligible(f.schemeName));
-  const growth = eligible.filter(f => /growth/i.test(f.schemeName));
-  const pool = growth.length ? growth : eligible;
-  return pool.length ? pool[0] : null;
-}
-
-// Fetch one query via proxy, return best fund or null
-async function fetchQuickFund(query) {
+// Fetch one fund by code, return {code, name} or null
+async function fetchFundByCode(code) {
   try {
-    const r = await fetch('/api/mf?q=' + encodeURIComponent(query),
-                          { signal: AbortSignal.timeout(8000) });
+    const r = await fetch('/api/mf?code=' + code, { signal: AbortSignal.timeout(8000) });
     if (!r.ok) return null;
-    const results = await r.json();
-    return pickBestFund(Array.isArray(results) ? results : []);
+    const data = await r.json();
+    const name = data?.meta?.scheme_name;
+    return name ? { code, name } : null;
   } catch(e) { return null; }
-}
-
-// Fetch both queries in parallel, return 2 distinct funds
-async function resolveQuickPick(cat) {
-  const [f1, f2] = await Promise.all(cat.queries.map(fetchQuickFund));
-  const primary   = f1 || f2;
-  const secondary = (f2 && f2.schemeCode !== (f1 && f1.schemeCode)) ? f2 : f1;
-  if (!primary) throw new Error('No picks for ' + cat.label);
-  const make = f => ({ code: f.schemeCode, name: f.schemeName, label: cat.label });
-  return { primary: make(primary), secondary: make(secondary) };
 }
 
 function renderQAChip(pick) {
@@ -3974,26 +3963,38 @@ function renderQAChip(pick) {
     .replace(/\s*-\s*regular\s*plan\s*-\s*growth\s*/i, '')
     .replace(/\s*-\s*growth\s*plan\s*-\s*growth\s*option\s*/i, '')
     .replace(/\s*-\s*growth\s*plan\s*/i, '')
+    .replace(/\s*-\s*growth\s*option\s*/i, '')
     .replace(/\s*-\s*growth\s*/i, '')
+    .replace(/-\s*regular\s*plan\s*/i, '')
     .trim();
-  btn.innerHTML = `<span class="qa-chip-cat">${pick.label}</span>
+  btn.innerHTML = `<span class="qa-chip-cat">${pick.label || ''}</span>
     <span class="qa-chip-name">${shortName.length > 28 ? shortName.slice(0,26)+'…' : shortName}</span>`;
   btn.title = pick.name;
-  btn.onclick = function() { quickAddFund(pick.code, pick.name, pick.label, this); };
+  btn.onclick = function() { quickAddFund(pick.code, pick.name, pick.label || '', this); };
   return btn;
 }
 
 async function loadQuickPicks() {
-  const settled = await Promise.allSettled(QP_CATEGORIES.map(resolveQuickPick));
+  // Fetch all fund names in parallel — codes are fixed, names come from API
+  const results = await Promise.all(POPULAR_FUND_CODES.map(fetchFundByCode));
+  const funds = results.filter(Boolean);
+
   const chips = document.getElementById('qaChips');
   if (!chips) return;
   chips.innerHTML = '';
-  settled.forEach((result, i) => {
-    if (result.status === 'fulfilled') {
-      _resolvedPicks[i] = result.value;
-      chips.appendChild(renderQAChip(result.value.primary));
+
+  // Build chips and _resolvedPicks (paired for Try: row)
+  funds.forEach((fund, i) => {
+    chips.appendChild(renderQAChip(fund));
+    // Pair funds for Try: row — each pair = one category comparison
+    const pairIdx = Math.floor(i / 2);
+    if (i % 2 === 0) {
+      _resolvedPicks[pairIdx] = { primary: fund, secondary: fund };
+    } else {
+      _resolvedPicks[Math.floor((i - 1) / 2)].secondary = fund;
     }
   });
+
   populateTryRow();
 }
 
@@ -4063,6 +4064,7 @@ function quickAddFund(schemeCode, name, category, btn){
         .filter(d=>{const v=parseFloat(d.nav);return !isNaN(v)&&v>0;})
         .sort((a,b)=>parseNAVDate(a.date)-parseNAVDate(b.date));
       selectedFunds.push({code:schemeCode, name:res.meta?.scheme_name||name, rawData:cleaned});
+
       renderChips();
       renderAll();
       setLoading(false);
