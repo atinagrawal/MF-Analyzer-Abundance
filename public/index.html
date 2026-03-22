@@ -15,6 +15,8 @@
 <meta name="author" content="Abundance Financial Services">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#2e7d32">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <link rel="canonical" href="https://mfcalc.getabundance.in/">
 <link rel="sitemap" type="application/xml" href="https://mfcalc.getabundance.in/sitemap.xml">
 <link rel="alternate" hreflang="en-IN" href="https://mfcalc.getabundance.in/">
@@ -3907,20 +3909,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 ════════════════════════════════════════ */
 // 2 verified search queries per category.
 // We search the proxy — API picks the current regular-growth plan dynamically.
-// ── Popular fund codes (permanent AMFI codes; names fetched live from API) ──
-// To update picks: change codes only. Names are always fetched at runtime.
-const POPULAR_FUND_CODES = [
-  125494,  // SBI Small Cap
-  113177,  // Nippon India Small Cap
-  122640,  // Parag Parikh Flexi Cap
-  101762,  // HDFC Flexi Cap
-  140225,  // Edelweiss Mid Cap
-  105758,  // HDFC Mid Cap
-  103131,  // HDFC Multi-Asset
-  101072,  // Quant Multi Asset
-  108466,  // ICICI Prudential Large Cap
-  103504,  // SBI Large Cap
-];
 
 // Resolved picks — populated on load, reused for "Try" pairs
 const _resolvedPicks = [];
@@ -3946,15 +3934,6 @@ function isEligible(name) {
 }
 
 // Fetch one fund by code, return {code, name} or null
-async function fetchFundByCode(code) {
-  try {
-    const r = await fetch('/api/mf?code=' + code + '&latest=1');
-    if (!r.ok) return null;
-    const data = await r.json();
-    const name = data && data.meta && data.meta.scheme_name;
-    return name ? { code: code, name: name } : null;
-  } catch(e) { return null; }
-}
 
 function renderQAChip(pick) {
   const btn = document.createElement('button');
@@ -3975,31 +3954,36 @@ function renderQAChip(pick) {
 }
 
 async function loadQuickPicks() {
-  // Fetch all fund names in parallel — codes are fixed, names come from API
-  const results = await Promise.all(POPULAR_FUND_CODES.map(fetchFundByCode));
-  const funds = results.filter(Boolean);
+  // Force quickAddWrap visible
+  var wrap = document.getElementById('quickAddWrap');
+  if (wrap) wrap.style.display = '';
 
-  const chips = document.getElementById('qaChips');
+  var chips = document.getElementById('qaChips');
   if (!chips) return;
-  chips.innerHTML = '';
 
-  // Build chips and _resolvedPicks (paired for Try: row)
-  funds.forEach((fund, i) => {
-    chips.appendChild(renderQAChip(fund));
-    // Pair funds for Try: row — each pair = one category comparison
-    const pairIdx = Math.floor(i / 2);
-    if (i % 2 === 0) {
-      _resolvedPicks[pairIdx] = { primary: fund, secondary: fund };
-    } else {
-      _resolvedPicks[Math.floor((i - 1) / 2)].secondary = fund;
-    }
-  });
+  chips.innerHTML = '<span style="font-size:.72rem;color:var(--muted)">Loading…</span>';
 
-  if (funds.length === 0) {
-    // Show fallback message so user knows loading was attempted
-    chips.innerHTML = '<span style="font-size:.72rem;color:var(--muted);padding:8px 0">Unable to load — try refreshing</span>';
+  try {
+    var r = await fetch('/api/picks');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var data = await r.json();
+    var funds = data && data.funds;
+    if (!funds || !funds.length) throw new Error('empty');
+
+    chips.innerHTML = '';
+    funds.forEach(function(fund, i) {
+      chips.appendChild(renderQAChip(fund));
+      var pairIdx = Math.floor(i / 2);
+      if (i % 2 === 0) {
+        _resolvedPicks[pairIdx] = { primary: fund, secondary: fund };
+      } else {
+        _resolvedPicks[Math.floor((i - 1) / 2)].secondary = fund;
+      }
+    });
+    populateTryRow();
+  } catch(e) {
+    chips.innerHTML = '<span style="font-size:.72rem;color:var(--muted)">Could not load picks (' + e.message + ')</span>';
   }
-  populateTryRow();
 }
 
 
@@ -8720,7 +8704,7 @@ readURLParams();
 injectBTShareMeta();
 btReadURL();
 sipBTReadURL();
-setTimeout(loadQuickPicks, 0); // run after all sync init completes
+setTimeout(loadQuickPicks, 0); // load popular picks after sync init
 
 
 </script>
