@@ -3774,18 +3774,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
         <summary class="faq-q">Can I share my SIP backtest results with someone?</summary>
         <div class="faq-a">Yes — the <strong>Share URL</strong> button in the SIP NAV Backtester creates a shareable link encoding the fund, SIP amount, step-up, date range, and key results (XIRR, final corpus, total invested). When sent on WhatsApp or LinkedIn, it generates a rich preview card. The recipient opens the exact same backtest pre-loaded — no login required.</div>
       </details>
-      <details class="faq-item">
-        <summary class="faq-q">What is the SIP NAV Backtester and how is it different from a regular SIP calculator?</summary>
-        <div class="faq-a">A regular SIP calculator uses a single assumed return rate (e.g. 12% p.a.) to project a future corpus. The <strong>SIP NAV Backtester</strong> actually purchases units at a mutual fund's real historical NAVs month by month. You see what your corpus would have actually been — accounting for market crashes, rallies and volatility. It shows <strong>XIRR</strong> on actual cashflows, total invested, corpus built, and a what-if table comparing different start years.</div>
-      </details>
+      
       <details class="faq-item">
         <summary class="faq-q">How do I use the SIP NAV Backtester?</summary>
         <div class="faq-a">Go to the <strong>SIP tab</strong> and click <strong>📊 NAV Backtest</strong> in the mode selector. Search for any AMFI-registered mutual fund by name, enter your monthly SIP amount, optional annual step-up %, and the start and end date range. The tool fetches the fund's full NAV history and simulates buying units each month at the actual NAV. Results include final corpus, total invested, XIRR, best and worst start-year scenarios, and a corpus growth chart.</div>
       </details>
-      <details class="faq-item">
-        <summary class="faq-q">Can I share my SIP backtest results with others?</summary>
-        <div class="faq-a">Yes — use the <strong>Share URL</strong> button after running a backtest. It creates a link encoding your fund, SIP amount, date range and key results (XIRR, final corpus, total invested). When shared on WhatsApp or LinkedIn, a rich preview card appears. The recipient opens the same backtest pre-loaded in their browser — no login needed.</div>
-      </details>
+      
     </div>
   </div>
 </section>
@@ -4004,9 +3998,6 @@ function quickAddFund(schemeCode, name, category, btn){
   if(selectedFunds.find(f=>f.code===schemeCode)){return;}
   if(btn) btn.classList.add('added');
   setLoading(true);
-  // Show visible feedback immediately
-  const lb = document.getElementById('loadingBar');
-  if(lb) lb.style.display='block';
   fetch('/api/mf?code='+schemeCode)
     .then(function(r){ return r.json(); })
     .then(function(res){
@@ -4380,7 +4371,12 @@ function getPeriodLabel(){
              "2Y":"2 Years","3Y":"3 Years","5Y":"5 Years","10Y":"10 Years","MAX":"Since Inception"};
   return map[currentPeriod]||currentPeriod;
 }
-function setLoading(on){document.getElementById("loadingBar").classList.toggle("active",on);}
+function setLoading(on){
+  var lb=document.getElementById("loadingBar");
+  if(!lb)return;
+  lb.classList.toggle("active",on);
+  if(!on) lb.style.removeProperty("display");
+}
 
 function calcPeriodReturn(rawData,months){
   if(!rawData||!rawData.length)return null;
