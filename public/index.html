@@ -8538,15 +8538,23 @@ function injectBTShareMeta(){
   // Handle SIP Backtester share links
   if(p.get('sipBTMode')){
     const fundName = p.get('sipBTName') || 'SIP Backtest';
-    const xirr     = p.get('sipXIRR') || '';
+    const xirr     = p.get('sipXirr') || '';
     const corpus   = p.get('sipCorpus') || '';
     const invested = p.get('sipInvested') || '';
-    const multiple = p.get('sipMultiple') || '';
+    const gain     = p.get('sipGain') || '';
     const btSY     = p.get('sipBTSY') || '';
     const ogParams = new URLSearchParams({
-      tab:'sip', btName:fundName, btCorpus:corpus, btWithdrawal:'',
-      btSY, btSM:p.get('sipBTSM')||'', btEY:p.get('sipBTEY')||'', btEM:p.get('sipBTEM')||'',
-      xirr, survived:'1', finalC:corpus, withdrawn:invested, sipMode:'1',
+      sipBTMode:'1',
+      sipBTName: fundName,
+      sipBTAmount: p.get('sipBTAmount') || '',
+      sipBTSY: btSY,
+      sipBTSM: p.get('sipBTSM') || '',
+      sipBTEY: p.get('sipBTEY') || '',
+      sipBTEM: p.get('sipBTEM') || '',
+      sipXirr: xirr,
+      sipCorpus: corpus,
+      sipInvested: invested,
+      sipGain: gain,
     });
     const ogImageURL = location.origin + '/api/og?' + ogParams.toString();
     const titleText  = 'SIP Backtester — ' + (fundName.length>40?fundName.slice(0,40)+'…':fundName) + ' | Abundance';
@@ -8560,9 +8568,15 @@ function injectBTShareMeta(){
       el.setAttribute('content', val);
     }
     document.title = titleText;
-    setMeta2('og:title', titleText); setMeta2('og:description', descText);
-    setMeta2('og:url', location.href); setMeta2('og:image', ogImageURL);
-    setMeta2('twitter:title', titleText, true); setMeta2('twitter:description', descText, true);
+    setMeta2('og:title', titleText);
+    setMeta2('og:description', descText);
+    setMeta2('og:url', location.href);
+    setMeta2('og:image', ogImageURL);
+    setMeta2('og:image:width', '1200');
+    setMeta2('og:image:height', '630');
+    setMeta2('twitter:card', 'summary_large_image', true);
+    setMeta2('twitter:title', titleText, true);
+    setMeta2('twitter:description', descText, true);
     setMeta2('twitter:image', ogImageURL, true);
     return;
   }
@@ -8622,6 +8636,7 @@ function injectBTShareMeta(){
   setMeta('og:image', ogImageURL);
   setMeta('og:image:width', '1200');
   setMeta('og:image:height', '630');
+  setMeta('twitter:card', 'summary_large_image', true);
   setMeta('twitter:title', titleText, true);
   setMeta('twitter:description', descText, true);
   setMeta('twitter:image', ogImageURL, true);
