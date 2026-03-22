@@ -2388,16 +2388,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   <div class="quick-add-wrap" id="quickAddWrap">
     <div class="qa-label">⚡ Popular picks — click to add instantly</div>
     <div class="qa-chips" id="qaChips">
-      <button class="qa-chip" data-code="125494" data-name="SBI Small Cap Fund - Regular Plan - Growth" data-cat="Small Cap"><span class="qa-chip-name">SBI Small Cap</span></button>
-      <button class="qa-chip" data-code="113177" data-name="Nippon India Small Cap Fund - Growth Plan - Growth Option" data-cat="Small Cap"><span class="qa-chip-name">Nippon Small Cap</span></button>
-      <button class="qa-chip" data-code="122640" data-name="Parag Parikh Flexi Cap Fund - Regular Plan - Growth" data-cat="Flexi Cap"><span class="qa-chip-name">Parag Parikh Flexi</span></button>
-      <button class="qa-chip" data-code="101762" data-name="HDFC Flexi Cap Fund - Growth Plan" data-cat="Flexi Cap"><span class="qa-chip-name">HDFC Flexi Cap</span></button>
-      <button class="qa-chip" data-code="140225" data-name="Edelweiss Mid Cap Fund - Regular Plan - Growth Option" data-cat="Mid Cap"><span class="qa-chip-name">Edelweiss Mid Cap</span></button>
-      <button class="qa-chip" data-code="105758" data-name="HDFC Mid Cap Fund - Growth Plan" data-cat="Mid Cap"><span class="qa-chip-name">HDFC Mid Cap</span></button>
-      <button class="qa-chip" data-code="103131" data-name="HDFC Multi-Asset Fund - Growth Option" data-cat="Multi Asset"><span class="qa-chip-name">HDFC Multi-Asset</span></button>
-      <button class="qa-chip" data-code="101072" data-name="quant Multi Asset Allocation Fund-GROWTH OPTION - Regular Plan" data-cat="Multi Asset"><span class="qa-chip-name">Quant Multi Asset</span></button>
-      <button class="qa-chip" data-code="108466" data-name="ICICI Prudential Large Cap Fund (erstwhile Bluechip Fund)  - Growth" data-cat="Large Cap"><span class="qa-chip-name">ICICI Large Cap</span></button>
-      <button class="qa-chip" data-code="103504" data-name="SBI Large Cap FUND-REGULAR PLAN GROWTH" data-cat="Large Cap"><span class="qa-chip-name">SBI Large Cap</span></button>
+      <button class="qa-chip" data-code="125494" data-name="SBI Small Cap Fund - Regular Plan - Growth" data-cat="Small Cap" onclick="qcClick(this)"><span class="qa-chip-name">SBI Small Cap</span></button>
+      <button class="qa-chip" data-code="113177" data-name="Nippon India Small Cap Fund - Growth Plan - Growth Option" data-cat="Small Cap" onclick="qcClick(this)"><span class="qa-chip-name">Nippon Small Cap</span></button>
+      <button class="qa-chip" data-code="122640" data-name="Parag Parikh Flexi Cap Fund - Regular Plan - Growth" data-cat="Flexi Cap" onclick="qcClick(this)"><span class="qa-chip-name">Parag Parikh Flexi</span></button>
+      <button class="qa-chip" data-code="101762" data-name="HDFC Flexi Cap Fund - Growth Plan" data-cat="Flexi Cap" onclick="qcClick(this)"><span class="qa-chip-name">HDFC Flexi Cap</span></button>
+      <button class="qa-chip" data-code="140225" data-name="Edelweiss Mid Cap Fund - Regular Plan - Growth Option" data-cat="Mid Cap" onclick="qcClick(this)"><span class="qa-chip-name">Edelweiss Mid Cap</span></button>
+      <button class="qa-chip" data-code="105758" data-name="HDFC Mid Cap Fund - Growth Plan" data-cat="Mid Cap" onclick="qcClick(this)"><span class="qa-chip-name">HDFC Mid Cap</span></button>
+      <button class="qa-chip" data-code="103131" data-name="HDFC Multi-Asset Fund - Growth Option" data-cat="Multi Asset" onclick="qcClick(this)"><span class="qa-chip-name">HDFC Multi-Asset</span></button>
+      <button class="qa-chip" data-code="101072" data-name="quant Multi Asset Allocation Fund-GROWTH OPTION - Regular Plan" data-cat="Multi Asset" onclick="qcClick(this)"><span class="qa-chip-name">Quant Multi Asset</span></button>
+      <button class="qa-chip" data-code="108466" data-name="ICICI Prudential Large Cap Fund (erstwhile Bluechip Fund)  - Growth" data-cat="Large Cap" onclick="qcClick(this)"><span class="qa-chip-name">ICICI Large Cap</span></button>
+      <button class="qa-chip" data-code="103504" data-name="SBI Large Cap FUND-REGULAR PLAN GROWTH" data-cat="Large Cap" onclick="qcClick(this)"><span class="qa-chip-name">SBI Large Cap</span></button>
     </div>
   </div>
 </div>
@@ -2443,7 +2443,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
     <div class="empty-title">Compare up to 5 funds side-by-side</div>
     <p class="empty-p">Search above or pick a popular fund below to get started</p>
     <!-- Try-me shortcuts -->
-    <div class="es-try-row" id="esTryRow"><span class="es-try-label">Try:</span><button class="es-try-btn" data-c1="125494" data-n1="SBI Small Cap Fund - Regular Plan - Growth" data-c2="113177" data-n2="Nippon India Small Cap Fund - Growth Plan - Growth Option">SBI Small Cap vs Nippon Small Cap</button><button class="es-try-btn" data-c1="122640" data-n1="Parag Parikh Flexi Cap Fund - Regular Plan - Growth" data-c2="101762" data-n2="HDFC Flexi Cap Fund - Growth Plan">Parag Parikh vs HDFC Flexi Cap</button><button class="es-try-btn" data-c1="140225" data-n1="Edelweiss Mid Cap Fund - Regular Plan - Growth Option" data-c2="105758" data-n2="HDFC Mid Cap Fund - Growth Plan">Edelweiss vs HDFC Mid Cap</button></div>
+    <div class="es-try-row" id="esTryRow"><span class="es-try-label">Try:</span><button class="es-try-btn" data-c1="125494" data-n1="SBI Small Cap Fund - Regular Plan - Growth" data-c2="113177" data-n2="Nippon India Small Cap Fund - Growth Plan - Growth Option" onclick="tryPairClick(this)">SBI Small Cap vs Nippon Small Cap</button><button class="es-try-btn" data-c1="122640" data-n1="Parag Parikh Flexi Cap Fund - Regular Plan - Growth" data-c2="101762" data-n2="HDFC Flexi Cap Fund - Growth Plan" onclick="tryPairClick(this)">Parag Parikh vs HDFC Flexi Cap</button><button class="es-try-btn" data-c1="140225" data-n1="Edelweiss Mid Cap Fund - Regular Plan - Growth Option" data-c2="105758" data-n2="HDFC Mid Cap Fund - Growth Plan" onclick="tryPairClick(this)">Edelweiss vs HDFC Mid Cap</button></div>
   </div>
 </div>
 
@@ -3981,22 +3981,13 @@ function tryPairClick(btn) {
 }
 // Chips are pre-rendered in HTML — just populate _resolvedPicks for internal use
 function loadQuickPicks() {
-  // Attach click handlers via addEventListener — inline onclick unreliable on Android
-  document.querySelectorAll('#qaChips .qa-chip').forEach(function(btn, i) {
-    btn.addEventListener('click', function() {
-      quickAddFund(parseInt(btn.dataset.code), btn.dataset.name || '', btn.dataset.cat || '', btn);
-    });
-    var pi = Math.floor(i / 2);
-    if (!_resolvedPicks[pi]) _resolvedPicks[pi] = {};
-    if (i % 2 === 0) _resolvedPicks[pi].primary   = { code: parseInt(btn.dataset.code), name: btn.dataset.name, label: btn.dataset.cat || '' };
-    else             _resolvedPicks[pi].secondary  = { code: parseInt(btn.dataset.code), name: btn.dataset.name, label: btn.dataset.cat || '' };
-  });
-  document.querySelectorAll('#esTryRow .es-try-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      quickAddFund(parseInt(btn.dataset.c1), btn.dataset.n1 || '', '', null);
-      quickAddFund(parseInt(btn.dataset.c2), btn.dataset.n2 || '', '', null);
-    });
-  });
+  var chips = document.querySelectorAll('#qaChips .qa-chip');
+  for (var i = 0; i + 1 < chips.length; i += 2) {
+    _resolvedPicks[i / 2] = {
+      primary:   { code: parseInt(chips[i].dataset.code),   name: chips[i].dataset.name,   label: chips[i].dataset.cat   || '' },
+      secondary: { code: parseInt(chips[i+1].dataset.code), name: chips[i+1].dataset.name, label: chips[i+1].dataset.cat || '' }
+    };
+  }
 }
 
 
@@ -4206,6 +4197,20 @@ function onSearch(){
 // (search API returns null isinGrowth for all funds — not usable as signal)
 // Post-2018 SEBI rationalisation: active fund names always contain "Plan" or "Option"
 // AMCs where every scheme is discontinued (null ISINs) — hidden unless explicitly searched
+
+
+const EMI_PRESETS = {
+  home:      { loan:5000000, rate:8.5,  tenure:20, label:'Home Loan' },
+  car:       { loan:800000,  rate:9.0,  tenure:7,  label:'Car Loan' },
+  personal:  { loan:500000,  rate:13.5, tenure:5,  label:'Personal Loan' },
+  education: { loan:1500000, rate:10.5, tenure:10, label:'Education Loan' },
+  custom:    { loan:1000000, rate:10.0, tenure:10, label:'Custom Loan' },
+};
+
+let emiMode = 'emi';       // 'emi' | 'loan' | 'tenure'
+let emiPrepayOn = false;
+let emiBTOn = false;
+
 const DEAD_AMCS=[
   'grindlays','dbs chola','ing vysya','ing mutual','abn amro',
   'standard chartered','fidelity','dws','sahara','morgan stanley',
@@ -4452,7 +4457,7 @@ function renderAll(){
       <div class="es-icon">📊</div>
       <div class="empty-title">Compare up to 5 funds side-by-side</div>
       <p class="empty-p">Search above or pick a popular fund below to get started</p>
-      <div class="es-try-row" id="esTryRow"><span class="es-try-label">Try:</span><button class="es-try-btn" data-c1="125494" data-n1="SBI Small Cap Fund - Regular Plan - Growth" data-c2="113177" data-n2="Nippon India Small Cap Fund - Growth Plan - Growth Option">SBI Small Cap vs Nippon Small Cap</button><button class="es-try-btn" data-c1="122640" data-n1="Parag Parikh Flexi Cap Fund - Regular Plan - Growth" data-c2="101762" data-n2="HDFC Flexi Cap Fund - Growth Plan">Parag Parikh vs HDFC Flexi Cap</button><button class="es-try-btn" data-c1="140225" data-n1="Edelweiss Mid Cap Fund - Regular Plan - Growth Option" data-c2="105758" data-n2="HDFC Mid Cap Fund - Growth Plan">Edelweiss vs HDFC Mid Cap</button></div>
+      <div class="es-try-row" id="esTryRow"><span class="es-try-label">Try:</span><button class="es-try-btn" data-c1="125494" data-n1="SBI Small Cap Fund - Regular Plan - Growth" data-c2="113177" data-n2="Nippon India Small Cap Fund - Growth Plan - Growth Option" onclick="tryPairClick(this)">SBI Small Cap vs Nippon Small Cap</button><button class="es-try-btn" data-c1="122640" data-n1="Parag Parikh Flexi Cap Fund - Regular Plan - Growth" data-c2="101762" data-n2="HDFC Flexi Cap Fund - Growth Plan" onclick="tryPairClick(this)">Parag Parikh vs HDFC Flexi Cap</button><button class="es-try-btn" data-c1="140225" data-n1="Edelweiss Mid Cap Fund - Regular Plan - Growth Option" data-c2="105758" data-n2="HDFC Mid Cap Fund - Growth Plan" onclick="tryPairClick(this)">Edelweiss vs HDFC Mid Cap</button></div>
     </div>`;
     // Re-populate Try row with resolved picks
     setTimeout(populateTryRow, 0);
@@ -7698,20 +7703,7 @@ const dCalcEMI  = debounce(calcEMI,  120);
 
 /* ════════════════════════════════════════
    EMI CALCULATOR — Debt Decoder
-════════════════════════════════════════ */
-
-const EMI_PRESETS = {
-  home:      { loan:5000000, rate:8.5,  tenure:20, label:'Home Loan' },
-  car:       { loan:800000,  rate:9.0,  tenure:7,  label:'Car Loan' },
-  personal:  { loan:500000,  rate:13.5, tenure:5,  label:'Personal Loan' },
-  education: { loan:1500000, rate:10.5, tenure:10, label:'Education Loan' },
-  custom:    { loan:1000000, rate:10.0, tenure:10, label:'Custom Loan' },
-};
-
-let emiMode = 'emi';       // 'emi' | 'loan' | 'tenure'
-let emiPrepayOn = false;
-let emiBTOn = false;
-let emiChartInst = null;
+════════════════════════════════════════ */let emiChartInst = null;
 let emiTableOpen = false;
 
 function initEMIStars() {
