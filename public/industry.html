@@ -587,10 +587,14 @@ function renderSummaryCards(s, data, gt){
   const label = mon && yr ? (MONTH_LABELS[MONTHS.indexOf(mon)]||mon) + ' ' + yr : '';
   const industryAAUM = gt.avgAum || 0;
 
+  // Fallback: sum category-level folios if grandTotal parsing failed
+  const catFolios = Object.values(data.categories||{}).reduce((sum,c)=>sum+(c.folios||0),0);
+  const totalFolios = s.totalFolios > 0 ? s.totalFolios : (gt.folios > 0 ? gt.folios : catFolios);
+
   const cards = [
     { icon:'🏦', val: fmtCr(s.totalAum), label:'Total Industry AUM', sub: label,
       aaum: industryAAUM ? 'AAUM ' + fmtCr(industryAAUM) : '', highlight: true },
-    { icon:'👥', val: fmtFolios(s.totalFolios), label:'Total Folios', sub:'Investor accounts', aaum:'', highlight: false },
+    { icon:'👥', val: fmtFolios(totalFolios), label:'Total Folios', sub:'Investor accounts', aaum:'', highlight: false },
     { icon:'📈', val: fmtCr(s.equityAum), label:'Equity AUM', sub:'Growth/equity schemes', aaum:'', highlight: false },
     { icon:'🏛', val: fmtCr(s.debtAum),   label:'Debt AUM',   sub:'Fixed income schemes', aaum:'', highlight: false },
     { icon:'⚖️', val: fmtCr(s.hybridAum), label:'Hybrid AUM', sub:'Balanced funds', aaum:'', highlight: false },
@@ -831,8 +835,15 @@ function renderTrends(months){
   const totalAum = months.map(m=>+(m.summary.totalAum/100000).toFixed(2));
   const equityAum= months.map(m=>+(m.summary.equityAum/100000).toFixed(2));
   const debtAum  = months.map(m=>+(m.summary.debtAum/100000).toFixed(2));
-  const folios   = months.map(m=>+(m.summary.totalFolios/10000000).toFixed(2));
-  const folioDelta= months.slice(1).map((m,i)=>Math.round((m.summary.totalFolios-months[i].summary.totalFolios)/100000));
+  // Helper: get reliable folio count — fall back to category sum if grandTotal parsing failed
+  function getMonthFolios(m){
+    if(m.summary?.totalFolios > 0) return m.summary.totalFolios;
+    if(m.grandTotal?.folios > 0)   return m.grandTotal.folios;
+    return Object.values(m.categories||{}).reduce((s,c)=>s+(c.folios||0),0);
+  }
+  const folioRaw = months.map(getMonthFolios);
+  const folios   = folioRaw.map(v=>+(v/10000000).toFixed(2));
+  const folioDelta= folioRaw.slice(1).map((v,i)=>Math.round((v-folioRaw[i])/100000));
 
   function sumType(d,type){return Object.values(d.categories||{}).filter(c=>c.type===type).reduce((s,c)=>s+(c.netFlow||0),0);}
   const eqNet   = months.map(m=>Math.round(sumType(m,'equity')));
@@ -851,8 +862,10 @@ function renderTrends(months){
   const pasShare = months.map(m=>+((m.summary.passiveAum/m.summary.totalAum)*100).toFixed(1));
 
   // Folio/AUM divergence indexed
-  const folIdx = folios.map(f=>+((f/folios[0])*100).toFixed(1));
-  const aumIdx = totalAum.map(a=>+((a/totalAum[0])*100).toFixed(1));
+  const _f0 = folios[0] || 1;  // guard division by zero
+  const folIdx = folios.map(f=>+((f/_f0)*100).toFixed(1));
+  const _a0 = totalAum[0] || 1;
+  const aumIdx = totalAum.map(a=>+((a/_a0)*100).toFixed(1));
   const gap    = folIdx.map((f,i)=>+(aumIdx[i]-f).toFixed(1));
 
   // Summary stats
@@ -873,12 +886,14 @@ function renderTrends(months){
     {n:'Small Cap',v:45},{n:'Money Market',v:9},{n:'Liquid Fund',v:10},{n:'Overnight',v:3},
   ];
   // Redemption pressure (avg)
+  // Redemption pressure: equity & hybrid only (redemptions / AUM %)
+  // Debt funds intentionally excluded — their high turnover is structural cash-management, not investor behaviour
   const redmData = [
-    {n:'Overnight',v:95,c:'#b71c1c'},{n:'Liquid Fund',v:67,c:'#c62828'},
-    {n:'Money Market',v:19,c:'#e53935'},{n:'Ultra Short',v:17,c:'#ef5350'},
-    {n:'Low Duration',v:10,c:'#ef9a9a'},{n:'Short Dur.',v:3,c:'#a5d6a7'},
-    {n:'Gilt',v:3,c:'#81c784'},{n:'Flexi Cap',v:0.7,c:'#43a047'},
-    {n:'Small Cap',v:1.1,c:'#66bb6a'},{n:'Mid Cap',v:0.9,c:'#66bb6a'},
+    {n:'Sectoral/Thematic',v:1.91,c:'#e65100'},{n:'Small Cap',v:1.02,c:'#f57c00'},
+    {n:'Balanced Adv.',v:1.00,c:'#f57c00'},{n:'Focused Fund',v:0.91,c:'#ffa726'},
+    {n:'Multi Asset',v:0.91,c:'#ffa726'},{n:'Mid Cap',v:0.83,c:'#66bb6a'},
+    {n:'Aggr. Hybrid',v:0.81,c:'#66bb6a'},{n:'Lg & Mid Cap',v:0.81,c:'#66bb6a'},
+    {n:'ELSS',v:0.79,c:'#43a047'},{n:'Flexi Cap',v:0.74,c:'#2e7d32'},
   ];
   // Top 8 leaderboard cumulative
   const leadData = hmKeys.map((k,i)=>({n:hmCats[i],v:hmData[i].reduce((s,x)=>s+x,0)}))
@@ -972,7 +987,7 @@ function renderTrends(months){
     </div>
     <div class="chart-card">
       <div class="chart-title">Redemption pressure — redemptions ÷ AUM (%)</div>
-      <div class="chart-sub">How fast investors pull relative to pool size</div>
+      <div class="chart-sub">Redemptions ÷ AUM (%) · equity &amp; hybrid only · debt excluded (structural turnover)</div>
       <div id="REDM"></div>
     </div>
   </div>
