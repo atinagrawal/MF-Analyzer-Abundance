@@ -1,63 +1,56 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
-
-  <!-- Main tool -->
   <url>
     <loc>https://mfcalc.getabundance.in/</loc>
-    <lastmod>2026-03-20</lastmod>
+    <lastmod>2026-03-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="en-IN" href="https://mfcalc.getabundance.in/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://mfcalc.getabundance.in/"/>
   </url>
-
-  <!-- Fund Comparison tab deep link -->
   <url>
     <loc>https://mfcalc.getabundance.in/?tab=fund</loc>
-    <lastmod>2026-03-20</lastmod>
+    <lastmod>2026-03-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
-
-  <!-- SIP Calculator tab -->
   <url>
     <loc>https://mfcalc.getabundance.in/?tab=sip</loc>
-    <lastmod>2026-03-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
+    <lastmod>2026-03-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
-
-  <!-- Goal Planner tab -->
   <url>
-    <loc>https://mfcalc.getabundance.in/?tab=goal</loc>
-    <lastmod>2026-03-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <!-- SWP Calculator + Backtester tab -->
-  <url>
-    <loc>https://mfcalc.getabundance.in/?tab=swp</loc>
-    <lastmod>2026-03-20</lastmod>
+    <loc>https://mfcalc.getabundance.in/?tab=sip&amp;sipBTMode=1</loc>
+    <lastmod>2026-03-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
-
-  <!-- EMI Calculator tab -->
   <url>
-    <loc>https://mfcalc.getabundance.in/?tab=emi</loc>
-    <lastmod>2026-03-20</lastmod>
+    <loc>https://mfcalc.getabundance.in/?tab=goal</loc>
+    <lastmod>2026-03-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
-
-  <!-- Industry Pulse page -->
+  <url>
+    <loc>https://mfcalc.getabundance.in/?tab=swp</loc>
+    <lastmod>2026-03-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://mfcalc.getabundance.in/?tab=emi</loc>
+    <lastmod>2026-03-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
   <url>
     <loc>https://mfcalc.getabundance.in/industry</loc>
-    <lastmod>2026-03-20</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
+    <lastmod>2026-03-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en-IN" href="https://mfcalc.getabundance.in/industry"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://mfcalc.getabundance.in/industry"/>
   </url>
-
 </urlset>
