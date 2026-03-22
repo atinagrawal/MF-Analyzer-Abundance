@@ -3948,11 +3948,11 @@ function isEligible(name) {
 // Fetch one fund by code, return {code, name} or null
 async function fetchFundByCode(code) {
   try {
-    const r = await fetch('/api/mf?code=' + code + '&latest=1', { signal: AbortSignal.timeout(8000) });
+    const r = await fetch('/api/mf?code=' + code + '&latest=1');
     if (!r.ok) return null;
     const data = await r.json();
-    const name = data?.meta?.scheme_name;
-    return name ? { code, name } : null;
+    const name = data && data.meta && data.meta.scheme_name;
+    return name ? { code: code, name: name } : null;
   } catch(e) { return null; }
 }
 
@@ -3995,6 +3995,10 @@ async function loadQuickPicks() {
     }
   });
 
+  if (funds.length === 0) {
+    // Show fallback message so user knows loading was attempted
+    chips.innerHTML = '<span style="font-size:.72rem;color:var(--muted);padding:8px 0">Unable to load — try refreshing</span>';
+  }
   populateTryRow();
 }
 
