@@ -3960,12 +3960,24 @@ function renderQAChip(pick) {
 
 // Click handler for popular pick chips — uses data attributes
 function qcClick(btn) {
-  quickAddFund(parseInt(btn.dataset.code), btn.dataset.name, btn.dataset.cat || '', btn);
+  try {
+    var code = parseInt(btn.dataset.code);
+    var name = btn.dataset.name || '';
+    var cat  = btn.dataset.cat  || '';
+    if (!code || !name) { alert('Chip data missing: code=' + code + ' name=' + name); return; }
+    quickAddFund(code, name, cat, btn);
+  } catch(e) {
+    alert('qcClick error: ' + e.message);
+  }
 }
 // Click handler for Try: pair buttons
 function tryPairClick(btn) {
-  quickAddFund(parseInt(btn.dataset.c1), btn.dataset.n1, '', null);
-  quickAddFund(parseInt(btn.dataset.c2), btn.dataset.n2, '', null);
+  try {
+    quickAddFund(parseInt(btn.dataset.c1), btn.dataset.n1, '', null);
+    quickAddFund(parseInt(btn.dataset.c2), btn.dataset.n2, '', null);
+  } catch(e) {
+    alert('tryPairClick error: ' + e.message);
+  }
 }
 // Chips are pre-rendered in HTML — just populate _resolvedPicks for internal use
 function loadQuickPicks() {
@@ -3980,52 +3992,8 @@ function loadQuickPicks() {
 
 
 function populateTryRow() {
-  const tryRow = document.getElementById('esTryRow');
-  if (!tryRow) return;
-
-  const short = name => name
-    .replace(/\s*-\s*regular\s*plan\s*-\s*growth\s*/i, '')
-    .replace(/\s*-\s*growth\s*/i, '')
-    .replace(/\bfund\b/gi, '').trim()
-    .replace(/\s+/g, ' ');
-
-  tryRow.innerHTML = '<span class="es-try-label">Try:</span>';
-
-  // Each resolved pick has {primary, secondary} of the SAME category
-  // Shuffle resolved categories, then use two different categories for 2 buttons
-  const available = _resolvedPicks.filter(Boolean);
-  if (available.length < 1) return;
-
-  // Shuffle category order
-  const cats = [...available].sort(() => Math.random() - 0.5);
-
-  // Button 1: primary vs secondary from same category (cat 0)
-  const c1 = cats[0];
-  if (c1 && c1.primary && c1.secondary && c1.primary.code !== c1.secondary.code) {
-    const b1 = document.createElement('button');
-    b1.className = 'es-try-btn';
-    b1.title = c1.primary.label + ' category comparison';
-    b1.textContent = short(c1.primary.name) + ' vs ' + short(c1.secondary.name);
-    b1.onclick = () => {
-      quickAddFund(c1.primary.code, c1.primary.name, c1.primary.label, null);
-      quickAddFund(c1.secondary.code, c1.secondary.name, c1.secondary.label, null);
-    };
-    tryRow.appendChild(b1);
-  }
-
-  // Button 2: primary vs secondary from a different category (cat 1)
-  const c2 = cats[1] || cats[0];
-  if (c2 && c2.primary && c2.secondary && c2.primary.code !== c2.secondary.code) {
-    const b2 = document.createElement('button');
-    b2.className = 'es-try-btn';
-    b2.title = c2.primary.label + ' category comparison';
-    b2.textContent = short(c2.primary.name) + ' vs ' + short(c2.secondary.name);
-    b2.onclick = () => {
-      quickAddFund(c2.primary.code, c2.primary.name, c2.primary.label, null);
-      quickAddFund(c2.secondary.code, c2.secondary.name, c2.secondary.label, null);
-    };
-    tryRow.appendChild(b2);
-  }
+  // Pair buttons are hardcoded in HTML — nothing to do.
+  // _resolvedPicks is already populated by loadQuickPicks() from the DOM.
 }
 
 /* ════════════════════════════════════════
@@ -4036,30 +4004,35 @@ function quickAddFund(schemeCode, name, category, btn){
   if(selectedFunds.find(f=>f.code===schemeCode)){return;}
   if(btn) btn.classList.add('added');
   setLoading(true);
+  // Show visible feedback immediately
+  const lb = document.getElementById('loadingBar');
+  if(lb) lb.style.display='block';
   fetch('/api/mf?code='+schemeCode)
-    .then(r=>r.json())
-    .then(res=>{
+    .then(function(r){ return r.json(); })
+    .then(function(res){
       if(!res.data||!res.data.length) throw new Error('No data');
       const cleaned = res.data
-        .filter(d=>{const v=parseFloat(d.nav);return !isNaN(v)&&v>0;})
-        .sort((a,b)=>parseNAVDate(a.date)-parseNAVDate(b.date));
-      selectedFunds.push({code:schemeCode, name:res.meta?.scheme_name||name, rawData:cleaned});
-
+        .filter(function(d){const v=parseFloat(d.nav);return !isNaN(v)&&v>0;})
+        .sort(function(a,b){return parseNAVDate(a.date)-parseNAVDate(b.date);});
+      const fname = (res.meta && res.meta.scheme_name) ? res.meta.scheme_name : name;
+      selectedFunds.push({code:schemeCode, name:fname, rawData:cleaned});
       renderChips();
       renderAll();
       setLoading(false);
-      // Hide empty state + quick-add row once a fund is added
       const es=document.getElementById('emptyState');
       const qa=document.getElementById('quickAddWrap');
       if(es) es.style.display='none';
       if(qa) qa.style.display='none';
-      // Show toolbar + tabs
       const tb=document.getElementById('toolbar');
       const tr=document.getElementById('tabsRow');
       if(tb) tb.style.display='flex';
       if(tr) tr.style.display='flex';
     })
-    .catch(()=>{ setLoading(false); if(btn) btn.classList.remove('added'); alert('Failed to load. Try again.'); });
+    .catch(function(err){
+      setLoading(false);
+      if(btn) btn.classList.remove('added');
+      alert('Could not load fund data. Please check your connection and try again.');
+    });
 }
 
 /* ════════════════════════════════════════
@@ -4470,11 +4443,7 @@ function renderAll(){
       <div class="es-icon">📊</div>
       <div class="empty-title">Compare up to 5 funds side-by-side</div>
       <p class="empty-p">Search above or pick a popular fund below to get started</p>
-      <div class="es-try-row" id="esTryRow">
-        <span class="es-try-label">Try:</span>
-        <span class="qa-skeleton" style="width:160px;height:28px;border-radius:6px"></span>
-        <span class="qa-skeleton" style="width:160px;height:28px;border-radius:6px"></span>
-      </div>
+      <div class="es-try-row" id="esTryRow"><span class="es-try-label">Try:</span><button class="es-try-btn" data-c1="125494" data-n1="SBI Small Cap Fund - Regular Plan - Growth" data-c2="113177" data-n2="Nippon India Small Cap Fund - Growth Plan - Growth Option" onclick="tryPairClick(this)">SBI Small Cap vs Nippon Small Cap</button><button class="es-try-btn" data-c1="122640" data-n1="Parag Parikh Flexi Cap Fund - Regular Plan - Growth" data-c2="101762" data-n2="HDFC Flexi Cap Fund - Growth Plan" onclick="tryPairClick(this)">Parag Parikh vs HDFC Flexi Cap</button><button class="es-try-btn" data-c1="140225" data-n1="Edelweiss Mid Cap Fund - Regular Plan - Growth Option" data-c2="105758" data-n2="HDFC Mid Cap Fund - Growth Plan" onclick="tryPairClick(this)">Edelweiss vs HDFC Mid Cap</button></div>
     </div>`;
     // Re-populate Try row with resolved picks
     setTimeout(populateTryRow, 0);
