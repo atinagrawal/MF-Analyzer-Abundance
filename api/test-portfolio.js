@@ -1,4 +1,4 @@
-// Portfolio source probe v2 — Nippon India Small Cap focus
+// Portfolio source probe v3 — Follow Kuvera v5 + scrape Nippon page
 // GET /api/test-portfolio
 
 const https = require('https');
@@ -10,11 +10,11 @@ function fetchUrl(url, options = {}) {
       method: options.method || 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-        'Accept': 'text/html,application/xhtml+xml,*/*;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/json,*/*;q=0.9',
         'Accept-Encoding': 'gzip, deflate, br',
         ...(options.headers || {}),
       },
-      timeout: 12000,
+      timeout: 15000,
     }, (res) => {
       const chunks = [];
       let stream = res;
@@ -27,8 +27,9 @@ function fetchUrl(url, options = {}) {
         resolve({
           status: res.statusCode,
           headers: res.headers,
+          body,
           bodyLen: body.length,
-          bodyStart: body.slice(0, 300).toString('utf8').replace(/[\x00-\x1f]+/g, ' '),
+          bodyText: body.toString('utf8'),
           isXlsx: body.slice(0,4).toString('hex') === '504b0304',
           location: res.headers['location'] || null,
         });
@@ -36,7 +37,7 @@ function fetchUrl(url, options = {}) {
       stream.on('error', reject);
     });
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout 12s')); });
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout 15s')); });
     if (options.body) req.write(options.body);
     req.end();
   });
@@ -46,15 +47,13 @@ async function probe(label, url, opts) {
   const t0 = Date.now();
   try {
     const r = await fetchUrl(url, opts);
+    const preview = r.bodyText.slice(0, 300).replace(/[\x00-\x08\x0b-\x1f]+/g, ' ');
     return {
-      label, ok: true,
-      status: r.status,
-      ms: Date.now() - t0,
-      bytes: r.bodyLen,
-      type: (r.headers['content-type'] || '').split(';')[0],
-      isXlsx: r.isXlsx,
-      redirect: r.location,
-      preview: r.bodyStart.slice(0, 150),
+      label, ok: true, status: r.status, ms: Date.now() - t0,
+      bytes: r.bodyLen, type: (r.headers['content-type'] || '').split(';')[0],
+      isXlsx: r.isXlsx, redirect: r.location, preview,
+      // Pass full body for further processing
+      _body: r.bodyText,
     };
   } catch(e) {
     return { label, ok: false, error: e.message, ms: Date.now() - t0 };
@@ -65,57 +64,112 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-store');
 
-  // Nippon India uses SharePoint-based hosting
-  // Their monthly portfolio is a SINGLE xlsx with ALL schemes combined (unlike HDFC per-scheme)
-  // Pattern from factsheet page: "Monthly portfolio as on 28th February 2026"
-  const probes = [
+  const results = {};
 
-    // ── NIPPON: Various URL patterns to try ──
-    // Pattern 1: SharePoint document library
-    probe('Nippon SharePoint Feb2026 v1',
-      'https://mf.nipponindiaim.com/InvestorServices/Monthly-Portfolio/Monthly-Portfolio-February-2026.xlsx'),
-    probe('Nippon SharePoint Feb2026 v2',
-      'https://mf.nipponindiaim.com/InvestorServices/Monthly%20Portfolio/Monthly-Portfolio-February-2026.xlsx'),
-    probe('Nippon SharePoint Feb2026 v3',
-      'https://mf.nipponindiaim.com/SiteCollectionDocuments/Monthly%20Portfolio/Monthly-Portfolio-February-2026.xlsx'),
+  // ── 1. Hit Kuvera API v5 directly (the redirect target) ──
+  const kuveraV5 = await probe(
+    'Kuvera v5 SCAG-GR (Nippon Small Cap)',
+    'https://api.kuvera.in/mf/api/v5/fund_schemes/SCAG-GR.json'
+  );
+  results.kuveraV5 = {
+    status: kuveraV5.status,
+    ok: kuveraV5.ok,
+    bytes: kuveraV5.bytes,
+    ms: kuveraV5.ms,
+    preview: kuveraV5.preview,
+    // Try to parse JSON keys if it's valid
+    keys: (() => {
+      try { return Object.keys(JSON.parse(kuveraV5._body || '{}')).slice(0,30); } catch(e) { return ['parse error']; }
+    })(),
+    // Check for holdings/portfolio fields
+    hasHoldings: (kuveraV5._body || '').includes('holding'),
+    hasPortfolio: (kuveraV5._body || '').includes('portfolio'),
+    hasBenchmark: (kuveraV5._body || '').includes('benchmark'),
+    hasSector: (kuveraV5._body || '').includes('sector'),
+  };
 
-    // Pattern 2: Old Reliance/Nippon URL style seen in older search results
-    probe('Nippon old style Feb2026',
-      'https://mf.nipponindiaim.com/investorservices/factsheetsdocuments/monthly-portfolio-feb-2026/Monthly-Portfolio-February-2026.xlsx'),
-    probe('Nippon factsheetsdocuments Feb2026',
-      'https://mf.nipponindiaim.com/investorservices/factsheetsdocuments/Monthly-Portfolio-February-2026.xlsx'),
+  // ── 2. Scrape Nippon factsheet page for real xlsx URLs ──
+  const nipponPage = await probe(
+    'Nippon factsheet page',
+    'https://mf.nipponindiaim.com/investor-service/downloads/factsheet-portfolio-and-other-disclosures'
+  );
+  
+  // Extract all .xlsx and document links from the HTML
+  const xlsxLinks = [];
+  const docLinks = [];
+  if (nipponPage._body) {
+    // Find xlsx URLs
+    const xlsxMatches = nipponPage._body.match(/https?:\/\/[^\s"'<>]+\.xlsx/gi) || [];
+    xlsxLinks.push(...[...new Set(xlsxMatches)]);
+    
+    // Find any link containing "monthly" or "portfolio"
+    const portMatches = nipponPage._body.match(/https?:\/\/[^\s"'<>]*(monthly|portfolio)[^\s"'<>]*/gi) || [];
+    docLinks.push(...[...new Set(portMatches)].slice(0, 10));
+    
+    // Also look for SharePoint RootFolder patterns
+    const spMatches = nipponPage._body.match(/\/InvestorServices[^\s"'<>]+\.(xlsx|xls|pdf)/gi) || [];
+    docLinks.push(...[...new Set(spMatches)].slice(0, 10));
+  }
+  results.nipponPage = {
+    status: nipponPage.status,
+    bytes: nipponPage.bytes,
+    xlsxLinksFound: xlsxLinks.length,
+    xlsxLinks: xlsxLinks.slice(0, 5),
+    portfolioLinks: docLinks.slice(0, 10),
+    // Sample of page for manual inspection
+    pageSample: nipponPage._body ? nipponPage._body.slice(0, 500) : '',
+  };
 
-    // Pattern 3: Direct CDN/blob
-    probe('Nippon blob Feb2026 v1',
-      'https://mf.nipponindiaim.com/_layouts/15/download.aspx?SourceUrl=%2FInvestorServices%2FMonthly%20Portfolio%2FMonthly%20Portfolio%20February%202026.xlsx'),
+  // ── 3. Try Kuvera v5 for HDFC Innovation (we know ISIN = INF179KC1JO7) ──
+  // captnemo gave 404 for this (new fund not in mapping). Try Kuvera directly with scheme code
+  const kuveraHdfc = await probe(
+    'Kuvera v5 HINNF-GR (HDFC Innovation guess)',
+    'https://api.kuvera.in/mf/api/v5/fund_schemes/HINNF-GR.json'
+  );
+  results.kuveraHdfc = {
+    status: kuveraHdfc.status, ms: kuveraHdfc.ms, bytes: kuveraHdfc.bytes,
+    preview: kuveraHdfc.preview,
+  };
 
-    // Pattern 4: Try the actual factsheet page for HTML link discovery
-    probe('Nippon factsheet page (HTML)',
-      'https://mf.nipponindiaim.com/investor-service/downloads/factsheet-portfolio-and-other-disclosures'),
+  // ── 4. Try Nippon portfolio via AMFI direct disclosure (scheme code 118778) ──
+  // AMFI has a per-scheme portfolio endpoint
+  const amfiPortfolio = await probe(
+    'AMFI scheme portfolio (code 118778)',
+    'https://www.amfiindia.com/modules/NAVHistoryReport?mf=118778'
+  );
+  results.amfiPortfolio = {
+    status: amfiPortfolio.status, ms: amfiPortfolio.ms, bytes: amfiPortfolio.bytes,
+    preview: amfiPortfolio.preview,
+  };
 
-    // Pattern 5: Try known monthly portfolio direct URLs (based on older web archive patterns)
-    probe('Nippon Jan2026 portfolio direct',
-      'https://mf.nipponindiaim.com/InvestorServices/Pages/Monthly-Portfolio/Monthly-Portfolio-January-2026.xlsx'),
+  // ── 5. Probe Nippon's actual document library root ──
+  const nipponDocLib = await probe(
+    'Nippon SharePoint doc library root',
+    'https://mf.nipponindiaim.com/InvestorServices/Monthly%20Portfolio'
+  );
+  results.nipponDocLib = {
+    status: nipponDocLib.status, ms: nipponDocLib.ms, bytes: nipponDocLib.bytes,
+    preview: nipponDocLib.preview,
+  };
 
-    // Pattern 6: Azure blob or CDN (nipponindiaim uses Azure)
-    probe('Nippon Azure CDN Feb2026',
-      'https://mf.nipponindiaim.com/content/dam/monthly-portfolio/Monthly-Portfolio-February-2026.xlsx'),
+  // ── 6. Try Nippon's RootFolder API (SharePoint REST) ──
+  const nipponSPREST = await probe(
+    'Nippon SharePoint REST API folder listing',
+    "https://mf.nipponindiaim.com/_api/web/GetFolderByServerRelativeUrl('/InvestorServices/Monthly Portfolio')/Files?$select=Name,TimeLastModified&$top=5"
+  );
+  results.nipponSPREST = {
+    status: nipponSPREST.status, ms: nipponSPREST.ms, bytes: nipponSPREST.bytes,
+    preview: nipponSPREST.preview.slice(0, 300),
+    hasXlsx: (nipponSPREST._body || '').toLowerCase().includes('.xlsx'),
+    filesFound: ((nipponSPREST._body || '').match(/\.xlsx/gi) || []).length,
+  };
 
-    // ── HDFC confirmation (Jan 2026 - already confirmed working) ──
-    probe('HDFC Innovation Jan2026 (re-confirm)',
-      'https://files.hdfcfund.com/s3fs-public/2026-02/Monthly%20HDFC%20Innovation%20Fund%20-%2031%20January%202026.xlsx'),
-
-    // ── captnemo for Nippon Small Cap ISIN ──
-    probe('captnemo /nav Nippon Small Cap Direct',
-      'https://mf.captnemo.in/nav/INF204K01K15'),
-
-    // Nippon Small Cap ISIN (Direct Growth = INF204K01K15)
-    probe('captnemo /kuvera Nippon Small Cap',
-      'https://mf.captnemo.in/kuvera/INF204K01K15'),
-  ];
-
-  const settled = await Promise.allSettled(probes);
-  const results = settled.map(r => r.status === 'fulfilled' ? r.value : { error: r.reason?.message });
+  // ── 7. HDFC S3 re-confirm + speed ──
+  const hdfc = await probe(
+    'HDFC S3 Innovation Feb2026',
+    'https://files.hdfcfund.com/s3fs-public/2026-03/Monthly%20HDFC%20Innovation%20Fund%20-%2028%20February%202026.xlsx'
+  );
+  results.hdfcFeb = { status: hdfc.status, ms: hdfc.ms, bytes: hdfc.bytes, isXlsx: hdfc.isXlsx };
 
   res.status(200).json({ ts: new Date().toISOString(), results });
 };
