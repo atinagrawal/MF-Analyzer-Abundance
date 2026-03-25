@@ -1,4 +1,4 @@
-// Portfolio probe v6 — Fast split: Nippon XLS + top 3 AMCs only (< 15s total)
+// Portfolio probe v7 — SBI pattern + verify all confirmed AMCs
 const https = require('https');
 const zlib = require('zlib');
 
@@ -27,26 +27,49 @@ function fetchUrl(url, options = {}) {
           bodyLen: body.length, bodyText: body.toString('utf8'),
           isXls:  hex4 === 'd0cf11e0',
           isXlsx: hex4 === '504b0304',
+          location: res.headers['location'],
         });
       });
       stream.on('error', reject);
     });
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout 12s')); });
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
     if (options.body) req.write(options.body);
     req.end();
   });
 }
 
-function extractXlsLinks(html, baseUrl) {
-  const relative = [...new Set((html.match(/\/[^\s"'<>]+\.(xls|xlsx)/gi) || []))];
-  const absolute = [...new Set((html.match(/https?:\/\/[^\s"'<>]+\.(xls|xlsx)/gi) || []))];
-  const full = [
-    ...relative.map(p => baseUrl + p),
-    ...absolute
+// ── SBI URL generator with full flexibility ──
+function ordinal(d) {
+  if (d === 1 || d === 21 || d === 31) return 'st';
+  if (d === 2 || d === 22)             return 'nd';
+  if (d === 3 || d === 23)             return 'rd';
+  return 'th';
+}
+
+function sbiCandidates(year, month) {
+  // month: 1-12
+  const months = ['january','february','march','april','may','june',
+                  'july','august','september','october','november','december'];
+  const monthName = months[month - 1];
+  
+  // Last day of month
+  const lastDays = {
+    1:31, 2: (year % 4 === 0 ? 29 : 28), 3:31, 4:30, 5:31, 6:30,
+    7:31, 8:31, 9:30, 10:31, 11:30, 12:31
+  };
+  const d = lastDays[month];
+  const ord = ordinal(d);
+  const base = 'https://www.sbimf.com/docs/default-source/scheme-portfolios/';
+  
+  // Variations: scheme vs schemes (both observed), triple-dash consistent
+  return [
+    `${base}all-schemes-monthly-portfolio---as-on-${d}${ord}-${monthName}-${year}.xlsx`,
+    `${base}all-scheme-monthly-portfolio---as-on-${d}${ord}-${monthName}-${year}.xlsx`,
+    // Some months may use double-dash (defensive)
+    `${base}all-schemes-monthly-portfolio--as-on-${d}${ord}-${monthName}-${year}.xlsx`,
+    `${base}all-scheme-monthly-portfolio--as-on-${d}${ord}-${monthName}-${year}.xlsx`,
   ];
-  // Filter: only keep likely portfolio/monthly files
-  return full.filter(u => /monthly|portfolio|factsheet|fundport/i.test(u)).slice(0, 8);
 }
 
 module.exports = async function handler(req, res) {
@@ -54,108 +77,117 @@ module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const out = {};
 
-  // Run all in parallel but with 12s timeouts each
-  const tasks = [
-
-    // ── NIPPON: Fetch the actual XLS file ──
-    (async () => {
-      try {
-        const r = await fetchUrl('https://mf.nipponindiaim.com/InvestorServices/FactsheetsDocuments/NIMF-MONTHLY-PORTFOLIO-28-Feb-26.xls');
-        out.nippon = {
-          status: r.status, bytes: r.bodyLen,
-          isXls: r.isXls, isXlsx: r.isXlsx,
-          type: r.headers['content-type'],
-          // First 200 bytes as hex to diagnose format
-          hexStart: r.body.slice(0,8).toString('hex'),
-          // If it's text-like, show preview
-          textPreview: r.isXls || r.isXlsx ? '[binary]' : r.bodyText.slice(0,200),
-        };
-      } catch(e) { out.nippon = { error: e.message }; }
-    })(),
-
-    // ── SBI ──
-    (async () => {
-      try {
-        const r = await fetchUrl('https://www.sbimf.com/en-us/portfolio-disclosure');
-        const links = extractXlsLinks(r.bodyText, 'https://www.sbimf.com');
-        out.sbi = { status: r.status, bytes: r.bodyLen, links };
-      } catch(e) { out.sbi = { error: e.message }; }
-    })(),
-
-    // ── ICICI Pru ──
-    (async () => {
-      try {
-        const r = await fetchUrl('https://www.icicipruamc.com/downloads/portfolio-disclosures');
-        const links = extractXlsLinks(r.bodyText, 'https://www.icicipruamc.com');
-        out.icicipru = { status: r.status, bytes: r.bodyLen, links };
-      } catch(e) { out.icicipru = { error: e.message }; }
-    })(),
-
-    // ── Axis ──
-    (async () => {
-      try {
-        const r = await fetchUrl('https://www.axismf.com/portfolio-disclosure');
-        const links = extractXlsLinks(r.bodyText, 'https://www.axismf.com');
-        out.axis = { status: r.status, bytes: r.bodyLen, links };
-      } catch(e) { out.axis = { error: e.message }; }
-    })(),
-
-    // ── Mirae ──
-    (async () => {
-      try {
-        const r = await fetchUrl('https://www.miraeassetmf.co.in/downloads/portfolio-disclosure');
-        const links = extractXlsLinks(r.bodyText, 'https://www.miraeassetmf.co.in');
-        out.mirae = { status: r.status, bytes: r.bodyLen, links };
-      } catch(e) { out.mirae = { error: e.message }; }
-    })(),
-
-    // ── Kotak ──
-    (async () => {
-      try {
-        const r = await fetchUrl('https://www.kotakmf.com/Information/statutory-disclosure/portfolio-disclosures');
-        const links = extractXlsLinks(r.bodyText, 'https://www.kotakmf.com');
-        out.kotak = { status: r.status, bytes: r.bodyLen, links };
-      } catch(e) { out.kotak = { error: e.message }; }
-    })(),
-
-    // ── DSP ──
-    (async () => {
-      try {
-        const r = await fetchUrl('https://www.dspim.com/mandatory-disclosures/portfolio-disclosures');
-        const links = extractXlsLinks(r.bodyText, 'https://www.dspim.com');
-        out.dsp = { status: r.status, bytes: r.bodyLen, links };
-      } catch(e) { out.dsp = { error: e.message }; }
-    })(),
-
-    // ── Franklin Templeton ──
-    (async () => {
-      try {
-        const r = await fetchUrl('https://www.franklintempletonindia.com/investor/portfolio-disclosures');
-        const links = extractXlsLinks(r.bodyText, 'https://www.franklintempletonindia.com');
-        out.franklin = { status: r.status, bytes: r.bodyLen, links };
-      } catch(e) { out.franklin = { error: e.message }; }
-    })(),
-
-    // ── AMFI POST with correct AMC-code discovery ──
-    // First: get the list of AMC codes from AMFI's own dropdown
-    (async () => {
-      try {
-        const r = await fetchUrl('https://www.amfiindia.com/online-center/portfolio-disclosure');
-        // Look for option values in the AMC dropdown
-        const opts = r.bodyText.match(/value="(\d+)"[^>]*>([^<]+)<\/option>/gi) || [];
-        const nipponOpt = opts.find(o => /nippon|reliance/i.test(o));
-        out.amfiAMCCodes = {
-          status: r.status,
-          bytes: r.bodyLen,
-          nipponOption: nipponOpt || null,
-          allOptions: opts.slice(0, 20),
-        };
-      } catch(e) { out.amfiAMCCodes = { error: e.message }; }
-    })(),
-
+  // ── 1. SBI: try Feb 2026, Jan 2026, Dec 2025, Sep 2025 (the known one) ──
+  const sbiTests = [
+    { year: 2026, month: 2, label: 'Feb2026' },
+    { year: 2026, month: 1, label: 'Jan2026' },
+    { year: 2025, month: 12, label: 'Dec2025' },
+    { year: 2025, month: 9,  label: 'Sep2025' },
   ];
 
-  await Promise.allSettled(tasks);
+  out.sbi = {};
+  await Promise.all(sbiTests.map(async ({ year, month, label }) => {
+    const candidates = sbiCandidates(year, month);
+    out.sbi[label] = { candidates, results: {} };
+    await Promise.all(candidates.map(async url => {
+      try {
+        const r = await fetchUrl(url);
+        const key = url.includes('all-schemes') ? 'schemes' : 'scheme';
+        const dashKey = url.includes('---') ? key+'_triple' : key+'_double';
+        out.sbi[label].results[dashKey] = {
+          status: r.status, bytes: r.bodyLen,
+          isXlsx: r.isXlsx, isXls: r.isXls,
+          ok: r.status === 200 && (r.isXlsx || r.isXls),
+        };
+      } catch(e) {
+        const key = url.includes('all-schemes') ? 'schemes_err' : 'scheme_err';
+        out.sbi[label].results[key] = { error: e.message };
+      }
+    }));
+  }));
+
+  // ── 2. NIPPON: confirm the 1.2MB XLSX is real (check sheet names via first bytes) ──
+  try {
+    const r = await fetchUrl('https://mf.nipponindiaim.com/InvestorServices/FactsheetsDocuments/NIMF-MONTHLY-PORTFOLIO-28-Feb-26.xls');
+    out.nippon = {
+      status: r.status, bytes: r.bodyLen,
+      isXlsx: r.isXlsx, isXls: r.isXls,
+      hexStart: r.body.slice(0,8).toString('hex'),
+      ok: r.status === 200 && (r.isXlsx || r.isXls),
+    };
+  } catch(e) { out.nippon = { error: e.message }; }
+
+  // ── 3. ICICI Pru: follow redirect ──
+  try {
+    // Try with trailing slash and common ICICI disclosure paths
+    const urls = [
+      'https://www.icicipruamc.com/downloads/portfolio-disclosures/',
+      'https://www.icicipruamc.com/downloads/portfolio-disclosures/monthly-portfolio',
+      'https://www.icicipruamc.com/portfolio-disclosures',
+    ];
+    out.icicipru = {};
+    await Promise.all(urls.map(async u => {
+      try {
+        const r = await fetchUrl(u);
+        const links = [...new Set((r.bodyText.match(/https?:\/\/[^\s"'<>]+\.(xlsx|xls)/gi) || [])
+          .concat((r.bodyText.match(/\/[^\s"'<>]+\.(xlsx|xls)/gi) || []).map(p => 'https://www.icicipruamc.com' + p))
+        )].filter(l => /portfolio|monthly|scheme/i.test(l)).slice(0,5);
+        out.icicipru[u.split('/').slice(-1)[0] || 'root'] = {
+          status: r.status, bytes: r.bodyLen, redirect: r.location, links
+        };
+      } catch(e) { out.icicipru[u.split('/').slice(-1)[0]] = { error: e.message }; }
+    }));
+  } catch(e) { out.icicipru = { error: e.message }; }
+
+  // ── 4. Mirae: follow redirect ──
+  try {
+    const urls = [
+      'https://www.miraeassetmf.co.in/downloads/portfolio-disclosure/',
+      'https://www.miraeassetmf.co.in/downloads/portfolio-disclosures',
+      'https://www.miraeassetmf.co.in/statutory-disclosure/monthly-portfolio',
+    ];
+    out.mirae = {};
+    await Promise.all(urls.map(async u => {
+      try {
+        const r = await fetchUrl(u);
+        const links = [...new Set((r.bodyText.match(/https?:\/\/[^\s"'<>]+\.(xlsx|xls)/gi) || [])
+          .filter(l => /portfolio|monthly|scheme/i.test(l))
+        )].slice(0,5);
+        out.mirae[u.split('/').slice(-1)[0] || 'root'] = {
+          status: r.status, bytes: r.bodyLen, redirect: r.location, links
+        };
+      } catch(e) { out.mirae[u.split('/').slice(-1)[0]] = { error: e.message }; }
+    }));
+  } catch(e) { out.mirae = { error: e.message }; }
+
+  // ── 5. DSP: fix double-domain bug + find equity monthly ──
+  try {
+    const r = await fetchUrl('https://www.dspim.com/mandatory-disclosures/portfolio-disclosures');
+    // Fix double-domain: remove the prefix duplication
+    const rawLinks = r.bodyText.match(/\/www\.dspim\.com\/media[^\s"'<>]+\.(xls|xlsx)/gi) || [];
+    const links = [...new Set(rawLinks.map(l => 'https:/' + l))];
+    // Also look for equity monthly specifically
+    const equityLinks = links.filter(l => !l.includes('debt') && !l.includes('fortnightly'));
+    out.dsp = { status: r.status, allLinks: links.slice(0,10), equityLinks };
+  } catch(e) { out.dsp = { error: e.message }; }
+
+  // ── 6. Franklin: find actual portfolio URL ──
+  try {
+    const urls = [
+      'https://www.franklintempletonindia.com/investor/portfolio-disclosures',
+      'https://www.franklintempletonindia.com/downloads/monthly-portfolio',
+    ];
+    out.franklin = {};
+    for (const u of urls) {
+      try {
+        const r = await fetchUrl(u);
+        const links = [...new Set((r.bodyText.match(/https?:\/\/[^\s"'<>]+\.(xlsx|xls)/gi) || [])
+          .filter(l => /portfolio|monthly/i.test(l))
+        )].slice(0,5);
+        out.franklin[u.split('/').slice(-1)[0]] = { status: r.status, bytes: r.bodyLen, redirect: r.location, links };
+      } catch(e) { out.franklin[u.split('/').slice(-1)[0]] = { error: e.message }; }
+    }
+  } catch(e) { out.franklin = { error: e.message }; }
 
   res.status(200).json({ ts: new Date().toISOString(), ...out });
 };
