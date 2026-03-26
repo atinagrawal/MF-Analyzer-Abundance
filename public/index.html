@@ -8696,5 +8696,31 @@ loadQuickPicks();
 
 
 </script>
+
+<!-- ── PWA Service Worker registration ── -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => {
+        reg.update();
+        reg.addEventListener('updatefound', () => {
+          const nw = reg.installing;
+          nw.addEventListener('statechange', () => {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              const b = document.createElement('div');
+              b.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b5e20;color:#fff;padding:10px 20px;border-radius:30px;font-family:Raleway,sans-serif;font-size:.78rem;font-weight:700;box-shadow:0 4px 20px rgba(0,0,0,.3);cursor:pointer;white-space:nowrap';
+              b.textContent = '\ud83d\udd04 Update available — tap to refresh';
+              b.onclick = () => window.location.reload();
+              document.body.appendChild(b);
+              setTimeout(() => b.remove(), 8000);
+            }
+          });
+        });
+      })
+      .catch(() => {});
+  });
+}
+</script>
 </body>
 </html>
