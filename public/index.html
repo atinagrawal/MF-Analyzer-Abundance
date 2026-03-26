@@ -6358,6 +6358,7 @@ ${chartImg?`<div class="sec">Projection</div><div class="ci"><img src="${chartIm
 //  SWP NAV BACKTESTER
 // ════════════════════════════════════════
 let btFundData = null;   // {code, name, navMap: {YYYY-MM: navValue}}
+let _btFetchSeq = 0;      // guards against race conditions between concurrent fund fetches
 let btChartInst = null;
 let btSearchTimer = null;
 
@@ -6453,8 +6454,10 @@ async function btSelectFund(code, name){
   document.getElementById('btWhatIfWrap').style.display = 'none';
 
   try{
+    const _mySeq = ++_btFetchSeq;
     const res = await fetch('/api/mf?code='+code);
     const json = await res.json();
+    if (_mySeq !== _btFetchSeq) return; // newer fund request superseded this one
     const navRaw = json.data; // [{date:'DD-MM-YYYY', nav:'123.45'}, ...]
     // Build navMap: YYYY-MM → last NAV of that month
     const navMap = {};
@@ -7032,9 +7035,11 @@ function btReadURL(){
   document.getElementById('btEmpty').textContent = 'Loading fund from shared link…';
   document.getElementById('btEmpty').style.display = 'block';
 
+  const _rdSeq = ++_btFetchSeq;
   fetch('/api/mf?code=' + schemeCode)
     .then(r=>r.json())
     .then(json=>{
+      if (_rdSeq !== _btFetchSeq) return; // superseded by user-initiated fund change
       const navMap={};
       (json.data||[]).forEach(d=>{
         const [dd,mm,yyyy]=d.date.split('-');
@@ -8666,6 +8671,9 @@ function writeURLParams() {
       p.set('goal', getVal('goalTarget'));
       p.set('gyears', getVal('goalYears'));
     } else if (activeTab === 'swp') {
+      // Don't overwrite URL when in backtester sub-mode — BT has its own share URL
+      const _swpTabs = document.querySelectorAll('.swp-mode-tab');
+      if (_swpTabs[2] && _swpTabs[2].classList.contains('active')) return;
       p.set('corpus', getVal('swpCorpus'));
       p.set('withdraw', getVal('swpMonthly'));
     }
