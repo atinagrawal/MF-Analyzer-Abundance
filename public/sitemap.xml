@@ -55,4 +55,12 @@
     <xhtml:link rel="alternate" hreflang="en-IN" href="https://mfcalc.getabundance.in/geography"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://mfcalc.getabundance.in/geography"/>
   </url>
+  <url>
+    <loc>https://mfcalc.getabundance.in/report</loc>
+    <lastmod>2026-03-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+    <xhtml:link rel="alternate" hreflang="en-IN" href="https://mfcalc.getabundance.in/report"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://mfcalc.getabundance.in/report"/>
+  </url>
 </urlset>
