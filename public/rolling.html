@@ -12,7 +12,7 @@
 <link rel="canonical" href="https://mfcalc.getabundance.in/rolling">
 <link rel="icon" type="image/x-icon" href="https://www.getabundance.in/favicon.ico">
 <meta property="og:title" content="Rolling Returns Visualizer — MF Consistency Analyser | Abundance">
-<meta property="og:description" content="How consistent is your mutual fund? See rolling 1Y/3Y/5Y CAGR distribution across every entry point. Free tool by Abundance Financial Services® ARN-251838.">
+<meta property="og:description" content="How consistent is your mutual fund really? See rolling CAGR distribution across every possible entry date — 1Y to 10Y windows. Compare two funds side by side. Free by Abundance Financial Services® ARN-251838.">
 <meta property="og:url" content="https://mfcalc.getabundance.in/rolling">
 <meta property="og:image" content="https://mfcalc.getabundance.in/og-mfcalc.png">
 <meta property="og:image:width" content="1200">
@@ -22,6 +22,8 @@
 <meta property="og:locale" content="en_IN">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://mfcalc.getabundance.in/og-mfcalc.png">
+<meta name="keywords" content="rolling returns mutual fund India, rolling CAGR calculator, mutual fund consistency, SIP returns analysis, AMFI NAV history, fund comparison India">
+<link rel="alternate" hreflang="en-IN" href="https://mfcalc.getabundance.in/rolling">
 <link rel="sitemap" type="application/xml" href="https://mfcalc.getabundance.in/sitemap.xml">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-9KMZ8MS3M7"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-9KMZ8MS3M7');</script>
@@ -38,6 +40,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
 :root{
   --bg:#f0f7f0;--surface:#fff;--s2:#edf6ed;--s3:#dff0df;
@@ -375,9 +379,17 @@ a{color:inherit;text-decoration:none}
     </div>
   </div>
 
-  <div class="src-line" id="srcLine" style="display:none">
-    <div class="src-dot"></div>
-    <span id="srcText">Data: AMFI via mfapi.in · NAV history</span>
+  <div class="src-line" id="srcLine" style="display:none;flex-wrap:wrap;gap:10px">
+    <div style="display:flex;align-items:center;gap:6px;flex:1">
+      <div class="src-dot"></div>
+      <span id="srcText">Data: AMFI via mfapi.in · NAV history</span>
+    </div>
+    <button onclick="copyShareUrl()" id="shareBtn"
+      style="padding:4px 12px;border-radius:6px;font-size:.62rem;font-weight:700;cursor:pointer;
+      border:1px solid var(--border2);background:var(--s2);color:var(--g2);font-family:Raleway,sans-serif;
+      transition:.15s" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background='var(--s2)'">
+      🔗 Share link
+    </button>
   </div>
 
 </div><!-- /container -->
@@ -564,6 +576,7 @@ async function run() {
     // Render
     renderOutput(rrA, rrB);
 
+    updateUrl();
     document.getElementById('srcLine').style.display = 'flex';
     document.getElementById('srcText').textContent =
       `Data: AMFI · ${state.A.nav.length.toLocaleString()} NAV records · ` +
@@ -983,6 +996,22 @@ function drawTimeline(rrA, rrB, twoFund, nameA, nameB) {
       parsing: false,
       plugins: {
         legend: { display: twoFund, labels: { font: { family: 'Raleway', size: 11 }, boxWidth: 12, padding: 16 } },
+        annotation: {
+          annotations: {
+            zeroLine: {
+              type: 'line', yMin: 0, yMax: 0,
+              borderColor: 'rgba(183,28,28,0.45)', borderWidth: 1.5, borderDash: [4,3],
+              label: { display: true, content: '0%', position: 'end', color: 'rgba(183,28,28,0.7)',
+                font: { family: 'JetBrains Mono', size: 9 }, padding: 2 }
+            },
+            twelveLine: {
+              type: 'line', yMin: 12, yMax: 12,
+              borderColor: 'rgba(46,125,50,0.3)', borderWidth: 1, borderDash: [3,4],
+              label: { display: true, content: '12%', position: 'end', color: 'rgba(46,125,50,0.6)',
+                font: { family: 'JetBrains Mono', size: 9 }, padding: 2 }
+            },
+          }
+        },
         tooltip: {
           backgroundColor: '#162616',
           titleFont: { family: 'JetBrains Mono', size: 10 },
@@ -1068,6 +1097,17 @@ function fmtDateLong(d) {
   const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}`;
 }
+function copyShareUrl() {
+  const url = location.href;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('shareBtn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    btn.style.color = 'var(--g1)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+  });
+}
+
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function buildSkeleton() {
@@ -1081,8 +1121,53 @@ function buildSkeleton() {
 }
 
 /* ═══════════════════════════════════════════════════════
+   URL PARAMS — shareable links (?a=CODE&w=5)
+═══════════════════════════════════════════════════════ */
+async function initFromUrl() {
+  const p = new URLSearchParams(location.search);
+  const codeA = p.get('a'), codeB = p.get('b'), w = p.get('w');
+  if (w && [1,3,5,7,10].includes(+w)) {
+    state.window = +w;
+    document.querySelectorAll('.window-btn').forEach(b => {
+      b.classList.toggle('active', +b.dataset.w === +w);
+    });
+  }
+  if (codeA) {
+    // Fetch scheme name
+    try {
+      const r = await fetch(`/api/mf?q=${codeA}`);
+      const d = await r.json();
+      // Try to find by code directly via NAV fetch
+      const nr = await fetch(`/api/mf?code=${codeA}`);
+      const nd = await nr.json();
+      if (nd.meta) {
+        selectFund('A', +codeA, nd.meta.scheme_name || `Fund ${codeA}`);
+        if (codeB) {
+          const nbr = await fetch(`/api/mf?code=${codeB}`);
+          const nbd = await nbr.json();
+          if (nbd.meta) {
+            toggleCompare();
+            selectFund('B', +codeB, nbd.meta.scheme_name || `Fund ${codeB}`);
+          }
+        }
+        run();
+      }
+    } catch(e) { /* silent — user can still use manually */ }
+  }
+}
+
+function updateUrl() {
+  const p = new URLSearchParams();
+  if (state.A.code) p.set('a', state.A.code);
+  if (state.B.code) p.set('b', state.B.code);
+  p.set('w', state.window);
+  history.replaceState(null, '', '?' + p.toString());
+}
+
+/* ═══════════════════════════════════════════════════════
    BOOT
 ═══════════════════════════════════════════════════════ */
+initFromUrl();
 // Fund B slot starts disabled visually
 document.getElementById('slotB').style.opacity = '0.45';
 document.getElementById('slotB').style.pointerEvents = 'none';
