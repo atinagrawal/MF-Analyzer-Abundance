@@ -41,7 +41,7 @@
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"India MF Geography — State-wise AUM Map","url":"https://mfcalc.getabundance.in/geography","description":"Interactive choropleth map showing state-wise mutual fund AUM distribution across all 36 Indian states and union territories, including Telangana and Ladakh. Monthly AMFI data with equity penetration, state rankings, and history since 2014.","applicationCategory":"FinanceApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","inLanguage":"en-IN","dateModified":"2026-03-26","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"},"featureList":["Interactive India choropleth map with all 36 states/UTs","Telangana and Ladakh shown as separate polygons","State-wise AUM rankings","Equity penetration by state","Historical monthly data since March 2014","State detail panel with full fund-type breakdown"],"provider":{"@type":"FinancialService","name":"Abundance Financial Services","url":"https://www.getabundance.in","telephone":"+919808105923","identifier":"ARN-251838"},"isPartOf":{"@type":"WebSite","name":"Abundance MF Calculator","url":"https://mfcalc.getabundance.in"}}
+{"@context":"https://schema.org","@type":"WebApplication","name":"India MF Geography — State-wise AUM Map","url":"https://mfcalc.getabundance.in/geography","description":"Interactive choropleth map showing state-wise mutual fund AUM distribution across all 36 Indian states and union territories, including Telangana and Ladakh. Monthly AMFI data with equity penetration, state rankings, and history since 2014.","applicationCategory":"FinanceApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","inLanguage":"en-IN","dateModified":"2026-03-29","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"},"featureList":["Interactive India choropleth map with all 36 states/UTs","Telangana and Ladakh shown as separate polygons","State-wise AUM rankings","Equity penetration by state","Historical monthly data since March 2014","State detail panel with full fund-type breakdown"],"provider":{"@type":"FinancialService","name":"Abundance Financial Services","url":"https://www.getabundance.in","telephone":"+919808105923","identifier":"ARN-251838"},"isPartOf":{"@type":"WebSite","name":"Abundance MF Calculator","url":"https://mfcalc.getabundance.in"}}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.getabundance.in"},{"@type":"ListItem","position":2,"name":"MF Calculator","item":"https://mfcalc.getabundance.in"},{"@type":"ListItem","position":3,"name":"India MF Geography","item":"https://mfcalc.getabundance.in/geography"}]}
@@ -106,7 +106,8 @@ a{color:inherit;text-decoration:none}
 #mapContainer svg{display:block;width:100%;height:auto}
 .state-path{transition:opacity .15s,stroke-width .15s}
 .state-path:hover{opacity:.82;stroke-width:1.5px!important;stroke:#1b5e20!important}
-.state-path.selected{stroke:#1b5e20!important;stroke-width:2.5px!important;opacity:1}
+/* Amber/orange highlight — distinct from all green choropleth fills */
+.state-path.selected{stroke:#ff6d00!important;stroke-width:2.5px!important;opacity:1;filter:drop-shadow(0 0 3px rgba(255,109,0,.45))}
 #mapTooltip{position:fixed;background:#162616;color:#c8e6c9;padding:8px 12px;border-radius:8px;font-size:.72rem;font-weight:600;pointer-events:none;display:none;z-index:1000;font-family:'Raleway',sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:220px}
 #mapTooltip .tt-name{font-weight:800;font-size:.78rem;margin-bottom:3px}
 #mapTooltip .tt-val{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#81c784}
@@ -605,7 +606,7 @@ function selectState(s) {
 
   const geoName = MERGED_UT_MAP[s.state] || AMFI_TO_GEO[s.state] || s.state;
   highlightPath(geoName);
-  scrollToRow(s.state);
+  highlightTableRow(s.state);  // visual highlight only — no scroll
 
   const avg     = currentData?.equityPctIndustry || 59;
   const isAbove = (s.equityPct||0) > avg;
@@ -697,13 +698,20 @@ function renderTable(data) {
   const maxAUM = Math.max(...sorted.map(s => s.total), 1);
 
   document.getElementById('tableBadge').textContent = sorted.length + ' STATES & UTs';
-  document.getElementById('geoTableBody').innerHTML = sorted.map(s => {
+
+  // Rank label changes depending on sort: "AUM Rank" vs "Equity % Rank" etc.
+  const rankLabels = { total:'AUM Rank', equity:'Equity Rank', equityPct:'Eq% Rank', sharePct:'Share Rank' };
+  const rankHead = document.querySelector('#geoTable thead th:first-child');
+  if (rankHead) rankHead.textContent = rankLabels[sortKey] || 'Rank';
+
+  document.getElementById('geoTableBody').innerHTML = sorted.map((s, i) => {
+    const sortedRank = i + 1;                                        // rank in current sort
     const bar  = Math.round(s.total / maxAUM * 100);
     const eqCl = s.equityPct >= 80 ? 'eq-high' : s.equityPct >= 65 ? 'eq-med' : 'eq-low';
-    const rCl  = s.rank <= 3 ? 'rank-badge top3' : 'rank-badge';
+    const rCl  = sortedRank <= 3 ? 'rank-badge top3' : 'rank-badge'; // top3 based on current sort
     const sel  = selectedAmfi === s.state ? ' selected-row' : '';
     return `<tr data-state="${esc(s.state)}" class="${sel}">
-      <td><span class="${rCl}">${s.rank}</span></td>
+      <td><span class="${rCl}">${sortedRank}</span></td>
       <td class="state-name-cell">${esc(s.state)}</td>
       <td class="mono">${fmtCr(s.total)}<div class="share-bar-bg"><div class="share-bar-fill" style="width:${bar}%"></div></div></td>
       <td class="mono">${(s.sharePct||0).toFixed(2)}%</td>
@@ -714,7 +722,7 @@ function renderTable(data) {
   }).join('');
 }
 
-// Delegated click on table — no state names in onclick attrs
+// Delegated click on table — scrolls to map on mobile
 document.getElementById('geoTableBody').addEventListener('click', e => {
   const tr = e.target.closest('tr[data-state]');
   if (!tr) return;
@@ -725,9 +733,15 @@ document.getElementById('geoTableBody').addEventListener('click', e => {
     document.getElementById('mapContainer').scrollIntoView({behavior:'smooth', block:'start'});
 });
 
-function scrollToRow(stateName) {
+// Highlight the table row without scrolling (used when clicking the map)
+function highlightTableRow(stateName) {
   document.querySelectorAll('#geoTableBody tr').forEach(tr =>
     tr.classList.toggle('selected-row', tr.dataset.state === stateName));
+}
+
+// Highlight + scroll to table row (used when clicking FROM the table itself)
+function scrollToRow(stateName) {
+  highlightTableRow(stateName);
   const row = document.querySelector(`#geoTableBody tr[data-state="${CSS.escape(stateName)}"]`);
   if (row) row.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
