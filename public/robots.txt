@@ -1,12 +1,13 @@
 User-agent: *
 Allow: /
-Allow: /api/og
+Disallow: /api/amfi-statewise
 Disallow: /api/amfi-pdf
 Disallow: /api/amfi-industry
 Disallow: /api/mf-portfolio
+Disallow: /api/test-portfolio
 Disallow: /api/health
 
-# Allow OG image endpoint for social crawlers
+# Allow OG image endpoint for social media crawlers
 User-agent: Twitterbot
 Allow: /api/og
 
