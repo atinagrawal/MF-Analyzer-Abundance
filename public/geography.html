@@ -280,6 +280,7 @@ a{color:inherit;text-decoration:none}
         <span class="geo-filter-label">Sort by:</span>
         <button class="geo-filter-btn active" onclick="setSortKey('total',this)">Total AUM</button>
         <button class="geo-filter-btn" onclick="setSortKey('equity',this)">Equity AUM</button>
+        <button class="geo-filter-btn" onclick="setSortKey('debt',this)">Debt AUM</button>
         <button class="geo-filter-btn" onclick="setSortKey('equityPct',this)">Equity %</button>
         <button class="geo-filter-btn" onclick="setSortKey('sharePct',this)">Share %</button>
       </div>
@@ -700,7 +701,7 @@ function renderTable(data) {
   document.getElementById('tableBadge').textContent = sorted.length + ' STATES & UTs';
 
   // Rank label changes depending on sort: "AUM Rank" vs "Equity % Rank" etc.
-  const rankLabels = { total:'AUM Rank', equity:'Equity Rank', equityPct:'Eq% Rank', sharePct:'Share Rank' };
+  const rankLabels = { total:'AUM Rank', equity:'Equity Rank', debt:'Debt Rank', equityPct:'Eq% Rank', sharePct:'Share Rank' };
   const rankHead = document.querySelector('#geoTable thead th:first-child');
   if (rankHead) rankHead.textContent = rankLabels[sortKey] || 'Rank';
 
