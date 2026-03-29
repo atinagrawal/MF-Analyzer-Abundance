@@ -7,17 +7,21 @@ Disallow: /api/mf-portfolio
 Disallow: /api/test-portfolio
 Disallow: /api/health
 
-# Allow OG image endpoint for social media crawlers
+# Allow OG image endpoints for social media crawlers
 User-agent: Twitterbot
 Allow: /api/og
+Allow: /api/og-report
 
 User-agent: facebookexternalhit
 Allow: /api/og
+Allow: /api/og-report
 
 User-agent: LinkedInBot
 Allow: /api/og
+Allow: /api/og-report
 
 User-agent: WhatsApp
 Allow: /api/og
+Allow: /api/og-report
 
 Sitemap: https://mfcalc.getabundance.in/sitemap.xml
