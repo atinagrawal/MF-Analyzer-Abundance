@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Rolling Returns Visualizer — Mutual Fund Consistency Analyser | Abundance Financial Services®</title>
-<meta name="description" content="Analyse rolling returns of any mutual fund in India. See 1Y, 3Y, 5Y, 7Y, 10Y rolling CAGR distribution and consistency over time. Free tool by Abundance Financial Services® ARN-251838.">
+<title>Rolling Returns Calculator — MF Consistency Analyser | Abundance</title>
+<meta name="description" content="Rolling returns calculator for Indian mutual funds — CAGR distribution across every entry date, 1Y–10Y windows. Free tool by Abundance Financial Services®.">
 <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
 <meta name="author" content="Abundance Financial Services, ARN-251838">
 <meta name="theme-color" content="#1b5e20">
@@ -14,16 +14,17 @@
 <meta property="og:title" content="Rolling Returns Visualizer — MF Consistency Analyser | Abundance">
 <meta property="og:description" content="How consistent is your mutual fund really? See rolling CAGR distribution across every possible entry date — 1Y to 10Y windows. Compare two funds side by side. Free by Abundance Financial Services® ARN-251838.">
 <meta property="og:url" content="https://mfcalc.getabundance.in/rolling">
-<meta property="og:image" content="https://mfcalc.getabundance.in/og-mfcalc.png">
+<meta property="og:image" content="https://mfcalc.getabundance.in/og-rolling.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Abundance Financial Services">
 <meta property="og:locale" content="en_IN">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://mfcalc.getabundance.in/og-mfcalc.png">
+<meta name="twitter:image" content="https://mfcalc.getabundance.in/og-rolling.png">
 <meta name="keywords" content="rolling returns mutual fund India, rolling CAGR calculator, mutual fund consistency, SIP returns analysis, AMFI NAV history, fund comparison India">
 <link rel="alternate" hreflang="en-IN" href="https://mfcalc.getabundance.in/rolling">
+<link rel="alternate" hreflang="x-default" href="https://mfcalc.getabundance.in/rolling">
 <link rel="sitemap" type="application/xml" href="https://mfcalc.getabundance.in/sitemap.xml">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-9KMZ8MS3M7"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-9KMZ8MS3M7');</script>
@@ -94,11 +95,11 @@ a{color:inherit;text-decoration:none}
 .fund-slot{position:relative}
 .fund-label{font-size:.6rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;
   color:var(--muted);margin-bottom:7px;font-family:'JetBrains Mono',monospace}
-.fund-label span{display:inline-block;width:16px;height:16px;border-radius:50%;
+.fund-label .badge{display:inline-block;width:16px;height:16px;border-radius:50%;
   font-size:.6rem;font-weight:800;line-height:16px;text-align:center;margin-right:5px;
   vertical-align:middle}
-.fund-label-a span{background:var(--g2);color:#fff}
-.fund-label-b span{background:#7b1fa2;color:#fff}
+.fund-label-a .badge{background:var(--g2);color:#fff}
+.fund-label-b .badge{background:#7b1fa2;color:#fff}
 .fund-input-wrap{position:relative}
 .fund-input{width:100%;padding:10px 36px 10px 12px;border:1.5px solid var(--border2);
   border-radius:10px;font-family:'Raleway',sans-serif;font-size:.8rem;font-weight:600;
@@ -315,7 +316,7 @@ a{color:inherit;text-decoration:none}
 
       <!-- Fund A -->
       <div class="fund-slot" id="slotA">
-        <div class="fund-label fund-label-a"><span>A</span> Fund 1</div>
+        <div class="fund-label fund-label-a"><span class="badge">A</span> Fund 1</div>
         <div class="fund-input-wrap">
           <input class="fund-input" id="inputA" type="text" placeholder="Type fund name…" autocomplete="off" spellcheck="false">
           <button class="fund-clear" id="clearA" onclick="clearInput('A')" title="Clear">✕</button>
@@ -336,7 +337,7 @@ a{color:inherit;text-decoration:none}
 
       <!-- Fund B -->
       <div class="fund-slot" id="slotB">
-        <div class="fund-label fund-label-b"><span>B</span> Fund 2 <span style="font-size:.55rem;font-weight:500;color:var(--muted);margin-left:4px">(optional)</span></div>
+        <div class="fund-label fund-label-b"><span class="badge">B</span> Fund 2 <span style="font-size:.55rem;font-weight:500;color:var(--muted);margin-left:4px">(optional)</span></div>
         <div class="fund-input-wrap">
           <input class="fund-input" id="inputB" type="text" placeholder="Type to compare…" autocomplete="off" spellcheck="false" disabled>
           <button class="fund-clear" id="clearB" onclick="clearInput('B')" title="Clear">✕</button>
@@ -440,6 +441,23 @@ document.getElementById('footerYear').textContent = new Date().getFullYear();
   inp.addEventListener('blur', () => setTimeout(() => closeDd(slot), 180));
 });
 
+/* Active plan filter state */
+const _planFilter = 'regular'; // always regular — distributor tool
+
+function filterAndRankFunds(data) {
+  // Exclude IDCW/Dividend/Bonus/Institutional — NAV resets on payout, distorts CAGR
+  const growthOnly = data.filter(f =>
+    !/\b(idcw|dividend|weekly|daily|monthly\s+reinvestment|bonus|institutional)\b/i.test(f.schemeName)
+  );
+
+  // Regular only: "direct" is always explicitly in direct plan names.
+  // Anything without "direct" is a regular plan.
+  const regular = growthOnly.filter(f => !/\bdirect\b/i.test(f.schemeName));
+
+  // Fallback: if fund has no regular plan (rare), show all growth plans
+  return regular.length ? regular : growthOnly;
+}
+
 async function searchFunds(q, slot) {
   const dd = document.getElementById(`dd${slot}`);
   dd.innerHTML = `<div class="dd-msg">Searching…</div>`;
@@ -452,9 +470,17 @@ async function searchFunds(q, slot) {
       return;
     }
     _ddKeyIdx[slot] = -1;
-    // Highlight matching term in name
+
+    // Apply Growth-only filter + plan type filter + ranking
+    const ranked = filterAndRankFunds(data);
+
+    if (!ranked.length) {
+      dd.innerHTML = `<div class="dd-msg">No ${_planFilter === 'all' ? 'non-IDCW' : _planFilter} plans found. Try switching the plan filter above.</div>`;
+      return;
+    }
+
     const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
-    dd.innerHTML = data.slice(0, 20).map((d, i) =>
+    dd.innerHTML = ranked.slice(0, 20).map((d, i) =>
       `<div class="dd-item" data-code="${d.schemeCode}" data-name="${esc(d.schemeName)}" data-idx="${i}"
         onmousedown="selectFund('${slot}',${d.schemeCode},'${esc(d.schemeName).replace(/'/g,"\\'")}')">
         ${esc(d.schemeName).replace(re, '<em>$1</em>')}
@@ -540,6 +566,8 @@ function setWindow(btn) {
   document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   state.window = +btn.dataset.w;
+  // Auto re-run if we already have a result displayed
+  if (state.A.code && window._rrA) run();
 }
 
 function checkRunnable() {
@@ -557,6 +585,10 @@ async function run() {
   btn.querySelector('.icon').style.display = 'none';
   document.getElementById('outputArea').innerHTML = buildSkeleton();
   document.getElementById('srcLine').style.display = 'none';
+
+  // Clear stale rolling data before new run
+  window._rrA = null;
+  window._rrB = null;
 
   try {
     // Fetch NAV data for fund A (and B if active)
@@ -601,7 +633,20 @@ async function fetchNav(code) {
   if (!r.ok) throw new Error(`Could not fetch NAV for code ${code}`);
   const d = await r.json();
   if (!d.data || !d.data.length) throw new Error(`No NAV data found for scheme ${code}`);
-  return d.data; // [{date:'DD-MM-YYYY', nav:'X.XX'}], newest first
+  // Show NAV history info in the selected pill
+  const nav = d.data;
+  const newest = nav[0]?.date, oldest = nav[nav.length-1]?.date;
+  if (oldest && newest) {
+    const slot = Object.entries({'A':state.A,'B':state.B}).find(([,s])=>s.code===code)?.[0];
+    if (slot) {
+      const [od,om,oy] = oldest.split('-');
+      const [nd,nm,ny] = newest.split('-');
+      const yrs = ((new Date(ny,nm-1,nd) - new Date(oy,om-1,od)) / (365.25*86400000)).toFixed(1);
+      document.getElementById(`selCode${slot}`).textContent =
+        `Code: ${code}  ·  ${nav.length.toLocaleString()} NAV records  ·  ${yrs}Y history`;
+    }
+  }
+  return nav; // [{date:'DD-MM-YYYY', nav:'X.XX'}], newest first
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1171,8 +1216,10 @@ initFromUrl();
 // Fund B slot starts disabled visually
 document.getElementById('slotB').style.opacity = '0.45';
 document.getElementById('slotB').style.pointerEvents = 'none';
+// Note: toggleCompare() flips state.compareActive BEFORE this listener fires
+// so we read state.compareActive AFTER the flip — correctly reflects new state
 document.getElementById('compareToggle').addEventListener('click', function() {
-  const active = state.compareActive;
+  const active = state.compareActive; // already flipped by toggleCompare()
   document.getElementById('slotB').style.opacity = active ? '1' : '0.45';
   document.getElementById('slotB').style.pointerEvents = active ? 'auto' : 'none';
 });
