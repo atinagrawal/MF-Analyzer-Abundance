@@ -216,6 +216,53 @@ function parsePdfText(text) {
 }
 
 
+
+// Riskometer URL pattern: NSE_Indices_Riskometer_YYYY-MM.pdf
+// Try current month, fall back to previous month
+function getRiskometerUrl(year, month) {
+  // month: 1-12
+  const mm = String(month).padStart(2, '0');
+  return `https://niftyindices.com/Benchmark_Riskometer/NSE_Indices_Riskometer_${year}-${mm}.pdf`;
+}
+
+async function fetchRiskometer() {
+  const now = new Date();
+  // Try previous month (riskometer typically lags by ~1 month vs dashboard)
+  const attempts = [];
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    attempts.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
+  }
+
+  for (const { year, month } of attempts) {
+    const url = getRiskometerUrl(year, month);
+    try {
+      const { status, text } = await fetchPdfText(url);
+      if (status === 200 && text) {
+        return parseRiskometer(text);
+      }
+    } catch(e) { /* try next */ }
+  }
+  return {}; // graceful fallback — riskometer is optional
+}
+
+function parseRiskometer(text) {
+  const result = {};
+  const LABELS = ['Low To Moderate', 'Moderately High', 'Moderately Low', 'Very High', 'Moderate', 'High', 'Low'];
+  const labelPat = LABELS.join('|');
+  // Line format: "1 Nifty 50 5.33 Very High Broad Market"
+  // Match: serial  name  score  label
+  const lineRe = new RegExp(`^\d+\s+(.+?)\s+(\d+\.\d+)\s+(${labelPat})`, 'gm');
+  let m;
+  while ((m = lineRe.exec(text)) !== null) {
+    const name = m[1].trim();
+    const score = parseFloat(m[2]);
+    const label = m[3];
+    result[name] = { score, label };
+  }
+  return result;
+}
+
 function getPdfUrl(year, month) {
   // month: 0-11
   return `https://niftyindices.com/Index_Dashboard/Index_Dashboard_${MONTH_NAMES[month]}${year}.pdf`;
@@ -255,8 +302,11 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // Fetch and parse PDF text
-    const { status, text } = await fetchPdfText(pdfUrl);
+    // Fetch dashboard PDF and riskometer in parallel
+    const [{ status, text }, riskMap] = await Promise.all([
+      fetchPdfText(pdfUrl),
+      fetchRiskometer(),
+    ]);
 
     if (status !== 200 || !text) {
       // Try previous month as fallback
@@ -268,7 +318,8 @@ module.exports = async function handler(req, res) {
       }
       year = prev.getFullYear(); month = prev.getMonth();
       const indices = parsePdfText(fallback.text);
-      return res.status(200).json({ month: MONTH_FULL[month], year, asOf: `${year}-${String(month+1).padStart(2,'0')}-28`, indices, source: prevUrl });
+      const enrichedFallback = indices.map(idx => { const r = riskMap[idx.name]; return r ? { ...idx, riskScore: r.score, riskLabel: r.label } : idx; });
+      return res.status(200).json({ month: MONTH_FULL[month], year, asOf: `${year}-${String(month+1).padStart(2,'0')}-28`, count: enrichedFallback.length, indices: enrichedFallback, source: 'NSE Indices' });
     }
 
     const indices = parsePdfText(text);
@@ -281,13 +332,19 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'PDF parsed but no indices found. Check runtime logs.', url: pdfUrl });
     }
 
+    // Merge riskometer scores
+    const enriched = indices.map(idx => {
+      const risk = riskMap[idx.name];
+      return risk ? { ...idx, riskScore: risk.score, riskLabel: risk.label } : idx;
+    });
+
     return res.status(200).json({
       month: MONTH_FULL[month],
       year,
       asOf: `${year}-${String(month+1).padStart(2,'0')}-${new Date(year, month+1, 0).getDate()}`,
-      count: indices.length,
-      indices,
-      source: pdfUrl,
+      count: enriched.length,
+      indices: enriched,
+      source: 'NSE Indices',
     });
 
   } catch (err) {
