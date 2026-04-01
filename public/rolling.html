@@ -1043,6 +1043,20 @@ function renderOutput(rrA, rrB, benchIndexName) {
   const fmtPct = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
   const cagrClass = v => v >= 12 ? 'cagr-pos' : v >= 0 ? 'cagr-warn' : 'cagr-neg';
 
+  // Compute alpha if benchmark active
+  let alphaData = null, hitRatio = null, medAlpha = null;
+  if (statsB && rrA.length && rrB) {
+    alphaData = computeAlpha(rrA, rrB);
+    if (alphaData.length) {
+      hitRatio = alphaData.filter(r => r.alpha > 0).length / alphaData.length * 100;
+      const sortedAlpha = [...alphaData].map(r => r.alpha).sort((a,b)=>a-b);
+      const n = sortedAlpha.length;
+      medAlpha = n % 2 === 0
+        ? (sortedAlpha[n/2-1] + sortedAlpha[n/2]) / 2
+        : sortedAlpha[Math.floor(n/2)];
+    }
+  }
+
   // Stat cards HTML
   // For index mode: show alpha metrics; for fund mode: show side-by-side comparison
   const indexStatCards = isIndex && alphaData?.length ? [
@@ -1115,20 +1129,6 @@ function renderOutput(rrA, rrB, benchIndexName) {
         <div class="cl-item"><div class="cl-dot" style="background:${isIndex?'#e65100':'#7b1fa2'}"></div>${nameB}</div>
       </div>`
     : '';
-
-  // Compute alpha if benchmark active
-  let alphaData = null, hitRatio = null, medAlpha = null;
-  if (statsB && rrA.length && rrB) {
-    alphaData = computeAlpha(rrA, rrB);
-    if (alphaData.length) {
-      hitRatio = alphaData.filter(r => r.alpha > 0).length / alphaData.length * 100;
-      const sortedAlpha = [...alphaData].map(r => r.alpha).sort((a,b)=>a-b);
-      const n = sortedAlpha.length;
-      medAlpha = n % 2 === 0
-        ? (sortedAlpha[n/2-1] + sortedAlpha[n/2]) / 2
-        : sortedAlpha[Math.floor(n/2)];
-    }
-  }
 
   const insight = buildInsight(statsA, statsB, rrA);
 
