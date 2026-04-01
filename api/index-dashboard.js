@@ -104,14 +104,30 @@ const INDEX_META = {
 
 const KNOWN_NAMES = Object.keys(INDEX_META);
 
-function fetchPdf(url) {
-  return new Promise((resolve, reject) => {
+async function fetchPdfText(url) {
+  // Fetch the PDF binary
+  const buffer = await new Promise((resolve, reject) => {
     https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 Chrome/120.0.0.0 Safari/537.36' } }, res => {
+      if (res.statusCode !== 200) {
+        // Drain response
+        res.resume();
+        return resolve({ status: res.statusCode, text: null });
+      }
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => resolve({ status: res.statusCode, buffer: Buffer.concat(chunks) }));
-    }).on('error', reject).setTimeout(20000, function() { this.destroy(new Error('PDF fetch timeout')); });
+    }).on('error', reject).setTimeout(25000, function() { this.destroy(new Error('PDF fetch timeout')); });
   });
+
+  if (!buffer.buffer) return { status: buffer.status, text: null };
+
+  // Use pdf-parse to extract text
+  const pdfParse = require('pdf-parse');
+  const data = await pdfParse(buffer.buffer, {
+    // Extract all pages as text
+    max: 0,
+  });
+  return { status: 200, text: data.text };
 }
 
 function parsePdfText(text) {
@@ -208,28 +224,29 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // Fetch PDF
-    const { status, buffer } = await fetchPdf(pdfUrl);
+    // Fetch and parse PDF text
+    const { status, text } = await fetchPdfText(pdfUrl);
 
-    if (status !== 200) {
+    if (status !== 200 || !text) {
       // Try previous month as fallback
       const prev = new Date(year, month - 1, 1);
       const prevUrl = getPdfUrl(prev.getFullYear(), prev.getMonth());
-      const fallback = await fetchPdf(prevUrl);
-      if (fallback.status !== 200) {
+      const fallback = await fetchPdfText(prevUrl);
+      if (fallback.status !== 200 || !fallback.text) {
         return res.status(502).json({ error: `PDF not available: ${pdfUrl}`, status });
       }
       year = prev.getFullYear(); month = prev.getMonth();
-      const text = fallback.buffer.toString('utf8');
-      const indices = parsePdfText(text);
+      const indices = parsePdfText(fallback.text);
       return res.status(200).json({ month: MONTH_FULL[month], year, asOf: `${year}-${String(month+1).padStart(2,'0')}-28`, indices, source: prevUrl });
     }
 
-    const text = buffer.toString('utf8');
     const indices = parsePdfText(text);
 
     if (!indices.length) {
-      return res.status(500).json({ error: 'PDF parsed but no indices found', url: pdfUrl, preview: text.slice(0, 500) });
+      // Log first 1000 chars for debugging
+      const preview = text ? text.slice(0, 1000) : 'no text extracted';
+      console.error('[index-dashboard] Parse failed. Text preview:', preview);
+      return res.status(500).json({ error: 'PDF parsed but no indices found', url: pdfUrl, preview });
     }
 
     return res.status(200).json({
