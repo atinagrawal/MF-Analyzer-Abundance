@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en-IN" prefix="og: https://ogp.me/ns#">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NSE Index Dashboard — Returns, Valuation & Risk | Abundance</title>
+<meta name="description" content="Monthly NSE index dashboard — 100+ indices with 1M, 3M, 1Y, 3Y, 5Y returns, P/E, P/B and Beta. Broad, sectoral, strategy and thematic indices. Free by Abundance Financial Services® ARN-251838.">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+<meta name="author" content="Abundance Financial Services, ARN-251838">
+<meta name="theme-color" content="#1b5e20">
+<meta name="geo.region" content="IN">
+<link rel="canonical" href="https://mfcalc.getabundance.in/indices">
+<link rel="icon" type="image/x-icon" href="https://www.getabundance.in/favicon.ico">
+<meta property="og:title" content="NSE Index Dashboard — Returns, Valuation & Risk | Abundance">
+<meta property="og:description" content="100+ NSE indices — monthly returns, P/E, P/B, Beta in one sortable table. Broad, sectoral, strategy and thematic. Free by Abundance Financial Services® ARN-251838.">
+<meta property="og:url" content="https://mfcalc.getabundance.in/indices">
+<meta property="og:image" content="https://mfcalc.getabundance.in/og-indices.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Abundance Financial Services">
+<meta property="og:locale" content="en_IN">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://mfcalc.getabundance.in/og-indices.png">
+<meta name="keywords" content="NSE index returns India, Nifty 50 returns, Nifty index dashboard, NSE index PE PB, mutual fund benchmark, index comparison India">
+<link rel="alternate" hreflang="en-IN" href="https://mfcalc.getabundance.in/indices">
+<link rel="alternate" hreflang="x-default" href="https://mfcalc.getabundance.in/indices">
+<link rel="sitemap" type="application/xml" href="https://mfcalc.getabundance.in/sitemap.xml">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-9KMZ8MS3M7"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-9KMZ8MS3M7');</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"NSE Index Dashboard","url":"https://mfcalc.getabundance.in/indices","description":"Monthly NSE Index Dashboard showing 100+ indices with 1M, 3M, 1Y, 3Y, 5Y TRI returns, P/E, P/B, Beta and Dividend Yield. Data sourced from NSE Indices Limited (niftyindices.com) official monthly PDF.","applicationCategory":"FinanceApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","inLanguage":"en-IN","dateModified":"2026-03-31","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"},"featureList":["100+ NSE indices","1M 3M 1Y 3Y 5Y TRI returns","P/E P/B Dividend Yield","Beta Volatility Correlation","Sortable by any column","Filter by category","Link to Rolling Returns benchmark"],"provider":{"@type":"FinancialService","name":"Abundance Financial Services","url":"https://www.getabundance.in","telephone":"+919808105923","identifier":"ARN-251838"},"isPartOf":{"@type":"WebSite","name":"Abundance MF Calculator","url":"https://mfcalc.getabundance.in"}}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.getabundance.in"},{"@type":"ListItem","position":2,"name":"MF Calculator","item":"https://mfcalc.getabundance.in"},{"@type":"ListItem","position":3,"name":"NSE Index Dashboard","item":"https://mfcalc.getabundance.in/indices"}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f7f0;--surface:#fff;--s2:#edf6ed;--s3:#dff0df;
+  --border:#c2dfc2;--border2:#a8cfa8;
+  --text:#162616;--text2:#2e4d2e;--muted:#5e8a5e;
+  --g1:#1b5e20;--g2:#2e7d32;--g3:#43a047;--g4:#66bb6a;
+  --neg:#b71c1c;--neg-bg:#ffebee;--neg-light:#ef5350;
+  --warn:#e65100;--warn-bg:#fff3e0;
+  --shadow:0 2px 16px rgba(46,125,50,.09);
+  --r:14px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Raleway',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse 70% 40% at 50% -10%,rgba(46,125,50,.07) 0%,transparent 60%)}
+a{color:inherit;text-decoration:none}
+.container{max-width:1280px;margin:0 auto;padding:0 20px}
+
+/* NAVBAR */
+.navbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0 18px;
+  margin-bottom:28px;border-bottom:1.5px solid var(--border);gap:16px;flex-wrap:wrap}
+.logo-wrap{display:flex;align-items:center;gap:12px}
+.logo-img{height:38px;width:auto;border-radius:6px}
+.logo-icon{width:38px;height:38px;border-radius:8px;background:var(--g2);color:#fff;
+  font-weight:800;font-size:1.1rem;display:none;align-items:center;justify-content:center}
+.logo-text .brand{font-size:.95rem;font-weight:800;color:var(--g1)}
+.logo-text .sub{font-size:.62rem;font-weight:600;color:var(--muted)}
+.nav-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nav-link{padding:7px 12px;border-radius:8px;font-size:.72rem;font-weight:700;color:var(--g2);
+  background:var(--s2);border:1.5px solid var(--border);transition:.15s}
+.nav-link:hover{background:var(--s3);border-color:var(--border2)}
+.nav-tag{padding:7px 12px;border-radius:8px;font-size:.72rem;font-weight:700;background:var(--g1);color:#fff}
+
+/* PAGE HEADER */
+.page-header{margin-bottom:24px}
+.page-eyebrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#43a047;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.eyebrow-text{font-size:.65rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);font-family:'JetBrains Mono',monospace}
+.page-title{font-size:1.6rem;font-weight:800;color:var(--g1);letter-spacing:-.5px}
+.page-title span{color:var(--g3)}
+.page-subtitle{font-size:.82rem;color:var(--muted);margin-top:6px;font-weight:500}
+
+/* CONTROLS */
+.controls-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.cat-btn{padding:6px 14px;border-radius:20px;font-family:'Raleway',sans-serif;
+  font-size:.7rem;font-weight:700;cursor:pointer;border:1.5px solid var(--border);
+  background:var(--s2);color:var(--muted);transition:.15s}
+.cat-btn:hover{background:var(--s3);border-color:var(--border2);color:var(--g2)}
+.cat-btn.active{background:var(--g1);border-color:var(--g1);color:#fff}
+.search-box{padding:7px 14px;border:1.5px solid var(--border2);border-radius:10px;
+  font-family:'Raleway',sans-serif;font-size:.78rem;font-weight:600;color:var(--text);
+  background:var(--s2);outline:none;width:220px;transition:.15s}
+.search-box:focus{border-color:var(--g3);background:#fff}
+.data-badge{font-size:.62rem;font-weight:700;padding:4px 10px;border-radius:20px;
+  background:var(--s2);border:1px solid var(--border);color:var(--muted);
+  font-family:'JetBrains Mono',monospace;margin-left:auto}
+
+/* TABLE */
+.table-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);
+  overflow:hidden;box-shadow:var(--shadow)}
+.table-wrap{overflow-x:auto}
+.idx-table{width:100%;border-collapse:collapse;font-size:.73rem;min-width:900px}
+.idx-table th{text-align:right;padding:10px 12px;background:var(--s2);font-size:.58rem;
+  font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);
+  border-bottom:1.5px solid var(--border);font-family:'JetBrains Mono',monospace;
+  cursor:pointer;user-select:none;white-space:nowrap;transition:.15s}
+.idx-table th:first-child{text-align:left;padding-left:16px;width:220px}
+.idx-table th:hover{color:var(--g2)}
+.idx-table th.sorted-asc::after{content:' ▲';font-size:.55rem}
+.idx-table th.sorted-desc::after{content:' ▼';font-size:.55rem}
+.idx-table th.th-group{background:#e8f5e9;color:var(--g2);border-bottom-color:var(--border2)}
+
+.idx-table td{padding:9px 12px;border-bottom:1px solid var(--border);
+  text-align:right;font-family:'JetBrains Mono',monospace;vertical-align:middle;white-space:nowrap}
+.idx-table td:first-child{text-align:left;padding-left:16px;font-family:'Raleway',sans-serif;font-weight:600}
+.idx-table tr:last-child td{border-bottom:none}
+.idx-table tr:hover td{background:var(--s2)}
+.idx-table tr.hidden{display:none}
+
+/* Cat pill */
+.cat-pill{display:inline-block;font-size:.52rem;font-weight:800;letter-spacing:.4px;
+  padding:2px 6px;border-radius:4px;text-transform:uppercase;
+  font-family:'JetBrains Mono',monospace;vertical-align:middle;margin-left:5px}
+.cat-broad   {background:#e8f5e9;color:#1b5e20}
+.cat-sectoral{background:#fff3e0;color:#e65100}
+.cat-strategy{background:#f3e5f5;color:#6a1b9a}
+.cat-thematic{background:#e3f2fd;color:#1565c0}
+
+/* Return colors */
+.ret-pos{color:#2e7d32;font-weight:700}
+.ret-neg{color:#b71c1c;font-weight:700}
+.ret-neu{color:var(--muted)}
+
+/* Roll link */
+.roll-btn{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;
+  font-size:.58rem;font-weight:700;background:var(--s2);border:1px solid var(--border);
+  color:var(--g2);cursor:pointer;text-decoration:none;transition:.15s;white-space:nowrap}
+.roll-btn:hover{background:var(--g1);color:#fff;border-color:var(--g1)}
+
+/* Skeleton */
+@keyframes skSweep{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.sk{background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);
+  background-size:400% 100%;animation:skSweep 1.5s ease infinite;border-radius:4px}
+
+/* Column group headers */
+.th-divider{border-left:1.5px solid var(--border)}
+.td-divider{border-left:1.5px solid var(--border)}
+
+/* Footer */
+.dark-footer{background:#0d1f0d;color:#c8e6c9;margin-top:48px}
+.dark-footer-edge{height:3px;background:linear-gradient(90deg,#1b5e20,#43a047,#a5d6a7,#43a047,#1b5e20)}
+.dark-footer-inner{max-width:1280px;margin:0 auto;padding:32px 20px 0}
+.dark-footer-bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  gap:6px;padding:16px 0;border-top:1px solid rgba(255,255,255,.08);margin-top:20px;
+  font-size:.67rem;color:rgba(200,230,201,.5)}
+.dfb-arn{font-family:'JetBrains Mono',monospace;font-size:.62rem}
+.dark-footer-disclaimer{background:rgba(255,255,255,.04);border-radius:10px;padding:12px 16px;
+  font-size:.65rem;color:rgba(200,230,201,.5);line-height:1.7}
+
+.src-line{display:flex;align-items:center;gap:6px;font-size:.58rem;color:var(--muted);
+  font-family:'JetBrains Mono',monospace;margin-top:12px;justify-content:flex-end}
+.src-dot{width:5px;height:5px;border-radius:50%;background:var(--g3)}
+
+@media(max-width:700px){.search-box{width:100%}.data-badge{margin-left:0}}
+</style>
+<script>window.si=window.si||function(){(window.siq=window.siq||[]).push(arguments);};</script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</head>
+<body>
+<div class="container">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a class="logo-wrap" href="https://www.getabundance.in" target="_blank" rel="noopener">
+      <img class="logo-img" src="/logo-navbar.png" alt="Abundance Financial Services®"
+        width="140" height="56" loading="eager"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="logo-icon">A</div>
+      <div class="logo-text">
+        <div class="brand">Abundance</div>
+        <div class="sub">Financial Services<sup style="font-size:.55em;opacity:.75">®</sup></div>
+      </div>
+    </a>
+    <div class="nav-right">
+      <a class="nav-link" href="https://www.getabundance.in" target="_blank" rel="noopener">🏠 Home</a>
+      <a class="nav-link" href="/">📊 MF Calculator</a>
+      <a class="nav-link" href="/industry">📈 Industry Pulse</a>
+      <a class="nav-link" href="/report">📋 Report Card</a>
+      <a class="nav-link" href="/geography">🗺 Geography</a>
+      <a class="nav-link" href="/rolling">📉 Rolling Returns</a>
+      <div class="nav-tag">📊 Index Dashboard</div>
+      <a class="nav-link" href="https://www.getabundance.in/contact-us" target="_blank" rel="noopener">📞 Contact</a>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-eyebrow">
+      <div class="live-dot"></div>
+      <span class="eyebrow-text">NSE Indices · Official Monthly Data · TRI Basis</span>
+    </div>
+    <h1 class="page-title">Index <span>Dashboard</span></h1>
+    <p class="page-subtitle">100+ NSE indices — monthly returns, P/E, P/B, Beta and Volatility. Source: NSE Indices Limited official PDF.</p>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls-bar" id="controls" style="display:none">
+    <button class="cat-btn active" data-cat="all"       onclick="filterCat('all',this)">All</button>
+    <button class="cat-btn"        data-cat="broad"     onclick="filterCat('broad',this)">Broad Market</button>
+    <button class="cat-btn"        data-cat="sectoral"  onclick="filterCat('sectoral',this)">Sectoral</button>
+    <button class="cat-btn"        data-cat="strategy"  onclick="filterCat('strategy',this)">Strategy</button>
+    <button class="cat-btn"        data-cat="thematic"  onclick="filterCat('thematic',this)">Thematic</button>
+    <input class="search-box" type="text" placeholder="🔍 Search index…" id="searchBox" oninput="filterSearch(this.value)">
+    <span class="data-badge" id="dataBadge">Loading…</span>
+  </div>
+
+  <!-- SKELETON -->
+  <div id="skeleton" class="table-card" style="padding:20px">
+    <div style="display:grid;gap:10px">
+      ${[...Array(12)].map(()=>`<div class="sk" style="height:32px;border-radius:6px"></div>`).join('')}
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-card" id="tableCard" style="display:none">
+    <div class="table-wrap">
+      <table class="idx-table" id="idxTable">
+        <thead>
+          <tr>
+            <th onclick="sortTable('name')" style="text-align:left">Index Name</th>
+            <th onclick="sortTable('r1m')" class="th-divider">1M%</th>
+            <th onclick="sortTable('r3m')">3M%</th>
+            <th onclick="sortTable('r1y')">1Y%</th>
+            <th onclick="sortTable('r3y')">3Y%</th>
+            <th onclick="sortTable('r5y')">5Y%</th>
+            <th onclick="sortTable('vol')" class="th-divider">Vol%</th>
+            <th onclick="sortTable('beta')">Beta</th>
+            <th onclick="sortTable('pe')" class="th-divider">P/E</th>
+            <th onclick="sortTable('pb')">P/B</th>
+            <th onclick="sortTable('dy')">Div Yield</th>
+            <th style="cursor:default">Compare</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="src-line" id="srcLine" style="padding:10px 16px">
+      <div class="src-dot"></div>
+      <span id="srcText">Data: NSE Indices Limited · niftyindices.com · TRI basis</span>
+    </div>
+  </div>
+
+  <div id="errorBox" style="display:none;padding:20px;background:#ffebee;border:1.5px solid #ffcdd2;border-radius:14px;color:#b71c1c;font-weight:600"></div>
+
+</div><!-- /container -->
+
+<footer class="dark-footer">
+  <div class="dark-footer-edge"></div>
+  <div class="dark-footer-inner">
+    <div class="dark-footer-disclaimer">
+      ⚠ <strong>Disclaimer:</strong> Index returns are on a Total Return Index (TRI) basis sourced from NSE Indices Limited official monthly publication. Mutual fund investments are subject to market risks. Past performance does not guarantee future returns. This tool is for informational and educational purposes only and does not constitute financial advice.
+    </div>
+    <div class="dark-footer-bottom">
+      <span>© <span id="footerYear"></span> Abundance Financial Services® · Atin Kumar Agrawal</span>
+      <span class="dfb-arn">ARN-251838 · AMFI Registered Mutual Funds Distributor &amp; SIF Distributor</span>
+      <span class="dfb-arn">GST: 05AXYPA6954G1Z3</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+document.getElementById('footerYear').textContent = new Date().getFullYear();
+
+let _allData = [];
+let _sortKey = 'r1y';
+let _sortDir = -1;
+let _catFilter = 'all';
+let _searchFilter = '';
+
+const CAT_LABELS = { broad: 'Broad', sectoral: 'Sectoral', strategy: 'Strategy', thematic: 'Thematic' };
+
+function fmtRet(v) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const cls = v > 0 ? 'ret-pos' : v < 0 ? 'ret-neg' : 'ret-neu';
+  const txt = (v > 0 ? '+' : '') + v.toFixed(2) + '%';
+  return `<span class="${cls}">${txt}</span>`;
+}
+function fmtNum(v, dp=2) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  return v.toFixed(dp);
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderTable() {
+  let rows = _allData.slice();
+
+  // Category filter
+  if (_catFilter !== 'all') rows = rows.filter(r => r.category === _catFilter);
+
+  // Search filter
+  if (_searchFilter) {
+    const q = _searchFilter.toLowerCase();
+    rows = rows.filter(r => r.name.toLowerCase().includes(q));
+  }
+
+  // Sort
+  rows.sort((a, b) => {
+    const kMap = {
+      name: r => r.name,
+      r1m: r => r.returns.m1, r3m: r => r.returns.m3,
+      r1y: r => r.returns.y1, r3y: r => r.returns.y3,
+      r5y: r => r.returns.y5, vol: r => r.risk.volatility,
+      beta: r => r.risk.beta, pe: r => r.valuation.pe,
+      pb: r => r.valuation.pb, dy: r => r.valuation.dividendYield,
+    };
+    const fn = kMap[_sortKey] || (r => r.name);
+    const aV = fn(a), bV = fn(b);
+    if (typeof aV === 'string') return _sortDir * aV.localeCompare(bV);
+    return _sortDir * ((aV ?? -999) - (bV ?? -999));
+  });
+
+  // Update sort indicators
+  document.querySelectorAll('.idx-table th').forEach(th => {
+    th.classList.remove('sorted-asc','sorted-desc');
+  });
+
+  // Render rows
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = rows.map(r => {
+    const encodedName = encodeURIComponent(r.name);
+    const rollUrl = `/rolling?bench=${encodedName}`;
+    return `<tr data-cat="${r.category}">
+      <td>
+        ${esc(r.name)}
+        <span class="cat-pill cat-${r.category}">${CAT_LABELS[r.category]||r.category}</span>
+      </td>
+      <td class="td-divider">${fmtRet(r.returns.m1)}</td>
+      <td>${fmtRet(r.returns.m3)}</td>
+      <td>${fmtRet(r.returns.y1)}</td>
+      <td>${fmtRet(r.returns.y3)}</td>
+      <td>${fmtRet(r.returns.y5)}</td>
+      <td class="td-divider">${fmtNum(r.risk.volatility)}</td>
+      <td>${fmtNum(r.risk.beta)}</td>
+      <td class="td-divider">${fmtNum(r.valuation.pe)}</td>
+      <td>${fmtNum(r.valuation.pb)}</td>
+      <td>${fmtNum(r.valuation.dividendYield)}</td>
+      <td><a class="roll-btn" href="${rollUrl}" title="Compare vs ${esc(r.name)} on Rolling Returns">📉 vs Rolling</a></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('dataBadge').textContent = `${rows.length} of ${_allData.length} indices`;
+}
+
+function sortTable(key) {
+  if (_sortKey === key) _sortDir *= -1;
+  else { _sortKey = key; _sortDir = -1; }
+  renderTable();
+}
+
+function filterCat(cat, btn) {
+  _catFilter = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function filterSearch(q) {
+  _searchFilter = q.trim();
+  renderTable();
+}
+
+async function loadData() {
+  try {
+    const res = await fetch('/api/index-dashboard');
+    if (!res.ok) throw new Error(`API returned ${res.status}`);
+    const data = await res.json();
+
+    if (!data.indices?.length) throw new Error('No index data in response');
+
+    _allData = data.indices;
+
+    document.getElementById('skeleton').style.display = 'none';
+    document.getElementById('tableCard').style.display = '';
+    document.getElementById('controls').style.display = 'flex';
+
+    const srcText = `Data: NSE Indices Limited · ${data.month} ${data.year} · TRI basis · ${data.count} indices`;
+    document.getElementById('srcText').textContent = srcText;
+
+    // Update page subtitle with month
+    document.querySelector('.page-subtitle').textContent =
+      `${data.count} NSE indices as of ${data.month} ${data.year} — returns, P/E, P/B, Beta, Volatility. Source: NSE Indices Limited.`;
+
+    renderTable();
+
+  } catch(e) {
+    document.getElementById('skeleton').style.display = 'none';
+    document.getElementById('errorBox').style.display = '';
+    document.getElementById('errorBox').textContent = `⚠ Could not load index data: ${e.message}. Please try again in a moment.`;
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>
