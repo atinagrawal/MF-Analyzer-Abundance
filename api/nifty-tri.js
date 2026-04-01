@@ -39,7 +39,7 @@ async function blobPut(slugName,indexName,data){
   try{
     const{put}=require('@vercel/blob');
     await put(`${CACHE_PRE}${slugName}.json`,JSON.stringify({index:indexName,lastUpdated:new Date().toISOString(),count:data.length,data}),{access:'public',contentType:'application/json',addRandomSuffix:false,token:process.env.BLOB_READ_WRITE_TOKEN});
-  }catch(e){console.error('[nifty-tri] blob write:',e.message)}
+  }catch(e){console.error('[nifty-tri] BLOB WRITE FAILED — name:',e.name,'msg:',e.message,'status:',e.status||'?','token-present:',!!process.env.BLOB_READ_WRITE_TOKEN)}
 }
 
 async function fetchChunk(indexName,startDate,endDate,cookieStr){
@@ -75,8 +75,22 @@ async function fetchRange(indexName,fromStr,toStr,cookieStr){
 
 module.exports = async function handler(req,res){
   res.setHeader('Access-Control-Allow-Origin','*');
+
+  // Diagnostic endpoint: /api/nifty-tri?health=1
+  if(req.query.health){
+    const hasToken=!!process.env.BLOB_READ_WRITE_TOKEN;
+    let blobStatus='not-tested';
+    if(hasToken){
+      try{
+        const{list}=require('@vercel/blob');
+        await list({prefix:'tri-cache/',limit:1,token:process.env.BLOB_READ_WRITE_TOKEN});
+        blobStatus='ok';
+      }catch(e){blobStatus=`error: ${e.name} - ${e.message}`;}
+    }else{blobStatus='BLOB_READ_WRITE_TOKEN not set';}
+    return res.status(200).json({hasToken,blobStatus,node:process.version,pkg:'@vercel/blob'});
+  }
   res.setHeader('Access-Control-Allow-Methods','GET, OPTIONS');
-  res.setHeader('Cache-Control','s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control','s-maxage=86400, stale-while-revalidate=604800');
   if(req.method==='OPTIONS')return res.status(200).end();
 
   const indexName=req.query.index||'NIFTY 50';
@@ -86,26 +100,28 @@ module.exports = async function handler(req,res){
   const hasBlob=!!process.env.BLOB_READ_WRITE_TOKEN;
 
   try{
-    // Acquire cookie
-    const homeRes=await httpsRequest({hostname:'www.niftyindices.com',path:'/',method:'GET',headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36','Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8','Accept-Language':'en-US,en;q=0.9'}});
-    const setCookieRaw=homeRes.headers['set-cookie']||[];
-    const cookieStr=(Array.isArray(setCookieRaw)?setCookieRaw:[setCookieRaw]).map(c=>c.split(';')[0]).join('; ');
-    if(!cookieStr)return res.status(502).json({error:'Could not acquire session cookie'});
-
-    // Check blob cache
+    // Check blob cache FIRST — skip cookie fetch entirely on cache hit
     let cached=null,fromStr=req.query.from||defaultFrom;
     if(hasBlob){
       cached=await blobGet(slugName);
       if(cached?.data?.length){
         const lastDate=cached.data[cached.data.length-1].date;
         const lastTs=parseDate(lastDate);
-        const yesterday=addDays(new Date(),-1);yesterday.setHours(0,0,0,0);
-        if(lastTs>=yesterday){
+        // Use -4 days window: covers weekends (Fri cache valid Mon) + public holidays
+        const staleCutoff=addDays(new Date(),-4);staleCutoff.setHours(0,0,0,0);
+        if(lastTs>=staleCutoff){
+          // Cache is fresh — return immediately, no niftyindices.com call needed
           return res.status(200).json({index:indexName,from:cached.data[0].date,to:lastDate,source:'blob-cache',type:'TRI',chunks:0,count:cached.data.length,sampleKeys:['Date','TotalReturnsIndex'],dateKey:'Date',valueKey:'TotalReturnsIndex',oldest:cached.data[0],newest:cached.data[cached.data.length-1],data:cached.data});
         }
         fromStr=fmtDate(addDays(lastTs,1));
       }
     }
+
+    // Acquire cookie (only reached if cache miss or stale)
+    const homeRes=await httpsRequest({hostname:'www.niftyindices.com',path:'/',method:'GET',headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36','Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8','Accept-Language':'en-US,en;q=0.9'}});
+    const setCookieRaw=homeRes.headers['set-cookie']||[];
+    const cookieStr=(Array.isArray(setCookieRaw)?setCookieRaw:[setCookieRaw]).map(c=>c.split(';')[0]).join('; ');
+    if(!cookieStr)return res.status(502).json({error:'Could not acquire session cookie'});
 
     // Fetch gap from niftyindices
     const{rows,sampleKeys,errors,chunks}=await fetchRange(indexName,fromStr,toStr,cookieStr);
@@ -121,7 +137,8 @@ module.exports = async function handler(req,res){
     const seenMerge=new Set(cachedData.map(r=>r.date));
     const merged=[...cachedData,...newData.filter(r=>!seenMerge.has(r.date))].sort((a,b)=>parseDate(a.date)-parseDate(b.date));
 
-    if(hasBlob&&merged.length)blobPut(slugName,indexName,merged);
+    // Fire-and-forget: blob write runs after response is sent
+    if(hasBlob&&merged.length)blobPut(slugName,indexName,merged).catch(()=>{});
 
     return res.status(200).json({index:indexName,from:merged[0]?.date||fromStr,to:merged[merged.length-1]?.date||toStr,source:'niftyindices.com/getTotalReturnIndexString',type:triKey?'TRI':'PRICE',cached:hasBlob,chunks,count:merged.length,sampleKeys:['Date','TotalReturnsIndex'],dateKey:'Date',valueKey:'TotalReturnsIndex',oldest:merged[0],newest:merged[merged.length-1],...(errors.length?{errors}:{}),data:merged});
   }catch(err){
