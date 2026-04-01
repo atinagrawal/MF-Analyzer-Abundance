@@ -22,14 +22,14 @@
 <meta property="og:locale" content="en_IN">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://mfcalc.getabundance.in/og-rolling.png">
-<meta name="keywords" content="rolling returns mutual fund India, rolling CAGR calculator, mutual fund consistency, SIP returns analysis, AMFI NAV history, fund comparison India">
+<meta name="keywords" content="rolling returns mutual fund India, rolling CAGR calculator, mutual fund benchmark comparison, Nifty 50 TRI comparison, mutual fund consistency, AMFI NAV history, fund vs index comparison India">
 <link rel="alternate" hreflang="en-IN" href="https://mfcalc.getabundance.in/rolling">
 <link rel="alternate" hreflang="x-default" href="https://mfcalc.getabundance.in/rolling">
 <link rel="sitemap" type="application/xml" href="https://mfcalc.getabundance.in/sitemap.xml">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-9KMZ8MS3M7"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-9KMZ8MS3M7');</script>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"Rolling Returns Visualizer","url":"https://mfcalc.getabundance.in/rolling","description":"Analyse rolling returns of any Indian mutual fund. See 1Y, 3Y, 5Y, 7Y, 10Y rolling CAGR distribution — how consistent a fund has been across every possible entry point. Compare two funds side by side.","applicationCategory":"FinanceApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","inLanguage":"en-IN","dateModified":"2026-03-30","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"},"featureList":["Rolling CAGR for 1Y/3Y/5Y/7Y/10Y windows","Distribution histogram","Timeline consistency chart","Compare two funds side by side","Benchmark vs Nifty 50","Works on any AMFI-listed open-ended fund"],"provider":{"@type":"FinancialService","name":"Abundance Financial Services","url":"https://www.getabundance.in","telephone":"+919808105923","identifier":"ARN-251838"},"isPartOf":{"@type":"WebSite","name":"Abundance MF Calculator","url":"https://mfcalc.getabundance.in"}}
+{"@context":"https://schema.org","@type":"WebApplication","name":"Rolling Returns Visualizer","url":"https://mfcalc.getabundance.in/rolling","description":"Analyse rolling returns of any Indian mutual fund. See 1Y, 3Y, 5Y, 7Y, 10Y rolling CAGR distribution — how consistent a fund has been across every possible entry point. Compare two funds side by side.","applicationCategory":"FinanceApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","inLanguage":"en-IN","dateModified":"2026-03-31","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"},"featureList":["Rolling CAGR for 1Y/3Y/5Y/7Y/10Y windows","Distribution histogram","Timeline consistency chart","Compare vs 100+ NSE indices (TRI)","Hit ratio and alpha analysis","Benchmark quick-select","Compare two funds side by side","Works on any AMFI-listed open-ended fund"],"provider":{"@type":"FinancialService","name":"Abundance Financial Services","url":"https://www.getabundance.in","telephone":"+919808105923","identifier":"ARN-251838"},"isPartOf":{"@type":"WebSite","name":"Abundance MF Calculator","url":"https://mfcalc.getabundance.in"}}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.getabundance.in"},{"@type":"ListItem","position":2,"name":"MF Calculator","item":"https://mfcalc.getabundance.in"},{"@type":"ListItem","position":3,"name":"Rolling Returns Visualizer","item":"https://mfcalc.getabundance.in/rolling"}]}
@@ -259,6 +259,53 @@ a{color:inherit;text-decoration:none}
 .dark-footer-disclaimer{background:rgba(255,255,255,.04);border-radius:10px;padding:12px 16px;
   font-size:.65rem;color:rgba(200,230,201,.5);line-height:1.7}
 
+
+/* ── SLOT MODE TOGGLE ── */
+.slot-mode-row{display:flex;gap:5px;margin-bottom:8px}
+.slot-mode-btn{padding:5px 12px;border-radius:8px;font-family:'Raleway',sans-serif;
+  font-size:.68rem;font-weight:700;cursor:pointer;border:1.5px solid var(--border);
+  background:var(--s2);color:var(--muted);transition:.15s}
+.slot-mode-btn.active{background:var(--g1);border-color:var(--g1);color:#fff}
+.slot-mode-btn:hover:not(.active){background:var(--s3);border-color:var(--border2);color:var(--g2)}
+
+/* ── BENCHMARK CHIPS ── */
+.bench-chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.bench-chip{padding:4px 10px;border-radius:16px;font-family:'Raleway',sans-serif;
+  font-size:.66rem;font-weight:700;cursor:pointer;border:1.5px solid var(--border);
+  background:var(--s2);color:var(--muted);transition:.15s}
+.bench-chip:hover{background:var(--s3);border-color:var(--border2);color:var(--g2)}
+.bench-chip.active{background:var(--g1);border-color:var(--g1);color:#fff}
+
+/* ── MORE INDICES ── */
+.more-indices-btn{font-size:.64rem;font-weight:700;color:var(--g2);background:none;
+  border:none;cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:2px;
+  font-family:'Raleway',sans-serif;transition:.15s}
+.more-indices-btn:hover{color:var(--g1)}
+.more-indices-drop{position:absolute;top:100%;left:0;right:0;z-index:300;
+  background:#fff;border:1.5px solid var(--border2);border-radius:10px;
+  box-shadow:var(--shadow-lg);max-height:320px;overflow:hidden;display:flex;flex-direction:column}
+.idx-search-in{padding:9px 14px;border:none;border-bottom:1.5px solid var(--border);
+  font-family:'Raleway',sans-serif;font-size:.78rem;font-weight:600;outline:none;
+  color:var(--text);flex-shrink:0}
+#idxDropBody{overflow-y:auto;flex:1}
+.idx-drop-section{padding:6px 14px 2px;font-size:.55rem;font-weight:800;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted);font-family:'JetBrains Mono',monospace;
+  border-top:1px solid var(--border);margin-top:4px}
+.idx-drop-section:first-child{border-top:none;margin-top:0}
+.idx-drop-item{padding:8px 14px;cursor:pointer;font-size:.75rem;font-weight:600;
+  color:var(--text2);transition:.1s}
+.idx-drop-item:hover,.idx-drop-item.active{background:var(--s2);color:var(--g1)}
+.idx-drop-item.hidden{display:none}
+
+/* ── BENCHMARK PILL ── */
+.bench-pill{margin-top:8px;padding:8px 12px;background:var(--s2);
+  border:1.5px solid var(--border);border-radius:9px}
+#benchPillName{display:block;font-size:.75rem;font-weight:700;color:var(--g1)}
+#benchPillSub{display:block;font-size:.6rem;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px}
+
+/* ── ALPHA CHART card ── */
+.alpha-pos{color:var(--g2);font-weight:700}
+.alpha-neg{color:var(--neg);font-weight:700}
 @media(max-width:768px){
   .search-row{grid-template-columns:1fr;gap:10px}
   .vs-divider{flex-direction:row;padding-top:0;padding-left:0}
@@ -296,6 +343,7 @@ a{color:inherit;text-decoration:none}
       <a class="nav-link" href="/report">📋 Report Card</a>
       <a class="nav-link" href="/geography">🗺 Geography</a>
       <div class="nav-tag">📉 Rolling Returns</div>
+      <a class="nav-link" href="/indices">📊 Index Dashboard</a>
       <a class="nav-link" href="https://www.getabundance.in/contact-us" target="_blank" rel="noopener">📞 Contact</a>
     </div>
   </nav>
@@ -331,22 +379,58 @@ a{color:inherit;text-decoration:none}
 
       <!-- VS divider -->
       <div class="vs-divider">
-        <div class="vs-label">VS</div>
-        <button class="vs-toggle" id="compareToggle" onclick="toggleCompare()">+ Compare</button>
+        <div class="vs-label" id="vsLabel">VS</div>
       </div>
 
-      <!-- Fund B -->
+      <!-- Right slot: Index picker or Fund B -->
       <div class="fund-slot" id="slotB">
-        <div class="fund-label fund-label-b"><span class="badge">B</span> Fund 2 <span style="font-size:.55rem;font-weight:500;color:var(--muted);margin-left:4px">(optional)</span></div>
-        <div class="fund-input-wrap">
-          <input class="fund-input" id="inputB" type="text" placeholder="Type to compare…" autocomplete="off" spellcheck="false" disabled>
-          <button class="fund-clear" id="clearB" onclick="clearInput('B')" title="Clear">✕</button>
+
+        <!-- Mode toggle -->
+        <div class="slot-mode-row">
+          <button class="slot-mode-btn active" id="modeIndexBtn" onclick="setBenchMode('index')">📈 vs Index</button>
+          <button class="slot-mode-btn" id="modeFundBtn" onclick="setBenchMode('fund')">👥 vs Fund</button>
         </div>
-        <div class="fund-dropdown" id="ddB"></div>
-        <div class="fund-selected" id="selectedB">
-          <div class="fs-name" id="selNameB"></div>
-          <div class="fs-code" id="selCodeB"></div>
-          <button class="fs-remove" onclick="removeSelected('B')" title="Remove">✕</button>
+
+        <!-- INDEX PICKER (default) -->
+        <div id="indexModeContent">
+          <div class="fund-label fund-label-b"><span class="badge">B</span> Benchmark Index</div>
+          <!-- Quick chips -->
+          <div class="bench-chips" id="benchChips">
+            <button class="bench-chip active" data-index="NIFTY 50" onclick="selectBenchChip(this)">Nifty 50</button>
+            <button class="bench-chip" data-index="Nifty Next 50" onclick="selectBenchChip(this)">Next 50</button>
+            <button class="bench-chip" data-index="Nifty Midcap 150" onclick="selectBenchChip(this)">Mid 150</button>
+            <button class="bench-chip" data-index="Nifty Smallcap 250" onclick="selectBenchChip(this)">Small 250</button>
+            <button class="bench-chip" data-index="Nifty 500" onclick="selectBenchChip(this)">N 500</button>
+            <button class="bench-chip" data-index="Nifty Bank" onclick="selectBenchChip(this)">Bank</button>
+            <button class="bench-chip" data-index="Nifty IT" onclick="selectBenchChip(this)">IT</button>
+            <button class="bench-chip" data-index="Nifty Pharma" onclick="selectBenchChip(this)">Pharma</button>
+          </div>
+          <button class="more-indices-btn" id="moreIndicesBtn" onclick="toggleIndexDropdown(event)">▾ More indices</button>
+          <!-- More dropdown -->
+          <div class="more-indices-drop" id="moreIndicesDrop" style="display:none">
+            <input type="text" class="idx-search-in" placeholder="Search all indices…" id="idxSearchIn" oninput="filterIdxDrop(this.value)" onclick="event.stopPropagation()">
+            <div id="idxDropBody"></div>
+          </div>
+          <!-- Selected benchmark pill -->
+          <div class="bench-pill" id="benchPill">
+            <span id="benchPillName">Nifty 50</span>
+            <span id="benchPillSub">TRI · niftyindices.com</span>
+          </div>
+        </div>
+
+        <!-- FUND B SEARCH (vs Fund mode, hidden by default) -->
+        <div id="fundModeContent" style="display:none">
+          <div class="fund-label fund-label-b"><span class="badge">B</span> Fund 2 <span style="font-size:.55rem;font-weight:500;color:var(--muted);margin-left:4px">(optional)</span></div>
+          <div class="fund-input-wrap">
+            <input class="fund-input" id="inputB" type="text" placeholder="Type to compare…" autocomplete="off" spellcheck="false">
+            <button class="fund-clear" id="clearB" onclick="clearInput('B')" title="Clear">✕</button>
+          </div>
+          <div class="fund-dropdown" id="ddB"></div>
+          <div class="fund-selected" id="selectedB">
+            <div class="fs-name" id="selNameB"></div>
+            <div class="fs-code" id="selCodeB"></div>
+            <button class="fs-remove" onclick="removeSelected('B')" title="Remove">✕</button>
+          </div>
         </div>
       </div>
     </div>
@@ -418,8 +502,37 @@ const state = {
   B: { code: null, name: null, nav: null },
   window: 5,
   compareActive: false,
+  benchMode: 'index',      // 'index' | 'fund'
+  benchIndex: 'NIFTY 50',  // selected index name
+  benchNav: null,           // TRI data converted to nav format
   charts: {},
 };
+
+/* ── All NSE indices for the dropdown ──────────────────── */
+const ALL_INDICES = {
+  broad: [
+    'NIFTY 50','Nifty Next 50','Nifty 100','Nifty 200','Nifty 500',
+    'Nifty Midcap 150','Nifty Midcap 50','Nifty Midcap 100','Nifty Midcap Select',
+    'Nifty Smallcap 250','Nifty Smallcap 50','Nifty Smallcap 100','Nifty Smallcap 500',
+    'Nifty LargeMidcap 250','Nifty MidSmallcap 400','Nifty Total Market',
+    'Nifty Microcap 250','Nifty500 Multicap 50:25:25',
+  ],
+  sectoral: [
+    'Nifty Bank','Nifty IT','Nifty Pharma','Nifty FMCG','Nifty Auto',
+    'Nifty Financial Services','Nifty Private Bank','Nifty PSU Bank',
+    'Nifty Realty','Nifty Metal','Nifty Healthcare Index','Nifty Infrastructure',
+    'Nifty MNC','Nifty Media','Nifty Chemicals','Nifty Oil & Gas',
+    'Nifty Consumer Durables','Nifty500 Healthcare',
+  ],
+  strategy: [
+    'Nifty Alpha 50','Nifty Dividend Opportunities 50','Nifty High Beta 50',
+    'Nifty Low Volatility 50','Nifty50 Equal Weight','Nifty100 Quality 30',
+    'Nifty200 Momentum 30','Nifty500 Value 50','Nifty500 Quality 50',
+    'Nifty Midcap150 Momentum 50','Nifty Midcap150 Quality 50',
+    'Nifty100 Alpha 30','Nifty200 Alpha 30','Nifty500 Momentum 50',
+  ],
+};
+const CAT_LABELS = { broad:'Broad Market', sectoral:'Sectoral', strategy:'Strategy & Thematic' };
 
 let _searchTimers = { A: null, B: null };
 let _ddKeyIdx = { A: -1, B: -1 };
@@ -548,15 +661,93 @@ function clearInput(slot) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   COMPARE TOGGLE
+   MODE: INDEX vs FUND
 ═══════════════════════════════════════════════════════ */
-function toggleCompare() {
-  state.compareActive = !state.compareActive;
-  const inp = document.getElementById('inputB');
-  const btn = document.getElementById('compareToggle');
-  inp.disabled = !state.compareActive;
-  btn.textContent = state.compareActive ? '− Remove' : '+ Compare';
-  if (!state.compareActive) removeSelected('B');
+function setBenchMode(mode) {
+  state.benchMode = mode;
+  const indexContent = document.getElementById('indexModeContent');
+  const fundContent  = document.getElementById('fundModeContent');
+  document.getElementById('modeIndexBtn').classList.toggle('active', mode === 'index');
+  document.getElementById('modeFundBtn').classList.toggle('active', mode === 'fund');
+  indexContent.style.display = mode === 'index' ? '' : 'none';
+  fundContent.style.display  = mode === 'fund'  ? '' : 'none';
+  // In fund mode, activate compareActive; in index mode always have benchmark
+  state.compareActive = mode === 'fund' ? !!state.B.code : false;
+  // Re-run if result is already shown
+  if (state.A.code && window._rrA) run();
+}
+
+/* ── Benchmark index picker ──────────────────────────── */
+function selectBenchChip(btn) {
+  document.querySelectorAll('.bench-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.benchIndex = btn.dataset.index;
+  document.getElementById('benchPillName').textContent = btn.dataset.index;
+  document.getElementById('benchPillSub').textContent = 'TRI · niftyindices.com';
+  state.benchNav = null; // invalidate cache
+  closeBenchDrop();
+  if (state.A.code && window._rrA) run();
+}
+
+function selectBenchIndex(name) {
+  state.benchIndex = name;
+  document.getElementById('benchPillName').textContent = name;
+  document.getElementById('benchPillSub').textContent = 'TRI · niftyindices.com';
+  state.benchNav = null;
+  // Clear chip active states (not a chip selection)
+  document.querySelectorAll('.bench-chip').forEach(b =>
+    b.classList.toggle('active', b.dataset.index === name)
+  );
+  closeBenchDrop();
+  if (state.A.code && window._rrA) run();
+}
+
+function toggleIndexDropdown(e) {
+  e.stopPropagation();
+  const drop = document.getElementById('moreIndicesDrop');
+  if (drop.style.display === 'none') {
+    drop.style.display = '';
+    buildIdxDropdown('');
+    document.getElementById('idxSearchIn').value = '';
+    document.getElementById('idxSearchIn').focus();
+  } else {
+    closeBenchDrop();
+  }
+}
+function closeBenchDrop() {
+  document.getElementById('moreIndicesDrop').style.display = 'none';
+}
+document.addEventListener('click', () => closeBenchDrop());
+
+function buildIdxDropdown(q) {
+  const body = document.getElementById('idxDropBody');
+  const ql = q.toLowerCase();
+  let html = '';
+  for (const [cat, names] of Object.entries(ALL_INDICES)) {
+    const filtered = names.filter(n => !ql || n.toLowerCase().includes(ql));
+    if (!filtered.length) continue;
+    html += `<div class="idx-drop-section">${CAT_LABELS[cat]}</div>`;
+    html += filtered.map(name =>
+      `<div class="idx-drop-item${state.benchIndex===name?' active':''}" onmousedown="selectBenchIndex('${name.replace(/'/,"\'")}')">${name}</div>`
+    ).join('');
+  }
+  body.innerHTML = html || '<div class="idx-drop-item" style="color:var(--muted)">No results</div>';
+}
+function filterIdxDrop(q) { buildIdxDropdown(q); }
+
+/* ── Fetch TRI benchmark data ────────────────────────── */
+async function fetchBenchmark(indexName) {
+  const r = await fetch(`/api/nifty-tri?index=${encodeURIComponent(indexName)}`);
+  if (!r.ok) throw new Error(`Could not fetch TRI for ${indexName}`);
+  const d = await r.json();
+  if (!d.data?.length) throw new Error(`No TRI data for ${indexName}`);
+  // Convert TRI [{date:"DD Mon YYYY", value:N}] → [{date:"DD-MM-YYYY", nav:"N"}]
+  const MON = {Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',
+               Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+  return d.data.map(r => {
+    const [dd, mon, yyyy] = r.date.split(' ');
+    return { date: `${dd.padStart(2,'0')}-${MON[mon]||'01'}-${yyyy}`, nav: String(r.value) };
+  });
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -591,28 +782,38 @@ async function run() {
   window._rrB = null;
 
   try {
-    // Fetch NAV data for fund A (and B if active)
-    const fetches = [fetchNav(state.A.code)];
-    if (state.compareActive && state.B.code) fetches.push(fetchNav(state.B.code));
+    // Fetch Fund A NAV
+    const navA = await fetchNav(state.A.code);
+    state.A.nav = navA;
 
-    const results = await Promise.all(fetches);
-    state.A.nav = results[0];
-    state.B.nav = state.compareActive && state.B.code ? results[1] : null;
+    let navB = null;
+    if (state.benchMode === 'index') {
+      // Fetch TRI benchmark (cached by state.benchNav)
+      if (!state.benchNav) state.benchNav = await fetchBenchmark(state.benchIndex);
+      navB = state.benchNav;
+    } else if (state.compareActive && state.B.code) {
+      const navBFund = await fetchNav(state.B.code);
+      state.B.nav = navBFund;
+      navB = navBFund;
+    }
 
     // Calculate rolling returns
     const rrA = calcRolling(state.A.nav, state.window);
-    const rrB = state.B.nav ? calcRolling(state.B.nav, state.window) : null;
+    const rrB = navB ? calcRolling(navB, state.window) : null;
 
     if (!rrA.length) throw new Error(`Not enough NAV history for a ${state.window}Y rolling window.`);
 
     // Render
-    renderOutput(rrA, rrB);
+    renderOutput(rrA, rrB, state.benchMode === 'index' ? state.benchIndex : null);
 
     updateUrl();
     document.getElementById('srcLine').style.display = 'flex';
+    const benchLabel = state.benchMode === 'index'
+      ? ` vs ${state.benchIndex} TRI`
+      : (state.B.code ? ` vs Fund B` : '');
     document.getElementById('srcText').textContent =
       `Data: AMFI · ${state.A.nav.length.toLocaleString()} NAV records · ` +
-      `${state.window}Y rolling · ${rrA.length.toLocaleString()} windows computed`;
+      `${state.window}Y rolling · ${rrA.length.toLocaleString()} windows${benchLabel}`;
 
   } catch(e) {
     document.getElementById('outputArea').innerHTML =
@@ -797,9 +998,32 @@ function buildInsight(statsA, statsB, rrA) {
 }
 
 /* ═══════════════════════════════════════════════════════
+   ALPHA CALCULATION (fund vs index)
+═══════════════════════════════════════════════════════ */
+function computeAlpha(rrA, rrB) {
+  // Match rolling windows by month-year of end date
+  // (fund and index may have slightly different exact dates)
+  function monthKey(d) { return `${d.getFullYear()}-${d.getMonth()}`; }
+  const bMap = new Map(rrB.map(r => [monthKey(r.endDate), r]));
+  const result = [];
+  for (const a of rrA) {
+    const b = bMap.get(monthKey(a.endDate));
+    if (!b) continue;
+    result.push({
+      endDate:    a.endDate,
+      startDate:  a.startDate,
+      fundCagr:   a.cagrPct,
+      indexCagr:  b.cagrPct,
+      alpha:      a.cagrPct - b.cagrPct,
+    });
+  }
+  return result.sort((a, b) => a.endDate - b.endDate);
+}
+
+/* ═══════════════════════════════════════════════════════
    RENDER OUTPUT
 ═══════════════════════════════════════════════════════ */
-function renderOutput(rrA, rrB) {
+function renderOutput(rrA, rrB, benchIndexName) {
   // Destroy old charts
   Object.values(state.charts).forEach(c => { try { c.destroy(); } catch(e) {} });
   state.charts = {};
@@ -809,15 +1033,41 @@ function renderOutput(rrA, rrB) {
   const histA  = buildHistogram(rrA);
   const histB  = rrB ? buildHistogram(rrB) : null;
   const twoFund = !!statsB;
+  const isIndex = !!benchIndexName;
   const W = state.window;
   const nameA = state.A.name ? state.A.name.split('-')[0].trim() : 'Fund A';
-  const nameB = state.B.name ? state.B.name.split('-')[0].trim() : 'Fund B';
+  const nameB = benchIndexName
+    ? benchIndexName
+    : (state.B.name ? state.B.name.split('-')[0].trim() : 'Fund B');
 
   const fmtPct = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
   const cagrClass = v => v >= 12 ? 'cagr-pos' : v >= 0 ? 'cagr-warn' : 'cagr-neg';
 
   // Stat cards HTML
-  const statCards = (twoFund ? [
+  // For index mode: show alpha metrics; for fund mode: show side-by-side comparison
+  const indexStatCards = isIndex && alphaData?.length ? [
+    { label:'Hit Ratio',
+      val: hitRatio.toFixed(0) + '%',
+      cl:  hitRatio >= 60 ? 'cagr-pos' : hitRatio >= 40 ? 'cagr-warn' : 'cagr-neg',
+      sub: `of ${W}Y windows beat ${nameB}` },
+    { label:'Median Alpha',
+      val: (medAlpha >= 0 ? '+' : '') + medAlpha.toFixed(1) + ' pp',
+      cl:  medAlpha > 0 ? 'cagr-pos' : medAlpha > -2 ? 'cagr-warn' : 'cagr-neg',
+      sub: 'fund − index per window' },
+    { label:`Fund Median CAGR`,
+      val: fmtPct(statsA.median), cl: cagrClass(statsA.median),
+      sub: `vs index ${fmtPct(statsB.median)}` },
+    { label:'Best Alpha',
+      val: (alphaData.reduce((m,r)=>r.alpha>m?r.alpha:m,-Infinity) >= 0 ? '+' : '') +
+           alphaData.reduce((m,r)=>r.alpha>m?r.alpha:m,-Infinity).toFixed(1) + ' pp',
+      cl:  'cagr-pos', sub: 'single window outperformance' },
+    { label:'Worst Alpha',
+      val: alphaData.reduce((m,r)=>r.alpha<m?r.alpha:m,Infinity).toFixed(1) + ' pp',
+      cl:  alphaData.reduce((m,r)=>r.alpha<m?r.alpha:m,Infinity) > -3 ? 'cagr-warn' : 'cagr-neg',
+      sub: 'single window underperformance' },
+  ] : null;
+
+  const statCards = indexStatCards ? indexStatCards : (twoFund ? [
     { label:`Median CAGR`, valA:fmtPct(statsA.median), valB:fmtPct(statsB.median),
       clA:cagrClass(statsA.median), clB:cagrClass(statsB.median) },
     { label:`% Positive`, valA:statsA.pctPos.toFixed(0)+'%', valB:statsB.pctPos.toFixed(0)+'%',
@@ -842,7 +1092,7 @@ function renderOutput(rrA, rrB) {
       sub:statsA.worstEntry ? fmtDateShort(statsA.worstEntry.startDate)+'→'+fmtDateShort(statsA.worstEntry.endDate) : '' },
   ]);
 
-  const statHtml = statCards.map(s => twoFund
+  const statHtml = statCards.map(s => (!indexStatCards && twoFund)
     ? `<div class="stat-card two-fund">
         <div class="sc-label">${s.label}</div>
         <div class="sc-pair">
@@ -858,13 +1108,27 @@ function renderOutput(rrA, rrB) {
       </div>`
   ).join('');
 
-  // Legend HTML
-  const legendHtml = twoFund
+  // Legend HTML — for index mode use orange for index, for fund mode use purple
+  const legendHtml = twoFund || isIndex
     ? `<div class="chart-legend">
         <div class="cl-item"><div class="cl-dot" style="background:var(--g2)"></div>${nameA}</div>
-        <div class="cl-item"><div class="cl-dot" style="background:#7b1fa2"></div>${nameB}</div>
+        <div class="cl-item"><div class="cl-dot" style="background:${isIndex?'#e65100':'#7b1fa2'}"></div>${nameB}</div>
       </div>`
     : '';
+
+  // Compute alpha if benchmark active
+  let alphaData = null, hitRatio = null, medAlpha = null;
+  if (statsB && rrA.length && rrB) {
+    alphaData = computeAlpha(rrA, rrB);
+    if (alphaData.length) {
+      hitRatio = alphaData.filter(r => r.alpha > 0).length / alphaData.length * 100;
+      const sortedAlpha = [...alphaData].map(r => r.alpha).sort((a,b)=>a-b);
+      const n = sortedAlpha.length;
+      medAlpha = n % 2 === 0
+        ? (sortedAlpha[n/2-1] + sortedAlpha[n/2]) / 2
+        : sortedAlpha[Math.floor(n/2)];
+    }
+  }
 
   const insight = buildInsight(statsA, statsB, rrA);
 
@@ -885,6 +1149,28 @@ function renderOutput(rrA, rrB) {
         <div class="chart-wrap" style="height:240px"><canvas id="chartHist"></canvas></div>
         <div class="insight-bar">${insight}</div>
       </div>
+
+      <!-- Alpha bar chart (index mode only) -->
+      ${isIndex && alphaData?.length ? `
+      <div class="chart-card" style="animation:fadeUp .4s .1s ease both">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">📊 Rolling Alpha — Fund vs ${nameB}</div>
+            <div class="chart-sub">Each bar = fund CAGR minus index CAGR for that ${W}Y entry window · green = outperformed · red = underperformed</div>
+          </div>
+          <div class="chart-badge" style="background:${hitRatio>=60?'var(--g-xlight)':'var(--neg-bg)'}; color:${hitRatio>=60?'var(--g2)':'var(--neg)'}">
+            HIT RATIO ${hitRatio.toFixed(0)}%
+          </div>
+        </div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chartAlpha"></canvas></div>
+        <div class="insight-bar">
+          <strong>Alpha summary:</strong> Median alpha <span class="${medAlpha>0?'pos':'neg'}">${(medAlpha>=0?'+':'')+medAlpha.toFixed(1)}pp</span>.
+          Fund beat ${nameB} in <span class="${hitRatio>=60?'pos':'neg'}">${hitRatio.toFixed(0)}%</span> of ${W}Y windows.
+          ${hitRatio >= 70 ? `<span class="pos">Consistent outperformer — alpha appears structural.</span>`
+          : hitRatio >= 50 ? `Marginal edge — alpha is present but entry timing matters.`
+          : `<span class="neg">Index was a stronger choice in majority of windows.</span>`}
+        </div>
+      </div>` : ''}
 
       <!-- Timeline line chart -->
       <div class="chart-card">
@@ -927,8 +1213,9 @@ function renderOutput(rrA, rrB) {
 
   // Draw charts after DOM settles
   setTimeout(() => {
-    drawHistogram(histA, histB, twoFund, nameA, nameB);
-    drawTimeline(rrA, rrB, twoFund, nameA, nameB);
+    drawHistogram(histA, histB, !indexStatCards && twoFund, nameA, nameB);
+    drawTimeline(rrA, rrB, !indexStatCards && twoFund, nameA, nameB);
+    if (isIndex && alphaData?.length) drawAlpha(alphaData, nameB);
   }, 50);
 
   // Store rolling data for table
@@ -1085,6 +1372,94 @@ function drawTimeline(rrA, rrB, twoFund, nameA, nameB) {
   });
 }
 
+
+/* ═══════════════════════════════════════════════════════
+   CHART: ALPHA BARS (fund vs index)
+═══════════════════════════════════════════════════════ */
+function drawAlpha(alphaData, indexName) {
+  const ctx = document.getElementById('chartAlpha');
+  if (!ctx) return;
+
+  // Sample to ~400 points for performance
+  const sample = alphaData.length > 400
+    ? alphaData.filter((_, i) => i % Math.ceil(alphaData.length / 400) === 0)
+    : alphaData;
+
+  const labels = sample.map(r => r.endDate);
+  const values = sample.map(r => +r.alpha.toFixed(2));
+  const colors = values.map(v => v >= 0 ? 'rgba(46,125,50,0.75)' : 'rgba(183,28,28,0.72)');
+
+  // Avg alpha line
+  const avgAlpha = values.reduce((s, v) => s + v, 0) / values.length;
+
+  if (state.charts.alpha) { try { state.charts.alpha.destroy(); } catch(e){} }
+  state.charts.alpha = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      datasets: [{
+        label: 'Alpha (pp)',
+        data: values.map((v, i) => ({ x: labels[i], y: v })),
+        backgroundColor: colors,
+        borderRadius: 1,
+        borderSkipped: false,
+        barPercentage: 0.9,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 700, easing: 'easeInOutQuart' },
+      parsing: false,
+      plugins: {
+        legend: { display: false },
+        annotation: {
+          annotations: {
+            zeroLine: {
+              type: 'line', yMin: 0, yMax: 0,
+              borderColor: 'rgba(0,0,0,0.3)', borderWidth: 1,
+            },
+            avgLine: {
+              type: 'line', yMin: avgAlpha, yMax: avgAlpha,
+              borderColor: avgAlpha >= 0 ? 'rgba(46,125,50,0.6)' : 'rgba(183,28,28,0.6)',
+              borderWidth: 1.5, borderDash: [5, 4],
+              label: {
+                display: true,
+                content: `Avg ${avgAlpha >= 0 ? '+' : ''}${avgAlpha.toFixed(1)}pp`,
+                position: 'end',
+                color: avgAlpha >= 0 ? 'rgba(46,125,50,0.8)' : 'rgba(183,28,28,0.8)',
+                font: { family: 'JetBrains Mono', size: 9 },
+                padding: 2,
+              }
+            },
+          }
+        },
+        tooltip: {
+          backgroundColor: '#162616',
+          titleFont: { family: 'JetBrains Mono', size: 10 },
+          bodyFont:  { family: 'JetBrains Mono', size: 11 },
+          padding: 10, cornerRadius: 8,
+          callbacks: {
+            title: items => fmtDateLong(new Date(items[0].parsed.x)),
+            label: c => ` Alpha: ${c.parsed.y >= 0 ? '+' : ''}${c.parsed.y.toFixed(2)}pp vs ${indexName}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: 'year', displayFormats: { year: 'MMM yy' } },
+          grid: { display: false },
+          ticks: { font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
+        },
+        y: {
+          grid: { color: ctx2 => ctx2.tick.value === 0 ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,.04)' },
+          ticks: { font: { family: 'JetBrains Mono', size: 9 }, callback: v => (v >= 0 ? '+' : '') + v + 'pp' },
+          title: { display: true, text: 'Alpha (pp)', font: { size: 9 }, color: '#5e8a5e' },
+        },
+      },
+    },
+  });
+}
+
 /* ═══════════════════════════════════════════════════════
    DATA TABLE
 ═══════════════════════════════════════════════════════ */
@@ -1213,16 +1588,6 @@ function updateUrl() {
    BOOT
 ═══════════════════════════════════════════════════════ */
 initFromUrl();
-// Fund B slot starts disabled visually
-document.getElementById('slotB').style.opacity = '0.45';
-document.getElementById('slotB').style.pointerEvents = 'none';
-// Note: toggleCompare() flips state.compareActive BEFORE this listener fires
-// so we read state.compareActive AFTER the flip — correctly reflects new state
-document.getElementById('compareToggle').addEventListener('click', function() {
-  const active = state.compareActive; // already flipped by toggleCompare()
-  document.getElementById('slotB').style.opacity = active ? '1' : '0.45';
-  document.getElementById('slotB').style.pointerEvents = active ? 'auto' : 'none';
-});
 </script>
 </body>
 </html>
