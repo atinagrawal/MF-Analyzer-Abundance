@@ -71,4 +71,10 @@
     <xhtml:link rel="alternate" hreflang="en-IN" href="https://mfcalc.getabundance.in/rolling"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://mfcalc.getabundance.in/rolling"/>
   </url>
+  <url>
+    <loc>https://mfcalc.getabundance.in/indices</loc>
+    <lastmod>2026-03-31</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>
