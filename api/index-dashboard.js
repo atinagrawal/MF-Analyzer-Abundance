@@ -278,11 +278,43 @@ function getCurrentPdfUrl() {
   return { url: getPdfUrl(now.getFullYear(), now.getMonth()), year: now.getFullYear(), month: now.getMonth() };
 }
 
+
+// ── Blob caching for parsed index data ─────────────────────────────────────
+// Avoids fetching & parsing two PDFs on every CDN miss (~6-8s cold)
+// Cache key: idx-dashboard-YYYY-MM.json  (refreshed monthly)
+
+async function dashboardCacheGet(year, month) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
+  try {
+    const { list } = require('@vercel/blob');
+    const key = `idx-dashboard-${year}-${String(month+1).padStart(2,'0')}.json`;
+    const { blobs } = await list({ prefix: key, limit: 1, token: process.env.BLOB_READ_WRITE_TOKEN });
+    if (!blobs.length) return null;
+    const r = await fetch(blobs[0].url + '?t=' + Date.now());
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+async function dashboardCachePut(year, month, payload) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return;
+  try {
+    const { put } = require('@vercel/blob');
+    const key = `idx-dashboard-${year}-${String(month+1).padStart(2,'0')}.json`;
+    await put(key, JSON.stringify(payload), {
+      access: 'public', contentType: 'application/json',
+      addRandomSuffix: false, token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+  } catch(e) {
+    console.error('[index-dashboard] blob write FAILED — name:', e.name, 'msg:', e.message);
+  }
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   // Cache 12 hours — monthly data
-  res.setHeader('Cache-Control', 's-maxage=43200, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');  // blob handles persistence
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   // Allow override for testing: ?month=MAR2025
@@ -302,7 +334,13 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // Fetch dashboard PDF and riskometer in parallel
+    // Check blob cache first — avoids fetching PDFs on every CDN miss
+    const cached = await dashboardCacheGet(year, month);
+    if (cached?.indices?.length) {
+      return res.status(200).json({ ...cached, source: 'NSE Indices', cached: true });
+    }
+
+    // Cache miss — fetch dashboard PDF and riskometer in parallel
     const [{ status, text }, riskMap] = await Promise.all([
       fetchPdfText(pdfUrl),
       fetchRiskometer(),
@@ -338,14 +376,18 @@ module.exports = async function handler(req, res) {
       return risk ? { ...idx, riskScore: risk.score, riskLabel: risk.label } : idx;
     });
 
-    return res.status(200).json({
+    const payload = {
       month: MONTH_FULL[month],
       year,
       asOf: `${year}-${String(month+1).padStart(2,'0')}-${new Date(year, month+1, 0).getDate()}`,
       count: enriched.length,
       indices: enriched,
-      source: 'NSE Indices',
-    });
+    };
+
+    // Fire-and-forget blob write — cache for next request
+    dashboardCachePut(year, month, payload).catch(() => {});
+
+    return res.status(200).json({ ...payload, source: 'NSE Indices' });
 
   } catch (err) {
     return res.status(500).json({ error: err.message, url: pdfUrl });
