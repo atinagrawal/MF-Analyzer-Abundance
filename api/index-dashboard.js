@@ -131,59 +131,90 @@ async function fetchPdfText(url) {
 }
 
 function parsePdfText(text) {
-  const indices = [];
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const indices = [];
 
-  // Regex: matches a line ending with 12 numbers (the data columns)
-  const numPat = /^(.+?)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s*$/;
-
-  // Track current category from section headers
-  let currentCat = 'broad';
+  // Section headers mark category changes
   const catMap = {
     'broad market': 'broad',
+    'strategy indices': 'strategy',
     'strategy': 'strategy',
+    'sectoral indices': 'sectoral',
     'sectoral': 'sectoral',
+    'thematic indices': 'thematic',
     'thematic': 'thematic',
   };
 
-  for (const line of lines) {
-    // Check for section headers
-    const lineLow = line.toLowerCase();
+  // Skip lines that are definitely headers/noise
+  const SKIP = new Set([
+    'index dashboard','returns (%)','index name','volatility (%)','beta','correlation',
+    'r','p/e','p/b','dividend','yield','based on total return index','contact us',
+    '1 yr','3 yr','5 yr','1m','3m','2','indices','about nse indices limited',
+    'nse indices limited','exchange plaza',
+  ]);
+
+  function isSkip(l) {
+    const ll = l.toLowerCase();
+    return SKIP.has(ll) || ll.startsWith('for more') || ll.startsWith('nse indices')
+      || ll.startsWith('exchange plaza') || ll.startsWith('telephone')
+      || ll.startsWith('disclaimer') || ll.startsWith('www.')
+      || l.length < 2 || /^\d{1,2}$/.test(l);
+  }
+
+  // A numbers line: starts with optional minus, a digit, a dot — and contains ≥10 floats
+  function isNumbersLine(l) {
+    return /^-?\d+\./.test(l) && (l.match(/-?\d+\.\d{2}/g) || []).length >= 10;
+  }
+
+  // An index name line: not a number, not a skip, reasonable length
+  function isNameLine(l) {
+    return !isSkip(l) && !isNumbersLine(l) && l.length >= 4 && l.length <= 80;
+  }
+
+  let currentCat = 'broad';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const ll = line.toLowerCase();
+
+    // Detect category changes
     for (const [key, val] of Object.entries(catMap)) {
-      if (lineLow.includes(key) && lineLow.length < 60) {
+      if (ll.includes(key) && line.length < 60) {
         currentCat = val;
         break;
       }
     }
 
-    const m = numPat.exec(line);
-    if (!m) continue;
+    // Numbers line — look back for the name
+    if (isNumbersLine(line)) {
+      // Find the most recent name line before this
+      let name = null;
+      for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
+        if (isNameLine(lines[j])) { name = lines[j]; break; }
+      }
+      if (!name) continue;
 
-    const name = m[1].trim();
-    // Skip header-like lines
-    if (['index name','returns','volatility','index'].some(h => name.toLowerCase().startsWith(h))) continue;
-    // Must have a reasonable name length
-    if (name.length < 4 || name.length > 80) continue;
+      // Extract exactly 12 numbers using the 2-decimal pattern
+      const nums = (line.match(/-?\d+\.\d{2}/g) || []).map(Number);
+      if (nums.length < 12) continue;
 
-    const nums = m.slice(2).map(Number);
-    if (nums.some(isNaN)) continue;
+      const meta = INDEX_META[name];
+      const cat = meta?.cat || currentCat;
 
-    // Determine category from known list or current section
-    const meta = INDEX_META[name];
-    const cat = meta?.cat || currentCat;
-
-    indices.push({
-      name,
-      short: meta?.short || name.replace(/[^A-Z0-9]/gi,'').slice(0,8).toUpperCase(),
-      category: cat,
-      returns: { m1: nums[0], m3: nums[1], y1: nums[2], y3: nums[3], y5: nums[4] },
-      risk:    { volatility: nums[5], beta: nums[6], correlation: nums[7], r2: nums[8] },
-      valuation: { pe: nums[9], pb: nums[10], dividendYield: nums[11] },
-    });
+      indices.push({
+        name,
+        cat,
+        short: meta?.short || name.slice(0, 8).toUpperCase(),
+        returns: { r1m: nums[0], r3m: nums[1], r1y: nums[2], r3y: nums[3], r5y: nums[4] },
+        risk:    { vol: nums[5], beta: nums[6], corr: nums[7], r2: nums[8] },
+        val:     { pe: nums[9], pb: nums[10], dy: nums[11] },
+      });
+    }
   }
 
   return indices;
 }
+
 
 function getPdfUrl(year, month) {
   // month: 0-11
@@ -244,9 +275,10 @@ module.exports = async function handler(req, res) {
 
     if (!indices.length) {
       // Log first 1000 chars for debugging
-      const preview = text ? text.slice(0, 1000) : 'no text extracted';
-      console.error('[index-dashboard] Parse failed. Text preview:', preview);
-      return res.status(500).json({ error: 'PDF parsed but no indices found', url: pdfUrl, preview });
+      // Log first 500 chars to runtime logs for debugging
+      const preview = text ? text.slice(0, 500) : 'no text extracted';
+      console.error('[index-dashboard] Parse failed. Preview:', preview.replace(/\n/g,' '));
+      return res.status(500).json({ error: 'PDF parsed but no indices found. Check runtime logs.', url: pdfUrl });
     }
 
     return res.status(200).json({
