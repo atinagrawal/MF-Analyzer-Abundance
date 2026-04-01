@@ -414,7 +414,7 @@ a{color:inherit;text-decoration:none}
           <!-- Selected benchmark pill -->
           <div class="bench-pill" id="benchPill">
             <span id="benchPillName">Nifty 50</span>
-            <span id="benchPillSub">TRI · niftyindices.com</span>
+            <span id="benchPillSub">TRI · NSE</span>
           </div>
         </div>
 
@@ -683,7 +683,7 @@ function selectBenchChip(btn) {
   btn.classList.add('active');
   state.benchIndex = btn.dataset.index;
   document.getElementById('benchPillName').textContent = btn.dataset.index;
-  document.getElementById('benchPillSub').textContent = 'TRI · niftyindices.com';
+  document.getElementById('benchPillSub').textContent = 'TRI · NSE';
   state.benchNav = null; // invalidate cache
   closeBenchDrop();
   if (state.A.code && window._rrA) run();
@@ -692,7 +692,7 @@ function selectBenchChip(btn) {
 function selectBenchIndex(name) {
   state.benchIndex = name;
   document.getElementById('benchPillName').textContent = name;
-  document.getElementById('benchPillSub').textContent = 'TRI · niftyindices.com';
+  document.getElementById('benchPillSub').textContent = 'TRI · NSE';
   state.benchNav = null;
   // Clear chip active states (not a chip selection)
   document.querySelectorAll('.bench-chip').forEach(b =>
@@ -1546,11 +1546,26 @@ function buildSkeleton() {
 async function initFromUrl() {
   const p = new URLSearchParams(location.search);
   const codeA = p.get('a'), codeB = p.get('b'), w = p.get('w');
+  const benchParam = p.get('bench') || p.get('index');  // ?bench=Nifty%20Bank from /indices page
+
   if (w && [1,3,5,7,10].includes(+w)) {
     state.window = +w;
     document.querySelectorAll('.window-btn').forEach(b => {
       b.classList.toggle('active', +b.dataset.w === +w);
     });
+  }
+
+  // Pre-select benchmark index from URL param
+  if (benchParam) {
+    setBenchMode('index');
+    state.benchIndex = benchParam;
+    state.benchNav = null;
+    // Update chip highlight or pill
+    document.querySelectorAll('.bench-chip').forEach(b =>
+      b.classList.toggle('active', b.dataset.index === benchParam)
+    );
+    document.getElementById('benchPillName').textContent = benchParam;
+    document.getElementById('benchPillSub').textContent = 'TRI · NSE';
   }
   if (codeA) {
     // Fetch scheme name
