@@ -1,0 +1,247 @@
+// api/index-dashboard.js
+// Fetches and parses the monthly NSE Index Dashboard PDF from niftyindices.com
+// PDF URL pattern: https://niftyindices.com/Index_Dashboard/Index_Dashboard_MAR2026.pdf
+//
+// Returns: { month, asOf, indices: [{name, category, returns:{1m,3m,1y,3y,5y}, risk:{vol,beta,corr,r2}, val:{pe,pb,dy}}] }
+//
+// Cached 12 hours (data is monthly, no point hitting PDF on every request)
+
+const https = require('https');
+
+const MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const MONTH_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// All known index names from NSE Index Dashboard PDF (March 2026)
+// Used to reliably parse multi-word names from the PDF text
+const INDEX_META = {
+  // Broad Market
+  'NIFTY 50':                          { cat: 'broad',    short: 'N50'     },
+  'Nifty Next 50':                     { cat: 'broad',    short: 'NXT50'   },
+  'Nifty 100':                         { cat: 'broad',    short: 'N100'    },
+  'Nifty 200':                         { cat: 'broad',    short: 'N200'    },
+  'Nifty 500':                         { cat: 'broad',    short: 'N500'    },
+  'Nifty Midcap 150':                  { cat: 'broad',    short: 'MID150'  },
+  'Nifty Midcap 50':                   { cat: 'broad',    short: 'MID50'   },
+  'Nifty Midcap 100':                  { cat: 'broad',    short: 'MID100'  },
+  'Nifty Midcap Select':               { cat: 'broad',    short: 'MIDSEL'  },
+  'Nifty Smallcap 250':                { cat: 'broad',    short: 'SM250'   },
+  'Nifty Smallcap 50':                 { cat: 'broad',    short: 'SM50'    },
+  'Nifty Smallcap 100':                { cat: 'broad',    short: 'SM100'   },
+  'Nifty Smallcap 500':                { cat: 'broad',    short: 'SM500'   },
+  'Nifty LargeMidcap 250':             { cat: 'broad',    short: 'LRGMID'  },
+  'Nifty MidSmallcap 400':             { cat: 'broad',    short: 'MIDSM'   },
+  'Nifty MidSmallcap400 50:50':        { cat: 'broad',    short: 'MS5050'  },
+  'Nifty Total Market':                { cat: 'broad',    short: 'TOTMKT'  },
+  'Nifty Microcap 250':                { cat: 'broad',    short: 'MICRO'   },
+  'Nifty500 Multicap 50:25:25':        { cat: 'broad',    short: 'MULTICAP'},
+  'Nifty500 LargeMidSmall Equal-Cap Weighted': { cat: 'broad', short: 'ECWT' },
+  'Nifty India FPI 150':               { cat: 'broad',    short: 'FPI150'  },
+  // Sectoral
+  'Nifty Auto':                        { cat: 'sectoral', short: 'AUTO'    },
+  'Nifty Bank':                        { cat: 'sectoral', short: 'BANK'    },
+  'Nifty Cement':                      { cat: 'sectoral', short: 'CEMENT'  },
+  'Nifty Chemicals':                   { cat: 'sectoral', short: 'CHEM'    },
+  'Nifty Consumer Durables':           { cat: 'sectoral', short: 'CONSDUR' },
+  'Nifty Financial Services':          { cat: 'sectoral', short: 'FINSERV' },
+  'Nifty Financial Services 25/50':    { cat: 'sectoral', short: 'FIN2550' },
+  'Nifty Financial Services Ex-Bank':  { cat: 'sectoral', short: 'FINEXBK' },
+  'Nifty FMCG':                        { cat: 'sectoral', short: 'FMCG'    },
+  'Nifty Healthcare Index':            { cat: 'sectoral', short: 'HLTH'    },
+  'Nifty IT':                          { cat: 'sectoral', short: 'IT'      },
+  'Nifty Media':                       { cat: 'sectoral', short: 'MEDIA'   },
+  'Nifty Metal':                       { cat: 'sectoral', short: 'METAL'   },
+  'Nifty MidSmall Financial Services': { cat: 'sectoral', short: 'MSFINSR' },
+  'Nifty MidSmall Healthcare':         { cat: 'sectoral', short: 'MSHLTH'  },
+  'Nifty MidSmall IT & Telecom':       { cat: 'sectoral', short: 'MSIT'    },
+  'Nifty Oil & Gas':                   { cat: 'sectoral', short: 'OILGAS'  },
+  'Nifty Pharma':                      { cat: 'sectoral', short: 'PHARMA'  },
+  'Nifty Private Bank':                { cat: 'sectoral', short: 'PVTBANK' },
+  'Nifty PSU Bank':                    { cat: 'sectoral', short: 'PSUBANK' },
+  'Nifty Realty':                      { cat: 'sectoral', short: 'REALTY'  },
+  'Nifty REITs & Realty':              { cat: 'sectoral', short: 'REITS'   },
+  'Nifty500 Healthcare':               { cat: 'sectoral', short: 'HLT500'  },
+  // Strategy
+  'Nifty Alpha 50':                    { cat: 'strategy', short: 'ALPHA50' },
+  'Nifty Alpha Low-Volatility 30':     { cat: 'strategy', short: 'ALPHALV' },
+  'Nifty Alpha Quality Low-Volatility 30': { cat: 'strategy', short: 'AQALV' },
+  'Nifty Alpha Quality Value Low-Volatility 30': { cat: 'strategy', short: 'AQVLV' },
+  'Nifty Dividend Opportunities 50':   { cat: 'strategy', short: 'DIV50'  },
+  'Nifty Growth Sectors 15':           { cat: 'strategy', short: 'GROWTH' },
+  'Nifty High Beta 50':                { cat: 'strategy', short: 'HBETA'  },
+  'Nifty Low Volatility 50':           { cat: 'strategy', short: 'LVOL50' },
+  'Nifty Midcap150 Momentum 50':       { cat: 'strategy', short: 'M150M50'},
+  'Nifty Midcap150 Quality 50':        { cat: 'strategy', short: 'M150Q50'},
+  'Nifty MidSmallcap400 Momentum Quality 100': { cat: 'strategy', short: 'MS400MQ'},
+  'Nifty Quality Low-Volatility 30':   { cat: 'strategy', short: 'QLVOL'  },
+  'Nifty Smallcap250 Momentum Quality 100': { cat: 'strategy', short: 'S250MQ' },
+  'Nifty Smallcap250 Quality 50':      { cat: 'strategy', short: 'S250Q'  },
+  'Nifty Top 10 Equal Weight':         { cat: 'strategy', short: 'TOP10'  },
+  'Nifty Top 15 Equal Weight':         { cat: 'strategy', short: 'TOP15'  },
+  'Nifty Top 20 Equal Weight':         { cat: 'strategy', short: 'TOP20'  },
+  'Nifty Total Market Momentum Quality 50': { cat: 'strategy', short: 'TMMQ50'},
+  'Nifty100 Alpha 30':                 { cat: 'strategy', short: 'N100A30'},
+  'Nifty100 Equal Weight':             { cat: 'strategy', short: 'N100EW' },
+  'Nifty100 Low Volatility 30':        { cat: 'strategy', short: 'N100LV' },
+  'Nifty100 Quality 30':               { cat: 'strategy', short: 'N100Q30'},
+  'Nifty200 Alpha 30':                 { cat: 'strategy', short: 'N200A30'},
+  'Nifty200 Momentum 30':              { cat: 'strategy', short: 'N200M30'},
+  'Nifty200 Quality 30':               { cat: 'strategy', short: 'N200Q30'},
+  'Nifty200 Value 30':                 { cat: 'strategy', short: 'N200V30'},
+  'Nifty500 Equal Weight':             { cat: 'strategy', short: 'N500EW' },
+  'Nifty500 Flexicap Quality 30':      { cat: 'strategy', short: 'N500FQ' },
+  'Nifty500 Low Volatility 50':        { cat: 'strategy', short: 'N500LV' },
+  'Nifty500 Momentum 50':              { cat: 'strategy', short: 'N500M50'},
+  'Nifty500 Multicap Momentum Quality 50': { cat: 'strategy', short: 'N500MMQ'},
+  'Nifty500 Multifactor MQVLv 50':     { cat: 'strategy', short: 'N500MF' },
+  'Nifty500 Quality 50':               { cat: 'strategy', short: 'N500Q50'},
+  'Nifty500 Value 50':                 { cat: 'strategy', short: 'N500V50'},
+  'Nifty50 Equal Weight':              { cat: 'strategy', short: 'N50EW'  },
+  'Nifty50 Value 20':                  { cat: 'strategy', short: 'N50V20' },
+  // Thematic
+  'Nifty100 Enhanced ESG':             { cat: 'thematic', short: 'EESG'   },
+  'Nifty100 ESG':                      { cat: 'thematic', short: 'ESG100' },
+};
+
+const KNOWN_NAMES = Object.keys(INDEX_META);
+
+function fetchPdf(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 Chrome/120.0.0.0 Safari/537.36' } }, res => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => resolve({ status: res.statusCode, buffer: Buffer.concat(chunks) }));
+    }).on('error', reject).setTimeout(20000, function() { this.destroy(new Error('PDF fetch timeout')); });
+  });
+}
+
+function parsePdfText(text) {
+  const indices = [];
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Regex: matches a line ending with 12 numbers (the data columns)
+  const numPat = /^(.+?)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s*$/;
+
+  // Track current category from section headers
+  let currentCat = 'broad';
+  const catMap = {
+    'broad market': 'broad',
+    'strategy': 'strategy',
+    'sectoral': 'sectoral',
+    'thematic': 'thematic',
+  };
+
+  for (const line of lines) {
+    // Check for section headers
+    const lineLow = line.toLowerCase();
+    for (const [key, val] of Object.entries(catMap)) {
+      if (lineLow.includes(key) && lineLow.length < 60) {
+        currentCat = val;
+        break;
+      }
+    }
+
+    const m = numPat.exec(line);
+    if (!m) continue;
+
+    const name = m[1].trim();
+    // Skip header-like lines
+    if (['index name','returns','volatility','index'].some(h => name.toLowerCase().startsWith(h))) continue;
+    // Must have a reasonable name length
+    if (name.length < 4 || name.length > 80) continue;
+
+    const nums = m.slice(2).map(Number);
+    if (nums.some(isNaN)) continue;
+
+    // Determine category from known list or current section
+    const meta = INDEX_META[name];
+    const cat = meta?.cat || currentCat;
+
+    indices.push({
+      name,
+      short: meta?.short || name.replace(/[^A-Z0-9]/gi,'').slice(0,8).toUpperCase(),
+      category: cat,
+      returns: { m1: nums[0], m3: nums[1], y1: nums[2], y3: nums[3], y5: nums[4] },
+      risk:    { volatility: nums[5], beta: nums[6], correlation: nums[7], r2: nums[8] },
+      valuation: { pe: nums[9], pb: nums[10], dividendYield: nums[11] },
+    });
+  }
+
+  return indices;
+}
+
+function getPdfUrl(year, month) {
+  // month: 0-11
+  return `https://niftyindices.com/Index_Dashboard/Index_Dashboard_${MONTH_NAMES[month]}${year}.pdf`;
+}
+
+function getCurrentPdfUrl() {
+  const now = new Date();
+  // Try current month; if before 10th, try last month (data typically released by 10th)
+  if (now.getDate() < 10) {
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return { url: getPdfUrl(prev.getFullYear(), prev.getMonth()), year: prev.getFullYear(), month: prev.getMonth() };
+  }
+  return { url: getPdfUrl(now.getFullYear(), now.getMonth()), year: now.getFullYear(), month: now.getMonth() };
+}
+
+module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  // Cache 12 hours — monthly data
+  res.setHeader('Cache-Control', 's-maxage=43200, stale-while-revalidate=86400');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // Allow override for testing: ?month=MAR2025
+  let pdfUrl, year, month;
+  if (req.query.month) {
+    const m = req.query.month.toUpperCase();
+    const mn = MONTH_NAMES.indexOf(m.slice(0, 3));
+    const yr = parseInt(m.slice(3));
+    if (mn >= 0 && yr >= 2020) {
+      pdfUrl = getPdfUrl(yr, mn);
+      year = yr; month = mn;
+    }
+  }
+  if (!pdfUrl) {
+    const cur = getCurrentPdfUrl();
+    pdfUrl = cur.url; year = cur.year; month = cur.month;
+  }
+
+  try {
+    // Fetch PDF
+    const { status, buffer } = await fetchPdf(pdfUrl);
+
+    if (status !== 200) {
+      // Try previous month as fallback
+      const prev = new Date(year, month - 1, 1);
+      const prevUrl = getPdfUrl(prev.getFullYear(), prev.getMonth());
+      const fallback = await fetchPdf(prevUrl);
+      if (fallback.status !== 200) {
+        return res.status(502).json({ error: `PDF not available: ${pdfUrl}`, status });
+      }
+      year = prev.getFullYear(); month = prev.getMonth();
+      const text = fallback.buffer.toString('utf8');
+      const indices = parsePdfText(text);
+      return res.status(200).json({ month: MONTH_FULL[month], year, asOf: `${year}-${String(month+1).padStart(2,'0')}-28`, indices, source: prevUrl });
+    }
+
+    const text = buffer.toString('utf8');
+    const indices = parsePdfText(text);
+
+    if (!indices.length) {
+      return res.status(500).json({ error: 'PDF parsed but no indices found', url: pdfUrl, preview: text.slice(0, 500) });
+    }
+
+    return res.status(200).json({
+      month: MONTH_FULL[month],
+      year,
+      asOf: `${year}-${String(month+1).padStart(2,'0')}-${new Date(year, month+1, 0).getDate()}`,
+      count: indices.length,
+      indices,
+      source: pdfUrl,
+    });
+
+  } catch (err) {
+    return res.status(500).json({ error: err.message, url: pdfUrl });
+  }
+};
