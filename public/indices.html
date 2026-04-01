@@ -29,7 +29,7 @@
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-9KMZ8MS3M7"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-9KMZ8MS3M7');</script>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebApplication","name":"NSE Index Dashboard","url":"https://mfcalc.getabundance.in/indices","description":"Monthly NSE Index Dashboard showing 100+ indices with 1M, 3M, 1Y, 3Y, 5Y TRI returns, P/E, P/B, Beta and Dividend Yield. Data from NSE Indices Limited.","applicationCategory":"FinanceApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","inLanguage":"en-IN","dateModified":"2026-03-31","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"},"featureList":["100+ NSE indices","1M 3M 1Y 3Y 5Y TRI returns","P/E P/B Dividend Yield","Beta Volatility Correlation","Sortable by any column","Filter by category","Link to Rolling Returns benchmark"],"provider":{"@type":"FinancialService","name":"Abundance Financial Services","url":"https://www.getabundance.in","telephone":"+919808105923","identifier":"ARN-251838"},"isPartOf":{"@type":"WebSite","name":"Abundance MF Calculator","url":"https://mfcalc.getabundance.in"}}
+{"@context":"https://schema.org","@type":"WebApplication","name":"NSE Index Dashboard","url":"https://mfcalc.getabundance.in/indices","description":"Monthly NSE Index Dashboard showing 100+ indices with 1M, 3M, 1Y, 3Y, 5Y TRI returns, P/E, P/B, Beta and Dividend Yield. Data from NSE Indices Limited.","applicationCategory":"FinanceApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","inLanguage":"en-IN","dateModified": "2026-04-01","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"},"featureList":["100+ NSE indices","1M 3M 1Y 3Y 5Y TRI returns","P/E P/B Dividend Yield","Beta Volatility Correlation","Sortable by any column","Filter by category","Link to Rolling Returns benchmark"],"provider":{"@type":"FinancialService","name":"Abundance Financial Services","url":"https://www.getabundance.in","telephone":"+919808105923","identifier":"ARN-251838"},"isPartOf":{"@type":"WebSite","name":"Abundance MF Calculator","url":"https://mfcalc.getabundance.in"}}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.getabundance.in"},{"@type":"ListItem","position":2,"name":"MF Calculator","item":"https://mfcalc.getabundance.in"},{"@type":"ListItem","position":3,"name":"NSE Index Dashboard","item":"https://mfcalc.getabundance.in/indices"}]}
@@ -318,7 +318,7 @@ function renderTable() {
       r5y: r => r.returns.r5y, vol: r => r.risk.vol,
       beta: r => r.risk.beta, pe: r => r.val.pe,
       pb: r => r.val.pb, dy: r => r.val.dy,
-      risk: r => r.riskScore ?? 0,
+      risk: r => r.riskScore ?? -1,
     };
     const fn = kMap[_sortKey] || (r => r.name);
     const aV = fn(a), bV = fn(b);
