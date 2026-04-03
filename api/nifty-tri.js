@@ -137,8 +137,8 @@ module.exports = async function handler(req,res){
     const seenMerge=new Set(cachedData.map(r=>r.date));
     const merged=[...cachedData,...newData.filter(r=>!seenMerge.has(r.date))].sort((a,b)=>parseDate(a.date)-parseDate(b.date));
 
-    // Fire-and-forget: blob write runs after response is sent
-    if(hasBlob&&merged.length)blobPut(slugName,indexName,merged).catch(()=>{});
+    // Await blob write — must complete before Vercel freezes the function after res.json()
+    if(hasBlob&&merged.length) await blobPut(slugName,indexName,merged).catch(()=>{});
 
     return res.status(200).json({index:indexName,from:merged[0]?.date||fromStr,to:merged[merged.length-1]?.date||toStr,source:'niftyindices.com/getTotalReturnIndexString',type:triKey?'TRI':'PRICE',cached:hasBlob,chunks,count:merged.length,sampleKeys:['Date','TotalReturnsIndex'],dateKey:'Date',valueKey:'TotalReturnsIndex',oldest:merged[0],newest:merged[merged.length-1],...(errors.length?{errors}:{}),data:merged});
   }catch(err){

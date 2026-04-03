@@ -357,7 +357,10 @@ module.exports = async function handler(req, res) {
       year = prev.getFullYear(); month = prev.getMonth();
       const indices = parsePdfText(fallback.text);
       const enrichedFallback = indices.map(idx => { const r = riskMap[idx.name]; return r ? { ...idx, riskScore: r.score, riskLabel: r.label } : idx; });
-      return res.status(200).json({ month: MONTH_FULL[month], year, asOf: `${year}-${String(month+1).padStart(2,'0')}-28`, count: enrichedFallback.length, indices: enrichedFallback, source: 'NSE Indices' });
+      const fallbackPayload = { month: MONTH_FULL[month], year, asOf: `${year}-${String(month+1).padStart(2,'0')}-28`, count: enrichedFallback.length, indices: enrichedFallback };
+      // Cache fallback results too — await so it finishes before Vercel freezes the function
+      await dashboardCachePut(year, month, fallbackPayload).catch(() => {});
+      return res.status(200).json({ ...fallbackPayload, source: 'NSE Indices' });
     }
 
     const indices = parsePdfText(text);
@@ -384,8 +387,8 @@ module.exports = async function handler(req, res) {
       indices: enriched,
     };
 
-    // Fire-and-forget blob write — cache for next request
-    dashboardCachePut(year, month, payload).catch(() => {});
+    // Await blob write — must complete before Vercel freezes the function after res.json()
+    await dashboardCachePut(year, month, payload).catch(() => {});
 
     return res.status(200).json({ ...payload, source: 'NSE Indices' });
 
