@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en-IN" prefix="og: https://ogp.me/ns#">
+<head>
+<meta charset="UTF-8">
+<meta name="geo.region" content="IN-UT">
+<meta name="geo.placename" content="Haldwani, Uttarakhand, India">
+<meta name="geo.position" content="29.2183;79.5130">
+<meta name="ICBM" content="29.2183, 79.5130">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>CAS Portfolio Tracker & Live NAV Analyser | Abundance</title>
+<meta name="description" content="Securely upload your CAMS or KFintech Consolidated Account Statement (CAS). Parse your mutual fund holdings locally to track live NAVs and calculate exact wealth gains.">
+<meta name="keywords" content="CAS upload, CAMS statement, KFintech CAS, mutual fund portfolio tracker, live NAV tracker, ELSS lock-in tracker, Abundance Financial Services, ARN-251838">
+<meta name="author" content="Abundance Financial Services">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#2e7d32">
+<link rel="canonical" href="https://mfcalc.getabundance.in/cas-tracker">
+<link rel="sitemap" type="application/xml" href="https://mfcalc.getabundance.in/sitemap.xml">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://api.mfapi.in">
+
+<link rel="icon" type="image/png" sizes="32x32" href="/logo-favicon.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/logo-favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/logo-apple.png">
+<link rel="manifest" href="/manifest.json">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Abundance Financial Services">
+<meta property="og:title" content="CAS Portfolio Tracker & Live NAV Analyser">
+<meta property="og:description" content="Upload your CAMS/KFintech CAS statement to instantly track live mutual fund NAVs and accurate FIFO wealth gains. Free by Abundance ARN-251838.">
+<meta property="og:url" content="https://mfcalc.getabundance.in/cas-tracker">
+<meta property="og:image" content="https://mfcalc.getabundance.in/og-mfcalc.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="en_IN">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@abundancefinsvs">
+<meta name="twitter:title" content="Live CAS Portfolio Tracker | Abundance">
+<meta name="twitter:description" content="Instantly track your mutual fund portfolio using live NAVs. Upload your CAS securely. Processed locally.">
+<meta name="twitter:image" content="https://mfcalc.getabundance.in/og-mfcalc.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Abundance CAS Portfolio Tracker",
+  "url": "https://mfcalc.getabundance.in/cas-tracker",
+  "description": "A tool to parse CAMS/KFintech Consolidated Account Statements and track live mutual fund holdings using FIFO accounting and AMFI live NAVs.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "All",
+  "provider": {
+    "@type": "Organization",
+    "name": "Abundance Financial Services",
+    "url": "https://www.getabundance.in"
+  }
+}
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* Core Variables & Resets */
+:root {
+  --bg:#f0f7f0; --surface:#fff; --surface2:#edf6ed; --surface3:#dff0df;
+  --border:#c2dfc2; --border2:#a8cfa8;
+  --text:#162616; --text2:#2e4d2e; --muted:#5e8a5e;
+  --g1:#1b5e20; --g2:#2e7d32; --g3:#43a047; --g4:#66bb6a;
+  --g-light:#a5d6a7; --g-xlight:#e8f5e9;
+  --pos:#1b5e20; --neg:#b71c1c;
+  --shadow:0 2px 16px rgba(46,125,50,.09);
+  --radius:14px;
+}
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Raleway", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; background-image: radial-gradient(ellipse 70% 40% at 50% -10%, rgba(46,125,50,.07) 0%, transparent 60%); }
+a { text-decoration: none; color: inherit; }
+.accent-line { height: 3px; background: linear-gradient(90deg, var(--g1), var(--g3), var(--g4), var(--g3), var(--g1)); }
+.page { max-width: 1160px; margin: 0 auto; padding: 0 24px 48px; }
+
+/* Navbar */
+.navbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 0 18px; margin-bottom: 28px; border-bottom: 1.5px solid var(--border); flex-wrap: wrap; }
+.logo-wrap { display: flex; align-items: center; gap: 12px; }
+.logo-icon { width: 38px; height: 38px; border-radius: 8px; background: var(--g2); color: #fff; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; }
+.logo-text .brand { font-size: 1.12rem; font-weight: 800; color: var(--g2); letter-spacing: -.3px; }
+.logo-text .sub { font-size: .62rem; font-weight: 600; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
+.nav-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nav-link { font-size: .76rem; font-weight: 700; color: var(--muted); padding: 7px 13px; border-radius: 8px; transition: all .18s; }
+.nav-link:hover { color: var(--g2); background: var(--g-xlight); }
+.nav-tag { font-size: .64rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 7px 14px; border-radius: 8px; background: var(--g-xlight); border: 1.5px solid var(--g-light); color: var(--g2); }
+
+/* Hero Section (Mimics wc-hdr) */
+.wc-hdr { background: linear-gradient(135deg, #0d2818 0%, #1b4332 45%, #155e38 100%); padding: 28px 32px; position: relative; border-radius: 16px 16px 0 0; overflow: hidden; }
+.wc-hdr-grid { position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px); background-size: 28px 28px; pointer-events: none; }
+.wc-eyebrow { display: flex; align-items: center; gap: 7px; font-size: .58rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,.45); font-family: 'JetBrains Mono', monospace; }
+.wc-title-row { display: flex; align-items: center; gap: 12px; margin-top: 8px; position: relative; z-index: 2; }
+.wc-icon { font-size: 1.6rem; filter: drop-shadow(0 0 10px rgba(165,214,167,.4)); }
+.wc-name { font-size: 1.1rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #fff; }
+.wc-sub { font-size: .7rem; color: rgba(255,255,255,.55); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+.wr-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #66bb6a; box-shadow: 0 0 0 0 rgba(102,187,106,.5); animation: livePulse 2s ease infinite; flex-shrink: 0; }
+@keyframes livePulse { 0%{box-shadow: 0 0 0 0 rgba(102,187,106,.5)} 70%{box-shadow: 0 0 0 6px rgba(102,187,106,0)} 100%{box-shadow: 0 0 0 0 rgba(102,187,106,0)} }
+
+/* Main Cards */
+.sip-card { background: var(--surface); border-radius: var(--radius); border: 1.5px solid var(--border); box-shadow: var(--shadow); margin-bottom: 24px; animation: fadeUp .4s .2s ease both; }
+.sip-card-body { padding: 28px 32px; }
+.section-label { font-size: .6rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; display: flex; align-items: center; gap: 9px; }
+.section-label::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+/* Forms */
+.sip-field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
+.sip-field label { font-size: .62rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.sip-input { width: 100%; padding: 13px 16px; font-family: "JetBrains Mono", monospace; font-size: .88rem; font-weight: 700; border: 1.5px solid var(--border2); border-radius: 9px; background: var(--surface2); color: var(--text); outline: none; transition: all .2s; }
+.sip-input:focus { border-color: var(--g3); background: #fff; box-shadow: 0 0 0 3px rgba(67,160,71,.1); }
+.btn-primary { display: flex; align-items: center; justify-content: center; width: 100%; padding: 14px; border-radius: 9px; background: linear-gradient(135deg, var(--g1), var(--g2)); color: #fff; font-family: "Raleway", sans-serif; font-size: .9rem; font-weight: 800; cursor: pointer; border: none; transition: all .15s; letter-spacing: .5px; box-shadow: 0 4px 14px rgba(46,125,50,.25); }
+.btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(46,125,50,.35); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Dashboard Summary */
+.sip-summary { display: flex; flex-wrap: wrap; border-radius: 11px; border: 1.5px solid var(--g-light); overflow: hidden; background: var(--g-xlight); margin-bottom: 24px; }
+.sip-sum-item { flex: 1; min-width: 100px; padding: 16px; border-right: 1px solid var(--g-light); text-align: center; }
+.sip-sum-item:last-child { border-right: none; }
+.sip-sum-label { font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 5px; }
+.sip-sum-val { font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: 800; color: var(--text); }
+
+/* Table */
+.risk-table { width: 100%; border-collapse: collapse; }
+.risk-table th { text-align: left; padding: 12px 20px; background: var(--surface2); font-size: .6rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); border-bottom: 1.5px solid var(--border); font-family: "JetBrains Mono", monospace; }
+.risk-table th.right { text-align: right; }
+.risk-table td { padding: 14px 20px; border-bottom: 1px solid var(--surface2); font-size: .85rem; color: var(--text); }
+.risk-table tr:last-child td { border-bottom: none; }
+.risk-table tbody tr:hover td { background: var(--g-xlight); }
+.elss-badge { display: inline-flex; align-items: center; gap: 4px; font-size: .55rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; margin-top: 6px; text-transform: uppercase; }
+.badge-locked { background: #fff3e0; color: #e65100; border: 1px solid #ffe0b2; }
+.badge-unlocked { background: var(--surface3); color: var(--g1); border: 1px solid var(--border2); }
+
+/* Dark Footer */
+.dark-footer{ background:#0d1f10; margin-top:60px; padding:48px 24px 20px; text-align: center; font-family:'Raleway',sans-serif; border-top: 4px solid var(--g2); }
+.dfc-logo{ height:48px; object-fit:contain; opacity:.95; margin-bottom:14px; }
+.dfc-text{ font-size: .7rem; color: rgba(232,245,233,.6); line-height: 1.6; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+@media(max-width:640px){
+  .wc-hdr { padding: 20px; }
+  .sip-card-body { padding: 20px; }
+  .risk-table thead { display: none; }
+  .risk-table tr { display: block; margin-bottom: 12px; border: 1.5px solid var(--border); border-radius: 10px; }
+  .risk-table td { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--surface2); }
+  .risk-table td::before { content: attr(data-label); font-size: .55rem; font-weight: 800; text-transform: uppercase; color: var(--muted); }
+  .risk-table td.full-width { flex-direction: column; align-items: flex-start; }
+  .risk-table td.full-width::before { margin-bottom: 6px; }
+  .sip-summary { flex-direction: column; }
+  .sip-sum-item { border-right: none; border-bottom: 1px solid var(--g-light); }
+}
+</style>
+</head>
+<body>
+<div class="accent-line"></div>
+
+<div class="page">
+  <nav class="navbar">
+    <a class="logo-wrap" href="/" target="_self">
+      <div class="logo-icon">A</div>
+      <div class="logo-text">
+        <div class="brand">Abundance</div>
+        <div class="sub">Financial Services<sup style="font-size:.55em;vertical-align:super;opacity:.75">®</sup></div>
+      </div>
+    </a>
+    <div class="nav-right">
+      <a class="nav-link" href="/">🏠 Calculators</a>
+      <a class="nav-link" href="/portfolio.html">📈 Live AMC Extractor</a>
+      <div class="nav-tag active">📄 CAS Tracker</div>
+    </div>
+  </nav>
+
+  <main class="sip-card">
+    <div class="wc-hdr">
+      <div class="wc-hdr-grid"></div>
+      <div class="wc-eyebrow">
+        <span class="wr-live-dot"></span>Live AMFI Data · Local Processing
+      </div>
+      <div class="wc-title-row">
+        <span class="wc-icon">📄</span>
+        <div>
+          <div class="wc-name">CAS Portfolio Tracker</div>
+          <div class="wc-sub">Upload CAMS/KFintech Statement · Live NAVs · FIFO Capital Gains</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sip-card-body">
+      
+      <div id="upload-section" style="max-width: 500px; margin: 0 auto;">
+        <div class="section-label">Upload Statement</div>
+        <form id="cas-form">
+          <div class="sip-field">
+            <label for="pdf-file">1. Select CAS PDF</label>
+            <input type="file" id="pdf-file" accept=".pdf" class="sip-input" required style="padding: 10px;">
+          </div>
+          <div class="sip-field" style="margin-top: 20px;">
+            <label for="pdf-password">2. PDF Password</label>
+            <input type="password" id="pdf-password" placeholder="Usually your PAN" class="sip-input" required>
+            <div style="font-size: .65rem; color: var(--muted); font-weight: 600; margin-top: 4px;">🔒 Parsed locally via secure serverless functions. Never stored.</div>
+          </div>
+          
+          <button type="submit" id="submit-btn" class="btn-primary" style="margin-top: 28px;">
+            Analyse Portfolio
+          </button>
+        </form>
+
+        <div id="loading-msg" style="display: none; text-align: center; margin-top: 20px;">
+          <div style="font-size: 1.2rem; margin-bottom: 8px;">⏳</div>
+          <div style="color: var(--g2); font-weight: 800; font-size: .9rem;">Parsing statement & fetching live NAVs...</div>
+          <div style="color: var(--muted); font-size: .7rem; margin-top: 4px;">This may take up to 10 seconds</div>
+        </div>
+
+        <div id="error-msg" style="display: none; text-align: center; color: var(--neg); font-weight: 700; font-size: .85rem; margin-top: 20px; padding: 12px; background: #ffebee; border: 1.5px solid #ef9a9a; border-radius: 8px;">
+        </div>
+      </div>
+
+      <div id="dashboard-section" style="display: none; animation: fadeUp .5s ease;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px;">
+          <div class="section-label" style="margin-bottom: 0;">Portfolio Overview</div>
+          <button onclick="location.reload()" style="background:none; border:none; color:var(--muted); font-size:.75rem; font-weight:700; cursor:pointer; text-decoration:underline; font-family:'Raleway',sans-serif;">Upload Another</button>
+        </div>
+
+        <div class="sip-summary">
+          <div class="sip-sum-item">
+            <div class="sip-sum-label">Current Value</div>
+            <div class="sip-sum-val" id="res-current">₹0</div>
+          </div>
+          <div class="sip-sum-item">
+            <div class="sip-sum-label">Total Invested (FIFO)</div>
+            <div class="sip-sum-val" id="res-invested">₹0</div>
+          </div>
+          <div class="sip-sum-item">
+            <div class="sip-sum-label">Wealth Gain</div>
+            <div class="sip-sum-val" id="res-gain" style="color: var(--g1)">₹0</div>
+          </div>
+        </div>
+
+        <div style="border: 1.5px solid var(--border); border-radius: var(--radius); overflow: hidden;">
+          <table class="risk-table">
+            <thead>
+              <tr>
+                <th>Scheme Name</th>
+                <th class="right">Units</th>
+                <th class="right">Live NAV</th>
+                <th class="right">Current Value</th>
+              </tr>
+            </thead>
+            <tbody id="holdings-table-body">
+              </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<footer class="dark-footer">
+  <img class="dfc-logo" src="/logo-footer-white.png" alt="Abundance Financial Services" onerror="this.style.display='none'">
+  <div class="dfc-text">
+    <strong style="color: #a5d6a7;">Abundance Financial Services®</strong><br>
+    AMFI Registered Mutual Fund Distributor · ARN-251838<br><br>
+    <span style="opacity: 0.6;">Mutual fund investments are subject to market risks. Portfolio data parsed directly from user uploads. We do not store financial documents.</span>
+  </div>
+</footer>
+
+<script>
+// Format Indian Rupees
+const fmtINR = (num) => Math.round(num).toLocaleString('en-IN');
+
+// Parse date safely
+function parseDate(dateStr) {
+  return new Date(dateStr);
+}
+
+// Advanced FIFO calculation for accurate 'Invested Capital'
+function calculateFIFODetails(transactions, isELSS, currentNav) {
+  const buyLots = [];
+  
+  for (const txn of transactions) {
+    const type = (txn.type || '').toUpperCase();
+    const units = parseFloat(txn.units) || 0;
+    const amount = parseFloat(txn.amount) || 0;
+    const txnDate = parseDate(txn.date);
+
+    if (units === 0) continue;
+
+    if (type.includes('PURCHASE') || type.includes('SIP') || type.includes('SWITCH IN') || type.includes('REINVEST')) {
+      buyLots.push({ units, amount, nav: amount / units, date: txnDate });
+    } else if (type.includes('REDEMPTION') || type.includes('SWITCH OUT')) {
+      let unitsToRedeem = Math.abs(units);
+      
+      while (unitsToRedeem > 0 && buyLots.length > 0) {
+        let oldestLot = buyLots[0];
+        
+        if (oldestLot.units <= unitsToRedeem) {
+          unitsToRedeem -= oldestLot.units;
+          buyLots.shift(); 
+        } else {
+          oldestLot.units -= unitsToRedeem;
+          oldestLot.amount = oldestLot.units * oldestLot.nav; 
+          unitsToRedeem = 0; 
+        }
+      }
+    }
+  }
+
+  let totalInvested = 0;
+  let lockedUnits = 0;
+  
+  // ELSS 3-Year Rule
+  const threeYearsAgo = new Date();
+  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+
+  for (const lot of buyLots) {
+    totalInvested += lot.amount;
+    if (isELSS && lot.date > threeYearsAgo) {
+      lockedUnits += lot.units;
+    }
+  }
+
+  return { 
+    totalInvested: Math.max(0, totalInvested), 
+    lockedUnits, 
+    lockedValue: lockedUnits * currentNav 
+  };
+}
+
+// Form Submit Handler
+document.getElementById('cas-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const file = document.getElementById('pdf-file').files[0];
+    const password = document.getElementById('pdf-password').value;
+    const submitBtn = document.getElementById('submit-btn');
+    const loadingMsg = document.getElementById('loading-msg');
+    const errorMsg = document.getElementById('error-msg');
+    
+    submitBtn.disabled = true;
+    submitBtn.innerText = 'Processing...';
+    loadingMsg.style.display = 'block';
+    errorMsg.style.display = 'none';
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('password', password);
+
+    try {
+        // 1. Call the Python FastApi Parser via Vercel
+        const parseRes = await fetch('/api/parse', { method: 'POST', body: formData });
+        if (!parseRes.ok) {
+            const errText = await parseRes.text();
+            throw new Error(parseRes.status === 401 ? "Incorrect PDF Password (check PAN)" : "Failed to parse CAS statement.");
+        }
+        
+        const data = await parseRes.json();
+        
+        let globalCurrentValue = 0;
+        let globalInvestedValue = 0;
+        const processHoldings = [];
+
+        // 2. Map folios and fetch live NAVs from existing MF API
+        for (const folio of data.folios) {
+            for (const scheme of folio.schemes) {
+                if (scheme.close < 0.01) continue; // Ignore zero/dust balances
+
+                let currentNav = parseFloat(scheme.valuation.nav);
+                let isLive = false;
+
+                // Fetch live NAV using the existing resilient proxy
+                if (scheme.amfi) {
+                    try {
+                        const navRes = await fetch(`/api/mf?code=${scheme.amfi}&latest=1`);
+                        if (navRes.ok) {
+                            const resJson = await navRes.json();
+                            if (resJson.status === 'SUCCESS' && resJson.data && resJson.data.length > 0) {
+                                currentNav = parseFloat(resJson.data[0].nav);
+                                isLive = true;
+                            }
+                        }
+                    } catch(e) { 
+                        console.warn('Live NAV failed for', scheme.scheme); 
+                    }
+                }
+
+                // Check for tax savers
+                const schemeNameUpper = scheme.scheme.toUpperCase();
+                const isELSS = schemeNameUpper.includes('ELSS') || schemeNameUpper.includes('TAX SAVER');
+                
+                // Process Transactions via FIFO
+                const fifo = calculateFIFODetails(scheme.transactions, isELSS, currentNav);
+                
+                const currentValue = scheme.close * currentNav;
+                
+                globalCurrentValue += currentValue;
+                globalInvestedValue += fifo.totalInvested;
+
+                processHoldings.push({
+                    name: scheme.scheme,
+                    units: scheme.close,
+                    nav: currentNav,
+                    isLive: isLive,
+                    value: currentValue,
+                    invested: fifo.totalInvested,
+                    isELSS: isELSS,
+                    lockedValue: fifo.lockedValue
+                });
+            }
+        }
+
+        // Sort holdings largest to smallest
+        processHoldings.sort((a,b) => b.value - a.value);
+
+        // 3. Render Table
+        const tbody = document.getElementById('holdings-table-body');
+        tbody.innerHTML = processHoldings.map(fund => {
+            let elssBadge = '';
+            if (fund.isELSS) {
+                if (fund.lockedValue > 0) {
+                    elssBadge = `<div class="elss-badge badge-locked">🔒 ₹${fmtINR(fund.lockedValue)} Locked</div>`;
+                } else {
+                    elssBadge = `<div class="elss-badge badge-unlocked">🔓 Fully Unlocked</div>`;
+                }
+            }
+
+            return `
+            <tr>
+                <td class="full-width" data-label="Scheme Name">
+                    <div style="font-weight: 700; color: var(--text); line-height: 1.4;">${fund.name}</div>
+                    ${elssBadge}
+                </td>
+                <td class="right" data-label="Units" style="font-family:'JetBrains Mono',monospace; color:var(--muted)">
+                    ${fund.units.toFixed(3)}
+                </td>
+                <td class="right" data-label="Live NAV" style="font-family:'JetBrains Mono',monospace; font-weight:700;">
+                    ₹${fund.nav.toFixed(4)}
+                    ${!fund.isLive ? '<div style="font-size:.6rem;color:var(--muted);font-family:\'Raleway\',sans-serif;font-weight:600;margin-top:3px">Statement NAV</div>' : ''}
+                </td>
+                <td class="right" data-label="Current Value">
+                    <div style="font-family:'JetBrains Mono',monospace; font-size: 1rem; font-weight: 800; color: var(--g1)">₹${fmtINR(fund.value)}</div>
+                    <div style="font-size: .65rem; color: var(--muted); margin-top: 3px; font-weight: 600;">Inv: ₹${fmtINR(fund.invested)}</div>
+                </td>
+            </tr>`;
+        }).join('');
+
+        // 4. Render Summary Metrics
+        const gain = globalCurrentValue - globalInvestedValue;
+        document.getElementById('res-current').innerText = `₹${fmtINR(globalCurrentValue)}`;
+        document.getElementById('res-invested').innerText = `₹${fmtINR(globalInvestedValue)}`;
+        
+        const gainEl = document.getElementById('res-gain');
+        gainEl.innerText = `${gain >= 0 ? '+' : ''}₹${fmtINR(gain)}`;
+        gainEl.style.color = gain >= 0 ? 'var(--g1)' : 'var(--neg)';
+
+        // 5. Switch Views
+        document.getElementById('upload-section').style.display = 'none';
+        document.getElementById('dashboard-section').style.display = 'block';
+
+    } catch (error) {
+        errorMsg.innerText = error.message;
+        errorMsg.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Analyse Portfolio';
+        loadingMsg.style.display = 'none';
+    }
+});
+</script>
+</body>
+</html>
