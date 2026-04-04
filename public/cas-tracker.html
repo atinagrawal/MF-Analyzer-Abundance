@@ -112,7 +112,7 @@
 <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
         <a href="/" class="flex items-center gap-3 group">
-            <div class="w-8 h-8 rounded bg-green-700 text-white flex items-center justify-center font-bold text-lg shadow-sm group-hover:bg-green-800 transition-colors">A</div>
+            <img src="/logo-128.png" alt="Abundance" class="w-8 h-8 rounded-md shadow-sm group-hover:scale-105 transition-transform">
             <div class="flex flex-col justify-center">
                 <span class="font-extrabold text-slate-800 tracking-tight leading-none mb-0.5">Abundance</span>
                 <span class="text-[0.55rem] font-bold text-slate-500 uppercase tracking-[0.15em] leading-none">Financial Services</span>
@@ -183,22 +183,49 @@
     </div>
 </main>
 
-<footer class="bg-white border-t border-slate-200 py-8 mt-auto">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-        <div>
-            <div class="flex items-center gap-2 mb-2">
-                <div class="w-6 h-6 rounded bg-green-700 text-white flex items-center justify-center font-bold text-xs">A</div>
-                <span class="font-bold text-slate-800 text-sm tracking-tight">Abundance Financial Services®</span>
+<footer class="bg-[#090E17] text-slate-400 py-14 mt-auto relative overflow-hidden">
+    <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-800 via-green-400 to-green-800"></div>
+    <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-50"></div>
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-12 gap-8 relative z-10">
+        
+        <div class="md:col-span-5 lg:col-span-4">
+            <div class="flex items-center gap-3 mb-6">
+                <img src="/logo-128.png" alt="Abundance" class="w-10 h-10 rounded-lg shadow-sm">
+                <div class="flex flex-col justify-center">
+                    <span class="font-extrabold text-white text-lg tracking-tight leading-none mb-1">Abundance</span>
+                    <span class="text-[0.6rem] font-bold text-green-400 uppercase tracking-[0.2em] leading-none">Financial Services<sup style="font-size:0.5rem">®</sup></span>
+                </div>
             </div>
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">AMFI Registered Distributor · ARN-251838</p>
-            <p class="text-[0.65rem] mt-3 text-slate-400 max-w-md leading-relaxed">Mutual fund investments are subject to market risks. Read all scheme related documents carefully. Portfolio data is parsed securely and never stored.</p>
+            <p class="text-xs text-slate-500 mb-2 font-mono">AMFI Registered Distributor: <span class="text-slate-300 font-bold">ARN-251838</span></p>
+            <p class="text-xs text-slate-500 leading-relaxed pr-4">Empowering investors with data-driven clarity. Mutual fund investments are subject to market risks. Read all scheme related documents carefully.</p>
         </div>
-        <div class="md:text-right">
-            <div class="flex gap-4 md:justify-end">
-                <a href="/" class="text-slate-400 hover:text-green-700 transition-colors text-xs font-bold uppercase tracking-widest">Calculators</a>
-                <a href="/portfolio.html" class="text-slate-400 hover:text-green-700 transition-colors text-xs font-bold uppercase tracking-widest">AMC Extractor</a>
+
+        <div class="md:col-span-3 lg:col-span-4">
+            <h4 class="text-white font-bold text-sm tracking-widest uppercase mb-6">Our Tools</h4>
+            <ul class="space-y-3">
+                <li><a href="/" class="text-sm hover:text-green-400 transition-colors">Financial Calculators</a></li>
+                <li><a href="/portfolio.html" class="text-sm hover:text-green-400 transition-colors">Live AMC Extractor</a></li>
+                <li><a href="/cas-tracker.html" class="text-sm text-green-500 font-semibold">CAS Portfolio Analyzer</a></li>
+            </ul>
+        </div>
+
+        <div class="md:col-span-4 lg:col-span-4">
+            <h4 class="text-white font-bold text-sm tracking-widest uppercase mb-6">Privacy & Security</h4>
+            <div class="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-sm">
+                <p class="text-xs text-slate-400 leading-relaxed mb-2">We take privacy seriously. All PDF parsing is executed in isolated, ephemeral browser instances or serverless functions.</p>
+                <div class="flex items-center gap-2 text-green-400 text-xs font-bold uppercase tracking-widest mt-3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    Zero Data Storage
+                </div>
             </div>
         </div>
+
+    </div>
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-white/10 relative z-10 flex flex-col md:flex-row justify-between items-center gap-4">
+        <p class="text-xs text-slate-600">© 2026 Abundance Financial Services. All rights reserved.</p>
+        <p class="text-xs text-slate-600 font-mono">mfcalc.getabundance.in</p>
     </div>
 </footer>
 
@@ -263,17 +290,20 @@
 
         // Process each folio in the payload
         for (const folio of data.folios || []) {
-            // Smart PAN extraction Fallback
+            
+            // Map the PAN exactly as extracted by our custom Python pdfminer script
             let rawPan = folio.pan ? folio.pan.toUpperCase().trim() : '';
             if (!rawPan || rawPan.length < 5) rawPan = 'UNKNOWN PAN';
             
-            // Build PAN grouped container
+            // Retrieve the specific Investor Name for this Folio (Not the global one)
+            let specificName = folio.investor_name || data.investor_info?.name || 'Investor';
+            
             if (!portfolioDataByPan[rawPan]) {
                 portfolioDataByPan[rawPan] = { 
                     current: 0, 
                     invested: 0, 
                     holdings: [], 
-                    investorName: folio.investor_name || data.investor_info?.name || 'Investor' 
+                    investorName: specificName
                 };
             }
 
@@ -284,7 +314,6 @@
                 let currentNav = parseFloat(scheme.valuation?.nav || 0);
                 let isLive = false;
 
-                // Live NAV fetching
                 if (scheme.amfi) {
                     try {
                         const navRes = await fetch(`/api/mf?code=${scheme.amfi}&latest=1`);
@@ -320,7 +349,6 @@
             }
         }
 
-        // Sort holdings by Current Value (Largest to Smallest)
         Object.keys(portfolioDataByPan).forEach(pan => {
             portfolioDataByPan[pan].holdings.sort((a,b) => b.value - a.value);
         });
@@ -340,7 +368,6 @@
         
         const panKeys = Object.keys(portfolioDataByPan);
         
-        // Render Tabs (Only if Multiple PANs exist, or if the only PAN isn't UNKNOWN)
         if (panKeys.length > 1 || (panKeys.length === 1 && panKeys[0] !== 'UNKNOWN PAN')) {
             tabsContainer.innerHTML = panKeys.map(pan => {
                 const invName = portfolioDataByPan[pan].investorName;
@@ -360,7 +387,6 @@
         const gain = data.current - data.invested;
         const gainPct = data.invested > 0 ? ((gain / data.invested) * 100).toFixed(2) : 0;
 
-        // Render Summary Dash
         let html = `
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 animate-stagger">
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -388,7 +414,6 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-stagger">
         `;
 
-        // Render Individual Holdings
         data.holdings.forEach(fund => {
             const fGain = fund.value - fund.invested;
             const fGainPct = fund.invested > 0 ? ((fGain / fund.invested) * 100).toFixed(1) : 0;
@@ -396,8 +421,8 @@
 
             let elssBadge = fund.isELSS 
                 ? (fund.lockedValue > 0 
-                    ? `<span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-[0.6rem] font-bold uppercase tracking-wider">🔒 ₹${fmtINR(fund.lockedValue)} Locked</span>`
-                    : `<span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[0.6rem] font-bold uppercase tracking-wider">🔓 Unlocked</span>`)
+                    ? `<span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-[0.6rem] font-bold uppercase tracking-wider border border-orange-200">🔒 ₹${fmtINR(fund.lockedValue)} Locked</span>`
+                    : `<span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[0.6rem] font-bold uppercase tracking-wider border border-slate-200">🔓 Unlocked</span>`)
                 : '';
 
             html += `
@@ -436,7 +461,7 @@
                         <div class="text-right flex flex-col justify-start">
                             <div class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Current Value</div>
                             <div class="mono font-extrabold text-slate-900 text-lg">₹${fmtINR(fund.value)}</div>
-                            <div class="text-xs font-bold mt-1.5 ${isProfit ? 'text-green-600' : 'text-red-600'} bg-slate-50 inline-block self-end px-2 py-0.5 rounded">
+                            <div class="text-xs font-bold mt-1.5 ${isProfit ? 'text-green-600' : 'text-red-600'} bg-slate-50 inline-block self-end px-2 py-0.5 rounded border border-slate-100">
                                 ${isProfit ? '+' : ''}${fGainPct}%
                             </div>
                         </div>
@@ -449,13 +474,11 @@
         contentContainer.innerHTML = html;
     }
 
-    // Tab Switcher
     window.switchPan = function(pan) { 
         activePan = pan; 
         renderUI(); 
     };
 
-    // Form Submission
     document.getElementById('cas-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const submitBtn = document.getElementById('submit-btn');
