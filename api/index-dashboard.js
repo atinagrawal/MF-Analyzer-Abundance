@@ -287,10 +287,14 @@ async function dashboardCacheGet(year, month) {
   if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
   try {
     const { list } = require('@vercel/blob');
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
     const key = `idx-dashboard-${year}-${String(month+1).padStart(2,'0')}.json`;
-    const { blobs } = await list({ prefix: key, limit: 1, token: process.env.BLOB_READ_WRITE_TOKEN });
+    const { blobs } = await list({ prefix: key, limit: 1, token });
     if (!blobs.length) return null;
-    const r = await fetch(blobs[0].url + '?t=' + Date.now());
+    // Private blobs require Authorization header to read
+    const r = await fetch(blobs[0].downloadUrl || blobs[0].url, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Cache-Control': 'no-store' }
+    });
     if (!r.ok) return null;
     return await r.json();
   } catch { return null; }
@@ -302,7 +306,7 @@ async function dashboardCachePut(year, month, payload) {
     const { put } = require('@vercel/blob');
     const key = `idx-dashboard-${year}-${String(month+1).padStart(2,'0')}.json`;
     await put(key, JSON.stringify(payload), {
-      access: 'public', contentType: 'application/json',
+      access: 'private', contentType: 'application/json',
       addRandomSuffix: false, token: process.env.BLOB_READ_WRITE_TOKEN,
     });
   } catch(e) {
