@@ -2,3 +2,4 @@ fastapi
 python-multipart
 casparser
 uvicorn
+pdfminer.six
