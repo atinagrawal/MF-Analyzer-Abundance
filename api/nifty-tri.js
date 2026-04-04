@@ -27,9 +27,13 @@ function httpsRequest(options, body){
 async function blobGet(slugName){
   try{
     const{list}=require('@vercel/blob');
-    const{blobs}=await list({prefix:`${CACHE_PRE}${slugName}.json`,token:process.env.BLOB_READ_WRITE_TOKEN,limit:1});
+    const token=process.env.BLOB_READ_WRITE_TOKEN;
+    const{blobs}=await list({prefix:`${CACHE_PRE}${slugName}.json`,token,limit:1});
     if(!blobs.length)return null;
-    const r=await fetch(blobs[0].url+'?t='+Date.now());
+    // Private blobs require Authorization header to read
+    const r=await fetch(blobs[0].downloadUrl||blobs[0].url,{
+      headers:{'Authorization':`Bearer ${token}`,'Cache-Control':'no-store'}
+    });
     if(!r.ok)return null;
     return await r.json();
   }catch{return null}
@@ -38,7 +42,7 @@ async function blobGet(slugName){
 async function blobPut(slugName,indexName,data){
   try{
     const{put}=require('@vercel/blob');
-    await put(`${CACHE_PRE}${slugName}.json`,JSON.stringify({index:indexName,lastUpdated:new Date().toISOString(),count:data.length,data}),{access:'public',contentType:'application/json',addRandomSuffix:false,token:process.env.BLOB_READ_WRITE_TOKEN});
+    await put(`${CACHE_PRE}${slugName}.json`,JSON.stringify({index:indexName,lastUpdated:new Date().toISOString(),count:data.length,data}),{access:'private',contentType:'application/json',addRandomSuffix:false,token:process.env.BLOB_READ_WRITE_TOKEN});
   }catch(e){console.error('[nifty-tri] BLOB WRITE FAILED — name:',e.name,'msg:',e.message,'status:',e.status||'?','token-present:',!!process.env.BLOB_READ_WRITE_TOKEN)}
 }
 
