@@ -31,20 +31,30 @@ def build_pan_name_map(raw_text: str) -> dict:
         context   = raw_text[ctx_start:ctx_end]
 
         # Ordered from most-specific to most-generic
+        # BUG FIX: {2,60?} was INVALID regex (? inside braces) → corrected to {2,60}
         name_patterns = [
             # "Investor Name : JOHN DOE" followed by any line-end or PAN/KYC/Email keyword
-            r'(?:Investor\s+Name|Name)\s*[:\-]\s*([A-Za-z][A-Za-z .]{2,60}?)(?:\s*[\r\n]|\s+(?:PAN|KYC|Email|Mobile|Address|DOB))',
-            # Bare "Name : JOHN DOE" ending at line boundary
-            r'(?:Investor\s+Name|Name)\s*[:\-]\s*([A-Za-z][A-Za-z .]{2,60?})[\r\n]',
+            r'(?:Investor\s+Name|Name\s+of\s+(?:the\s+)?(?:Investor|Holder|First\s+Holder))\s*[:\-]\s*([A-Za-z][A-Za-z .]{2,60})(?:\s*[\r\n]|\s+(?:PAN|KYC|Email|Mobile|Address|DOB|Date|Folio))',
+            # "Name : JOHN DOE" ending at line boundary
+            r'(?:Investor\s+Name|Name)\s*[:\-]\s*([A-Za-z][A-Za-z .]{2,60})[\r\n]',
             # Fallback: label then colon then name, stopping at 2+ spaces or line
-            r'(?:Investor|Name)\s*:\s*([A-Za-z][A-Za-z .]{2,55?})(?:\s{2,}|[\r\n])',
+            r'(?:Investor|Name)\s*:\s*([A-Za-z][A-Za-z .]{2,55})(?:\s{2,}|[\r\n])',
+            # KFintech format: sometimes "Name" appears after PAN on same/next line
+            r'PAN\s*[:\-]?\s*[A-Z]{5}[0-9]{4}[A-Z]\s*[\r\n\s]+([A-Z][A-Za-z .]{2,55})[\r\n]',
         ]
 
         for pattern in name_patterns:
             nm = re.search(pattern, context, re.IGNORECASE)
             if nm:
                 name = nm.group(1).strip().rstrip('.')
-                if len(name) > 2:
+                # Filter out false positives: common field labels, single words that are labels
+                skip_words = {
+                    'pan', 'kyc', 'email', 'mobile', 'address', 'folio', 'nominee',
+                    'advisor', 'broker', 'arn', 'date', 'dob', 'status', 'mode',
+                    'tax', 'statement', 'consolidated', 'account', 'not provided',
+                    'not updated', 'na', 'nil', 'compliant', 'ok', 'yes', 'no',
+                }
+                if len(name) > 2 and name.lower() not in skip_words:
                     pan_name_map[pan] = name
                     break
 
@@ -105,12 +115,12 @@ async def parse_cas_statement(
                     folio['investor_name'] = pan_investor_map[folio_pan]
                 else:
                     # Fallback: search immediately around this folio block
-                    # Check both before AND after – layout varies by issuer
+                    # BUG FIX: corrected {2,60?} → {2,60}
                     for ctx in [text_before, text_after]:
                         nm = re.search(
-                            r'(?:Investor\s+Name|Name)\s*[:\-]\s*'
-                            r'([A-Za-z][A-Za-z .]{2,60?})'
-                            r'(?:\s*[\r\n]|\s+(?:PAN|KYC|Email|Mobile))',
+                            r'(?:Investor\s+Name|Name\s+of\s+(?:the\s+)?(?:Investor|Holder|First\s+Holder)|Name)\s*[:\-]\s*'
+                            r'([A-Za-z][A-Za-z .]{2,60})'
+                            r'(?:\s*[\r\n]|\s+(?:PAN|KYC|Email|Mobile|Folio|Date))',
                             ctx, re.IGNORECASE
                         )
                         if nm:
@@ -149,6 +159,32 @@ async def parse_cas_statement(
         except Exception as e:
             print("⚠️  Text enrichment failed:", e)
             traceback.print_exc()
+
+        # ── 3. Fallback: use casparser's investor_info for single-PAN CAS ───
+        # If the document-level scan found no names at all, but casparser
+        # extracted a global investor_info.name, use it as last resort.
+        investor_info_name = (
+            dict_data.get('investor_info', {}).get('name', '') or ''
+        ).strip()
+
+        if investor_info_name and len(investor_info_name) > 2:
+            # Collect all unique PANs across folios
+            all_pans = set()
+            for folio in dict_data.get('folios', []):
+                fp = (folio.get('pan') or '').upper().strip()
+                if fp and len(fp) >= 10:
+                    all_pans.add(fp)
+
+            # If single-PAN CAS (or all folios share the same PAN),
+            # it's safe to assign investor_info.name to that PAN.
+            if len(all_pans) <= 1:
+                for pan in all_pans:
+                    if pan not in pan_investor_map:
+                        pan_investor_map[pan] = investor_info_name
+                # Also fill any folio that still lacks an investor_name
+                for folio in dict_data.get('folios', []):
+                    if not folio.get('investor_name'):
+                        folio['investor_name'] = investor_info_name
 
         # Attach the PAN→Name map so the frontend can use it directly
         dict_data['pan_investor_map'] = pan_investor_map
