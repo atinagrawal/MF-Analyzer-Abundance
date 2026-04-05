@@ -36,24 +36,13 @@
     "description": "Parse CAMS/KFintech Consolidated Account Statements locally. Track multi-PAN mutual fund holdings using FIFO accounting and AMFI live NAVs.",
     "applicationCategory": "FinanceApplication",
     "operatingSystem": "WebBrowser",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "INR"
-    },
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" },
     "featureList": [
-      "100% Local PDF Parsing",
-      "Multi-PAN Family CAS Support",
-      "Live AMFI NAV Fetching",
-      "FIFO Capital Gains Calculation",
-      "ELSS Lock-in Tracking",
-      "Advisor & Nominee Extraction"
+      "100% Local PDF Parsing", "Multi-PAN Family CAS Support",
+      "Live AMFI NAV Fetching", "FIFO Capital Gains Calculation",
+      "ELSS Lock-in Tracking", "Advisor & Nominee Extraction"
     ],
-    "provider": {
-      "@type": "FinancialService",
-      "name": "Abundance Financial Services",
-      "url": "https://www.getabundance.in"
-    }
+    "provider": { "@type": "FinancialService", "name": "Abundance Financial Services", "url": "https://www.getabundance.in" }
   },
   {
     "@context": "https://schema.org",
@@ -62,18 +51,12 @@
       {
         "@type": "Question",
         "name": "Is it safe to upload my CAS PDF with my PAN password?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Yes. The decryption and parsing are done entirely in temporary, isolated serverless functions. We never store your PDF, your password, or your portfolio data. Once the analysis is complete, the file is instantly deleted from memory."
-        }
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. The decryption and parsing are done entirely in temporary, isolated serverless functions. We never store your PDF, your password, or your portfolio data. Once the analysis is complete, the file is instantly deleted from memory." }
       },
       {
         "@type": "Question",
         "name": "Does this tool support Family CAS with multiple PANs?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Absolutely. Our engine automatically scans the statement, detects the different PANs and Investor Names, and builds a segregated dashboard with clickable tabs for each family member."
-        }
+        "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. Our engine automatically scans the statement, detects the different PANs and Investor Names, and builds a segregated dashboard with clickable tabs for each family member." }
       }
     ]
   }
@@ -89,22 +72,25 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    
+
     @keyframes slideUpFade { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
     .animate-stagger > * { opacity: 0; animation: slideUpFade 0.4s ease forwards; }
     .animate-stagger > *:nth-child(1) { animation-delay: 0.05s; }
-    .animate-stagger > *:nth-child(2) { animation-delay: 0.1s; }
+    .animate-stagger > *:nth-child(2) { animation-delay: 0.10s; }
     .animate-stagger > *:nth-child(3) { animation-delay: 0.15s; }
-    .animate-stagger > *:nth-child(4) { animation-delay: 0.2s; }
+    .animate-stagger > *:nth-child(4) { animation-delay: 0.20s; }
     .animate-stagger > *:nth-child(5) { animation-delay: 0.25s; }
 
-    .glass-panel { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03); }
+    .glass-panel { background: rgba(255,255,255,0.9); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 4px 24px rgba(0,0,0,0.03); }
     .fund-card { transition: all 0.2s ease; border: 1px solid #e2e8f0; }
-    .fund-card:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -8px rgba(22, 101, 52, 0.12); border-color: #86efac; }
+    .fund-card:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -8px rgba(22,101,52,0.12); border-color: #86efac; }
     .pan-tab { transition: all 0.2s ease; border-bottom: 2px solid transparent; }
     .pan-tab.active { color: #166534; border-bottom: 2px solid #166534; }
     .pan-tab.inactive { color: #64748b; }
     .pan-tab.inactive:hover { color: #166534; }
+
+    /* Cache indicator badge */
+    .cache-badge { display:inline-flex; align-items:center; gap:5px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:3px 10px; border-radius:20px; font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; }
 </style>
 </head>
 <body>
@@ -127,23 +113,24 @@
 </header>
 
 <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
-    
+
+    <!-- ── Upload Section ── -->
     <div id="upload-section" class="max-w-xl mx-auto mt-8">
         <div class="text-center mb-10">
             <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight">CAS <span class="text-green-700">Analyzer</span></h1>
-            <p class="text-slate-600 font-medium text-sm">Upload your consolidated statement. We map folios to PANs, extract missing data, and fetch live NAVs—all within your browser session.</p>
+            <p class="text-slate-600 font-medium text-sm">Upload your consolidated statement. We map folios to PANs, extract missing data, and fetch live NAVs — all within your browser session.</p>
         </div>
 
         <div class="glass-panel rounded-2xl p-8 shadow-md">
             <form id="cas-form" class="space-y-6">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">1. Select Statement PDF</label>
-                    <input type="file" id="pdf-file" accept=".pdf" required 
+                    <input type="file" id="pdf-file" accept=".pdf" required
                            class="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 transition-colors bg-white border border-slate-200 rounded-lg cursor-pointer">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">2. PDF Password</label>
-                    <input type="password" id="pdf-password" placeholder="Usually PAN in ALL CAPS" required 
+                    <input type="password" id="pdf-password" placeholder="Usually PAN in ALL CAPS" required
                            class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all font-mono">
                 </div>
                 <button type="submit" id="submit-btn" class="w-full py-3.5 mt-2 bg-slate-900 hover:bg-green-700 text-white font-bold rounded-lg shadow-md transition-all active:scale-[0.98] flex justify-center items-center gap-2">
@@ -156,22 +143,26 @@
                     </p>
                 </div>
             </form>
-            
+
             <div id="loading-msg" class="hidden mt-8 text-center">
                 <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-green-700 mb-4"></div>
-                <p class="text-green-800 font-bold text-sm uppercase tracking-widest">Decrypting & Parsing...</p>
+                <p class="text-green-800 font-bold text-sm uppercase tracking-widest" id="loading-text">Decrypting & Parsing...</p>
                 <p class="text-[0.65rem] text-slate-500 mt-1 font-medium">Fetching live AMFI market data & extracting folios</p>
             </div>
-            
+
             <div id="error-msg" class="hidden mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm font-semibold text-center"></div>
         </div>
     </div>
 
+    <!-- ── Dashboard Section ── -->
     <div id="dashboard-section" class="hidden w-full">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
             <div>
-                <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight" id="dash-investor-name">Portfolio Dashboard</h2>
-                <p class="text-slate-500 font-medium text-sm mt-1">Live Valuation & Folio Extraction</p>
+                <div class="flex items-center gap-3 mb-1">
+                    <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight" id="dash-investor-name">Portfolio Dashboard</h2>
+                    <span id="cache-badge-container"></span>
+                </div>
+                <p class="text-slate-500 font-medium text-sm">Live Valuation & Folio Extraction</p>
             </div>
             <button onclick="location.reload()" class="text-xs font-bold text-slate-600 hover:text-green-700 bg-white border border-slate-200 px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all flex items-center gap-2">
                 Upload New Statement
@@ -186,9 +177,7 @@
 <footer class="bg-[#090E17] text-slate-400 py-14 mt-auto relative overflow-hidden">
     <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-800 via-green-400 to-green-800"></div>
     <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-50"></div>
-    
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-12 gap-8 relative z-10">
-        
         <div class="md:col-span-5 lg:col-span-4">
             <div class="flex items-center gap-3 mb-6">
                 <img src="/logo-128.png" alt="Abundance" class="w-10 h-10 rounded-lg shadow-sm">
@@ -200,7 +189,6 @@
             <p class="text-xs text-slate-500 mb-2 font-mono">AMFI Registered Distributor: <span class="text-slate-300 font-bold">ARN-251838</span></p>
             <p class="text-xs text-slate-500 leading-relaxed pr-4">Empowering investors with data-driven clarity. Mutual fund investments are subject to market risks. Read all scheme related documents carefully.</p>
         </div>
-
         <div class="md:col-span-3 lg:col-span-4">
             <h4 class="text-white font-bold text-sm tracking-widest uppercase mb-6">Our Tools</h4>
             <ul class="space-y-3">
@@ -209,20 +197,17 @@
                 <li><a href="/cas-tracker.html" class="text-sm text-green-500 font-semibold">CAS Portfolio Analyzer</a></li>
             </ul>
         </div>
-
         <div class="md:col-span-4 lg:col-span-4">
             <h4 class="text-white font-bold text-sm tracking-widest uppercase mb-6">Privacy & Security</h4>
             <div class="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-sm">
-                <p class="text-xs text-slate-400 leading-relaxed mb-2">We take privacy seriously. All PDF parsing is executed in isolated, ephemeral browser instances or serverless functions.</p>
+                <p class="text-xs text-slate-400 leading-relaxed mb-2">All PDF parsing is executed in isolated, ephemeral browser instances or serverless functions.</p>
                 <div class="flex items-center gap-2 text-green-400 text-xs font-bold uppercase tracking-widest mt-3">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                     Zero Data Storage
                 </div>
             </div>
         </div>
-
     </div>
-    
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-white/10 relative z-10 flex flex-col md:flex-row justify-between items-center gap-4">
         <p class="text-xs text-slate-600">© 2026 Abundance Financial Services. All rights reserved.</p>
         <p class="text-xs text-slate-600 font-mono">mfcalc.getabundance.in</p>
@@ -230,289 +215,400 @@
 </footer>
 
 <script>
-    const fmtINR = (num) => Math.round(num).toLocaleString('en-IN');
-    const fmtDec = (num) => Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+// ── Formatters ───────────────────────────────────────────────────────────────
+const fmtINR = (num) => Math.round(num).toLocaleString('en-IN');
+const fmtDec = (num, dp = 4) => Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: dp });
 
-    let portfolioDataByPan = {};
-    let activePan = null;
+// ── State ────────────────────────────────────────────────────────────────────
+let portfolioDataByPan = {};   // keyed by PAN string (clean, uppercase)
+let activePan = null;
 
-    // Advanced FIFO calculation with Fallback
-    function calculateInvested(scheme, currentNav) {
-        const units = parseFloat(scheme.close) || 0;
-        if (units === 0) return { invested: 0, lockedValue: 0 };
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSION CACHE
+// Key = filename + size + lastModified  →  good enough uniqueness without
+// reading file bytes (fast). Stored in sessionStorage (cleared on tab close).
+// ─────────────────────────────────────────────────────────────────────────────
+const CACHE_PREFIX = 'cas_parse_v1_';
 
-        let directCost = parseFloat(scheme.valuation?.cost || scheme.cost);
-        let fifoInvested = 0;
-        let lockedUnits = 0;
-        const buyLots = [];
-        const threeYearsAgo = new Date();
-        threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
-        const isELSS = scheme.scheme.toUpperCase().includes('ELSS') || scheme.scheme.toUpperCase().includes('TAX SAVER');
+function getFileKey(file) {
+    return CACHE_PREFIX + [file.name, file.size, file.lastModified].join('|');
+}
 
-        for (const txn of scheme.transactions || []) {
-            const type = (txn.type || '').toUpperCase();
-            const txnUnits = parseFloat(txn.units) || 0;
-            const amount = parseFloat(txn.amount) || 0;
-            if (txnUnits === 0) continue;
+function readCache(file) {
+    try {
+        const raw = sessionStorage.getItem(getFileKey(file));
+        return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+}
 
-            if (type.includes('PURCHASE') || type.includes('SIP') || type.includes('SWITCH IN') || type.includes('REINVEST')) {
-                buyLots.push({ units: txnUnits, amount, nav: amount / txnUnits, date: new Date(txn.date) });
-            } else if (type.includes('REDEMPTION') || type.includes('SWITCH OUT')) {
-                let unitsToRedeem = Math.abs(txnUnits);
-                while (unitsToRedeem > 0 && buyLots.length > 0) {
-                    if (buyLots[0].units <= unitsToRedeem) {
-                        unitsToRedeem -= buyLots[0].units;
-                        buyLots.shift(); 
-                    } else {
-                        buyLots[0].units -= unitsToRedeem;
-                        buyLots[0].amount = buyLots[0].units * buyLots[0].nav; 
-                        unitsToRedeem = 0; 
-                    }
-                }
+function writeCache(file, data) {
+    try {
+        sessionStorage.setItem(getFileKey(file), JSON.stringify(data));
+    } catch (e) {
+        // Quota exceeded — just skip caching
+        console.warn('Session cache write failed:', e.message);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIFO cost basis for remaining units (used for total invested display)
+// ─────────────────────────────────────────────────────────────────────────────
+function calculateFifoCost(scheme, currentNav) {
+    const units = parseFloat(scheme.close) || 0;
+    if (units === 0) return { invested: 0, lockedValue: 0 };
+
+    const directCost = parseFloat(scheme.valuation?.cost || scheme.cost || 0);
+    const buyLots    = [];
+    let lockedUnits  = 0;
+
+    const threeYearsAgo = new Date();
+    threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+    const isELSS = /ELSS|TAX.?SAVER/i.test(scheme.scheme);
+
+    for (const txn of scheme.transactions || []) {
+        const type     = (txn.type || '').toUpperCase();
+        const txnUnits = parseFloat(txn.units)  || 0;
+        const amount   = parseFloat(txn.amount) || 0;
+        if (txnUnits === 0) continue;
+
+        if (/PURCHASE|SIP|SWITCH.?IN|REINVEST/.test(type)) {
+            buyLots.push({ units: txnUnits, amount, nav: amount / txnUnits, date: new Date(txn.date) });
+        } else if (/REDEMPTION|SWITCH.?OUT/.test(type)) {
+            let rem = Math.abs(txnUnits);
+            while (rem > 0 && buyLots.length > 0) {
+                if (buyLots[0].units <= rem) { rem -= buyLots[0].units; buyLots.shift(); }
+                else { buyLots[0].units -= rem; buyLots[0].amount = buyLots[0].units * buyLots[0].nav; rem = 0; }
             }
         }
-
-        for (const lot of buyLots) {
-            fifoInvested += lot.amount;
-            if (isELSS && lot.date > threeYearsAgo) lockedUnits += lot.units;
-        }
-
-        let finalInvested = fifoInvested;
-        if (directCost && directCost > 0 && (fifoInvested < (directCost * 0.5) || fifoInvested === 0)) {
-            finalInvested = directCost;
-        }
-
-        return { invested: Math.max(0, finalInvested), lockedValue: lockedUnits * currentNav };
     }
 
-    async function processCasData(data) {
-        portfolioDataByPan = {};
+    let fifoInvested = 0;
+    for (const lot of buyLots) {
+        fifoInvested += lot.amount;
+        if (isELSS && lot.date > threeYearsAgo) lockedUnits += lot.units;
+    }
 
-        // Process each folio in the payload
-        for (const folio of data.folios || []) {
-            
-            // Map the PAN exactly as extracted by our custom Python pdfminer script
-            let rawPan = folio.pan ? folio.pan.toUpperCase().trim() : '';
-            if (!rawPan || rawPan.length < 5) rawPan = 'UNKNOWN PAN';
-            
-            // Retrieve the specific Investor Name for this Folio (Not the global one)
-            let specificName = folio.investor_name || data.investor_info?.name || 'Investor';
-            
-            if (!portfolioDataByPan[rawPan]) {
-                portfolioDataByPan[rawPan] = { 
-                    current: 0, 
-                    invested: 0, 
-                    holdings: [], 
-                    investorName: specificName
-                };
-            }
+    // Fall back to casparser's directCost if FIFO looks implausible
+    let finalInvested = fifoInvested;
+    if (directCost > 0 && (fifoInvested === 0 || fifoInvested < directCost * 0.5)) {
+        finalInvested = directCost;
+    }
 
-            for (const scheme of folio.schemes || []) {
-                const units = parseFloat(scheme.close) || 0;
-                if (units < 0.001) continue; 
+    return { invested: Math.max(0, finalInvested), lockedValue: lockedUnits * currentNav };
+}
 
-                let currentNav = parseFloat(scheme.valuation?.nav || 0);
-                let isLive = false;
+// ─────────────────────────────────────────────────────────────────────────────
+// PROCESS CAS DATA
+// - Groups holdings strictly by PAN (never mixes)
+// - Investor name sourced from pan_investor_map (backend) → folio.investor_name
+//   → never falls back to the global investor_info.name for multi-PAN CAS
+// - Avg Purchase NAV = CAS reported cost ÷ current units (per user requirement)
+// ─────────────────────────────────────────────────────────────────────────────
+async function processCasData(data, fromCache) {
+    portfolioDataByPan = {};
 
-                if (scheme.amfi) {
-                    try {
-                        const navRes = await fetch(`/api/mf?code=${scheme.amfi}&latest=1`);
-                        if (navRes.ok) {
-                            const resJson = await navRes.json();
-                            if (resJson.status === 'SUCCESS' && resJson.data?.length > 0) {
-                                currentNav = parseFloat(resJson.data[0].nav);
-                                isLive = true;
-                            }
+    // The backend now returns a document-level PAN→Name map
+    const panInvestorMap = data.pan_investor_map || {};
+
+    for (const folio of data.folios || []) {
+
+        // ── Determine canonical PAN for this folio ───────────────────────────
+        let rawPan = (folio.pan || '').toUpperCase().trim();
+        if (!rawPan || rawPan.length < 10) rawPan = 'UNKNOWN';
+
+        // ── Investor name: prefer backend map > folio field > fallback ────────
+        // IMPORTANT: never fall back to data.investor_info.name here —
+        // that is the *first* investor in the CAS and would contaminate other PANs.
+        const investorName =
+            panInvestorMap[rawPan]         ||   // from document-level scan (most reliable)
+            folio.investor_name            ||   // from per-folio enrichment
+            (rawPan !== 'UNKNOWN' ? rawPan : 'Unknown Investor');
+
+        // ── Initialise PAN bucket (first folio wins on name) ─────────────────
+        if (!portfolioDataByPan[rawPan]) {
+            portfolioDataByPan[rawPan] = {
+                current: 0, invested: 0, holdings: [],
+                investorName,
+            };
+        }
+
+        for (const scheme of folio.schemes || []) {
+            const units = parseFloat(scheme.close) || 0;
+            if (units < 0.001) continue;
+
+            // ── Live NAV fetch ────────────────────────────────────────────────
+            let currentNav = parseFloat(scheme.valuation?.nav || 0);
+            let isLive     = false;
+
+            if (scheme.amfi) {
+                try {
+                    const navRes = await fetch(`/api/mf?code=${scheme.amfi}&latest=1`);
+                    if (navRes.ok) {
+                        const resJson = await navRes.json();
+                        if (resJson.status === 'SUCCESS' && resJson.data?.length > 0) {
+                            currentNav = parseFloat(resJson.data[0].nav);
+                            isLive     = true;
                         }
-                    } catch (e) { console.warn('Live NAV failed'); }
-                }
-
-                const metrics = calculateInvested(scheme, currentNav);
-                const currentValue = units * currentNav;
-                
-                portfolioDataByPan[rawPan].current += currentValue;
-                portfolioDataByPan[rawPan].invested += metrics.invested;
-
-                portfolioDataByPan[rawPan].holdings.push({
-                    name: scheme.scheme,
-                    folioNumber: folio.folio,
-                    nominee: folio.nominee || 'Not Specified',
-                    advisor: folio.advisor || 'Direct / N/A',
-                    units: units,
-                    liveNav: currentNav,
-                    isLive: isLive,
-                    value: currentValue,
-                    invested: metrics.invested,
-                    isELSS: scheme.scheme.toUpperCase().includes('ELSS') || scheme.scheme.toUpperCase().includes('TAX SAVER'),
-                    lockedValue: metrics.lockedValue
-                });
+                    }
+                } catch { /* live NAV failure is non-fatal */ }
             }
-        }
 
-        Object.keys(portfolioDataByPan).forEach(pan => {
-            portfolioDataByPan[pan].holdings.sort((a,b) => b.value - a.value);
-        });
+            // ── Cost metrics ─────────────────────────────────────────────────
+            const fifo         = calculateFifoCost(scheme, currentNav);
+            const currentValue = units * currentNav;
 
-        const pans = Object.keys(portfolioDataByPan);
-        if (pans.length > 0) {
-            activePan = pans[0]; 
-            renderUI();
-        } else {
-            throw new Error("No active holdings found in this statement.");
+            // Avg Purchase NAV: CAS reported cost ÷ CAS reported units
+            // (as per requirement — uses raw CAS figures, not FIFO reconstruction)
+            const casCost          = parseFloat(scheme.valuation?.cost || 0);
+            const avgPurchaseNav   = units > 0 && casCost > 0 ? casCost / units : 0;
+
+            portfolioDataByPan[rawPan].current  += currentValue;
+            portfolioDataByPan[rawPan].invested += fifo.invested;
+
+            portfolioDataByPan[rawPan].holdings.push({
+                name:           scheme.scheme,
+                folioNumber:    folio.folio,
+                nominee:        folio.nominee  || 'Not Specified',
+                advisor:        folio.advisor  || 'Direct / N/A',
+                units,
+                liveNav:        currentNav,
+                isLive,
+                value:          currentValue,
+                invested:       fifo.invested,
+                avgPurchaseNav,           // ← from CAS reported figures
+                isELSS:         /ELSS|TAX.?SAVER/i.test(scheme.scheme),
+                lockedValue:    fifo.lockedValue,
+            });
         }
     }
 
-    function renderUI() {
-        const tabsContainer = document.getElementById('pan-tabs-container');
-        const contentContainer = document.getElementById('investor-content');
-        
-        const panKeys = Object.keys(portfolioDataByPan);
-        
-        if (panKeys.length > 1 || (panKeys.length === 1 && panKeys[0] !== 'UNKNOWN PAN')) {
-            tabsContainer.innerHTML = panKeys.map(pan => {
-                const invName = portfolioDataByPan[pan].investorName;
-                return `
-                <button onclick="switchPan('${pan}')" 
-                        class="pan-tab px-4 py-3 font-bold text-xs tracking-widest uppercase flex flex-col items-start gap-1 ${pan === activePan ? 'active' : 'inactive'}">
-                    <span class="text-[0.6rem] opacity-70">${pan}</span>
-                    <span>${invName.split(' ')[0]}'s Profile</span>
-                </button>
-            `}).join('');
-            tabsContainer.classList.remove('hidden');
-        } else {
-            tabsContainer.classList.add('hidden');
-        }
+    // Sort each PAN's holdings by current value (desc)
+    Object.values(portfolioDataByPan).forEach(p =>
+        p.holdings.sort((a, b) => b.value - a.value)
+    );
 
-        const data = portfolioDataByPan[activePan];
-        const gain = data.current - data.invested;
-        const gainPct = data.invested > 0 ? ((gain / data.invested) * 100).toFixed(2) : 0;
+    const pans = Object.keys(portfolioDataByPan);
+    if (pans.length === 0) throw new Error('No active holdings found in this statement.');
 
-        let html = `
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 animate-stagger">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <div class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Current Value</div>
-                    <div class="text-2xl md:text-3xl font-extrabold text-slate-900 mono">₹${fmtINR(data.current)}</div>
+    activePan = pans[0];
+    renderUI(fromCache);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER UI
+// ─────────────────────────────────────────────────────────────────────────────
+function renderUI(fromCache = false) {
+    const tabsContainer    = document.getElementById('pan-tabs-container');
+    const contentContainer = document.getElementById('investor-content');
+    const panKeys          = Object.keys(portfolioDataByPan);
+
+    // ── PAN tabs ─────────────────────────────────────────────────────────────
+    if (panKeys.length > 1 || panKeys[0] !== 'UNKNOWN') {
+        tabsContainer.innerHTML = panKeys.map(pan => {
+            const { investorName } = portfolioDataByPan[pan];
+            const firstName        = investorName.split(' ')[0];
+            return `
+            <button onclick="switchPan('${pan}')"
+                    class="pan-tab px-4 py-3 font-bold text-xs tracking-widest uppercase flex flex-col items-start gap-1 ${pan === activePan ? 'active' : 'inactive'}">
+                <span class="text-[0.6rem] opacity-70 mono">${pan}</span>
+                <span>${firstName}'s Portfolio</span>
+            </button>`;
+        }).join('');
+        tabsContainer.classList.remove('hidden');
+    } else {
+        tabsContainer.classList.add('hidden');
+    }
+
+    // ── Dashboard heading ─────────────────────────────────────────────────────
+    const { investorName, current, invested, holdings } = portfolioDataByPan[activePan];
+    document.getElementById('dash-investor-name').textContent = `${investorName}'s Portfolio`;
+
+    // Cache badge
+    const badgeContainer = document.getElementById('cache-badge-container');
+    badgeContainer.innerHTML = fromCache
+        ? `<span class="cache-badge">⚡ From Cache</span>`
+        : '';
+
+    // ── Summary cards ─────────────────────────────────────────────────────────
+    const gain    = current - invested;
+    const gainPct = invested > 0 ? ((gain / invested) * 100).toFixed(2) : 0;
+
+    let html = `
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 animate-stagger">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Current Value</div>
+                <div class="text-2xl md:text-3xl font-extrabold text-slate-900 mono">₹${fmtINR(current)}</div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Total Invested</div>
+                <div class="text-xl md:text-2xl font-bold text-slate-600 mono">₹${fmtINR(invested)}</div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 col-span-2 relative overflow-hidden">
+                <div class="absolute left-0 top-0 bottom-0 w-1.5 ${gain >= 0 ? 'bg-green-500' : 'bg-red-500'}"></div>
+                <div class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Wealth Gain</div>
+                <div class="flex items-baseline gap-3">
+                    <span class="text-3xl md:text-4xl font-extrabold mono ${gain >= 0 ? 'text-green-600' : 'text-red-600'}">
+                        ${gain >= 0 ? '+' : ''}₹${fmtINR(gain)}
+                    </span>
+                    <span class="text-sm font-bold px-2 py-1 rounded-md ${gain >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                        ${gain >= 0 ? '+' : ''}${gainPct}%
+                    </span>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <div class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Total Invested</div>
-                    <div class="text-xl md:text-2xl font-bold text-slate-600 mono">₹${fmtINR(data.invested)}</div>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-stagger">
+    `;
+
+    // ── Fund cards ────────────────────────────────────────────────────────────
+    holdings.forEach(fund => {
+        const fGain    = fund.value - fund.invested;
+        const fGainPct = fund.invested > 0 ? ((fGain / fund.invested) * 100).toFixed(1) : 0;
+        const isProfit = fGain >= 0;
+
+        const elssBadge = fund.isELSS
+            ? (fund.lockedValue > 0
+                ? `<span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-[0.6rem] font-bold uppercase tracking-wider border border-orange-200">🔒 ₹${fmtINR(fund.lockedValue)} Locked</span>`
+                : `<span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[0.6rem] font-bold uppercase tracking-wider border border-slate-200">🔓 ELSS Unlocked</span>`)
+            : '';
+
+        // Avg NAV indicator — show dash if not available
+        const avgNavDisplay = fund.avgPurchaseNav > 0
+            ? `₹${fmtDec(fund.avgPurchaseNav, 2)}`
+            : '—';
+
+        html += `
+            <div class="fund-card bg-white p-6 rounded-xl flex flex-col justify-between">
+                <div class="mb-5">
+                    <h3 class="text-sm font-extrabold text-slate-800 leading-snug mb-3">${fund.name}</h3>
+
+                    <!-- Folio meta row -->
+                    <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 mb-3">
+                        <div class="grid grid-cols-2 gap-2 text-[0.65rem] font-medium text-slate-500 uppercase tracking-wide">
+                            <div><span class="font-bold text-slate-400">Folio:</span> <span class="mono text-slate-700">${fund.folioNumber || 'N/A'}</span></div>
+                            <div><span class="font-bold text-slate-400">Nominee:</span> <span class="text-slate-700 truncate block" title="${fund.nominee}">${fund.nominee}</span></div>
+                            <div class="col-span-2"><span class="font-bold text-slate-400">Advisor:</span> <span class="text-slate-700">${fund.advisor}</span></div>
+                        </div>
+                    </div>
+                    ${elssBadge}
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 col-span-2 relative overflow-hidden">
-                    <div class="absolute left-0 top-0 bottom-0 w-1.5 ${gain >= 0 ? 'bg-green-500' : 'bg-red-500'}"></div>
-                    <div class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Wealth Gain</div>
-                    <div class="flex items-baseline gap-3">
-                        <span class="text-3xl md:text-4xl font-extrabold mono ${gain >= 0 ? 'text-green-600' : 'text-red-600'}">
-                            ${gain >= 0 ? '+' : ''}₹${fmtINR(gain)}
-                        </span>
-                        <span class="text-sm font-bold px-2 py-1 rounded-md ${gain >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
-                            ${gain >= 0 ? '+' : ''}${gainPct}%
-                        </span>
+
+                <!-- NAV + value grid -->
+                <div class="grid grid-cols-3 gap-4 border-t border-slate-100 pt-4">
+                    <div class="col-span-2 grid grid-cols-2 gap-4">
+
+                        <!-- Avg Purchase NAV (from CAS cost ÷ units) -->
+                        <div>
+                            <div class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                                Avg Buy NAV
+                                <span class="text-slate-300 font-normal normal-case tracking-normal">(CAS)</span>
+                            </div>
+                            <div class="mono font-bold text-slate-700 text-sm">${avgNavDisplay}</div>
+                        </div>
+
+                        <!-- Live NAV -->
+                        <div>
+                            <div class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                Live NAV
+                                ${fund.isLive ? '<span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse relative top-[-1px]"></span>' : ''}
+                            </div>
+                            <div class="mono font-bold text-slate-900 text-sm">₹${fmtDec(fund.liveNav)}</div>
+                        </div>
+
+                        <!-- Units + invested cost -->
+                        <div>
+                            <div class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Units</div>
+                            <div class="mono text-slate-600 text-xs font-bold">${fmtDec(fund.units)}</div>
+                        </div>
+                        <div>
+                            <div class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Invested</div>
+                            <div class="mono text-slate-600 text-xs font-bold">₹${fmtINR(fund.invested)}</div>
+                        </div>
+                    </div>
+
+                    <!-- Current value + gain % -->
+                    <div class="text-right flex flex-col justify-start">
+                        <div class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Current Value</div>
+                        <div class="mono font-extrabold text-slate-900 text-lg">₹${fmtINR(fund.value)}</div>
+                        <div class="text-xs font-bold mt-1.5 ${isProfit ? 'text-green-600' : 'text-red-600'} bg-slate-50 inline-block self-end px-2 py-0.5 rounded border border-slate-100">
+                            ${isProfit ? '+' : ''}${fGainPct}%
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-stagger">
         `;
-
-        data.holdings.forEach(fund => {
-            const fGain = fund.value - fund.invested;
-            const fGainPct = fund.invested > 0 ? ((fGain / fund.invested) * 100).toFixed(1) : 0;
-            const isProfit = fGain >= 0;
-
-            let elssBadge = fund.isELSS 
-                ? (fund.lockedValue > 0 
-                    ? `<span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-[0.6rem] font-bold uppercase tracking-wider border border-orange-200">🔒 ₹${fmtINR(fund.lockedValue)} Locked</span>`
-                    : `<span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[0.6rem] font-bold uppercase tracking-wider border border-slate-200">🔓 Unlocked</span>`)
-                : '';
-
-            html += `
-                <div class="fund-card bg-white p-6 rounded-xl flex flex-col justify-between">
-                    <div class="mb-5">
-                        <h3 class="text-sm font-extrabold text-slate-800 leading-snug mb-3">${fund.name}</h3>
-                        
-                        <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 mb-3">
-                            <div class="grid grid-cols-2 gap-2 text-[0.65rem] font-medium text-slate-500 uppercase tracking-wide">
-                                <div><span class="font-bold text-slate-400">Folio:</span> <span class="mono text-slate-700">${fund.folioNumber || 'N/A'}</span></div>
-                                <div><span class="font-bold text-slate-400">Nominee:</span> <span class="text-slate-700 truncate block" title="${fund.nominee}">${fund.nominee}</span></div>
-                                <div class="col-span-2"><span class="font-bold text-slate-400">Advisor:</span> <span class="text-slate-700">${fund.advisor}</span></div>
-                            </div>
-                        </div>
-                        ${elssBadge}
-                    </div>
-                    
-                    <div class="grid grid-cols-3 gap-4 border-t border-slate-100 pt-4">
-                        <div class="col-span-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <div class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">Purchase Price</div>
-                                <div class="mono font-bold text-slate-700 text-sm">₹${fmtINR(fund.invested)}</div>
-                            </div>
-                            <div>
-                                <div class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                                    Live NAV
-                                    ${fund.isLive ? '<span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse relative top-[-1px]"></span>' : ''}
-                                </div>
-                                <div class="mono font-bold text-slate-900 text-sm">₹${fmtDec(fund.liveNav)}</div>
-                            </div>
-                            <div class="col-span-2">
-                                <span class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest">Units: <span class="mono text-slate-600">${fmtDec(fund.units)}</span></span>
-                            </div>
-                        </div>
-
-                        <div class="text-right flex flex-col justify-start">
-                            <div class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Current Value</div>
-                            <div class="mono font-extrabold text-slate-900 text-lg">₹${fmtINR(fund.value)}</div>
-                            <div class="text-xs font-bold mt-1.5 ${isProfit ? 'text-green-600' : 'text-red-600'} bg-slate-50 inline-block self-end px-2 py-0.5 rounded border border-slate-100">
-                                ${isProfit ? '+' : ''}${fGainPct}%
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        html += `</div>`;
-        contentContainer.innerHTML = html;
-    }
-
-    window.switchPan = function(pan) { 
-        activePan = pan; 
-        renderUI(); 
-    };
-
-    document.getElementById('cas-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const submitBtn = document.getElementById('submit-btn');
-        const loadingMsg = document.getElementById('loading-msg');
-        const errorMsg = document.getElementById('error-msg');
-        
-        submitBtn.classList.add('hidden');
-        loadingMsg.classList.remove('hidden');
-        errorMsg.classList.add('hidden');
-
-        const formData = new FormData();
-        formData.append('file', document.getElementById('pdf-file').files[0]);
-        formData.append('password', document.getElementById('pdf-password').value);
-
-        try {
-            const parseRes = await fetch('/api/parse', { method: 'POST', body: formData });
-            if (!parseRes.ok) throw new Error(parseRes.status === 401 ? "Incorrect Password" : "Failed to decrypt/parse statement.");
-            
-            const data = await parseRes.json();
-            
-            await processCasData(data);
-
-            document.getElementById('upload-section').classList.add('hidden');
-            document.getElementById('dashboard-section').classList.remove('hidden');
-            document.getElementById('dashboard-section').classList.add('animate-stagger');
-
-        } catch (error) {
-            errorMsg.innerText = error.message;
-            errorMsg.classList.remove('hidden');
-            submitBtn.classList.remove('hidden');
-        } finally {
-            loadingMsg.classList.add('hidden');
-        }
     });
+
+    html += `</div>`;
+    contentContainer.innerHTML = html;
+}
+
+// ── Switch active PAN tab ─────────────────────────────────────────────────────
+window.switchPan = function(pan) {
+    activePan = pan;
+    renderUI(/* fromCache= */ false);   // switching tabs re-renders with existing data
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FORM SUBMIT
+// ─────────────────────────────────────────────────────────────────────────────
+document.getElementById('cas-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const submitBtn  = document.getElementById('submit-btn');
+    const loadingMsg = document.getElementById('loading-msg');
+    const loadingTxt = document.getElementById('loading-text');
+    const errorMsg   = document.getElementById('error-msg');
+    const pdfFile    = document.getElementById('pdf-file').files[0];
+
+    submitBtn.classList.add('hidden');
+    loadingMsg.classList.remove('hidden');
+    errorMsg.classList.add('hidden');
+
+    try {
+        let data      = null;
+        let fromCache = false;
+
+        // ── 1. Try session cache first ────────────────────────────────────────
+        const cached = readCache(pdfFile);
+        if (cached) {
+            console.log('[CAS] Cache hit — skipping API parse');
+            data      = cached;
+            fromCache = true;
+            loadingTxt.textContent = 'Loading from cache…';
+        } else {
+            // ── 2. Call parse API ─────────────────────────────────────────────
+            loadingTxt.textContent = 'Decrypting & Parsing…';
+            const formData = new FormData();
+            formData.append('file', pdfFile);
+            formData.append('password', document.getElementById('pdf-password').value);
+
+            const parseRes = await fetch('/api/parse', { method: 'POST', body: formData });
+            if (!parseRes.ok) {
+                throw new Error(
+                    parseRes.status === 401
+                        ? 'Incorrect password. Try your PAN in ALL CAPS.'
+                        : 'Failed to decrypt or parse the statement.'
+                );
+            }
+            data = await parseRes.json();
+            writeCache(pdfFile, data);   // store for this session
+        }
+
+        loadingTxt.textContent = 'Fetching live NAVs…';
+        await processCasData(data, fromCache);
+
+        document.getElementById('upload-section').classList.add('hidden');
+        document.getElementById('dashboard-section').classList.remove('hidden');
+        document.getElementById('dashboard-section').classList.add('animate-stagger');
+
+    } catch (err) {
+        errorMsg.textContent = err.message;
+        errorMsg.classList.remove('hidden');
+        submitBtn.classList.remove('hidden');
+    } finally {
+        loadingMsg.classList.add('hidden');
+    }
+});
 </script>
 </body>
 </html>
