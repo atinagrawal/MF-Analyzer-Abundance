@@ -26,22 +26,17 @@ const nextConfig = {
   // [ ] /xls-pdf-extractor       — 218 lines
   // [ ] /404                     — 329 lines (→ app/not-found.js)
   async rewrites() {
-    return {
-      beforeFiles: [
-        // Homepage — largest page, port last
-        { source: '/', destination: '/index.html' },
-
-        // Tool pages — port from smallest to largest
-        { source: '/rolling', destination: '/rolling.html' },
-        { source: '/industry', destination: '/industry.html' },
-        { source: '/report', destination: '/report.html' },
-        { source: '/geography', destination: '/geography.html' },
-        { source: '/cas-tracker', destination: '/cas-tracker.html' },
-        { source: '/indices', destination: '/indices.html' },
-        { source: '/portfolio', destination: '/portfolio.html' },
-        { source: '/xls-pdf-extractor', destination: '/xls-pdf-extractor.html' },
-      ],
-    };
+    return [
+      { source: '/', destination: '/index.html' },
+      { source: '/rolling', destination: '/rolling.html' },
+      { source: '/industry', destination: '/industry.html' },
+      { source: '/report', destination: '/report.html' },
+      { source: '/geography', destination: '/geography.html' },
+      { source: '/cas-tracker', destination: '/cas-tracker.html' },
+      { source: '/indices', destination: '/indices.html' },
+      { source: '/portfolio', destination: '/portfolio.html' },
+      { source: '/xls-pdf-extractor', destination: '/xls-pdf-extractor.html' },
+    ];
   },
 
   // ── Headers ──
