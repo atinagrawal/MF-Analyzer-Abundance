@@ -1,6 +1,12 @@
 // middleware.js — Edge Middleware for server-side OG meta injection
 // Handles both SWP Backtester (?btMode=1) and SIP Backtester (?sipBTMode=1)
 // Only intercepts bot crawlers — regular browsers pass through unchanged
+//
+// NEXT.JS MIGRATION NOTE:
+// This file was previously a plain Vercel middleware. Now uses Next.js
+// middleware conventions (NextResponse). Logic is identical.
+
+import { NextResponse } from 'next/server';
 
 export const config = { matcher: '/' };
 
@@ -37,10 +43,10 @@ export default function middleware(request) {
   const isSWPBT = !!p.get('btMode');
   const isSIPBT = !!p.get('sipBTMode');
 
-  if (!isSWPBT && !isSIPBT) return; // pass through
+  if (!isSWPBT && !isSIPBT) return NextResponse.next();
 
   const ua = request.headers.get('user-agent') || '';
-  if (!isBot(ua)) return; // let browser handle it via injectBTShareMeta()
+  if (!isBot(ua)) return NextResponse.next();
 
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
