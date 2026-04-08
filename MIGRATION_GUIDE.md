@@ -165,10 +165,10 @@ Your production site switches to Next.js. Zero downtime.
 ## What's Next (Phase 2+)
 
 Pages will be ported one at a time from smallest to largest:
-1. `xls-pdf-extractor` (218 lines)
-2. `portfolio` (348 lines)
-3. `indices` (416 lines)
-4. `cas-tracker` (605 lines)
+1. ~~`xls-pdf-extractor` (218 lines)~~ — SKIPPED (not in use)
+2. ~~`portfolio` (348 lines)~~ — SKIPPED (not in use)
+3. ✅ `indices` (416 lines) — **PORTED** to `app/indices/page.js`
+4. ✅ `cas-tracker` (605 lines) — **PORTED** to `app/cas-tracker/page.js`
 5. `geography` (755 lines)
 6. `report` (1079 lines)
 7. `industry` (1182 lines)
@@ -182,3 +182,104 @@ For each page:
 4. Test and deploy
 
 Auth integration and feature gating can happen in parallel with page porting.
+
+## Phase 2 Progress
+
+### ✅ `/indices` — COMPLETED (2026-04-08)
+
+**What was ported:**
+- `app/indices/layout.js` — Server Component with metadata + JSON-LD structured data
+- `app/indices/page.js` — Client Component with sortable table, filters, search
+- Added indices-specific styles to `app/globals.css`:
+  - Controls bar (category buttons, search box, data badge)
+  - Table styling (headers, cells, hover states, sort indicators)
+  - Category pills (Broad, Sectoral, Strategy, Thematic)
+  - Return colors (positive/negative/neutral)
+  - Risk badges (Very High, High, Moderate, Low)
+  - Rolling returns comparison button
+  - Skeleton loading animation
+  - Source attribution footer
+- Removed `/indices` rewrite from `next.config.js`
+- Deleted `public/indices.html`
+
+**Features preserved:**
+- Fetches data from `/api/index-dashboard`
+- Sortable by any column (click headers)
+- Filter by category (All, Broad, Sectoral, Strategy, Thematic)
+- Search by index name
+- Shows 100+ NSE indices with 1M/3M/1Y/3Y/5Y returns
+- Risk metrics (Vol, Beta), Valuation (P/E, P/B, D.Y.)
+- Risk score badges with colors
+- "Compare" button links to `/rolling?bench=<index_name>`
+- Responsive table with horizontal scroll on mobile
+- Loading skeleton with smooth fade-in
+- Error handling with user-friendly messages
+
+**SEO improvements:**
+- Metadata from `lib/metadata.js` (title, description, keywords, OG tags)
+- JSON-LD structured data (WebApplication + BreadcrumbList)
+- Proper hreflang tags
+- Canonical URL
+- Updated sitemap (auto-generated from `app/sitemap.js`)
+
+---
+
+### ✅ `/cas-tracker` — COMPLETED (2026-04-08)
+
+**What was ported:**
+- `app/cas-tracker/layout.js` — Server Component with metadata + JSON-LD (SoftwareApplication + FAQPage schemas)
+- `app/cas-tracker/page.js` — Client Component with file upload, parsing, and portfolio dashboard
+- Added 500+ lines of CAS-specific styles to `app/globals.css`:
+  - Upload card (file input, password field, submit button, security note)
+  - Loading states (spinner animation, loading text, progress messages)
+  - Dashboard header (title, cache badge, new upload button)
+  - Multi-PAN tabs for family CAS statements
+  - Stat cards grid (Current Value, Invested, Wealth Gain with color-coded accents)
+  - Fund cards (2-column grid with hover effects)
+  - Folio metadata panels (Folio, Nominee, Advisor)
+  - ELSS lock-in badges (locked/unlocked states)
+  - NAV comparison grid (Avg Buy NAV vs Live NAV)
+  - Gain percentage indicators (positive/negative colors)
+  - Stagger animation for smooth card reveals
+  - Responsive breakpoints for mobile/tablet
+- Removed `/cas-tracker` rewrite from `next.config.js`
+- Deleted `public/cas-tracker.html`
+
+**Features preserved:**
+- File upload form (PDF + password input)
+- Session storage caching (reuse parsed data without re-upload)
+- Multi-PAN family CAS support with investor tabs
+- Live NAV fetching from `/api/mf` for each holding
+- FIFO cost basis calculation with transaction processing
+- ELSS lock-in tracking (3-year holding period)
+- Nominee and Advisor extraction from casparser
+- Stat cards showing:
+  - Current portfolio value
+  - Total invested amount (FIFO-based)
+  - Wealth gain (absolute + percentage)
+- Fund cards showing:
+  - Fund name, folio number, nominee, advisor
+  - ELSS lock status with locked value
+  - Average buy NAV (from CAS) vs Live NAV
+  - Units held, invested amount, current value
+  - Per-fund gain percentage
+- Error handling with user-friendly messages
+- Loading states with progress indicators
+- Smooth animations for dashboard reveal
+
+**Technical improvements:**
+- React hooks for state management (useState)
+- Proper form handling with FormData API
+- Async/await for API calls and NAV fetching
+- Session storage abstraction for caching
+- FIFO algorithm preserved from original implementation
+- Investor name resolution logic (handles single-PAN and multi-PAN CAS)
+- PAN validation and masking for privacy
+
+**SEO improvements:**
+- Metadata from `lib/metadata.js`
+- JSON-LD SoftwareApplication schema with feature list
+- JSON-LD FAQPage schema with common CAS questions
+- Proper structured data for finance applications
+
+

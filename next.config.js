@@ -20,10 +20,10 @@ const nextConfig = {
   // [ ] /industry                — 1182 lines
   // [ ] /report                  — 1079 lines
   // [ ] /geography               — 755 lines
-  // [ ] /cas-tracker             — 605 lines
-  // [ ] /indices                 — 416 lines
-  // [ ] /portfolio               — 348 lines
-  // [ ] /xls-pdf-extractor       — 218 lines
+  // [✓] /cas-tracker             — 605 lines (PORTED)
+  // [✓] /indices                 — 416 lines (PORTED)
+  // [ ] /portfolio               — 348 lines (SKIPPED)
+  // [ ] /xls-pdf-extractor       — 218 lines (SKIPPED)
   // [ ] /404                     — 329 lines (→ app/not-found.js)
   async rewrites() {
     return [
@@ -32,8 +32,6 @@ const nextConfig = {
       { source: '/industry', destination: '/industry.html' },
       { source: '/report', destination: '/report.html' },
       { source: '/geography', destination: '/geography.html' },
-      { source: '/cas-tracker', destination: '/cas-tracker.html' },
-      { source: '/indices', destination: '/indices.html' },
       { source: '/portfolio', destination: '/portfolio.html' },
       { source: '/xls-pdf-extractor', destination: '/xls-pdf-extractor.html' },
     ];
