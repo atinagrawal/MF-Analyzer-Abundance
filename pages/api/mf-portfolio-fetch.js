@@ -112,7 +112,7 @@ function isSchemeMatch(rowStr, schemeName) {
 // 1. NATIVE EXCEL ARRAY PARSER (Handles SBI Master Sheets)
 // ==========================================
 function extractHoldingsFromExcel(buf, schemeName) {
-  const xlsx = (await import('xlsx')).default;
+  const xlsx = require('xlsx');
   const workbook = xlsx.read(buf, { type: 'buffer' });
   const holdings = [];
 
