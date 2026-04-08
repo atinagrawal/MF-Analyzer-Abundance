@@ -5,7 +5,7 @@
 // GET /api/nifty-tri?index=NIFTY%2050
 // GET /api/nifty-tri?index=Nifty%20Midcap%20150&from=01-Jan-2010
 
-const https = require('https');
+import https from 'https';
 
 const MONTHS    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_MAP = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
@@ -26,7 +26,7 @@ function httpsRequest(options, body){
 
 async function blobGet(slugName){
   try{
-    const{list}=require('@vercel/blob');
+    const{list}=await import('@vercel/blob');
     const token=process.env.BLOB_READ_WRITE_TOKEN;
     const{blobs}=await list({prefix:`${CACHE_PRE}${slugName}.json`,token,limit:1});
     if(!blobs.length)return null;
@@ -41,7 +41,7 @@ async function blobGet(slugName){
 
 async function blobPut(slugName,indexName,data){
   try{
-    const{put}=require('@vercel/blob');
+    const{put}=await import('@vercel/blob');
     await put(`${CACHE_PRE}${slugName}.json`,JSON.stringify({index:indexName,lastUpdated:new Date().toISOString(),count:data.length,data}),{access:'private',contentType:'application/json',addRandomSuffix:false,token:process.env.BLOB_READ_WRITE_TOKEN});
   }catch(e){console.error('[nifty-tri] BLOB WRITE FAILED — name:',e.name,'msg:',e.message,'status:',e.status||'?','token-present:',!!process.env.BLOB_READ_WRITE_TOKEN)}
 }
@@ -77,7 +77,7 @@ async function fetchRange(indexName,fromStr,toStr,cookieStr){
   return{rows:allRows,sampleKeys,errors,chunks:chunks.length};
 }
 
-module.exports = async function handler(req,res){
+export default async function handler(req,res){
   res.setHeader('Access-Control-Allow-Origin','*');
 
   // Diagnostic endpoint: /api/nifty-tri?health=1
@@ -86,7 +86,7 @@ module.exports = async function handler(req,res){
     let blobStatus='not-tested';
     if(hasToken){
       try{
-        const{list}=require('@vercel/blob');
+        const{list}=await import('@vercel/blob');
         await list({prefix:'tri-cache/',limit:1,token:process.env.BLOB_READ_WRITE_TOKEN});
         blobStatus='ok';
       }catch(e){blobStatus=`error: ${e.name} - ${e.message}`;}

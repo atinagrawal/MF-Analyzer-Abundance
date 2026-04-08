@@ -6,7 +6,7 @@
 //
 // Cached 12 hours (data is monthly, no point hitting PDF on every request)
 
-const https = require('https');
+import https from 'https';
 
 const MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 const MONTH_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -122,7 +122,7 @@ async function fetchPdfText(url) {
   if (!buffer.buffer) return { status: buffer.status, text: null };
 
   // Use pdf-parse to extract text
-  const pdfParse = require('pdf-parse');
+  const pdfParse = (await import('pdf-parse')).default;
   const data = await pdfParse(buffer.buffer, {
     // Extract all pages as text
     max: 0,
@@ -286,7 +286,7 @@ function getCurrentPdfUrl() {
 async function dashboardCacheGet(year, month) {
   if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
   try {
-    const { list } = require('@vercel/blob');
+    const { list } = await import('@vercel/blob');
     const token = process.env.BLOB_READ_WRITE_TOKEN;
     const key = `idx-dashboard-${year}-${String(month+1).padStart(2,'0')}.json`;
     const { blobs } = await list({ prefix: key, limit: 1, token });
@@ -303,7 +303,7 @@ async function dashboardCacheGet(year, month) {
 async function dashboardCachePut(year, month, payload) {
   if (!process.env.BLOB_READ_WRITE_TOKEN) return;
   try {
-    const { put } = require('@vercel/blob');
+    const { put } = await import('@vercel/blob');
     const key = `idx-dashboard-${year}-${String(month+1).padStart(2,'0')}.json`;
     await put(key, JSON.stringify(payload), {
       access: 'private', contentType: 'application/json',
@@ -314,7 +314,7 @@ async function dashboardCachePut(year, month, payload) {
   }
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   // Cache 12 hours — monthly data

@@ -4,9 +4,9 @@
 
 export const config = { runtime: 'nodejs' };
 
-const https = require('https');
-const http = require('http');
-const zlib = require('zlib');
+import https from 'https';
+import http from 'http';
+import zlib from 'zlib';
 
 // Nippon month abbreviations (exact casing from confirmed URLs)
 // April, June, July use full names; others use 3-letter abbreviations

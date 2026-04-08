@@ -9,8 +9,8 @@
 // FIXES: (1) s-maxage added → Vercel CDN now caches (was MISS every call)
 //        (2) All AUM values rounded to 2dp → no more 3424298.829999999 noise
 
-const https = require('https');
-const zlib  = require('zlib');
+import https from 'https';
+import zlib from 'zlib';
 
 const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
@@ -119,7 +119,7 @@ function processData(raw, date) {
   };
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }

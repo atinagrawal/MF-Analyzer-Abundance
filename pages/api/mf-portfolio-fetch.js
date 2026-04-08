@@ -2,9 +2,9 @@
 
 export const config = { runtime: 'nodejs' };
 
-const https = require('https');
-const http = require('http');
-const zlib = require('zlib');
+import https from 'https';
+import http from 'http';
+import zlib from 'zlib';
 
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
@@ -112,7 +112,7 @@ function isSchemeMatch(rowStr, schemeName) {
 // 1. NATIVE EXCEL ARRAY PARSER (Handles SBI Master Sheets)
 // ==========================================
 function extractHoldingsFromExcel(buf, schemeName) {
-  const xlsx = require('xlsx');
+  const xlsx = (await import('xlsx')).default;
   const workbook = xlsx.read(buf, { type: 'buffer' });
   const holdings = [];
 

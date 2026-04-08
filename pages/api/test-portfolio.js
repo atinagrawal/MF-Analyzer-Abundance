@@ -1,6 +1,6 @@
 // Portfolio probe v7 — SBI pattern + verify all confirmed AMCs
-const https = require('https');
-const zlib = require('zlib');
+import https from 'https';
+import zlib from 'zlib';
 
 function fetchUrl(url, options = {}) {
   return new Promise((resolve, reject) => {
@@ -72,7 +72,7 @@ function sbiCandidates(year, month) {
   ];
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-store');
   const out = {};
