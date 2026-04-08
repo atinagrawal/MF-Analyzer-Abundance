@@ -5,6 +5,9 @@ const nextConfig = {
     unoptimized: true, // logos are pre-optimized PNGs
   },
 
+  // ── Allow network access for dev server ──
+  allowedDevOrigins: ['192.168.29.64'],
+
   // ── Rewrites: serve legacy HTML pages until they're ported ──────────────
   // HOW THIS WORKS:
   // - `beforeFiles` rewrites run BEFORE the App Router checks for pages.
@@ -28,10 +31,6 @@ const nextConfig = {
   async rewrites() {
     return [
       { source: '/', destination: '/index.html' },
-      { source: '/rolling', destination: '/rolling.html' },
-      { source: '/industry', destination: '/industry.html' },
-      { source: '/report', destination: '/report.html' },
-      { source: '/geography', destination: '/geography.html' },
       { source: '/portfolio', destination: '/portfolio.html' },
       { source: '/xls-pdf-extractor', destination: '/xls-pdf-extractor.html' },
     ];
