@@ -66,7 +66,7 @@ export default function GeographyPage() {
 
   function buildLookups(apiData) {
     const lookup = {};
-
+    
     apiData.states.forEach(s => {
       // Handle merged UTs
       if (MERGED_UT_MAP[s.state]) {
@@ -84,10 +84,10 @@ export default function GeographyPage() {
         }
         return;
       }
-
+      
       lookup[AMFI_TO_GEO[s.state] || s.state] = s;
     });
-
+    
     setAumByGeo(lookup);
   }
 
@@ -100,21 +100,21 @@ export default function GeographyPage() {
   // Update map highlights when selected state changes
   useEffect(() => {
     if (!window.d3 || !mapRef.current) return;
-
+    
     const d3 = window.d3;
     const svg = d3.select(mapRef.current.querySelector('svg'));
-
+    
     // Remove all selected classes
     svg.selectAll('.state-path').classed('selected', false);
-
+    
     // Add selected class to the clicked state
     if (selectedState) {
       const geoName = Object.keys(aumByGeo).find(key => {
         const state = aumByGeo[key];
-        return state.state === selectedState.state ||
-          (state._merged && state._merged.includes(selectedState.state));
+        return state.state === selectedState.state || 
+               (state._merged && state._merged.includes(selectedState.state));
       });
-
+      
       if (geoName) {
         svg.selectAll('.state-path')
           .filter(d => d.properties.ST_NM === geoName)
@@ -128,12 +128,12 @@ export default function GeographyPage() {
 
     const container = mapRef.current;
     container.innerHTML = '';
-
+    
     const W = container.clientWidth || 580;
     const H = Math.round(W * 1.1);
 
     const d3 = window.d3;
-
+    
     // Color scale
     const states = data.states.filter(s => s.state !== 'Others' && s.total > 0);
     const vals = states.map(s => s.total);
@@ -173,10 +173,10 @@ export default function GeographyPage() {
           setSelectedState(stateData);
         }
       })
-      .on('mouseover', function () {
+      .on('mouseover', function() {
         d3.select(this).attr('stroke-width', 1.5).attr('stroke', '#1b5e20');
       })
-      .on('mouseout', function () {
+      .on('mouseout', function() {
         d3.select(this).attr('stroke-width', 0.6).attr('stroke', '#fff');
       });
   }
@@ -184,10 +184,10 @@ export default function GeographyPage() {
   function handleMonthChange(e) {
     const date = e.target.value;
     if (!date) return;
-
+    
     setLoading(true);
     setSelectedMonth(date);
-
+    
     fetch(`/api/amfi-statewise?date=${date}`)
       .then(r => r.json())
       .then(newData => {
@@ -204,12 +204,12 @@ export default function GeographyPage() {
 
   function handleStateClick(state) {
     setSelectedState(state);
-
+    
     // Scroll to map
     if (mapContainerRef.current) {
-      mapContainerRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+      mapContainerRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
       });
     }
   }
@@ -282,11 +282,11 @@ export default function GeographyPage() {
           <p className="page-subtitle">
             Interactive India map showing mutual fund AUM across all 36 states and union territories
           </p>
-
+          
           {data.availableMonths && data.availableMonths.length > 0 && (
             <div className="month-selector">
-              <select
-                id="monthSel"
+              <select 
+                id="monthSel" 
                 className="month-select"
                 onChange={handleMonthChange}
                 value={selectedMonth}
@@ -423,19 +423,19 @@ export default function GeographyPage() {
           <div className="geo-table-wrap">
             <div className="geo-filters">
               <span className="geo-filter-label">Show:</span>
-              <button
+              <button 
                 className={`geo-filter-btn ${filterCategory === 'all' ? 'active' : ''}`}
                 onClick={() => setFilterCategory('all')}
               >
                 All States
               </button>
-              <button
+              <button 
                 className={`geo-filter-btn ${filterCategory === 'top10' ? 'active' : ''}`}
                 onClick={() => setFilterCategory('top10')}
               >
                 Top 10
               </button>
-              <button
+              <button 
                 className={`geo-filter-btn ${filterCategory === 'b30' ? 'active' : ''}`}
                 onClick={() => setFilterCategory('b30')}
               >
@@ -456,9 +456,9 @@ export default function GeographyPage() {
                 </thead>
                 <tbody>
                   {filteredStates.map((s, i) => (
-                    <tr
-                      key={i}
-                      onClick={() => handleStateClick(s)}
+                    <tr 
+                      key={i} 
+                      onClick={() => handleStateClick(s)} 
                       style={{ cursor: 'pointer' }}
                       className={selectedState?.state === s.state ? 'selected-row' : ''}
                     >
