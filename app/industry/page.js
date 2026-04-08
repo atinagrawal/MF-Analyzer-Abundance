@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
+const MONTH_LABELS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
 function fmtCr(val) {
   if (!val && val !== 0) return '—';
   if (val >= 100000) return '₹' + (val / 100000).toFixed(2) + 'L Cr';
@@ -15,8 +18,8 @@ function fmtFlow(val) {
   if (!val && val !== 0) return '—';
   const abs = Math.abs(val);
   let str = abs >= 100000 ? (abs / 100000).toFixed(2) + 'L' :
-    abs >= 1000 ? (abs / 1000).toFixed(2) + 'K' :
-      abs.toFixed(2);
+            abs >= 1000 ? (abs / 1000).toFixed(2) + 'K' :
+            abs.toFixed(2);
   return (val < 0 ? '−' : '+') + '₹' + str + ' Cr';
 }
 
@@ -31,7 +34,7 @@ export default function IndustryPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [filterType, setFilterType] = useState('all');
   const [sortCol, setSortCol] = useState('netFlow');
   const [sortDir, setSortDir] = useState(-1);
   const flowChartRef = useRef(null);
@@ -42,7 +45,7 @@ export default function IndustryPage() {
   }, []);
 
   useEffect(() => {
-    if (data && typeof window !== 'undefined' && window.Chart) {
+    if (data && typeof window !== 'undefined' && window.Chart && flowChartRef.current) {
       renderFlowChart();
     }
     return () => {
@@ -69,14 +72,14 @@ export default function IndustryPage() {
 
   function renderFlowChart() {
     if (!flowChartRef.current || !window.Chart) return;
-
+    
     if (flowChartInstance.current) {
       flowChartInstance.current.destroy();
     }
 
     const ctx = flowChartRef.current.getContext('2d');
     const cats = Object.values(data.categories || {});
-
+    
     const flows = { equity: 0, debt: 0, hybrid: 0, passive: 0, solution: 0 };
     cats.forEach(c => {
       if (flows[c.type] !== undefined) flows[c.type] += (c.netFlow || 0);
@@ -147,7 +150,7 @@ export default function IndustryPage() {
           <div className="page-header">
             <div className="page-eyebrow">
               <div className="live-dot"></div>
-              <span className="page-eyebrow-text">Industry Trends · Monthly</span>
+              <span className="page-eyebrow-text">AMFI Official Data</span>
             </div>
             <h1 className="page-title">
               MF Industry <span>Pulse</span>
@@ -168,7 +171,7 @@ export default function IndustryPage() {
           <div className="page-header">
             <div className="page-eyebrow">
               <div className="live-dot"></div>
-              <span className="page-eyebrow-text">Industry Trends · Monthly</span>
+              <span className="page-eyebrow-text">AMFI Official Data</span>
             </div>
             <h1 className="page-title">
               MF Industry <span>Pulse</span>
@@ -184,10 +187,25 @@ export default function IndustryPage() {
   const s = data.summary || {};
   const gt = data.grandTotal || {};
   const cats = data.categories || {};
-
+  
   const catFolios = Object.values(cats).reduce((sum, c) => sum + (c.folios || 0), 0);
   const totalFolios = s.totalFolios > 0 ? s.totalFolios : (gt.folios > 0 ? gt.folios : catFolios);
   const industryAAUM = gt.avgAum || 0;
+
+  const mon = data.month || '';
+  const yr = data.year || '';
+  const label = mon && yr ? (MONTH_LABELS[MONTHS.indexOf(mon)] || mon) + ' ' + yr : '';
+
+  // Summary cards data
+  const cards = [
+    { icon: '🏦', val: fmtCr(s.totalAum), label: 'Total Industry AUM', sub: label,
+      aaum: industryAAUM ? 'AAUM ' + fmtCr(industryAAUM) : '', highlight: true },
+    { icon: '👥', val: fmtFolios(totalFolios), label: 'Total Folios', sub: 'Investor accounts', aaum: '', highlight: false },
+    { icon: '📈', val: fmtCr(s.equityAum), label: 'Equity AUM', sub: 'Growth/equity schemes', aaum: '', highlight: false },
+    { icon: '🏛', val: fmtCr(s.debtAum), label: 'Debt AUM', sub: 'Fixed income schemes', aaum: '', highlight: false },
+    { icon: '⚖️', val: fmtCr(s.hybridAum), label: 'Hybrid AUM', sub: 'Balanced funds', aaum: '', highlight: false },
+    { icon: '📊', val: fmtCr(s.passiveAum), label: 'Passive AUM', sub: 'Index funds & ETFs', aaum: '', highlight: false },
+  ];
 
   // AUM breakdown segments
   const total = s.totalAum || 1;
@@ -200,8 +218,8 @@ export default function IndustryPage() {
 
   // Filter and sort categories
   const categories = Object.values(cats).filter(c => {
-    if (typeFilter === 'all') return true;
-    return c.type === typeFilter;
+    if (filterType === 'all') return true;
+    return c.type === filterType;
   }).sort((a, b) => {
     const aVal = a[sortCol] || 0;
     const bVal = b[sortCol] || 0;
@@ -216,59 +234,31 @@ export default function IndustryPage() {
         <div className="page-header">
           <div className="page-eyebrow">
             <div className="live-dot"></div>
-            <span className="page-eyebrow-text">AMFI Official Data · Monthly</span>
+            <span className="page-eyebrow-text">AMFI Official Data</span>
           </div>
           <h1 className="page-title">
             MF Industry <span>Pulse</span>
           </h1>
           <p className="page-subtitle">
-            39 fund categories · Flows, AUM, folios breakdown
+            AUM · AAUM · category flows · 12-month trends — sourced directly from AMFI official monthly reports
           </p>
         </div>
 
-        {/* 6 Summary Cards */}
+        {/* Summary Cards */}
         <div className="summary-grid">
-          <div className="sum-card highlight">
-            <div className="sum-icon">🏦</div>
-            <div className="sum-val">{fmtCr(s.totalAum)}</div>
-            <div className="sum-label">Total Industry AUM</div>
-            <div className="sum-sub">{data.month} {data.year}</div>
-            {industryAAUM > 0 && <div className="sum-aaum">AAUM {fmtCr(industryAAUM)}</div>}
-          </div>
-          <div className="sum-card">
-            <div className="sum-icon">👥</div>
-            <div className="sum-val">{fmtFolios(totalFolios)}</div>
-            <div className="sum-label">Total Folios</div>
-            <div className="sum-sub">Investor accounts</div>
-          </div>
-          <div className="sum-card">
-            <div className="sum-icon">📈</div>
-            <div className="sum-val">{fmtCr(s.equityAum)}</div>
-            <div className="sum-label">Equity AUM</div>
-            <div className="sum-sub">Growth/equity schemes</div>
-          </div>
-          <div className="sum-card">
-            <div className="sum-icon">🏛</div>
-            <div className="sum-val">{fmtCr(s.debtAum)}</div>
-            <div className="sum-label">Debt AUM</div>
-            <div className="sum-sub">Fixed income schemes</div>
-          </div>
-          <div className="sum-card">
-            <div className="sum-icon">⚖️</div>
-            <div className="sum-val">{fmtCr(s.hybridAum)}</div>
-            <div className="sum-label">Hybrid AUM</div>
-            <div className="sum-sub">Balanced funds</div>
-          </div>
-          <div className="sum-card">
-            <div className="sum-icon">📊</div>
-            <div className="sum-val">{fmtCr(s.passiveAum)}</div>
-            <div className="sum-label">Passive AUM</div>
-            <div className="sum-sub">Index funds & ETFs</div>
-          </div>
+          {cards.map((c, i) => (
+            <div key={i} className={`sum-card${c.highlight ? ' highlight' : ''}`}>
+              <div className="sum-icon">{c.icon}</div>
+              <div className="sum-val">{c.val}</div>
+              <div className="sum-label">{c.label}</div>
+              <div className="sum-sub">{c.sub}</div>
+              {c.aaum && <div className="sum-aaum">{c.aaum}</div>}
+            </div>
+          ))}
         </div>
 
-        {/* AUM Distribution Bar */}
-        <div className="section">
+        {/* AUM Breakdown */}
+        <div className="aum-breakdown section">
           <div className="section-head">
             <div className="section-title">📊 AUM distribution</div>
             <div className="section-badge">BREAKDOWN</div>
@@ -297,10 +287,13 @@ export default function IndustryPage() {
         <div className="section">
           <div className="section-head">
             <div className="section-title">💸 Net flows by category type</div>
-            <div className="section-badge">MONTHLY</div>
+            <div className="section-badge">THIS MONTH · ₹ CRORE</div>
           </div>
-          <div className="chart-wrap" style={{ height: '280px' }}>
-            <canvas ref={flowChartRef}></canvas>
+          <div className="chart-card">
+            <div className="chart-sub">Positive = net buying · negative = net redemptions · hover for exact figures</div>
+            <div className="chart-wrap" style={{ height: '220px' }}>
+              <canvas ref={flowChartRef}></canvas>
+            </div>
           </div>
         </div>
 
@@ -310,71 +303,83 @@ export default function IndustryPage() {
             <div className="section-title">📋 Category-wise data</div>
             <div className="section-badge">{Object.keys(cats).length} CATEGORIES</div>
           </div>
-
-          <div className="type-filters">
-            <button
-              className={`type-btn ${typeFilter === 'all' ? 'active' : ''}`}
-              onClick={() => setTypeFilter('all')}
-            >
-              All
-            </button>
-            <button
-              className={`type-btn ${typeFilter === 'equity' ? 'active' : ''}`}
-              onClick={() => setTypeFilter('equity')}
-            >
-              Equity
-            </button>
-            <button
-              className={`type-btn ${typeFilter === 'debt' ? 'active' : ''}`}
-              onClick={() => setTypeFilter('debt')}
-            >
-              Debt
-            </button>
-            <button
-              className={`type-btn ${typeFilter === 'hybrid' ? 'active' : ''}`}
-              onClick={() => setTypeFilter('hybrid')}
-            >
-              Hybrid
-            </button>
-            <button
-              className={`type-btn ${typeFilter === 'passive' ? 'active' : ''}`}
-              onClick={() => setTypeFilter('passive')}
-            >
-              Passive
-            </button>
-          </div>
-
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th onClick={() => handleSort('label')}>
-                    Category {sortCol === 'label' && (sortDir === 1 ? '↑' : '↓')}
-                  </th>
-                  <th onClick={() => handleSort('folios')} style={{ fontFamily: 'JetBrains Mono' }}>
-                    Folios {sortCol === 'folios' && (sortDir === 1 ? '↑' : '↓')}
-                  </th>
-                  <th onClick={() => handleSort('netFlow')} style={{ fontFamily: 'JetBrains Mono' }}>
-                    Net Flow (Cr) {sortCol === 'netFlow' && (sortDir === 1 ? '↑' : '↓')}
-                  </th>
-                  <th onClick={() => handleSort('aum')} style={{ fontFamily: 'JetBrains Mono' }}>
-                    AUM (Cr) {sortCol === 'aum' && (sortDir === 1 ? '↑' : '↓')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {categories.map((cat, i) => (
-                  <tr key={i}>
-                    <td style={{ textAlign: 'left' }}>{cat.label}</td>
-                    <td style={{ fontFamily: 'JetBrains Mono' }}>{fmtFolios(cat.folios)}</td>
-                    <td style={{ fontFamily: 'JetBrains Mono', color: (cat.netFlow || 0) >= 0 ? 'var(--g2)' : 'var(--neg)' }}>
-                      {fmtFlow(cat.netFlow)}
-                    </td>
-                    <td style={{ fontFamily: 'JetBrains Mono' }}>{fmtCr(cat.aum)}</td>
+          <div className="cat-table-wrap">
+            <div className="cat-filters">
+              <button
+                className={`cat-filter-btn ${filterType === 'all' ? 'active' : ''}`}
+                onClick={() => setFilterType('all')}
+              >
+                All
+              </button>
+              <button
+                className={`cat-filter-btn ${filterType === 'equity' ? 'active' : ''}`}
+                onClick={() => setFilterType('equity')}
+              >
+                Equity
+              </button>
+              <button
+                className={`cat-filter-btn ${filterType === 'debt' ? 'active' : ''}`}
+                onClick={() => setFilterType('debt')}
+              >
+                Debt
+              </button>
+              <button
+                className={`cat-filter-btn ${filterType === 'hybrid' ? 'active' : ''}`}
+                onClick={() => setFilterType('hybrid')}
+              >
+                Hybrid
+              </button>
+              <button
+                className={`cat-filter-btn ${filterType === 'passive' ? 'active' : ''}`}
+                onClick={() => setFilterType('passive')}
+              >
+                Passive
+              </button>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="cat-table">
+                <thead>
+                  <tr>
+                    <th onClick={() => handleSort('label')}>
+                      Category <span className="sort-arrow">{sortCol === 'label' ? (sortDir === -1 ? '↓' : '↑') : '↕'}</span>
+                    </th>
+                    <th onClick={() => handleSort('folios')} className="mono">
+                      Folios <span className="sort-arrow">{sortCol === 'folios' ? (sortDir === -1 ? '↓' : '↑') : '↕'}</span>
+                    </th>
+                    <th onClick={() => handleSort('inflow')} className="mono">
+                      Inflow (Cr) <span className="sort-arrow">{sortCol === 'inflow' ? (sortDir === -1 ? '↓' : '↑') : '↕'}</span>
+                    </th>
+                    <th onClick={() => handleSort('redemption')} className="mono col-hide-mobile">
+                      Redemption (Cr) <span className="sort-arrow">{sortCol === 'redemption' ? (sortDir === -1 ? '↓' : '↑') : '↕'}</span>
+                    </th>
+                    <th onClick={() => handleSort('netFlow')} className={`sorted mono`}>
+                      Net Flow (Cr) <span className="sort-arrow">{sortCol === 'netFlow' ? (sortDir === -1 ? '↓' : '↑') : '↕'}</span>
+                    </th>
+                    <th onClick={() => handleSort('aum')} className="mono">
+                      AUM (Cr) <span className="sort-arrow">{sortCol === 'aum' ? (sortDir === -1 ? '↓' : '↑') : '↕'}</span>
+                    </th>
+                    <th onClick={() => handleSort('avgAum')} className="mono col-hide-mobile">
+                      AAUM (Cr) <span className="sort-arrow">{sortCol === 'avgAum' ? (sortDir === -1 ? '↓' : '↑') : '↕'}</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {categories.map((cat, i) => (
+                    <tr key={i}>
+                      <td>{cat.label}</td>
+                      <td className="mono">{fmtFolios(cat.folios)}</td>
+                      <td className="mono">{fmtCr(cat.inflow)}</td>
+                      <td className="mono col-hide-mobile">{fmtCr(cat.redemption)}</td>
+                      <td className="mono" style={{ color: (cat.netFlow || 0) >= 0 ? 'var(--g2)' : 'var(--neg)' }}>
+                        {fmtFlow(cat.netFlow)}
+                      </td>
+                      <td className="mono">{fmtCr(cat.aum)}</td>
+                      <td className="mono col-hide-mobile">{fmtCr(cat.avgAum)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
