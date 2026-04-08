@@ -363,26 +363,34 @@ export default function GeographyPage() {
                   </div>
                 </div>
                 <div className="detail-breakdown">
-                  <div className="dbrk-title">AUM Breakdown</div>
+                  <div className="dbrk-title">Full breakdown</div>
                   <div className="dbrk-row">
-                    <span className="dbrk-name">Equity</span>
-                    <span className="dbrk-val">{fmtCrShort(selectedState.equity)} ({selectedState.equityPct?.toFixed(1)}%)</span>
+                    <span className="dbrk-name">Equity schemes</span>
+                    <span className="dbrk-val">{fmtCr(selectedState.equitySchemes || 0)}</span>
                   </div>
                   <div className="dbrk-row">
-                    <span className="dbrk-name">Debt</span>
-                    <span className="dbrk-val">{fmtCrShort(selectedState.debt)}</span>
+                    <span className="dbrk-name">Balanced / Hybrid</span>
+                    <span className="dbrk-val">{fmtCr(selectedState.balanced || 0)}</span>
                   </div>
                   <div className="dbrk-row">
-                    <span className="dbrk-name">Liquid</span>
-                    <span className="dbrk-val">{fmtCrShort(selectedState.liquid)}</span>
+                    <span className="dbrk-name">Other debt</span>
+                    <span className="dbrk-val">{fmtCr(selectedState.otherDebt || 0)}</span>
                   </div>
                   <div className="dbrk-row">
-                    <span className="dbrk-name">ETF</span>
-                    <span className="dbrk-val">{fmtCrShort(selectedState.etf)}</span>
+                    <span className="dbrk-name">Liquid schemes</span>
+                    <span className="dbrk-val">{fmtCr(selectedState.liquid || 0)}</span>
                   </div>
                   <div className="dbrk-row">
-                    <span className="dbrk-name">FoF</span>
-                    <span className="dbrk-val">{fmtCrShort(selectedState.fof)}</span>
+                    <span className="dbrk-name">Gold ETF</span>
+                    <span className="dbrk-val">{fmtCr(selectedState.goldETF || 0)}</span>
+                  </div>
+                  <div className="dbrk-row">
+                    <span className="dbrk-name">Other ETF</span>
+                    <span className="dbrk-val">{fmtCr(selectedState.otherETF || 0)}</span>
+                  </div>
+                  <div className="dbrk-row">
+                    <span className="dbrk-name">FoF (Overseas + Dom)</span>
+                    <span className="dbrk-val">{fmtCr(selectedState.fof || 0)}</span>
                   </div>
                 </div>
                 {selectedState.equityPct > data.equityPctIndustry ? (

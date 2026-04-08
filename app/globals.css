@@ -39,6 +39,7 @@
   --shadow: 0 2px 16px rgba(46, 125, 50, .09);
   --shadow-lg: 0 8px 40px rgba(46, 125, 50, .13);
   --r: 14px;
+  --radius: 14px;
 }
 
 /* ── BASE ── */
