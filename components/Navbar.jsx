@@ -19,15 +19,16 @@
  */
 
 const NAV_ITEMS = [
-  { key: 'home',        label: '🏠 Home',            href: 'https://www.getabundance.in', external: true },
-  { key: 'calculator',  label: '📊 MF Calculator',   href: '/' },
-  { key: 'industry',    label: '📈 Industry Pulse',  href: '/industry' },
-  { key: 'report',      label: '📋 Report Card',     href: '/report' },
-  { key: 'geography',   label: '🗺 Geography',       href: '/geography' },
-  { key: 'rolling',     label: '📉 Rolling Returns', href: '/rolling' },
-  { key: 'indices',     label: '📊 Index Dashboard', href: '/indices' },
-  { key: 'cas-tracker', label: '📋 CAS Tracker',     href: '/cas-tracker' },
-  { key: 'contact',     label: '📞 Contact',         href: 'https://www.getabundance.in/contact-us', external: true },
+  { key: 'home',          label: '🏠 Home',            href: 'https://www.getabundance.in', external: true },
+  { key: 'calculator',    label: '📊 MF Calculator',   href: '/' },
+  { key: 'industry',      label: '📈 Industry Pulse',  href: '/industry' },
+  { key: 'report',        label: '📋 Report Card',     href: '/report' },
+  { key: 'geography',     label: '🗺 Geography',       href: '/geography' },
+  { key: 'rolling',       label: '📉 Rolling Returns', href: '/rolling' },
+  { key: 'indices',       label: '📊 Index Dashboard', href: '/indices' },
+  { key: 'pms-screener',  label: '🏆 PMS Screener',   href: '/pms-screener' },
+  { key: 'cas-tracker',   label: '📋 CAS Tracker',     href: '/cas-tracker' },
+  { key: 'contact',       label: '📞 Contact',         href: 'https://www.getabundance.in/contact-us', external: true },
 ];
 
 export default function Navbar({ activePage, variant = 'default' }) {

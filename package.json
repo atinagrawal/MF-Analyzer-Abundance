@@ -16,10 +16,14 @@
     "@vercel/blob": "^2.3.3",
     "@vercel/og": "^0.6.3",
     "@vercel/speed-insights": "^2.0.0",
+    "cheerio": "^1.2.0",
     "next": "^16.2.2",
     "pdf-parse": "^1.1.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "canvas": "^3.2.3"
   }
 }
