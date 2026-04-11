@@ -15,11 +15,31 @@ export const config = { runtime: 'nodejs' };
 
 const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
-function getLatestMonth() {
+/** Returns up to 3 candidate months to try, most recent first */
+function candidateMonths() {
   const now = new Date();
-  const offset = now.getUTCDate() < 10 ? 2 : 1;
-  const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-  return { mon: MONTHS[d.getMonth()], year: d.getFullYear() };
+  const mon = now.getUTCMonth() + 1; // 1-based
+  const year = now.getUTCFullYear();
+  const out = [];
+  for (let offset = 1; offset <= 4; offset++) {
+    let m = mon - offset, y = year;
+    while (m <= 0) { m += 12; y--; }
+    out.push({ mon: MONTHS[m - 1], year: y });
+  }
+  return out;
+}
+
+/** Parse '01-feb-2026' date string used by statewise API */
+function parseDateParam(date) {
+  if (!date) return null;
+  // format: 01-MMM-YYYY  e.g. 01-feb-2026
+  const parts = date.split('-');
+  if (parts.length >= 3) {
+    const mon = parts[1].toLowerCase().slice(0, 3);
+    const year = parseInt(parts[2]);
+    if (MONTHS.includes(mon) && year > 2000) return { mon, year };
+  }
+  return null;
 }
 
 const KNOWN_CATS = new Map([
@@ -227,72 +247,101 @@ export default async function handler(req, res) {
     const url = new URL(req.url, `http://${req.headers.host}`);
     let mon  = url.searchParams.get('month');
     let year = url.searchParams.get('year');
+    const dateParam = url.searchParams.get('date');
 
-    if (!mon || !year) {
-      const latest = getLatestMonth();
-      mon  = latest.mon;
-      year = latest.year;
-    }
-    mon  = mon.toLowerCase().slice(0, 3);
-    year = parseInt(year);
-
-    const pdfUrl = `https://portal.amfiindia.com/spages/am${mon}${year}repo.pdf`;
-
-    const pdfRes = await fetch(pdfUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AbundanceMFCalc/1.0)' },
-    });
-
-    if (!pdfRes.ok) {
-      res.status(404).json({ error: `AMFI report not available for ${mon} ${year}`, pdfUrl, httpStatus: pdfRes.status });
-      return;
+    // Support '01-feb-2026' date format used by report page / statewise API
+    if ((!mon || !year) && dateParam) {
+      const parsed = parseDateParam(dateParam);
+      if (parsed) { mon = parsed.mon; year = parsed.year; }
     }
 
-    const pdfBuf = Buffer.from(await pdfRes.arrayBuffer()).toString('binary');
-    const chunks = extractPdfChunks(pdfBuf);
-    const { categories, grandTotal, unknownCategories } = parseCategories(chunks);
-    const catCount = Object.keys(categories).length;
+    // If specific month/year requested, try it directly
+    if (mon && year) {
+      mon  = mon.toLowerCase().slice(0, 3);
+      year = parseInt(year);
+      const pdfUrl = `https://portal.amfiindia.com/spages/am${mon}${year}repo.pdf`;
 
-    if (catCount < 10) {
-      res.status(422).json({
-        error: 'Too few categories parsed — PDF format may have changed',
-        catCount, chunksFound: chunks.length, sample: chunks.slice(50, 80),
+      const pdfRes = await fetch(pdfUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AbundanceMFCalc/1.0)' },
       });
-      return;
+
+      if (!pdfRes.ok) {
+        res.status(404).json({ error: `AMFI report not available for ${mon} ${year}`, pdfUrl, httpStatus: pdfRes.status });
+        return;
+      }
+
+      const pdfBuf = Buffer.from(await pdfRes.arrayBuffer()).toString('binary');
+      const chunks = extractPdfChunks(pdfBuf);
+      const { categories, grandTotal, unknownCategories } = parseCategories(chunks);
+      const catCount = Object.keys(categories).length;
+
+      if (catCount < 10) {
+        res.status(422).json({
+          error: 'Too few categories parsed — PDF format may have changed',
+          catCount, chunksFound: chunks.length, sample: chunks.slice(50, 80),
+        });
+        return;
+      }
+
+      return sendSuccess(res, mon, year, categories, grandTotal, unknownCategories, catCount);
     }
 
-    const byType = (t) => Object.values(categories).filter(c => c.type === t);
-    const sumAum = (arr) => arr.reduce((s, c) => s + (c.aum || 0), 0);
+    // No specific month: auto-resolve by trying candidates (month-1, month-2, ...)
+    for (const candidate of candidateMonths()) {
+      const { mon: cMon, year: cYear } = candidate;
+      const pdfUrl2 = `https://portal.amfiindia.com/spages/am${cMon}${cYear}repo.pdf`;
+      try {
+        const pdfRes2 = await fetch(pdfUrl2, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AbundanceMFCalc/1.0)' },
+        });
+        if (!pdfRes2.ok) continue;
+        const pdfBuf2 = Buffer.from(await pdfRes2.arrayBuffer()).toString('binary');
+        const chunks2 = extractPdfChunks(pdfBuf2);
+        const { categories: cats2, grandTotal: gt2, unknownCategories: unk2 } = parseCategories(chunks2);
+        const catCount2 = Object.keys(cats2).length;
+        if (catCount2 < 10) continue;
+        return sendSuccess(res, cMon, cYear, cats2, gt2, unk2, catCount2);
+      } catch (_) { continue; }
+    }
 
-    const summary = {
-      totalAum:     grandTotal?.aum      || sumAum(Object.values(categories)),
-      totalFolios:  grandTotal?.folios   || 0,
-      totalNetFlow: grandTotal?.netFlow  || 0,
-      equityAum:    sumAum(byType('equity')),
-      debtAum:      sumAum(byType('debt')),
-      hybridAum:    sumAum(byType('hybrid')),
-      passiveAum:   sumAum(byType('passive')),
-    };
-
-    res.setHeader('Content-Type', 'application/json');
-    // Historical months never change — AMFI doesn't update past PDFs
-    const now = new Date();
-    const reqDate = new Date(year, MONTHS.indexOf(mon), 1);
-    const cutoff = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const isHistorical = reqDate < cutoff;
-    const cacheHeader = isHistorical
-      ? 's-maxage=31536000, stale-while-revalidate=31536000, immutable'  // 1 year — permanent
-      : 's-maxage=86400, stale-while-revalidate=604800';                  // 1 day for current month
-    res.setHeader('Cache-Control', cacheHeader);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.status(200).json({
-      month: mon, year, reportDate: `${mon} ${year}`,
-      grandTotal, summary, categories,
-      parsedCategories: catCount,
-      ...(unknownCategories.length > 0 && { unknownCategories }),
-      parsedAt: new Date().toISOString(),
-    });
+    res.status(503).json({ error: 'AMFI report temporarily unavailable. Please try again later.' });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+}
+
+function sendSuccess(res, mon, year, categories, grandTotal, unknownCategories, catCount) {
+  const byType = (t) => Object.values(categories).filter(c => c.type === t);
+  const sumAum = (arr) => arr.reduce((s, c) => s + (c.aum || 0), 0);
+
+  const summary = {
+    totalAum:     grandTotal?.aum      || sumAum(Object.values(categories)),
+    totalFolios:  grandTotal?.folios   || 0,
+    totalNetFlow: grandTotal?.netFlow  || 0,
+    equityAum:    sumAum(byType('equity')),
+    debtAum:      sumAum(byType('debt')),
+    hybridAum:    sumAum(byType('hybrid')),
+    passiveAum:   sumAum(byType('passive')),
+  };
+
+  res.setHeader('Content-Type', 'application/json');
+  // Historical months never change — AMFI doesn't update past PDFs
+  const now = new Date();
+  const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const reqDate = new Date(year, MONTHS.indexOf(mon), 1);
+  const cutoff  = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const isHistorical = reqDate < cutoff;
+  const cacheHeader = isHistorical
+    ? 's-maxage=31536000, stale-while-revalidate=31536000, immutable'
+    : 's-maxage=21600, stale-while-revalidate=86400';
+  res.setHeader('Cache-Control', cacheHeader);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.status(200).json({
+    month: mon, year, reportDate: `${mon} ${year}`,
+    grandTotal, summary, categories,
+    parsedCategories: catCount,
+    ...(unknownCategories.length > 0 && { unknownCategories }),
+    parsedAt: new Date().toISOString(),
+  });
 }

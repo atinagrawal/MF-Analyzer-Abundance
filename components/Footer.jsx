@@ -23,7 +23,7 @@ const DEFAULT_DISCLAIMER =
   'Past performance is not indicative of future returns. ' +
   'This tool is for informational and educational purposes only and does not constitute financial advice. ' +
   'Please consult your financial advisor before making investment decisions. ' +
-  'Mutual fund data sourced from AMFI via mfapi.in.';
+  'Mutual fund data sourced from AMFI (amfiindia.com).';
 
 export default function Footer({ variant = 'default', activePage, disclaimer }) {
   const year = new Date().getFullYear();

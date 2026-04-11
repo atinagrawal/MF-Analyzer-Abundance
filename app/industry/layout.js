@@ -1,4 +1,5 @@
 import { getPageMeta } from '@/lib/metadata';
+import Script from 'next/script';
 
 export const metadata = getPageMeta('industry');
 
@@ -23,7 +24,8 @@ export default function IndustryLayout({ children }) {
       "39 fund categories with monthly data",
       "Net flow trends and category rankings",
       "Historical data since 2014",
-      "Sortable and filterable tables"
+      "Sortable and filterable tables",
+      "12-month industry trends with heatmap"
     ],
     "provider": {
       "@type": "FinancialService",
@@ -51,6 +53,10 @@ export default function IndustryLayout({ children }) {
 
   return (
     <>
+      <Script
+        src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"
+        strategy="beforeInteractive"
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }}
@@ -63,3 +69,4 @@ export default function IndustryLayout({ children }) {
     </>
   );
 }
+
