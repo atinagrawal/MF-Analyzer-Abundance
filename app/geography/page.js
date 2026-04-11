@@ -23,8 +23,7 @@ Object.entries(AMFI_TO_GEO).forEach(([amfi, geo]) => {
 
 // States that were merged by AMFI into a single UT after 2019 reorganisation
 const MERGED_UT_MAP = {
-  'Dadra and Nagar Haveli': 'Dadra & Nagar Haveli and Daman & Diu',
-  'Daman and Diu': 'Dadra & Nagar Haveli and Daman & Diu',
+
 };
 
 // Adaptive formatters — no more hardcoded L Cr for small states
