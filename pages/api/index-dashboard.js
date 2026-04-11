@@ -108,10 +108,11 @@ async function fetchPdfText(url) {
   // Fetch the PDF binary
   const buffer = await new Promise((resolve, reject) => {
     https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 Chrome/120.0.0.0 Safari/537.36' } }, res => {
-      if (res.statusCode !== 200) {
+      const isPdf = res.headers['content-type']?.includes('pdf') || res.headers['content-type']?.includes('octet-stream');
+      if (res.statusCode !== 200 || !isPdf) {
         // Drain response
         res.resume();
-        return resolve({ status: res.statusCode, text: null });
+        return resolve({ status: res.statusCode !== 200 ? res.statusCode : 404, text: null });
       }
       const chunks = [];
       res.on('data', c => chunks.push(c));
@@ -121,13 +122,18 @@ async function fetchPdfText(url) {
 
   if (!buffer.buffer) return { status: buffer.status, text: null };
 
-  // Use pdf-parse to extract text
-  const pdfParse = (await import('pdf-parse')).default;
-  const data = await pdfParse(buffer.buffer, {
-    // Extract all pages as text
-    max: 0,
-  });
-  return { status: 200, text: data.text };
+  try {
+    // Use pdf-parse to extract text
+    const pdfParse = (await import('pdf-parse')).default;
+    const data = await pdfParse(buffer.buffer, {
+      // Extract all pages as text
+      max: 0,
+    });
+    return { status: 200, text: data.text };
+  } catch (err) {
+    console.error(`[fetchPdfText] Error parsing PDF from ${url}:`, err.message);
+    return { status: 404, text: null };
+  }
 }
 
 function parsePdfText(text) {
@@ -388,8 +394,8 @@ export default async function handler(req, res) {
       indices: enriched,
     };
 
-    // Fire-and-forget blob write — cache for next request
-    dashboardCachePut(year, month, payload).catch(() => {});
+    // Await blob write — cache for next request (required for proper persistence in serverless environments)
+    await dashboardCachePut(year, month, payload).catch(() => {});
 
     return res.status(200).json({ ...payload, source: 'NSE Indices' });
 
