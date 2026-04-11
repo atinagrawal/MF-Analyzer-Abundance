@@ -102,7 +102,7 @@ const jsonLd = {
                 height: 512,
             },
             description:
-                'SEBI-registered MF & SIF Distributor and APMI Registered Portfolio Manager Distributor (APRN04279) based in Haldwani, Uttarakhand, India. ARN-251838.',
+                'SEBI-registered MF & SIF Distributor and APMI Registered Portfolio Management Services Distributor (APRN04279) based in Haldwani, Uttarakhand, India. ARN-251838.',
             contactPoint: {
                 '@type': 'ContactPoint',
                 contactType: 'customer support',
@@ -175,7 +175,7 @@ const jsonLd = {
                     name: 'How is PMS performance data sourced on this screener?',
                     acceptedAnswer: {
                         '@type': 'Answer',
-                        text: 'All performance data is sourced directly from APMI India (Association of Portfolio Managers in India), the official SEBI-recognised industry body for PMS. Returns are calculated using Time-Weighted Rate of Return (TWRR), net of all management fees and expenses, as mandated by SEBI. Abundance Financial Services (APRN04279) is an APMI Registered Portfolio Manager Distributor.',
+                        text: 'All performance data is sourced directly from APMI India (Association of Portfolio Managers in India), the official SEBI-recognised industry body for PMS. Returns are calculated using Time-Weighted Rate of Return (TWRR), net of all management fees and expenses, as mandated by SEBI. Abundance Financial Services (APRN04279) is an APMI Registered PMS Distributor.',
                     },
                 },
                 {
