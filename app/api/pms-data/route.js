@@ -137,7 +137,13 @@ async function scrapeAPMI(strategy, month, year, asOnDate) {
                 id: index,
                 portfolioManager: $(tds[0]).text().trim(),
                 strategyName:     $(tds[1]).text().trim(),
-                apmiLink:         $(tds[1]).find('a').attr('href') || null,
+                apmiLink:         (() => {
+                    const raw = $(tds[1]).find('a').attr('href');
+                    if (!raw) return null;
+                    if (raw.startsWith('http')) return raw;
+                    // Resolve relative link against the APMI base path
+                    return new URL(raw, 'https://www.apmiindia.org/apmi/').href;
+                })(),
                 aum:          parseVal($(tds[2]).text()),
                 ret1M:        parseVal($(tds[3]).text()),
                 ret3M:        parseVal($(tds[4]).text()),

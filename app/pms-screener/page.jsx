@@ -15,7 +15,7 @@ function getReturnClass(v) {
     if (v === null || v === undefined) return 'ret-neu';
     if (v >= 30) return 'ret-fire';
     if (v >= 15) return 'ret-pos';
-    if (v >= 0)  return 'ret-neu';
+    if (v >= 0) return 'ret-neu';
     if (v >= -5) return 'ret-warn';
     return 'ret-neg';
 }
@@ -33,21 +33,21 @@ function initials(name) {
 }
 
 export default function PMSScreener() {
-    const [data, setData]                   = useState([]);
-    const [loading, setLoading]             = useState(true);
-    const [error, setError]                 = useState(null);
-    const [selected, setSelected]           = useState(null);
-    const [search, setSearch]               = useState('');
+    const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [selected, setSelected] = useState(null);
+    const [search, setSearch] = useState('');
     const [providerFilter, setProviderFilter] = useState('');
-    const [viewMode, setViewMode]           = useState('table');
-    const [sortCol, setSortCol]             = useState('ret1Y');
-    const [sortDir, setSortDir]             = useState(-1);
-    const [strategy, setStrategy]           = useState('Equity');
-    const [page, setPage]                   = useState(1);
-    const [pageSize, setPageSize]           = useState(50);
-    const [showSmallAum, setShowSmallAum]   = useState(false); // AUM filter toggle
-    const [compareList, setCompareList]     = useState([]);    // comparison basket (max 3)
-    const [showCompare, setShowCompare]     = useState(false); // comparison modal open
+    const [viewMode, setViewMode] = useState('table');
+    const [sortCol, setSortCol] = useState('ret1Y');
+    const [sortDir, setSortDir] = useState(-1);
+    const [strategy, setStrategy] = useState('Equity');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+    const [showSmallAum, setShowSmallAum] = useState(false); // AUM filter toggle
+    const [compareList, setCompareList] = useState([]);    // comparison basket (max 3)
+    const [showCompare, setShowCompare] = useState(false); // comparison modal open
 
     const MAX_COMPARE = 3;
 
@@ -144,7 +144,7 @@ export default function PMSScreener() {
     }, [data, search, providerFilter, sortCol, sortDir, showSmallAum, smallAumProviders, strategy]);
 
     const totalPages = Math.ceil(filtered.length / pageSize);
-    const paginated  = filtered.slice((page - 1) * pageSize, page * pageSize);
+    const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
     const stats = useMemo(() => {
         if (!data.length) return null;
@@ -166,13 +166,13 @@ export default function PMSScreener() {
     const maxAum = useMemo(() => Math.max(...filtered.map(d => d.aum ?? 0), 1), [filtered]);
 
     const retPeriods = selected ? [
-        { label: '1M',        val: selected.ret1M },
-        { label: '3M',        val: selected.ret3M },
-        { label: '6M',        val: selected.ret6M },
-        { label: '1 Year',    val: selected.ret1Y },
-        { label: '2 Years',   val: selected.ret2Y },
-        { label: '3 Years',   val: selected.ret3Y },
-        { label: '5 Years',   val: selected.ret5Y },
+        { label: '1M', val: selected.ret1M },
+        { label: '3M', val: selected.ret3M },
+        { label: '6M', val: selected.ret6M },
+        { label: '1 Year', val: selected.ret1Y },
+        { label: '2 Years', val: selected.ret2Y },
+        { label: '3 Years', val: selected.ret3Y },
+        { label: '5 Years', val: selected.ret5Y },
         { label: 'Inception', val: selected.retInception },
     ].filter(r => r.val !== null) : [];
 
@@ -339,17 +339,17 @@ export default function PMSScreener() {
                                 <thead>
                                     <tr>
                                         <th style={{ width: 32, textAlign: "center", color: "var(--muted)", fontSize: ".65rem" }} title="Add to compare (max 3)">⚖</th>
-                                        <ThSort col="strategyName"  label="Strategy & Manager" left />
-                                        <ThSort col="aum"           label="AUM (Cr)" />
-                                        <ThSort col="ret1M"         label="1M" />
-                                        <ThSort col="ret3M"         label="3M" />
-                                        <ThSort col="ret6M"         label="6M" />
+                                        <ThSort col="strategyName" label="Strategy & Manager" left />
+                                        <ThSort col="aum" label="AUM (Cr)" />
+                                        <ThSort col="ret1M" label="1M" />
+                                        <ThSort col="ret3M" label="3M" />
+                                        <ThSort col="ret6M" label="6M" />
                                         <th onClick={() => handleSort('ret1Y')} className={sortCol === 'ret1Y' ? 'col-active' : ''} style={{ color: 'var(--g2)' }}>
                                             1Y <span className="sort-icon">{sortCol === 'ret1Y' ? (sortDir === -1 ? '▼' : '▲') : '⇅'}</span>
                                         </th>
-                                        <ThSort col="ret3Y"         label="3Y" />
-                                        <ThSort col="ret5Y"         label="5Y" />
-                                        <ThSort col="retInception"  label="Inception" />
+                                        <ThSort col="ret3Y" label="3Y" />
+                                        <ThSort col="ret5Y" label="5Y" />
+                                        <ThSort col="retInception" label="Inception" />
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -385,7 +385,7 @@ export default function PMSScreener() {
                                         </tr>
                                     ))}
                                     {paginated.length === 0 && (
-                                        <tr><td colSpan={9} style={{ textAlign:'center', padding:'56px', color:'var(--muted)', fontFamily:'Raleway' }}>No strategies match your filters.</td></tr>
+                                        <tr><td colSpan={9} style={{ textAlign: 'center', padding: '56px', color: 'var(--muted)', fontFamily: 'Raleway' }}>No strategies match your filters.</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -395,17 +395,17 @@ export default function PMSScreener() {
                         {totalPages > 1 && (
                             <div className="pms-pagination">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                    <span className="pg-info">Showing {(page-1)*pageSize+1}–{Math.min(page*pageSize, filtered.length)} of {filtered.length}</span>
+                                    <span className="pg-info">Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}</span>
                                     <select className="pg-size-sel" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}>
                                         {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n} per page</option>)}
                                     </select>
                                 </div>
                                 <div className="pg-controls">
-                                    <button className="pg-btn" onClick={() => setPage(1)} disabled={page===1}>«</button>
-                                    <button className="pg-btn" onClick={() => setPage(p=>p-1)} disabled={page===1}>‹</button>
-                                    {getPageNums().map(n => <button key={n} className={`pg-btn${n===page?' active':''}`} onClick={() => setPage(n)}>{n}</button>)}
-                                    <button className="pg-btn" onClick={() => setPage(p=>p+1)} disabled={page===totalPages}>›</button>
-                                    <button className="pg-btn" onClick={() => setPage(totalPages)} disabled={page===totalPages}>»</button>
+                                    <button className="pg-btn" onClick={() => setPage(1)} disabled={page === 1}>«</button>
+                                    <button className="pg-btn" onClick={() => setPage(p => p - 1)} disabled={page === 1}>‹</button>
+                                    {getPageNums().map(n => <button key={n} className={`pg-btn${n === page ? ' active' : ''}`} onClick={() => setPage(n)}>{n}</button>)}
+                                    <button className="pg-btn" onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>›</button>
+                                    <button className="pg-btn" onClick={() => setPage(totalPages)} disabled={page === totalPages}>»</button>
                                 </div>
                             </div>
                         )}
@@ -429,15 +429,15 @@ export default function PMSScreener() {
                                     <div className="gc-metrics">
                                         <div className="gc-metric">
                                             <div className="gc-m-label">3M</div>
-                                            <div className={`gc-m-val ${(fund.ret3M??0)>=0?'cagr-pos':'cagr-neg'}`}>{fmtRet(fund.ret3M)}</div>
+                                            <div className={`gc-m-val ${(fund.ret3M ?? 0) >= 0 ? 'cagr-pos' : 'cagr-neg'}`}>{fmtRet(fund.ret3M)}</div>
                                         </div>
                                         <div className="gc-metric">
                                             <div className="gc-m-label">1Y</div>
-                                            <div className={`gc-m-val ${(fund.ret1Y??0)>=0?'cagr-pos':'cagr-neg'}`}>{fmtRet(fund.ret1Y)}</div>
+                                            <div className={`gc-m-val ${(fund.ret1Y ?? 0) >= 0 ? 'cagr-pos' : 'cagr-neg'}`}>{fmtRet(fund.ret1Y)}</div>
                                         </div>
                                         <div className="gc-metric">
                                             <div className="gc-m-label">5Y</div>
-                                            <div className={`gc-m-val ${(fund.ret5Y??0)>=0?'cagr-pos':'cagr-neg'}`}>{fmtRet(fund.ret5Y)}</div>
+                                            <div className={`gc-m-val ${(fund.ret5Y ?? 0) >= 0 ? 'cagr-pos' : 'cagr-neg'}`}>{fmtRet(fund.ret5Y)}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -451,12 +451,12 @@ export default function PMSScreener() {
                             )}
                         </div>
                         {totalPages > 1 && (
-                            <div className="pms-pagination" style={{ background:'var(--surface)', border:'1.5px solid var(--border)', borderRadius:'var(--r)', marginBottom:'14px' }}>
+                            <div className="pms-pagination" style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', marginBottom: '14px' }}>
                                 <span className="pg-info">Page {page} of {totalPages} · {filtered.length} results</span>
                                 <div className="pg-controls">
-                                    <button className="pg-btn" onClick={() => setPage(p=>p-1)} disabled={page===1}>‹ Prev</button>
-                                    {getPageNums().map(n => <button key={n} className={`pg-btn${n===page?' active':''}`} onClick={() => setPage(n)}>{n}</button>)}
-                                    <button className="pg-btn" onClick={() => setPage(p=>p+1)} disabled={page===totalPages}>Next ›</button>
+                                    <button className="pg-btn" onClick={() => setPage(p => p - 1)} disabled={page === 1}>‹ Prev</button>
+                                    {getPageNums().map(n => <button key={n} className={`pg-btn${n === page ? ' active' : ''}`} onClick={() => setPage(n)}>{n}</button>)}
+                                    <button className="pg-btn" onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>Next ›</button>
                                 </div>
                             </div>
                         )}
@@ -489,16 +489,16 @@ export default function PMSScreener() {
             )}
 
             {/* ══ Slide-out Drawer ══ */}
-            <div className={`pms-drawer-backdrop${selected?' open':''}`} onClick={() => setSelected(null)}></div>
-            <div className={`pms-drawer${selected?' open':''}`}>
+            <div className={`pms-drawer-backdrop${selected ? ' open' : ''}`} onClick={() => setSelected(null)}></div>
+            <div className={`pms-drawer${selected ? ' open' : ''}`}>
                 <div className="pd-band"></div>
                 {selected && (
                     <>
                         <div className="pd-header">
                             <button className="pd-close" onClick={() => setSelected(null)}>×</button>
-                            <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                                 <div className="pd-avatar-lg">{initials(selected.portfolioManager)}</div>
-                                <img src="/logo-navbar.png" alt="Abundance" className="pd-logo" style={{ marginBottom:0 }} />
+                                <img src="/logo-navbar.png" alt="Abundance" className="pd-logo" style={{ marginBottom: 0 }} />
                             </div>
                             <div className="pd-provider">{selected.portfolioManager}</div>
                             <div className="pd-name">{selected.strategyName}</div>
@@ -509,12 +509,12 @@ export default function PMSScreener() {
                                 </div>
                                 <div className="pd-metric">
                                     <div className="pdm-label">1Y Return</div>
-                                    <div className="pdm-val" style={{ color:(selected.ret1Y??0)>=0?'var(--g2)':'var(--neg)' }}>{fmtRet(selected.ret1Y)}</div>
+                                    <div className="pdm-val" style={{ color: (selected.ret1Y ?? 0) >= 0 ? 'var(--g2)' : 'var(--neg)' }}>{fmtRet(selected.ret1Y)}</div>
                                 </div>
                                 <div className="pd-metric">
                                     <div className="pdm-label">vs Nifty 50</div>
-                                    <div className="pdm-val" style={{ color:(selected.ret1Y??0)>BENCHMARK_1Y?'var(--g2)':'var(--neg)' }}>
-                                        {selected.ret1Y!==null?`${(selected.ret1Y-BENCHMARK_1Y).toFixed(1)}%`:'—'}
+                                    <div className="pdm-val" style={{ color: (selected.ret1Y ?? 0) > BENCHMARK_1Y ? 'var(--g2)' : 'var(--neg)' }}>
+                                        {selected.ret1Y !== null ? `${(selected.ret1Y - BENCHMARK_1Y).toFixed(1)}%` : '—'}
                                     </div>
                                 </div>
                             </div>
@@ -526,9 +526,9 @@ export default function PMSScreener() {
                                     <div key={rp.label} className="pd-ret-row">
                                         <span className="pd-ret-lbl">{rp.label}</span>
                                         <div className="pd-ret-bar-wrap">
-                                            <div className={`pd-ret-bar-fill${rp.val<0?' neg':''}`} style={{ width:`${Math.round(Math.abs(rp.val)/maxAbsRet*100)}%` }}></div>
+                                            <div className={`pd-ret-bar-fill${rp.val < 0 ? ' neg' : ''}`} style={{ width: `${Math.round(Math.abs(rp.val) / maxAbsRet * 100)}%` }}></div>
                                         </div>
-                                        <span className="pd-ret-val" style={{ color:rp.val>=0?'var(--g2)':'var(--neg)' }}>{fmtRet(rp.val)}</span>
+                                        <span className="pd-ret-val" style={{ color: rp.val >= 0 ? 'var(--g2)' : 'var(--neg)' }}>{fmtRet(rp.val)}</span>
                                     </div>
                                 ))}
                             </div>
@@ -538,9 +538,9 @@ export default function PMSScreener() {
                                     <div className="pd-section-head">Wealth Creation Simulation · ₹50 Lakh</div>
                                     <div className="sim-card">
                                         <div className="sim-label">₹50,00,000 invested 1 year ago is today worth:</div>
-                                        <div className="sim-result">₹{(5000000*(1+selected.ret1Y/100)).toLocaleString('en-IN',{maximumFractionDigits:0})}</div>
-                                        <div className={`sim-gain${selected.ret1Y<0?' neg':''}`}>
-                                            {selected.ret1Y>=0?'+':''}₹{Math.abs(Math.round(5000000*selected.ret1Y/100)).toLocaleString('en-IN')} gain
+                                        <div className="sim-result">₹{(5000000 * (1 + selected.ret1Y / 100)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                                        <div className={`sim-gain${selected.ret1Y < 0 ? ' neg' : ''}`}>
+                                            {selected.ret1Y >= 0 ? '+' : ''}₹{Math.abs(Math.round(5000000 * selected.ret1Y / 100)).toLocaleString('en-IN')} gain
                                         </div>
                                     </div>
                                 </>
@@ -549,14 +549,21 @@ export default function PMSScreener() {
                             {selected.apmiLink && (
                                 <>
                                     <div className="pd-section-head">Official Source</div>
-                                    <a href={selected.apmiLink.startsWith('http')?selected.apmiLink:`https://www.apmiindia.org${selected.apmiLink}`}
+                                    <a href={(() => {
+                                        if (selected.apmiLink.startsWith('http')) return selected.apmiLink;
+                                        // Handle legacy cached relative links
+                                        const cleanPath = selected.apmiLink.startsWith('/') ? selected.apmiLink.slice(1) : selected.apmiLink;
+                                        // Most APMI relative links need the /apmi/ prefix if not already present
+                                        if (cleanPath.startsWith('apmi/')) return `https://www.apmiindia.org/${cleanPath}`;
+                                        return `https://www.apmiindia.org/apmi/${cleanPath}`;
+                                    })()}
                                         target="_blank" rel="noopener noreferrer" className="apmi-link-btn">
                                         View on APMI India ↗
                                     </a>
                                 </>
                             )}
 
-                            <div className="pd-source" style={{ marginTop:'28px' }}>
+                            <div className="pd-source" style={{ marginTop: '28px' }}>
                                 <strong>Disclosure:</strong> Data from APMI India · Discretionary {strategy} strategies · Feb 2026 · TWRR, net of all fees. Past performance is not indicative of future results. Min PMS investment ₹50L per SEBI.
                             </div>
                         </div>
