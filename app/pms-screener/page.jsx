@@ -48,6 +48,14 @@ export default function PMSScreener() {
     const [showSmallAum, setShowSmallAum] = useState(false); // AUM filter toggle
     const [compareList, setCompareList] = useState([]);    // comparison basket (max 3)
     const [showCompare, setShowCompare] = useState(false); // comparison modal open
+    const [showAdvanced, setShowAdvanced] = useState(false); // toggle advanced filters
+
+    // Advanced Filter State
+    const [aumTier, setAumTier] = useState('all'); // 'all', '<100', '100-500', '500-2000', '>2000', 'custom'
+    const [minAumFilter, setMinAumFilter] = useState('');
+    const [maxAumFilter, setMaxAumFilter] = useState('');
+    const [minRet, setMinRet] = useState('');
+    const [retPeriod, setRetPeriod] = useState('ret1Y');
 
     const MAX_COMPARE = 3;
 
@@ -72,7 +80,17 @@ export default function PMSScreener() {
         fetchData();
     }, [strategy]);
 
-    useEffect(() => { setPage(1); }, [search, providerFilter, sortCol, sortDir, showSmallAum]);
+    useEffect(() => { setPage(1); }, [search, providerFilter, sortCol, sortDir, showSmallAum, aumTier, minAumFilter, maxAumFilter, minRet, retPeriod]);
+
+    // Automatically manage Nascent/Illiquid filter based on Advanced Filters
+    useEffect(() => {
+        const hasAdvancedFilters = aumTier !== 'all' || minAumFilter !== '' || maxAumFilter !== '' || minRet !== '';
+        if (hasAdvancedFilters) {
+            setShowSmallAum(true); // Disable Manager-Level AUM Filter (Show All)
+        } else {
+            setShowSmallAum(false); // Enable Manager-Level AUM Filter (Hide Nascent)
+        }
+    }, [aumTier, minAumFilter, maxAumFilter, minRet]);
 
     async function fetchData() {
         setLoading(true); setError(null);
@@ -134,6 +152,28 @@ export default function PMSScreener() {
             );
         }
 
+        // AUM Tier filter
+        if (aumTier !== 'all') {
+            const aum = d => d.aum ?? 0;
+            if (aumTier === '<100') arr = arr.filter(d => aum(d) < 100);
+            else if (aumTier === '100-500') arr = arr.filter(d => aum(d) >= 100 && aum(d) < 500);
+            else if (aumTier === '500-2000') arr = arr.filter(d => aum(d) >= 500 && aum(d) < 2000);
+            else if (aumTier === '>2000') arr = arr.filter(d => aum(d) >= 2000);
+            else if (aumTier === 'custom') {
+                const min = parseFloat(minAumFilter) || 0;
+                const max = parseFloat(maxAumFilter) || Infinity;
+                arr = arr.filter(d => aum(d) >= min && aum(d) <= max);
+            }
+        }
+
+        // Return threshold filter
+        if (minRet !== '') {
+            const threshold = parseFloat(minRet);
+            if (!isNaN(threshold)) {
+                arr = arr.filter(d => (d[retPeriod] ?? -Infinity) >= threshold);
+            }
+        }
+
         // Sort
         arr.sort((a, b) => {
             const av = a[sortCol] ?? -Infinity;
@@ -141,7 +181,7 @@ export default function PMSScreener() {
             return typeof av === 'string' ? sortDir * av.localeCompare(bv) : sortDir * (bv - av);
         });
         return arr;
-    }, [data, search, providerFilter, sortCol, sortDir, showSmallAum, smallAumProviders, strategy]);
+    }, [data, search, providerFilter, sortCol, sortDir, showSmallAum, smallAumProviders, strategy, aumTier, minAumFilter, maxAumFilter, minRet, retPeriod]);
 
     const totalPages = Math.ceil(filtered.length / pageSize);
     const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -159,9 +199,8 @@ export default function PMSScreener() {
     }, [data, showSmallAum, smallAumProviders, strategy]);
 
     const topPerformers = useMemo(() => {
-        const visible = showSmallAum ? data : data.filter(d => !smallAumProviders.has(d.portfolioManager));
-        return [...visible].filter(d => d.ret1Y !== null).sort((a, b) => b.ret1Y - a.ret1Y).slice(0, 4);
-    }, [data, showSmallAum, smallAumProviders]);
+        return [...filtered].filter(d => d.ret1Y !== null).sort((a, b) => b.ret1Y - a.ret1Y).slice(0, 4);
+    }, [filtered]);
 
     const maxAum = useMemo(() => Math.max(...filtered.map(d => d.aum ?? 0), 1), [filtered]);
 
@@ -303,8 +342,121 @@ export default function PMSScreener() {
                     <button className={`view-btn ${viewMode === 'table' ? 'active' : ''}`} onClick={() => setViewMode('table')} aria-pressed={viewMode === 'table'} aria-label="Table view">Table</button>
                     <button className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} aria-pressed={viewMode === 'grid'} aria-label="Grid view">Grid</button>
 
+                    <button
+                        className={`view-btn ${showAdvanced ? 'active' : ''}`}
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                        <span>{showAdvanced ? '✕' : '⚙'} Filters</span>
+                    </button>
+
                     <span className="pms-count-badge">{filtered.length} strategies</span>
                 </section>
+
+                {/* ── Advanced Filters Panel (Collapsible) ── */}
+                {showAdvanced && (
+                    <section className="advanced-filters-panel" aria-label="Advanced filtering options">
+                        <div className="af-row">
+                            <div className="af-group">
+                                <label className="af-label">AUM Range</label>
+                                <div className="af-options">
+                                    {[
+                                        { id: 'all', label: 'All' },
+                                        { id: '<100', label: '< ₹100Cr' },
+                                        { id: '100-500', label: '100 - 500Cr' },
+                                        { id: '500-2000', label: '500 - 2K Cr' },
+                                        { id: '>2000', label: 'Mega (> ₹2K Cr)' },
+                                        { id: 'custom', label: 'Custom' }
+                                    ].map(tier => (
+                                        <button
+                                            key={tier.id}
+                                            className={`cat-btn ${aumTier === tier.id ? 'active' : ''}`}
+                                            onClick={() => setAumTier(tier.id)}
+                                            style={{ fontSize: '.68rem', padding: '6px 12px' }}
+                                        >
+                                            {tier.label}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {aumTier === 'custom' && (
+                                    <div className="af-options" style={{ marginTop: '12px' }}>
+                                        <div className="af-input-group">
+                                            <span className="af-input-pfx">MIN</span>
+                                            <input
+                                                type="number"
+                                                className="pms-search"
+                                                style={{ margin: 0, height: '32px', width: '80px', textAlign: 'center', padding: '0 8px', fontSize: '.7rem' }}
+                                                placeholder="0"
+                                                value={minAumFilter}
+                                                onChange={e => setMinAumFilter(e.target.value)}
+                                            />
+                                            <span className="af-input-sfx">Cr</span>
+                                        </div>
+                                        <div className="af-input-group">
+                                            <span className="af-input-pfx">MAX</span>
+                                            <input
+                                                type="number"
+                                                className="pms-search"
+                                                style={{ margin: 0, height: '32px', width: '80px', textAlign: 'center', padding: '0 8px', fontSize: '.7rem' }}
+                                                placeholder="∞"
+                                                value={maxAumFilter}
+                                                onChange={e => setMaxAumFilter(e.target.value)}
+                                            />
+                                            <span className="af-input-sfx">Cr</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="af-group">
+                                <label className="af-label">Performance Threshold</label>
+                                <div className="af-ret-controls">
+                                    <select
+                                        className="pms-provider-sel"
+                                        style={{ margin: 0, height: '38px', minWidth: '140px' }}
+                                        value={retPeriod}
+                                        onChange={e => setRetPeriod(e.target.value)}
+                                        aria-label="Filter return period"
+                                    >
+                                        <option value="ret1M">1 Month</option>
+                                        <option value="ret3M">3 Months</option>
+                                        <option value="ret6M">6 Months</option>
+                                        <option value="ret1Y">1 Year</option>
+                                        <option value="ret3Y">3 Years</option>
+                                        <option value="ret5Y">5 Years</option>
+                                    </select>
+                                    
+                                    <div className="af-input-group">
+                                        <span className="af-input-pfx">MIN</span>
+                                        <input
+                                            type="number"
+                                            className="pms-search"
+                                            style={{ margin: 0, height: '38px', width: '70px', textAlign: 'center', padding: '0 10px' }}
+                                            placeholder="0"
+                                            value={minRet}
+                                            onChange={e => setMinRet(e.target.value)}
+                                        />
+                                        <span className="af-input-sfx">%</span>
+                                    </div>
+
+                                    <button
+                                        className="af-reset-btn"
+                                        onClick={() => {
+                                            setAumTier('all');
+                                            setMinAumFilter('');
+                                            setMaxAumFilter('');
+                                            setMinRet('');
+                                            setProviderFilter('');
+                                            setSearch('');
+                                        }}
+                                    >
+                                        Clear All
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                )}
 
                 {/* AUM filter explanation */}
                 {!showSmallAum && stats?.hiddenCount > 0 && (

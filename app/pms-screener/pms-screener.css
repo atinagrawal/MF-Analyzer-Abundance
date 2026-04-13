@@ -818,3 +818,116 @@
   /* Drawer height: full screen */
   .pms-drawer { height: 100vh; height: 100dvh; border-radius: 0; }
 }
+
+/* ── Advanced Filters Panel (Fix & Polish) ── */
+.advanced-filters-panel {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
+  animation: af-slide .35s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+@keyframes af-slide {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.af-row {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.af-group {
+  flex: 1;
+  min-width: 250px;
+}
+
+.af-label {
+  display: block;
+  font-size: .56rem;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 16px;
+}
+
+.af-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.af-ret-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.af-input-group {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1.5px solid var(--border2);
+  border-radius: 10px;
+  padding: 0 12px;
+  height: 38px;
+  transition: border-color .15s;
+}
+
+.af-input-group:focus-within {
+  border-color: var(--g3);
+  box-shadow: 0 0 0 3px rgba(67,160,71,.1);
+}
+
+.af-input-pfx {
+  font-size: .55rem;
+  font-weight: 800;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-right: 4px;
+}
+
+.af-input-sfx {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-left: 2px;
+}
+
+.af-reset-btn {
+  margin-left: auto;
+  padding: 7px 16px;
+  font-size: .65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  background: none;
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: 'Raleway', sans-serif;
+}
+
+.af-reset-btn:hover {
+  border-color: var(--neg);
+  color: var(--neg);
+  background: rgba(211, 47, 47, 0.05);
+}
+
+/* Mobile adjustments */
+@media (max-width: 680px) {
+  .af-row { gap: 24px; }
+  .af-group { min-width: 100%; }
+  .af-reset-btn { margin-left: 0; width: 100%; text-align: center; }
+}
