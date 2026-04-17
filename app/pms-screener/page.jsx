@@ -1,16 +1,42 @@
 'use client';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+/**
+ * app/pms-screener/page.jsx
+ *
+ * Changes from original:
+ *  1. URL state — strategy and search query are reflected in URL params
+ *     (?strategy=Debt, ?q=mirae). Enables the SearchAction schema, shareable
+ *     filtered links, and browser back/forward support.
+ *
+ *  2. Dynamic data month — uses getLatestPmsDataDate() instead of hardcoded
+ *     "2026-2-28". Today is April 13 → March 2026 data is fetched correctly.
+ *
+ *  3. FAQ section — rendered HTML matching the FAQPage JSON-LD in layout.jsx.
+ *     Collapsible accordion. Google needs matching HTML to award rich snippets.
+ *
+ *  NOTE: useSearchParams requires this page to be wrapped in <Suspense>.
+ *  The existing loading.jsx acts as the fallback. If Next.js build warns about
+ *  static rendering, wrap the export in <Suspense fallback={<Loading />}>.
+ */
+
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { PMSCompareBar, PMSCompareModal } from './PMSCompare';
+import { getLatestPmsDataDate } from '@/lib/pmsDate';
+import { PMS_FAQ } from '@/lib/pmsFaq';
 import './pms-screener.css';
 
+// ── Constants ─────────────────────────────────────────────────────────────
 const BENCHMARK_1Y = 18.5;
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
-
-// AUM threshold per strategy type (Crores)
 const AUM_THRESHOLD = { Equity: 50, Debt: 10, 'Multi Asset': 10, Hybrid: 10 };
+const STRATEGIES = ['Equity', 'Debt', 'Multi Asset', 'Hybrid'];
+const MAX_COMPARE = 3;
 
+// PMS_FAQ is imported from lib/pmsFaq.js — single source of truth for HTML accordion + JSON-LD.
+
+// ── Helpers ───────────────────────────────────────────────────────────────
 function getReturnClass(v) {
     if (v === null || v === undefined) return 'ret-neu';
     if (v >= 30) return 'ret-fire';
@@ -32,87 +58,176 @@ function initials(name) {
     return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
-export default function PMSScreener() {
+// ── Collapsible FAQ item ──────────────────────────────────────────────────
+function PMSFaqItem({ question, answer }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <div
+            className={`pms-faq-item${open ? ' open' : ''}`}
+            itemScope
+            itemProp="mainEntity"
+            itemType="https://schema.org/Question"
+        >
+            <button
+                className="pms-faq-q"
+                onClick={() => setOpen(o => !o)}
+                aria-expanded={open}
+                itemProp="name"
+            >
+                {question}
+                <span className="pms-faq-icon" aria-hidden="true">{open ? '−' : '+'}</span>
+            </button>
+            <div
+                className="pms-faq-a"
+                itemScope
+                itemProp="acceptedAnswer"
+                itemType="https://schema.org/Answer"
+                hidden={!open}
+            >
+                <p itemProp="text">{answer}</p>
+            </div>
+        </div>
+    );
+}
+
+// ── Sort header — defined outside the component so React doesn't treat
+// it as a new component type on every render (which causes re-mounts).
+function ThSort({ col, label, left, sortCol, sortDir, onSort }) {
+    return (
+        <th
+            onClick={() => onSort(col)}
+            className={sortCol === col ? 'col-active' : ''}
+            style={left ? { textAlign: 'left' } : {}}
+        >
+            {label} <span className="sort-icon">{sortCol === col ? (sortDir === -1 ? '▼' : '▲') : '⇅'}</span>
+        </th>
+    );
+}
+
+// ── Inner component — uses useSearchParams so it must sit inside <Suspense> ──
+function PMSScreenerInner() {
+    // ── URL state (SEO: strategy + search reflected in URL) ──────────────
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    // Compute current data month once — used throughout component
+    const pmsDate = useMemo(() => getLatestPmsDataDate(), []);
+
+    // Read strategy from URL (?strategy=Debt); validate against known list
+    const urlStrategy = searchParams.get('strategy');
+    const [strategy, setStrategyState] = useState(
+        () => STRATEGIES.includes(urlStrategy) ? urlStrategy : 'Equity'
+    );
+
+    // Read search from URL (?q=mirae)
+    const [search, setSearch] = useState(() => searchParams.get('q') || '');
+
+    /** Update strategy + URL param; reset search when switching category */
+    function setStrategy(s) {
+        setStrategyState(s);
+        setSearch('');
+        const params = new URLSearchParams(searchParams.toString());
+        s === 'Equity' ? params.delete('strategy') : params.set('strategy', s);
+        params.delete('q');
+        // params.size is not supported in all browsers; use params.toString() instead
+        router.replace(`/pms-screener${params.toString() ? '?' + params : ''}`, { scroll: false });
+    }
+
+    /** Update search + URL param */
+    function handleSearchChange(q) {
+        setSearch(q);
+        const params = new URLSearchParams(searchParams.toString());
+        q ? params.set('q', q) : params.delete('q');
+        router.replace(`/pms-screener${params.toString() ? '?' + params : ''}`, { scroll: false });
+    }
+
+    // ── Local UI state ────────────────────────────────────────────────────
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selected, setSelected] = useState(null);
-    const [search, setSearch] = useState('');
     const [providerFilter, setProviderFilter] = useState('');
     const [viewMode, setViewMode] = useState('table');
     const [sortCol, setSortCol] = useState('ret1Y');
     const [sortDir, setSortDir] = useState(-1);
-    const [strategy, setStrategy] = useState('Equity');
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(50);
-    const [showSmallAum, setShowSmallAum] = useState(false); // AUM filter toggle
-    const [compareList, setCompareList] = useState([]);    // comparison basket (max 3)
-    const [showCompare, setShowCompare] = useState(false); // comparison modal open
-    const [showAdvanced, setShowAdvanced] = useState(false); // toggle advanced filters
+    const [showSmallAum, setShowSmallAum] = useState(false);
+    const [compareList, setCompareList] = useState([]);
+    const [showCompare, setShowCompare] = useState(false);
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
-    // Advanced Filter State
-    const [aumTier, setAumTier] = useState('all'); // 'all', '<100', '100-500', '500-2000', '>2000', 'custom'
+    // Advanced filter state
+    const [aumTier, setAumTier] = useState('all');
     const [minAumFilter, setMinAumFilter] = useState('');
     const [maxAumFilter, setMaxAumFilter] = useState('');
     const [minRet, setMinRet] = useState('');
     const [retPeriod, setRetPeriod] = useState('ret1Y');
 
-    const MAX_COMPARE = 3;
-
+    // ── Compare helpers ───────────────────────────────────────────────────
     const toggleCompare = useCallback((fund, e) => {
-        e.stopPropagation(); // don't open drawer
+        e.stopPropagation();
         setCompareList(prev => {
             const already = prev.find(f => f.id === fund.id);
             if (already) return prev.filter(f => f.id !== fund.id);
-            if (prev.length >= MAX_COMPARE) return prev; // silently cap at 3
+            if (prev.length >= MAX_COMPARE) return prev;
             return [...prev, fund];
         });
     }, []);
-
     const isComparing = useCallback(id => compareList.some(f => f.id === id), [compareList]);
     const removeFromCompare = useCallback(id => setCompareList(prev => prev.filter(f => f.id !== id)), []);
     const clearCompare = useCallback(() => setCompareList([]), []);
 
-    const STRATEGIES = ['Equity', 'Debt', 'Multi Asset', 'Hybrid'];
-
-    useEffect(() => {
-        setPage(1); setSearch(''); setProviderFilter('');
-        fetchData();
-    }, [strategy]);
-
-    useEffect(() => { setPage(1); }, [search, providerFilter, sortCol, sortDir, showSmallAum, aumTier, minAumFilter, maxAumFilter, minRet, retPeriod]);
-
-    // Automatically manage Nascent/Illiquid filter based on Advanced Filters
-    useEffect(() => {
-        const hasAdvancedFilters = aumTier !== 'all' || minAumFilter !== '' || maxAumFilter !== '' || minRet !== '';
-        if (hasAdvancedFilters) {
-            setShowSmallAum(true); // Disable Manager-Level AUM Filter (Show All)
-        } else {
-            setShowSmallAum(false); // Enable Manager-Level AUM Filter (Hide Nascent)
-        }
-    }, [aumTier, minAumFilter, maxAumFilter, minRet]);
-
-    async function fetchData() {
-        setLoading(true); setError(null);
+    // ── Data fetch ────────────────────────────────────────────────────────
+    // useCallback with [strategy, pmsDate] deps prevents a stale-closure bug
+    // where fetchData() captures an old `strategy` value from the render scope.
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
         try {
             const res = await fetch('/api/pms-data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ strategy, month: '2', year: '2026', asOnDate: '2026-2-28' })
+                body: JSON.stringify({
+                    strategy,
+                    month: String(pmsDate.month),
+                    year: String(pmsDate.year),
+                    asOnDate: pmsDate.asOnDate,
+                }),
             });
             const result = await res.json();
             if (result.status === 'success') setData(result.data);
             else throw new Error(result.message || 'API error');
-        } catch (e) { setError(e.message); }
+        } catch (e) {
+            setError(e.message);
+        }
         setLoading(false);
-    }
+    }, [strategy, pmsDate]);
 
+    // ── Effects ───────────────────────────────────────────────────────────
+    useEffect(() => {
+        setPage(1);
+        setProviderFilter('');
+        fetchData();
+    }, [fetchData]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [search, providerFilter, sortCol, sortDir, showSmallAum, aumTier, minAumFilter, maxAumFilter, minRet, retPeriod]);
+
+    // Auto-toggle showSmallAum when advanced filters are active
+    useEffect(() => {
+        const hasAdvanced = aumTier !== 'all' || minAumFilter !== '' || maxAumFilter !== '' || minRet !== '';
+        setShowSmallAum(hasAdvanced);
+    }, [aumTier, minAumFilter, maxAumFilter, minRet]);
+
+    // ── Sort ──────────────────────────────────────────────────────────────
     function handleSort(col) {
         if (sortCol === col) setSortDir(d => d * -1);
         else { setSortCol(col); setSortDir(-1); }
     }
 
-    // Derive the set of providers whose ALL strategies are below the AUM threshold
+    // ── AUM provider filter ───────────────────────────────────────────────
     const smallAumProviders = useMemo(() => {
         const threshold = AUM_THRESHOLD[strategy] ?? 50;
         const providerMap = {};
@@ -127,23 +242,18 @@ export default function PMSScreener() {
         return small;
     }, [data, strategy]);
 
-    // Unique provider list for the dropdown (only those passing AUM filter)
     const providers = useMemo(() => {
         const visible = showSmallAum ? data : data.filter(d => !smallAumProviders.has(d.portfolioManager));
         return [...new Set(visible.map(d => d.portfolioManager))].sort();
     }, [data, smallAumProviders, showSmallAum]);
 
+    // ── Filtered + sorted data ────────────────────────────────────────────
     const filtered = useMemo(() => {
-        const threshold = AUM_THRESHOLD[strategy] ?? 50;
         let arr = [...data];
 
-        // Hide small-AUM providers unless toggled
         if (!showSmallAum) arr = arr.filter(d => !smallAumProviders.has(d.portfolioManager));
-
-        // Provider filter
         if (providerFilter) arr = arr.filter(d => d.portfolioManager === providerFilter);
 
-        // Text search
         if (search.trim()) {
             const q = search.toLowerCase();
             arr = arr.filter(d =>
@@ -152,7 +262,6 @@ export default function PMSScreener() {
             );
         }
 
-        // AUM Tier filter
         if (aumTier !== 'all') {
             const aum = d => d.aum ?? 0;
             if (aumTier === '<100') arr = arr.filter(d => aum(d) < 100);
@@ -166,44 +275,49 @@ export default function PMSScreener() {
             }
         }
 
-        // Return threshold filter
         if (minRet !== '') {
             const threshold = parseFloat(minRet);
-            if (!isNaN(threshold)) {
-                arr = arr.filter(d => (d[retPeriod] ?? -Infinity) >= threshold);
-            }
+            if (!isNaN(threshold)) arr = arr.filter(d => (d[retPeriod] ?? -Infinity) >= threshold);
         }
 
-        // Sort
         arr.sort((a, b) => {
             const av = a[sortCol] ?? -Infinity;
             const bv = b[sortCol] ?? -Infinity;
             return typeof av === 'string' ? sortDir * av.localeCompare(bv) : sortDir * (bv - av);
         });
+
         return arr;
     }, [data, search, providerFilter, sortCol, sortDir, showSmallAum, smallAumProviders, strategy, aumTier, minAumFilter, maxAumFilter, minRet, retPeriod]);
 
     const totalPages = Math.ceil(filtered.length / pageSize);
     const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
+    // ── Stats strip ───────────────────────────────────────────────────────
     const stats = useMemo(() => {
         if (!data.length) return null;
-        const threshold = AUM_THRESHOLD[strategy] ?? 50;
         const visible = showSmallAum ? data : data.filter(d => !smallAumProviders.has(d.portfolioManager));
         const valid1Y = visible.filter(d => d.ret1Y !== null);
         const avg1Y = valid1Y.length ? (valid1Y.reduce((s, d) => s + d.ret1Y, 0) / valid1Y.length).toFixed(1) : null;
         const totalAum = visible.reduce((s, d) => s + (d.aum ?? 0), 0);
         const beatBenchmark = valid1Y.filter(d => d.ret1Y > BENCHMARK_1Y).length;
-        const hiddenCount = data.length - visible.length;
-        return { count: visible.length, total: data.length, avg1Y, totalAum, beatBenchmark, hiddenCount };
-    }, [data, showSmallAum, smallAumProviders, strategy]);
+        return {
+            count: visible.length,
+            total: data.length,
+            avg1Y,
+            totalAum,
+            beatBenchmark,
+            hiddenCount: data.length - visible.length,
+        };
+    }, [data, showSmallAum, smallAumProviders]);
 
-    const topPerformers = useMemo(() => {
-        return [...filtered].filter(d => d.ret1Y !== null).sort((a, b) => b.ret1Y - a.ret1Y).slice(0, 4);
-    }, [filtered]);
+    const topPerformers = useMemo(() =>
+        [...filtered].filter(d => d.ret1Y !== null).sort((a, b) => b.ret1Y - a.ret1Y).slice(0, 4),
+        [filtered]
+    );
 
     const maxAum = useMemo(() => Math.max(...filtered.map(d => d.aum ?? 0), 1), [filtered]);
 
+    // ── Drawer ret periods ────────────────────────────────────────────────
     const retPeriods = selected ? [
         { label: '1M', val: selected.ret1M },
         { label: '3M', val: selected.ret3M },
@@ -213,47 +327,59 @@ export default function PMSScreener() {
         { label: '3 Years', val: selected.ret3Y },
         { label: '5 Years', val: selected.ret5Y },
         { label: 'Inception', val: selected.retInception },
-    ].filter(r => r.val !== null) : [];
+    // Use != null (loose) to also exclude undefined coming from missing API fields
+    ].filter(r => r.val != null) : [];
 
     const maxAbsRet = retPeriods.length ? Math.max(...retPeriods.map(r => Math.abs(r.val)), 1) : 1;
 
+    // ── Pagination ────────────────────────────────────────────────────────
     function getPageNums() {
         const nums = []; const delta = 2;
         for (let i = Math.max(1, page - delta); i <= Math.min(totalPages, page + delta); i++) nums.push(i);
         return nums;
     }
 
-    const ThSort = ({ col, label, left }) => (
-        <th onClick={() => handleSort(col)} className={sortCol === col ? 'col-active' : ''} style={left ? { textAlign: 'left' } : {}}>
-            {label} <span className="sort-icon">{sortCol === col ? (sortDir === -1 ? '▼' : '▲') : '⇅'}</span>
-        </th>
-    );
+    // ThSort is now defined outside this component (above) to prevent re-mounts.
 
+    // ── Render ────────────────────────────────────────────────────────────
     return (
         <>
-            <main className="container" id="pms-screener-main" aria-label="PMS Screener — Portfolio Management Services Analytics">
+            <main
+                className="container"
+                id="pms-screener-main"
+                aria-label="PMS Screener — Portfolio Management Services Analytics"
+            >
                 <Navbar activePage="pms-screener" />
 
-                {/* Page Header */}
+                {/* ── Page Header ── */}
                 <div className="page-header">
                     <div className="page-eyebrow">
                         <div className="live-dot"></div>
-                        <span className="page-eyebrow-text">APMI Official Data · Feb 2026</span>
+                        {/* Dynamic month — no longer hardcoded "Feb 2026" */}
+                        <span className="page-eyebrow-text">APMI Official Data · {pmsDate.label}</span>
                     </div>
                     <h1 className="page-title">PMS <span>Screener</span></h1>
                     <p className="page-subtitle">
-                        Institutional-grade analytics for Portfolio Management Services — compare {strategy} strategies across all time horizons, assess manager track records, and shortlist portfolios for wealth allocation.
+                        Institutional-grade analytics for Portfolio Management Services — compare {strategy} strategies
+                        across all time horizons, assess manager track records, and shortlist portfolios for wealth allocation.
                     </p>
                 </div>
 
-                {/* Strategy Tabs */}
+                {/* ── Strategy Tabs (URL-backed) ── */}
                 <nav className="controls-bar" style={{ marginBottom: '20px' }} aria-label="PMS Strategy Category Filter">
                     {STRATEGIES.map(s => (
-                        <button key={s} onClick={() => setStrategy(s)} className={`cat-btn ${strategy === s ? 'active' : ''}`} aria-pressed={strategy === s}>{s}</button>
+                        <button
+                            key={s}
+                            onClick={() => setStrategy(s)}
+                            className={`cat-btn ${strategy === s ? 'active' : ''}`}
+                            aria-pressed={strategy === s}
+                        >
+                            {s}
+                        </button>
                     ))}
                 </nav>
 
-                {/* Summary Stats */}
+                {/* ── Summary Stats ── */}
                 {!loading && !error && stats && (
                     <div className="pms-stat-strip">
                         <div className="pms-stat-tile">
@@ -281,7 +407,7 @@ export default function PMSScreener() {
                     </div>
                 )}
 
-                {/* Top 4 performers — 2×2 grid, no horizontal scroll */}
+                {/* ── Top 4 Performers ── */}
                 {!loading && !error && topPerformers.length > 0 && (
                     <div style={{ marginBottom: '28px' }}>
                         <div className="section-head">
@@ -305,18 +431,15 @@ export default function PMSScreener() {
 
                 {/* ── Controls Bar ── */}
                 <section className="pms-controls" aria-label="Screener Filters">
-                    {/* Strategy/text search */}
                     <input
                         type="search"
                         id="pms-search-input"
                         className="pms-search"
-                        placeholder="Search strategy..."
+                        placeholder="Search strategy or manager..."
                         aria-label="Search PMS strategies"
                         value={search}
-                        onChange={e => setSearch(e.target.value)}
+                        onChange={e => handleSearchChange(e.target.value)}
                     />
-
-                    {/* Provider dropdown */}
                     <select
                         id="pms-provider-filter"
                         className="pms-provider-sel"
@@ -327,8 +450,6 @@ export default function PMSScreener() {
                         <option value="">All Providers</option>
                         {providers.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
-
-                    {/* AUM toggle */}
                     <button
                         className={`cat-btn ${showSmallAum ? 'active' : ''}`}
                         onClick={() => setShowSmallAum(v => !v)}
@@ -337,11 +458,8 @@ export default function PMSScreener() {
                     >
                         {showSmallAum ? '👁 All Funds' : `🔍 Filtered (${stats?.hiddenCount ?? '…'} hidden)`}
                     </button>
-
-                    {/* View toggle */}
                     <button className={`view-btn ${viewMode === 'table' ? 'active' : ''}`} onClick={() => setViewMode('table')} aria-pressed={viewMode === 'table'} aria-label="Table view">Table</button>
                     <button className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} aria-pressed={viewMode === 'grid'} aria-label="Grid view">Grid</button>
-
                     <button
                         className={`view-btn ${showAdvanced ? 'active' : ''}`}
                         onClick={() => setShowAdvanced(!showAdvanced)}
@@ -349,11 +467,10 @@ export default function PMSScreener() {
                     >
                         <span>{showAdvanced ? '✕' : '⚙'} Filters</span>
                     </button>
-
                     <span className="pms-count-badge">{filtered.length} strategies</span>
                 </section>
 
-                {/* ── Advanced Filters Panel (Collapsible) ── */}
+                {/* ── Advanced Filters ── */}
                 {showAdvanced && (
                     <section className="advanced-filters-panel" aria-label="Advanced filtering options">
                         <div className="af-row">
@@ -363,10 +480,10 @@ export default function PMSScreener() {
                                     {[
                                         { id: 'all', label: 'All' },
                                         { id: '<100', label: '< ₹100Cr' },
-                                        { id: '100-500', label: '100 - 500Cr' },
-                                        { id: '500-2000', label: '500 - 2K Cr' },
+                                        { id: '100-500', label: '100 – 500 Cr' },
+                                        { id: '500-2000', label: '500 – 2K Cr' },
                                         { id: '>2000', label: 'Mega (> ₹2K Cr)' },
-                                        { id: 'custom', label: 'Custom' }
+                                        { id: 'custom', label: 'Custom' },
                                     ].map(tier => (
                                         <button
                                             key={tier.id}
@@ -378,31 +495,16 @@ export default function PMSScreener() {
                                         </button>
                                     ))}
                                 </div>
-
                                 {aumTier === 'custom' && (
                                     <div className="af-options" style={{ marginTop: '12px' }}>
                                         <div className="af-input-group">
                                             <span className="af-input-pfx">MIN</span>
-                                            <input
-                                                type="number"
-                                                className="pms-search"
-                                                style={{ margin: 0, height: '32px', width: '80px', textAlign: 'center', padding: '0 8px', fontSize: '.7rem' }}
-                                                placeholder="0"
-                                                value={minAumFilter}
-                                                onChange={e => setMinAumFilter(e.target.value)}
-                                            />
+                                            <input type="number" className="pms-search" style={{ margin: 0, height: '32px', width: '80px', textAlign: 'center', padding: '0 8px', fontSize: '.7rem' }} placeholder="0" value={minAumFilter} onChange={e => setMinAumFilter(e.target.value)} />
                                             <span className="af-input-sfx">Cr</span>
                                         </div>
                                         <div className="af-input-group">
                                             <span className="af-input-pfx">MAX</span>
-                                            <input
-                                                type="number"
-                                                className="pms-search"
-                                                style={{ margin: 0, height: '32px', width: '80px', textAlign: 'center', padding: '0 8px', fontSize: '.7rem' }}
-                                                placeholder="∞"
-                                                value={maxAumFilter}
-                                                onChange={e => setMaxAumFilter(e.target.value)}
-                                            />
+                                            <input type="number" className="pms-search" style={{ margin: 0, height: '32px', width: '80px', textAlign: 'center', padding: '0 8px', fontSize: '.7rem' }} placeholder="∞" value={maxAumFilter} onChange={e => setMaxAumFilter(e.target.value)} />
                                             <span className="af-input-sfx">Cr</span>
                                         </div>
                                     </div>
@@ -411,13 +513,7 @@ export default function PMSScreener() {
                             <div className="af-group">
                                 <label className="af-label">Performance Threshold</label>
                                 <div className="af-ret-controls">
-                                    <select
-                                        className="pms-provider-sel"
-                                        style={{ margin: 0, height: '38px', minWidth: '140px' }}
-                                        value={retPeriod}
-                                        onChange={e => setRetPeriod(e.target.value)}
-                                        aria-label="Filter return period"
-                                    >
+                                    <select className="pms-provider-sel" style={{ margin: 0, height: '38px', minWidth: '140px' }} value={retPeriod} onChange={e => setRetPeriod(e.target.value)} aria-label="Filter return period">
                                         <option value="ret1M">1 Month</option>
                                         <option value="ret3M">3 Months</option>
                                         <option value="ret6M">6 Months</option>
@@ -425,31 +521,21 @@ export default function PMSScreener() {
                                         <option value="ret3Y">3 Years</option>
                                         <option value="ret5Y">5 Years</option>
                                     </select>
-                                    
                                     <div className="af-input-group">
                                         <span className="af-input-pfx">MIN</span>
-                                        <input
-                                            type="number"
-                                            className="pms-search"
-                                            style={{ margin: 0, height: '38px', width: '70px', textAlign: 'center', padding: '0 10px' }}
-                                            placeholder="0"
-                                            value={minRet}
-                                            onChange={e => setMinRet(e.target.value)}
-                                        />
+                                        <input type="number" className="pms-search" style={{ margin: 0, height: '38px', width: '70px', textAlign: 'center', padding: '0 10px' }} placeholder="0" value={minRet} onChange={e => setMinRet(e.target.value)} />
                                         <span className="af-input-sfx">%</span>
                                     </div>
-
-                                    <button
-                                        className="af-reset-btn"
-                                        onClick={() => {
-                                            setAumTier('all');
-                                            setMinAumFilter('');
-                                            setMaxAumFilter('');
-                                            setMinRet('');
-                                            setProviderFilter('');
-                                            setSearch('');
-                                        }}
-                                    >
+                                    <button className="af-reset-btn" onClick={() => {
+                                        setAumTier('all');
+                                        setMinAumFilter('');
+                                        setMaxAumFilter('');
+                                        setMinRet('');
+                                        setProviderFilter('');
+                                        setSearch('');
+                                        // Also clear strategy and search from URL
+                                        router.replace('/pms-screener', { scroll: false });
+                                    }}>
                                         Clear All
                                     </button>
                                 </div>
@@ -458,7 +544,7 @@ export default function PMSScreener() {
                     </section>
                 )}
 
-                {/* AUM filter explanation */}
+                {/* ── AUM insight bar ── */}
                 {!showSmallAum && stats?.hiddenCount > 0 && (
                     <div className="insight-bar" style={{ marginBottom: '16px' }}>
                         <strong>{stats.hiddenCount} strategies</strong> from providers with all strategies &lt;₹{AUM_THRESHOLD[strategy]}Cr AUM are hidden (likely nascent/illiquid). Toggle <strong>"All Funds"</strong> to see them.
@@ -467,7 +553,7 @@ export default function PMSScreener() {
 
                 {error && <div className="error-box">⚠ Failed to load data: {error}</div>}
 
-                {/* Loading skeleton */}
+                {/* ── Loading skeleton ── */}
                 {loading && (
                     <div className="pms-table-card">
                         <table className="pms-table">
@@ -488,27 +574,56 @@ export default function PMSScreener() {
                     <div className="pms-table-card">
                         <div className="pms-table-wrap">
                             <table className="pms-table">
+                                {/*
+                                  colgroup locks column widths once — browser reads these under
+                                  table-layout: fixed and never recalculates them from cell content.
+                                  Total = 36 + 240 + 110 + 7×72 = 890px (> min-width: 820px ✓)
+                                */}
+                                <colgroup>
+                                    <col style={{ width: 36 }} />   {/* ⚖ compare */}
+                                    <col style={{ width: 240 }} />  {/* Strategy & Manager */}
+                                    <col style={{ width: 110 }} />  {/* AUM */}
+                                    <col style={{ width: 72 }} />   {/* 1M */}
+                                    <col style={{ width: 72 }} />   {/* 3M */}
+                                    <col style={{ width: 72 }} />   {/* 6M */}
+                                    <col style={{ width: 72 }} />   {/* 1Y */}
+                                    <col style={{ width: 72 }} />   {/* 3Y */}
+                                    <col style={{ width: 72 }} />   {/* 5Y */}
+                                    <col style={{ width: 72 }} />   {/* Inception */}
+                                </colgroup>
                                 <thead>
                                     <tr>
-                                        <th style={{ width: 32, textAlign: "center", color: "var(--muted)", fontSize: ".65rem" }} title="Add to compare (max 3)">⚖</th>
-                                        <ThSort col="strategyName" label="Strategy & Manager" left />
-                                        <ThSort col="aum" label="AUM (Cr)" />
-                                        <ThSort col="ret1M" label="1M" />
-                                        <ThSort col="ret3M" label="3M" />
-                                        <ThSort col="ret6M" label="6M" />
+                                        <th style={{ width: 32, textAlign: 'center', color: 'var(--muted)', fontSize: '.65rem' }} title="Add to compare (max 3)">⚖</th>
+                                        <ThSort col="strategyName" label="Strategy & Manager" left sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                                        <ThSort col="aum" label="AUM (Cr)" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                                        <ThSort col="ret1M" label="1M" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                                        <ThSort col="ret3M" label="3M" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                                        <ThSort col="ret6M" label="6M" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
                                         <th onClick={() => handleSort('ret1Y')} className={sortCol === 'ret1Y' ? 'col-active' : ''} style={{ color: 'var(--g2)' }}>
                                             1Y <span className="sort-icon">{sortCol === 'ret1Y' ? (sortDir === -1 ? '▼' : '▲') : '⇅'}</span>
                                         </th>
-                                        <ThSort col="ret3Y" label="3Y" />
-                                        <ThSort col="ret5Y" label="5Y" />
-                                        <ThSort col="retInception" label="Inception" />
+                                        <ThSort col="ret3Y" label="3Y" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                                        <ThSort col="ret5Y" label="5Y" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                                        <ThSort col="retInception" label="Inception" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {paginated.map(fund => (
-                                        <tr key={fund.id} onClick={() => setSelected(fund)} className={[selected?.id === fund.id ? 'row-selected' : '', isComparing(fund.id) ? 'row-comparing' : ''].join(' ')}>
+                                        <tr
+                                            key={fund.id}
+                                            onClick={() => setSelected(fund)}
+                                            className={[selected?.id === fund.id ? 'row-selected' : '', isComparing(fund.id) ? 'row-comparing' : ''].join(' ')}
+                                        >
                                             <td onClick={e => e.stopPropagation()} style={{ textAlign: 'center', paddingLeft: 8, paddingRight: 4 }}>
-                                                <input type="checkbox" className="cmp-chk" checked={isComparing(fund.id)} onChange={e => toggleCompare(fund, e)} disabled={!isComparing(fund.id) && compareList.length >= MAX_COMPARE} title={isComparing(fund.id) ? 'Remove from compare' : compareList.length >= MAX_COMPARE ? 'Max 3 selected' : 'Add to compare'} aria-label={`Compare ${fund.strategyName}`} />
+                                                <input
+                                                    type="checkbox"
+                                                    className="cmp-chk"
+                                                    checked={isComparing(fund.id)}
+                                                    onChange={e => toggleCompare(fund, e)}
+                                                    disabled={!isComparing(fund.id) && compareList.length >= MAX_COMPARE}
+                                                    title={isComparing(fund.id) ? 'Remove from compare' : compareList.length >= MAX_COMPARE ? 'Max 3 selected' : 'Add to compare'}
+                                                    aria-label={`Compare ${fund.strategyName}`}
+                                                />
                                             </td>
                                             <td>
                                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
@@ -537,13 +652,16 @@ export default function PMSScreener() {
                                         </tr>
                                     ))}
                                     {paginated.length === 0 && (
-                                        <tr><td colSpan={9} style={{ textAlign: 'center', padding: '56px', color: 'var(--muted)', fontFamily: 'Raleway' }}>No strategies match your filters.</td></tr>
+                                        <tr>
+                                            <td colSpan={10} style={{ textAlign: 'center', padding: '56px', color: 'var(--muted)', fontFamily: 'Raleway' }}>
+                                                No strategies match your filters.
+                                            </td>
+                                        </tr>
                                     )}
                                 </tbody>
                             </table>
                         </div>
 
-                        {/* Pagination */}
                         {totalPages > 1 && (
                             <div className="pms-pagination">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -579,18 +697,9 @@ export default function PMSScreener() {
                                     </div>
                                     <div className="gc-divider"></div>
                                     <div className="gc-metrics">
-                                        <div className="gc-metric">
-                                            <div className="gc-m-label">3M</div>
-                                            <div className={`gc-m-val ${(fund.ret3M ?? 0) >= 0 ? 'cagr-pos' : 'cagr-neg'}`}>{fmtRet(fund.ret3M)}</div>
-                                        </div>
-                                        <div className="gc-metric">
-                                            <div className="gc-m-label">1Y</div>
-                                            <div className={`gc-m-val ${(fund.ret1Y ?? 0) >= 0 ? 'cagr-pos' : 'cagr-neg'}`}>{fmtRet(fund.ret1Y)}</div>
-                                        </div>
-                                        <div className="gc-metric">
-                                            <div className="gc-m-label">5Y</div>
-                                            <div className={`gc-m-val ${(fund.ret5Y ?? 0) >= 0 ? 'cagr-pos' : 'cagr-neg'}`}>{fmtRet(fund.ret5Y)}</div>
-                                        </div>
+                                        <div className="gc-metric"><div className="gc-m-label">3M</div><div className={`gc-m-val ${(fund.ret3M ?? 0) >= 0 ? 'cagr-pos' : 'cagr-neg'}`}>{fmtRet(fund.ret3M)}</div></div>
+                                        <div className="gc-metric"><div className="gc-m-label">1Y</div><div className={`gc-m-val ${(fund.ret1Y ?? 0) >= 0 ? 'cagr-pos' : 'cagr-neg'}`}>{fmtRet(fund.ret1Y)}</div></div>
+                                        <div className="gc-metric"><div className="gc-m-label">5Y</div><div className={`gc-m-val ${(fund.ret5Y ?? 0) >= 0 ? 'cagr-pos' : 'cagr-neg'}`}>{fmtRet(fund.ret5Y)}</div></div>
                                     </div>
                                 </div>
                             ))}
@@ -615,15 +724,45 @@ export default function PMSScreener() {
                     </>
                 )}
 
+                {/* ── Source line — dynamic month ── */}
                 {!loading && !error && (
                     <div className="src-line">
                         <div className="src-dot"></div>
-                        Source: APMI India · Discretionary {strategy} strategies · February 2026 · TWRR methodology
+                        Source: APMI India · Discretionary {strategy} strategies · {pmsDate.label} · TWRR methodology
                     </div>
                 )}
+
+                {/* ══════════════════════════════════════════════════════════════════
+            FAQ Section
+            — Rendered HTML matching the FAQPage JSON-LD in layout.jsx.
+            — Google requires actual HTML content to award rich snippet eligibility.
+            — Uses itemScope/itemProp microdata as a secondary signal.
+        ════════════════════════════════════════════════════════════════════ */}
+                <section
+                    className="pms-faq"
+                    id="pms-faq"
+                    aria-labelledby="pms-faq-heading"
+                    itemScope
+                    itemType="https://schema.org/FAQPage"
+                >
+                    <div className="pms-faq-header">
+                        <h2 className="pms-faq-title" id="pms-faq-heading">
+                            Frequently Asked Questions
+                        </h2>
+                        <p className="pms-faq-sub">
+                            Everything you need to know about Portfolio Management Services in India
+                        </p>
+                    </div>
+                    <div className="pms-faq-list">
+                        {PMS_FAQ.map((item, i) => (
+                            <PMSFaqItem key={i} question={item.q} answer={item.a} />
+                        ))}
+                    </div>
+                </section>
+
             </main>
 
-            {/* ══ Compare Bar (floats at bottom) ══ */}
+            {/* ══ Compare Bar ══ */}
             <PMSCompareBar
                 selected={compareList}
                 onRemove={removeFromCompare}
@@ -635,6 +774,7 @@ export default function PMSScreener() {
             {showCompare && compareList.length >= 2 && (
                 <PMSCompareModal
                     funds={compareList}
+                    dataLabel={pmsDate.label}
                     onClose={() => setShowCompare(false)}
                     onRemove={id => { removeFromCompare(id); if (compareList.length <= 2) setShowCompare(false); }}
                 />
@@ -701,22 +841,24 @@ export default function PMSScreener() {
                             {selected.apmiLink && (
                                 <>
                                     <div className="pd-section-head">Official Source</div>
-                                    <a href={(() => {
-                                        if (selected.apmiLink.startsWith('http')) return selected.apmiLink;
-                                        // Handle legacy cached relative links
-                                        const cleanPath = selected.apmiLink.startsWith('/') ? selected.apmiLink.slice(1) : selected.apmiLink;
-                                        // Most APMI relative links need the /apmi/ prefix if not already present
-                                        if (cleanPath.startsWith('apmi/')) return `https://www.apmiindia.org/${cleanPath}`;
-                                        return `https://www.apmiindia.org/apmi/${cleanPath}`;
-                                    })()}
-                                        target="_blank" rel="noopener noreferrer" className="apmi-link-btn">
+                                    <a
+                                        href={(() => {
+                                            if (selected.apmiLink.startsWith('http')) return selected.apmiLink;
+                                            const cleanPath = selected.apmiLink.startsWith('/') ? selected.apmiLink.slice(1) : selected.apmiLink;
+                                            if (cleanPath.startsWith('apmi/')) return `https://www.apmiindia.org/${cleanPath}`;
+                                            return `https://www.apmiindia.org/apmi/${cleanPath}`;
+                                        })()}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="apmi-link-btn"
+                                    >
                                         View on APMI India ↗
                                     </a>
                                 </>
                             )}
 
                             <div className="pd-source" style={{ marginTop: '28px' }}>
-                                <strong>Disclosure:</strong> Data from APMI India · Discretionary {strategy} strategies · Feb 2026 · TWRR, net of all fees. Past performance is not indicative of future results. Min PMS investment ₹50L per SEBI.
+                                <strong>Disclosure:</strong> Data from APMI India · Discretionary {strategy} strategies · {pmsDate.label} · TWRR, net of all fees. Past performance is not indicative of future results. Min PMS investment ₹50L per SEBI.
                             </div>
                         </div>
                     </>
@@ -725,5 +867,22 @@ export default function PMSScreener() {
 
             <Footer />
         </>
+    );
+}
+
+// ── Default export wraps the inner component in Suspense ─────────────────────
+// Required because PMSScreenerInner calls useSearchParams(). Without this,
+// Next.js App Router will either fail to statically render the segment (in
+// Next 13/14) or show a build warning. The existing loading.jsx serves as the
+// route-level fallback; this Suspense handles the client-side shell.
+export default function PMSScreener() {
+    return (
+        <Suspense fallback={
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg, #0d1117)', color: 'var(--muted, #8b949e)' }}>
+                Loading screener…
+            </div>
+        }>
+            <PMSScreenerInner />
+        </Suspense>
     );
 }

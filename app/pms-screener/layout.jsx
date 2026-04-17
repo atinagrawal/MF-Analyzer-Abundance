@@ -1,33 +1,63 @@
+/**
+ * app/pms-screener/layout.jsx
+ *
+ * Changes:
+ *  1. Dynamic data month via getLatestPmsDataDate() — no hardcoded "Feb 2026"
+ *  2. OG image overridden to use /api/og-pms (dynamic branded card)
+ *  3. robots: index/follow added to metadata
+ *  4. FAQ data imported from lib/pmsFaq.js (single source of truth for HTML + JSON-LD)
+ *  5. DataCatalog, SearchAction, datePublished all fully dynamic
+ */
+
 import { getPageMeta } from '@/lib/metadata';
+import { getLatestPmsDataDate } from '@/lib/pmsDate';
+import { PMS_FAQ } from '@/lib/pmsFaq';
 
-// ── Next.js Metadata (title, OG, Twitter, canonical, hreflang) ──────────────
-export const metadata = getPageMeta('pms-screener');
-
-// ── JSON-LD Structured Data ──────────────────────────────────────────────────
-// Schema.org @graph with:
-//   WebPage + BreadcrumbList
-//   Organization (publisher)
-//   DataCatalog (data tool signal for Google)
-//   FAQPage (rich snippet target — 6 common HNI questions)
-//   SpeakableSpecification (Google Assistant / voice search)
 const SITE = 'https://mfcalc.getabundance.in';
+const pmsDate = getLatestPmsDataDate();
+const OG_IMAGE_URL = `${SITE}/api/og-pms?month=${encodeURIComponent(pmsDate.label)}`;
+
+// ── Next.js Metadata ─────────────────────────────────────────────────────────
+// Start from shared config and override the OG image to use the dynamic card.
+const _baseMeta = getPageMeta('pms-screener');
+export const metadata = {
+    ..._baseMeta,
+    robots: { index: true, follow: true },
+    openGraph: {
+        ..._baseMeta.openGraph,
+        images: [{
+            url: OG_IMAGE_URL,
+            width: 1200,
+            height: 630,
+            alt: 'PMS Screener India — Abundance Financial Services, APRN04279',
+        }],
+    },
+    twitter: {
+        ..._baseMeta.twitter,
+        images: [OG_IMAGE_URL],
+    },
+};
+
+// ── Derive current data month at server render time ─────────────────────────
 const ORG_URL = 'https://www.getabundance.in';
 const PAGE_URL = `${SITE}/pms-screener`;
 const TODAY = new Date().toISOString().split('T')[0];
 
+// ── JSON-LD Structured Data ──────────────────────────────────────────────────
 const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
+
         // ── 1. WebPage ────────────────────────────────────────────────────────
         {
             '@type': 'WebPage',
             '@id': PAGE_URL,
             name: 'PMS Screener — Compare Portfolio Management Services in India',
             description:
-                'Live APMI data for 1,176+ PMS strategies in India. Compare Equity, Debt, Hybrid & Multi Asset portfolios by 1M–Inception returns, AUM, and alpha vs Nifty 50. Free HNI screener by Abundance Financial Services, APMI Registered, APRN04279.',
+                `Live APMI data for 1,000+ PMS strategies in India. Compare Equity, Debt, Hybrid & Multi Asset portfolios by 1M–Inception returns, AUM, and alpha vs Nifty 50. Free HNI screener by Abundance Financial Services, APMI Registered, APRN04279. Data: ${pmsDate.label}.`,
             url: PAGE_URL,
             inLanguage: 'en-IN',
-            datePublished: '2026-02-01',
+            datePublished: `${pmsDate.year}-${String(pmsDate.month).padStart(2, '0')}-01`,
             dateModified: TODAY,
             isPartOf: {
                 '@type': 'WebSite',
@@ -36,6 +66,7 @@ const jsonLd = {
                 url: SITE,
                 potentialAction: {
                     '@type': 'SearchAction',
+                    // target uses ?q= which now syncs to URL state in page.jsx
                     target: `${SITE}/pms-screener?q={search_term_string}`,
                     'query-input': 'required name=search_term_string',
                 },
@@ -43,27 +74,16 @@ const jsonLd = {
             publisher: { '@id': `${ORG_URL}/#organization` },
             primaryImageOfPage: {
                 '@type': 'ImageObject',
-                url: `${SITE}/og-pms-screener.png`,
+                url: OG_IMAGE_URL,
                 width: 1200,
                 height: 630,
-                caption:
-                    'PMS Screener India — Abundance Financial Services, APMI Registered, APRN04279',
+                caption: `PMS Screener India — ${pmsDate.label} — Abundance Financial Services, APRN04279`,
             },
             breadcrumb: {
                 '@type': 'BreadcrumbList',
                 itemListElement: [
-                    {
-                        '@type': 'ListItem',
-                        position: 1,
-                        name: 'Home',
-                        item: SITE,
-                    },
-                    {
-                        '@type': 'ListItem',
-                        position: 2,
-                        name: 'PMS Screener',
-                        item: PAGE_URL,
-                    },
+                    { '@type': 'ListItem', position: 1, name: 'Home', item: SITE },
+                    { '@type': 'ListItem', position: 2, name: 'PMS Screener', item: PAGE_URL },
                 ],
             },
             speakable: {
@@ -71,16 +91,8 @@ const jsonLd = {
                 cssSelector: ['h1', '.page-subtitle', '.pms-stat-strip'],
             },
             about: [
-                {
-                    '@type': 'Thing',
-                    name: 'Portfolio Management Services',
-                    sameAs: 'https://en.wikipedia.org/wiki/Portfolio_management',
-                },
-                {
-                    '@type': 'Thing',
-                    name: 'APMI India',
-                    sameAs: 'https://www.apmiindia.org',
-                },
+                { '@type': 'Thing', name: 'Portfolio Management Services', sameAs: 'https://en.wikipedia.org/wiki/Portfolio_management' },
+                { '@type': 'Thing', name: 'APMI India', sameAs: 'https://www.apmiindia.org' },
             ],
             mentions: [
                 { '@type': 'Organization', name: 'APMI India', url: 'https://www.apmiindia.org' },
@@ -88,7 +100,7 @@ const jsonLd = {
             ],
         },
 
-        // ── 2. Organization (publisher) ───────────────────────────────────────
+        // ── 2. Organization (publisher) ─────────────────────────────────────
         {
             '@type': 'Organization',
             '@id': `${ORG_URL}/#organization`,
@@ -113,33 +125,31 @@ const jsonLd = {
                 '@type': 'Place',
                 name: 'Haldwani, Uttarakhand, India',
             },
-            sameAs: [
-                ORG_URL,
-                SITE,
-            ],
+            sameAs: [ORG_URL, SITE],
             identifier: [
                 { '@type': 'PropertyValue', name: 'ARN', value: 'ARN-251838' },
                 { '@type': 'PropertyValue', name: 'APRN', value: 'APRN04279' },
             ],
         },
 
-        // ── 3. DataCatalog ────────────────────────────────────────────────────
+        // ── 3. DataCatalog — fully dynamic ──────────────────────────────────
         {
             '@type': 'DataCatalog',
             '@id': `${PAGE_URL}#datacatalog`,
-            name: 'APMI India PMS Performance Data — February 2026',
+            name: `APMI India PMS Performance Data — ${pmsDate.label}`,
             description:
-                'Monthly performance data for 1,176+ Discretionary Portfolio Management Services (PMS) in India. Source: Association of Portfolio Managers in India (APMI). Returns calculated using TWRR methodology, net of all fees.',
+                `Monthly performance data for 1,000+ Discretionary Portfolio Management Services (PMS) in India. Source: Association of Portfolio Managers in India (APMI). Returns calculated using TWRR methodology, net of all fees. Data period: ${pmsDate.label}.`,
             url: PAGE_URL,
             publisher: { '@id': `${ORG_URL}/#organization` },
             license: 'https://creativecommons.org/licenses/by/4.0/',
-            temporalCoverage: '2026-02',
+            temporalCoverage: pmsDate.isoYearMonth,
             measurementTechnique: 'Time-Weighted Rate of Return (TWRR)',
             variableMeasured: [
                 'PMS 1-Month Return',
                 'PMS 3-Month Return',
                 'PMS 6-Month Return',
                 'PMS 1-Year Return',
+                'PMS 2-Year Return',
                 'PMS 3-Year Return',
                 'PMS 5-Year Return',
                 'PMS Since Inception Return',
@@ -157,61 +167,20 @@ const jsonLd = {
             },
         },
 
-        // ── 4. FAQPage ────────────────────────────────────────────────────────
+        // ── 4. FAQPage — sourced from lib/pmsFaq.js (same data as HTML accordion) ─
         {
             '@type': 'FAQPage',
             '@id': `${PAGE_URL}#faq`,
-            mainEntity: [
-                {
-                    '@type': 'Question',
-                    name: 'What is a PMS (Portfolio Management Service) in India?',
-                    acceptedAnswer: {
-                        '@type': 'Answer',
-                        text: 'A Portfolio Management Service (PMS) is a SEBI-regulated investment vehicle where a professional portfolio manager invests on behalf of high-net-worth individuals (HNIs). Minimum investment in a PMS is ₹50 Lakhs (₹50,00,000) as per SEBI regulations. Unlike mutual funds, PMS strategies are customized and hold securities directly in the investor\'s demat account.',
-                    },
+            mainEntity: PMS_FAQ.map(item => ({
+                '@type': 'Question',
+                name: item.q,
+                acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: item.a,
                 },
-                {
-                    '@type': 'Question',
-                    name: 'How is PMS performance data sourced on this screener?',
-                    acceptedAnswer: {
-                        '@type': 'Answer',
-                        text: 'All performance data is sourced directly from APMI India (Association of Portfolio Managers in India), the official SEBI-recognised industry body for PMS. Returns are calculated using Time-Weighted Rate of Return (TWRR), net of all management fees and expenses, as mandated by SEBI. Abundance Financial Services (APRN04279) is an APMI Registered PMS Distributor.',
-                    },
-                },
-                {
-                    '@type': 'Question',
-                    name: 'How many PMS strategies are tracked on this screener?',
-                    acceptedAnswer: {
-                        '@type': 'Answer',
-                        text: 'This screener tracks 1,176+ Discretionary PMS strategies across Equity, Debt, Hybrid, and Multi Asset categories as of February 2026. By default, strategies from providers where all strategies have AUM below ₹50 Crores (Equity) or ₹10 Crores (Debt/Hybrid/Multi Asset) are hidden to focus on established, liquid strategies. Users can toggle "All Funds" to view all strategies.',
-                    },
-                },
-                {
-                    '@type': 'Question',
-                    name: 'What is the minimum investment for a PMS in India?',
-                    acceptedAnswer: {
-                        '@type': 'Answer',
-                        text: 'As per SEBI (Securities and Exchange Board of India) regulations, the minimum investment amount for a Portfolio Management Service (PMS) in India is ₹50 Lakhs (₹50,00,000). This threshold was revised upward from ₹25 Lakhs in 2019 to ensure PMS products remain accessible primarily to sophisticated high-net-worth investors.',
-                    },
-                },
-                {
-                    '@type': 'Question',
-                    name: 'What is the difference between PMS and Mutual Funds in India?',
-                    acceptedAnswer: {
-                        '@type': 'Answer',
-                        text: 'Key differences: (1) Minimum investment — PMS requires ₹50L vs no minimum for mutual funds. (2) Customization — PMS portfolios are tailored to individual clients whereas mutual funds are pooled. (3) Ownership — In PMS, securities are held in the investor\'s own demat account; in mutual funds, investors hold units. (4) Fees — PMS charges management fees (typically 1–2.5% pa) plus performance fees; mutual funds charge expense ratios. (5) Transparency — PMS provides complete portfolio visibility.',
-                    },
-                },
-                {
-                    '@type': 'Question',
-                    name: 'How can I compare PMS strategies on Abundance?',
-                    acceptedAnswer: {
-                        '@type': 'Answer',
-                        text: 'Use the compare checkboxes (⚖) on each row in the PMS Screener table. Select up to 3 strategies — a floating green bar will appear at the bottom. Click "Compare Now" to open a side-by-side comparison showing returns across all time horizons (1M to Inception), alpha vs Nifty 50, AUM, and a ₹50L wealth simulation for each strategy. This feature is completely free and requires no login.',
-                    },
-                },
-            ],
+            })),
         },
+
     ],
 };
 
