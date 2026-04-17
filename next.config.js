@@ -18,20 +18,20 @@ const nextConfig = {
   // - Also delete the old `public/rolling.html` after porting.
   //
   // MIGRATION CHECKLIST — delete rewrite + HTML file after porting each:
-  // [ ] / (index.html)           — 8735 lines, port last
-  // [ ] /rolling                 — 1608 lines
-  // [ ] /industry                — 1182 lines
-  // [ ] /report                  — 1079 lines
-  // [ ] /geography               — 755 lines
-  // [✓] /cas-tracker             — 605 lines (PORTED)
-  // [✓] /indices                 — 416 lines (PORTED)
-  // [ ] /portfolio               — 348 lines (SKIPPED)
-  // [ ] /xls-pdf-extractor       — 218 lines (SKIPPED)
-  // [ ] /404                     — 329 lines (→ app/not-found.js)
+  // [✓] / (index.html)           — PORTED (app/page.js)
+  // [✓] /rolling                 — PORTED (app/rolling/page.js)
+  // [✓] /industry                — PORTED (app/industry/page.js)
+  // [✓] /report                  — PORTED (app/report/page.js)
+  // [✓] /geography               — PORTED (app/geography/page.js)
+  // [✓] /cas-tracker             — PORTED (app/cas-tracker/page.js)
+  // [✓] /indices                 — PORTED (app/indices/page.js)
+  // [ ] /portfolio               — SKIPPED (no Next.js port yet)
+  // [ ] /xls-pdf-extractor       — SKIPPED (no Next.js port yet)
+  // [ ] /404                     — → app/not-found.js
   async rewrites() {
     return [
-      { source: '/', destination: '/index.html' },
-      { source: '/portfolio', destination: '/portfolio.html' },
+      // NOTE: / (index.html) has been removed — app/page.js now serves it.
+      { source: '/portfolio',         destination: '/portfolio.html' },
       { source: '/xls-pdf-extractor', destination: '/xls-pdf-extractor.html' },
     ];
   },
@@ -42,7 +42,7 @@ const nextConfig = {
       {
         source: '/api/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Origin',  value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
         ],
       },
@@ -58,13 +58,14 @@ const nextConfig = {
   // ── SEO Redirects: .html → clean URL (301) ──
   async redirects() {
     return [
-      { source: '/cas-tracker.html', destination: '/cas-tracker', permanent: true },
-      { source: '/portfolio.html', destination: '/portfolio', permanent: true },
-      { source: '/rolling.html', destination: '/rolling', permanent: true },
-      { source: '/industry.html', destination: '/industry', permanent: true },
-      { source: '/report.html', destination: '/report', permanent: true },
-      { source: '/geography.html', destination: '/geography', permanent: true },
-      { source: '/indices.html', destination: '/indices', permanent: true },
+      { source: '/index.html',             destination: '/',                  permanent: true },
+      { source: '/cas-tracker.html',       destination: '/cas-tracker',       permanent: true },
+      { source: '/portfolio.html',         destination: '/portfolio',         permanent: true },
+      { source: '/rolling.html',           destination: '/rolling',           permanent: true },
+      { source: '/industry.html',          destination: '/industry',          permanent: true },
+      { source: '/report.html',            destination: '/report',            permanent: true },
+      { source: '/geography.html',         destination: '/geography',         permanent: true },
+      { source: '/indices.html',           destination: '/indices',           permanent: true },
       { source: '/xls-pdf-extractor.html', destination: '/xls-pdf-extractor', permanent: true },
     ];
   },

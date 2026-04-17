@@ -1,4 +1,5 @@
 import './globals.css';
+import Script from 'next/script';
 import { SITE, SITE_NAME, THEME_COLOR } from '@/lib/metadata';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
@@ -9,7 +10,9 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
  * - Raleway + JetBrains Mono fonts via Google Fonts
  * - Global metadata (site name, theme color, PWA manifest, favicons)
  * - Vercel Speed Insights
- * - Google Analytics (gtag)
+ * - Google Analytics (gtag) via next/script — required so the script
+ *   actually executes on the client. Raw <script> tags inside JSX are
+ *   inert: React strips them during hydration.
  *
  * Individual pages export their own metadata via getPageMeta() which
  * merges with these defaults.
@@ -80,10 +83,18 @@ export default function RootLayout({ children }) {
 
         {/* Favicon fallback for older browsers */}
         <link rel="icon" type="image/x-icon" href="https://www.getabundance.in/favicon.ico" />
+      </head>
+      <body>
+        {children}
+        <SpeedInsights />
 
-        {/* Google Analytics */}
-        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
-        <script
+        {/* Google Analytics — must use next/script so the tag actually
+            executes on the client. Raw <script> JSX tags are inert. */}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="ga-init" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               window.dataLayer=window.dataLayer||[];
@@ -93,10 +104,6 @@ export default function RootLayout({ children }) {
             `,
           }}
         />
-      </head>
-      <body>
-        {children}
-        <SpeedInsights />
       </body>
     </html>
   );

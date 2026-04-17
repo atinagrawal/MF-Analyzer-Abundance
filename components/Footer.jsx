@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * components/Footer.jsx — Shared dark footer
  *
