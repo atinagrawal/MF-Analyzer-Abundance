@@ -64,27 +64,20 @@ function PMSFaqItem({ question, answer }) {
     return (
         <div
             className={`pms-faq-item${open ? ' open' : ''}`}
-            itemScope
-            itemProp="mainEntity"
-            itemType="https://schema.org/Question"
         >
             <button
                 className="pms-faq-q"
                 onClick={() => setOpen(o => !o)}
                 aria-expanded={open}
-                itemProp="name"
             >
                 {question}
                 <span className="pms-faq-icon" aria-hidden="true">{open ? '−' : '+'}</span>
             </button>
             <div
                 className="pms-faq-a"
-                itemScope
-                itemProp="acceptedAnswer"
-                itemType="https://schema.org/Answer"
                 hidden={!open}
             >
-                <p itemProp="text">{answer}</p>
+                <p>{answer}</p>
             </div>
         </div>
     );
@@ -736,14 +729,12 @@ function PMSScreenerInner() {
             FAQ Section
             — Rendered HTML matching the FAQPage JSON-LD in layout.jsx.
             — Google requires actual HTML content to award rich snippet eligibility.
-            — Uses itemScope/itemProp microdata as a secondary signal.
+            — Structured data is handled exclusively by the JSON-LD FAQPage in layout.jsx.
         ════════════════════════════════════════════════════════════════════ */}
                 <section
                     className="pms-faq"
                     id="pms-faq"
                     aria-labelledby="pms-faq-heading"
-                    itemScope
-                    itemType="https://schema.org/FAQPage"
                 >
                     <div className="pms-faq-header">
                         <h2 className="pms-faq-title" id="pms-faq-heading">
