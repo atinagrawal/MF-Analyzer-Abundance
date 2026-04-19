@@ -422,14 +422,15 @@ function getCurrentPdfUrl() {
 
 // ── Blob caching for parsed index data ─────────────────────────────────────
 // Avoids fetching & parsing two PDFs on every CDN miss (~6-8s cold)
-// Cache key: idx-dashboard-YYYY-MM.json  (refreshed monthly)
+// Cache key: idx-dashboard2-YYYY-MM.json  (refreshed monthly)
+// Prefix bumped from idx-dashboard- → idx-dashboard2- to orphan blobs with stale asOf=28.
 
 async function dashboardCacheGet(year, month) {
   if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
   try {
     const { list } = await import('@vercel/blob');
     const token = process.env.BLOB_READ_WRITE_TOKEN;
-    const key = `idx-dashboard-${year}-${String(month+1).padStart(2,'0')}.json`;
+    const key = `idx-dashboard2-${year}-${String(month+1).padStart(2,'0')}.json`;
     const { blobs } = await list({ prefix: key, limit: 1, token });
     if (!blobs.length) return null;
     // Private blobs require Authorization header to read
@@ -445,7 +446,7 @@ async function dashboardCachePut(year, month, payload) {
   if (!process.env.BLOB_READ_WRITE_TOKEN) return;
   try {
     const { put } = await import('@vercel/blob');
-    const key = `idx-dashboard-${year}-${String(month+1).padStart(2,'0')}.json`;
+    const key = `idx-dashboard2-${year}-${String(month+1).padStart(2,'0')}.json`;
     await put(key, JSON.stringify(payload), {
       access: 'private', contentType: 'application/json',
       addRandomSuffix: false, token: process.env.BLOB_READ_WRITE_TOKEN,
@@ -516,7 +517,7 @@ export default async function handler(req, res) {
       const indices = parsePdfText(fallback.text);
       const enrichedFallback = indices.map(idx => { const r = riskMap[idx.name]; return r ? { ...idx, riskScore: r.score, riskLabel: r.label } : idx; });
       const allFallback = [...enrichedFallback, ...fiHybrids];
-      return res.status(200).json({ month: MONTH_FULL[month], year, asOf: `${year}-${String(month+1).padStart(2,'0')}-28`, count: allFallback.length, indices: allFallback, source: 'NSE Indices' });
+      return res.status(200).json({ month: MONTH_FULL[month], year, asOf: `${year}-${String(month+1).padStart(2,'0')}-${new Date(year, month+1, 0).getDate()}`, count: allFallback.length, indices: allFallback, source: 'NSE Indices' });
     }
 
     const indices = parsePdfText(text);

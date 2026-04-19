@@ -24,6 +24,11 @@ function fmtNum(v, dp = 2) {
   return v.toFixed(dp);
 }
 
+function ordinal(n) {
+  const v = n % 100;
+  return n + (['th','st','nd','rd'][(v - 20) % 10] || ['th','st','nd','rd'][v] || 'th');
+}
+
 export default function IndicesPage() {
   const [allData, setAllData] = useState([]);
   const [sortKey, setSortKey] = useState('r1y');
@@ -32,7 +37,7 @@ export default function IndicesPage() {
   const [searchFilter, setSearchFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [metadata, setMetadata] = useState({ month: '', year: '', count: 0 });
+  const [metadata, setMetadata] = useState({ month: '', year: '', count: 0, asOf: '' });
 
   useEffect(() => {
     async function loadData() {
@@ -44,7 +49,7 @@ export default function IndicesPage() {
         if (!data.indices?.length) throw new Error('No index data in response');
 
         setAllData(data.indices);
-        setMetadata({ month: data.month, year: data.year, count: data.count });
+        setMetadata({ month: data.month, year: data.year, count: data.count, asOf: data.asOf || '' });
         setLoading(false);
       } catch (e) {
         setError(e.message);
@@ -127,7 +132,11 @@ export default function IndicesPage() {
           </h1>
           <p className="page-subtitle">
             {metadata.count > 0 
-              ? `${metadata.count} NSE indices as of ${metadata.month} ${metadata.year} — returns, P/E, P/B, Beta, Volatility. Source: NSE Indices Limited (equity + hybrid)`
+              ? (() => {
+                  const day = metadata.asOf ? ordinal(parseInt(metadata.asOf.split('-')[2], 10)) : '';
+                  const dateStr = day ? `${day} ${metadata.month} ${metadata.year}` : `${metadata.month} ${metadata.year}`;
+                  return `${metadata.count} NSE indices as of ${dateStr} — returns, P/E, P/B, Beta, Volatility. Source: NSE Indices Limited (equity + hybrid)`;
+                })()
               : 'Loading NSE index dashboard...'}
           </p>
         </div>
