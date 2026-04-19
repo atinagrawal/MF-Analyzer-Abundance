@@ -269,9 +269,144 @@ function parseRiskometer(text) {
   return result;
 }
 
+// ── Fixed Income PDF — Hybrid Indices parser ────────────────────────────────
+// Source: niftyindices.com/Index_Dashboard_Fixed_Income/Index_Dashboard_FixedIncome_MAR2026.pdf
+//
+// pdf-parse v1.1.1 (the same version used for equity PDF) renders each hybrid row as:
+//   "NIFTY 50 Hybrid Composite Debt 70:30 Index-----8.33-10.48-6.30-1.959.098.85"
+// The "----" is a 4-dash separator for 4 missing columns (Yield, MacD, Maturity, ModD).
+// The 5th visible dash is the minus sign of the 1M return value itself.
+// Multi-line names have data on the next line:
+//   "NIFTY Multi Asset - Equity : Arbitrage : REITs/InvITs"
+//   "(50:40:10) Index"
+//   "-----5.90-6.45-3.223.7911.329.95"
+//
+// 6 return values per index: 1M, 3M, 6M, 1Y, 3Y, 5Y.
+// All other fields (Yield, Duration, Vol, Beta, P/E, P/B, DY) are null for hybrids.
+
+const HYBRID_META = {
+  'NIFTY 50 Hybrid Composite Debt 70:30 Index':                                        { short: 'HYB7030'   },
+  'NIFTY 50 Hybrid Composite Debt 65:35 Index':                                        { short: 'HYB6535'   },
+  'NIFTY 50 Hybrid Composite Debt 50:50 Index':                                        { short: 'HYB5050'   },
+  'NIFTY 50 Hybrid Composite Debt 15:85 Index':                                        { short: 'HYB1585'   },
+  'NIFTY 50 Hybrid Short Duration Debt 40:60 Index':                                   { short: 'HYBSD4060' },
+  'NIFTY 50 Hybrid Short Duration Debt 25:75 Index':                                   { short: 'HYBSD2575' },
+  'NIFTY Equity Savings Index':                                                         { short: 'EQSAV'     },
+  'NIFTY AQLV 30 Plus 5yr G-Sec 70:30 Index':                                         { short: 'AQLV3070'  },
+  'NIFTY Multi Asset - Equity : Arbitrage : REITs/InvITs (50:40:10) Index':           { short: 'MULTI3'    },
+  'NIFTY Multi Asset - Equity : Debt : Arbitrage : REITs/InvITs (50:20:20:10) Index': { short: 'MULTI4'    },
+  'NIFTY LargeMidcap250 Plus 8-13 yr G-Sec 70:30 Index':                              { short: 'LMGOV70'   },
+};
+
+function parseFiHybridText(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const hybrids = [];
+
+  const startIdx = lines.findIndex(l => l === 'Hybrid Indices');
+  if (startIdx === -1) return hybrids;
+
+  const STOP = /^(Fixed Income Indices Dashboard|About NSE|Index Statistics and|www\.|Contact:|Disclaimer)/;
+
+  // Strip the leading 4-dash separator, then extract all signed floats with 2dp
+  function extractReturns(dataStr) {
+    const after = dataStr.replace(/^-{4}/, '');
+    return (after.match(/-?\d+\.\d{2}/g) || []).map(Number);
+  }
+
+  let i = startIdx + 1;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (STOP.test(line)) break;
+
+    // Standalone data line (for multi-line names): 4+ hyphens then a digit or minus+digit
+    if (/^-{4,}-?\d/.test(line)) {
+      if (hybrids.length > 0 && hybrids[hybrids.length - 1]._pending) {
+        const nums = extractReturns(line);
+        if (nums.length >= 6) {
+          const last = hybrids[hybrids.length - 1];
+          last.returns = { r1m: nums[0], r3m: nums[1], r6m: nums[2], r1y: nums[3], r3y: nums[4], r5y: nums[5] };
+          delete last._pending;
+        }
+      }
+      i++;
+      continue;
+    }
+
+    if (line.startsWith('NIFTY')) {
+      // 4+ consecutive hyphens mark the data separator (single hyphens in names like "8-13" are safe)
+      const dashIdx = line.search(/----/);
+
+      if (dashIdx !== -1) {
+        // Single-line: name + ---- + data concatenated on same line
+        const name = line.slice(0, dashIdx).trim();
+        const nums = extractReturns(line.slice(dashIdx));
+        if (nums.length >= 6) {
+          const meta = HYBRID_META[name] || {};
+          hybrids.push({
+            name,
+            cat: 'hybrid',
+            short: meta.short || name.slice(0, 8).toUpperCase(),
+            returns: { r1m: nums[0], r3m: nums[1], r6m: nums[2], r1y: nums[3], r3y: nums[4], r5y: nums[5] },
+            risk: { vol: null, beta: null, corr: null, r2: null },
+            val:  { pe: null, pb: null, dy: null },
+          });
+        }
+      } else {
+        // Multi-line name — next line may be a parenthetical continuation "(50:40:10) Index"
+        let fullName = line;
+        if (i + 1 < lines.length && lines[i + 1].startsWith('(')) {
+          fullName = line + ' ' + lines[i + 1];
+          i++;
+        }
+        const name = fullName.trim();
+        const meta = HYBRID_META[name] || {};
+        // Mark _pending; data line will be processed on next iteration
+        hybrids.push({
+          name,
+          cat: 'hybrid',
+          short: meta.short || name.slice(0, 8).toUpperCase(),
+          returns: { r1m: null, r3m: null, r6m: null, r1y: null, r3y: null, r5y: null },
+          risk: { vol: null, beta: null, corr: null, r2: null },
+          val:  { pe: null, pb: null, dy: null },
+          _pending: true,
+        });
+      }
+    }
+    i++;
+  }
+
+  // Drop any entries that never received their data (malformed PDF edge case)
+  return hybrids.filter(h => !h._pending);
+}
+
+async function fetchFiHybrid(year, month) {
+  const url = getFiPdfUrl(year, month);
+  try {
+    const { status, text } = await fetchPdfText(url);
+    if (status !== 200 || !text) {
+      // Try previous month as fallback (FI PDF may lag by one month)
+      const prev = new Date(year, month - 1, 1);
+      const { status: s2, text: t2 } = await fetchPdfText(getFiPdfUrl(prev.getFullYear(), prev.getMonth()));
+      if (s2 !== 200 || !t2) return [];
+      return parseFiHybridText(t2);
+    }
+    const hybrids = parseFiHybridText(text);
+    if (!hybrids.length) console.warn('[fi-hybrid] Parsed 0 hybrid indices from', url);
+    return hybrids;
+  } catch (e) {
+    console.error('[fi-hybrid] fetch/parse error:', e.name, e.message);
+    return []; // graceful — hybrid data is additive, not critical
+  }
+}
+
 function getPdfUrl(year, month) {
   // month: 0-11
   return `https://niftyindices.com/Index_Dashboard/Index_Dashboard_${MONTH_NAMES[month]}${year}.pdf`;
+}
+
+function getFiPdfUrl(year, month) {
+  // month: 0-11. Note: uses www.niftyindices.com (with www) — different from equity PDF.
+  return `https://www.niftyindices.com/Index_Dashboard_Fixed_Income/Index_Dashboard_FixedIncome_${MONTH_NAMES[month]}${year}.pdf`;
 }
 
 function getCurrentPdfUrl() {
@@ -347,13 +482,26 @@ export default async function handler(req, res) {
     // Check blob cache first — avoids fetching PDFs on every CDN miss
     const cached = await dashboardCacheGet(year, month);
     if (cached?.indices?.length) {
+      // If cache pre-dates hybrid support, fetch hybrids and merge before returning
+      const hasHybrid = cached.indices.some(idx => idx.cat === 'hybrid');
+      if (!hasHybrid) {
+        const fiHybrids = await fetchFiHybrid(year, month);
+        if (fiHybrids.length) {
+          const allIndices = [...cached.indices, ...fiHybrids];
+          const upgraded = { ...cached, count: allIndices.length, indices: allIndices };
+          // Update blob cache so next request gets full data without this extra fetch
+          await dashboardCachePut(year, month, upgraded).catch(() => {});
+          return res.status(200).json({ ...upgraded, source: 'NSE Indices', cached: true });
+        }
+      }
       return res.status(200).json({ ...cached, source: 'NSE Indices', cached: true });
     }
 
     // Cache miss — fetch dashboard PDF and riskometer in parallel
-    const [{ status, text }, riskMap] = await Promise.all([
+    const [{ status, text }, riskMap, fiHybrids] = await Promise.all([
       fetchPdfText(pdfUrl),
       fetchRiskometer(),
+      fetchFiHybrid(year, month),
     ]);
 
     if (status !== 200 || !text) {
@@ -367,7 +515,8 @@ export default async function handler(req, res) {
       year = prev.getFullYear(); month = prev.getMonth();
       const indices = parsePdfText(fallback.text);
       const enrichedFallback = indices.map(idx => { const r = riskMap[idx.name]; return r ? { ...idx, riskScore: r.score, riskLabel: r.label } : idx; });
-      return res.status(200).json({ month: MONTH_FULL[month], year, asOf: `${year}-${String(month+1).padStart(2,'0')}-28`, count: enrichedFallback.length, indices: enrichedFallback, source: 'NSE Indices' });
+      const allFallback = [...enrichedFallback, ...fiHybrids];
+      return res.status(200).json({ month: MONTH_FULL[month], year, asOf: `${year}-${String(month+1).padStart(2,'0')}-28`, count: allFallback.length, indices: allFallback, source: 'NSE Indices' });
     }
 
     const indices = parsePdfText(text);
@@ -386,12 +535,15 @@ export default async function handler(req, res) {
       return risk ? { ...idx, riskScore: risk.score, riskLabel: risk.label } : idx;
     });
 
+    // Merge hybrid indices (from Fixed Income PDF) — additive, gracefully empty if fetch failed
+    const allIndices = [...enriched, ...fiHybrids];
+
     const payload = {
       month: MONTH_FULL[month],
       year,
       asOf: `${year}-${String(month+1).padStart(2,'0')}-${new Date(year, month+1, 0).getDate()}`,
-      count: enriched.length,
-      indices: enriched,
+      count: allIndices.length,
+      indices: allIndices,
     };
 
     // Await blob write — cache for next request (required for proper persistence in serverless environments)

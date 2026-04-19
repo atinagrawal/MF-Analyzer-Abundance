@@ -8,7 +8,8 @@ const CAT_LABELS = {
   broad: 'Broad', 
   sectoral: 'Sectoral', 
   strategy: 'Strategy', 
-  thematic: 'Thematic' 
+  thematic: 'Thematic',
+  hybrid: 'Hybrid',
 };
 
 function fmtRet(v) {
@@ -126,7 +127,7 @@ export default function IndicesPage() {
           </h1>
           <p className="page-subtitle">
             {metadata.count > 0 
-              ? `${metadata.count} NSE indices as of ${metadata.month} ${metadata.year} — returns, P/E, P/B, Beta, Volatility. Source: NSE Indices Limited`
+              ? `${metadata.count} NSE indices as of ${metadata.month} ${metadata.year} — returns, P/E, P/B, Beta, Volatility. Source: NSE Indices Limited (equity + hybrid)`
               : 'Loading NSE index dashboard...'}
           </p>
         </div>
@@ -146,6 +147,9 @@ export default function IndicesPage() {
           </button>
           <button className={`cat-btn ${catFilter === 'thematic' ? 'active' : ''}`} onClick={() => filterCat('thematic')}>
             Thematic
+          </button>
+          <button className={`cat-btn ${catFilter === 'hybrid' ? 'active' : ''}`} onClick={() => filterCat('hybrid')}>
+            Hybrid
           </button>
           <input
             type="text"
@@ -251,7 +255,8 @@ export default function IndicesPage() {
                     const rollUrl = `/rolling?bench=${encodedName}`;
                     const riskLabel = r.riskLabel || '—';
                     const riskScore = r.riskScore != null ? r.riskScore.toFixed(2) : '—';
-                    const riskCls = riskLabel === 'Very High' ? 'risk-vh' 
+                    const riskCls = riskLabel === '—' ? 'risk-n'
+                      : riskLabel === 'Very High' ? 'risk-vh' 
                       : riskLabel === 'High' ? 'risk-h' 
                       : riskLabel.includes('Moderate') ? 'risk-m' 
                       : 'risk-l';
