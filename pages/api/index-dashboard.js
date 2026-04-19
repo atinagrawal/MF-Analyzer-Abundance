@@ -253,18 +253,21 @@ async function fetchRiskometer() {
 }
 
 function parseRiskometer(text) {
+  // pdf-parse v1.1.1 renders each row with all columns concatenated, no spaces between fields:
+  // "1Nifty 505.33Very HighBroad Market"  (single-digit serials, no space)
+  // "119   Nifty100 Enhanced ESG5.37Very HighThematic"  (3-digit serials, trailing spaces)
+  // The score is always 1.xx–6.xx (single leading digit), which safely distinguishes
+  // it from trailing digits in index names (e.g. "50" in "Nifty 50").
+  // Strategy: lowercase the parsed name for case-insensitive matching at enrichment time.
   const result = {};
-  const LABELS = ['Low To Moderate', 'Moderately High', 'Moderately Low', 'Very High', 'Moderate', 'High', 'Low'];
-  const labelPat = LABELS.join('|');
-  // Line format: "1 Nifty 50 5.33 Very High Broad Market"
-  // Match: serial  name  score  label
-  const lineRe = new RegExp(`^\d+\s+(.+?)\s+(\d+\.\d+)\s+(${labelPat})`, 'gm');
-  let m;
-  while ((m = lineRe.exec(text)) !== null) {
-    const name = m[1].trim();
-    const score = parseFloat(m[2]);
-    const label = m[3];
-    result[name] = { score, label };
+  const LABELS = 'Very High|Moderately High|Moderately Low|High|Low To Moderate|Moderate|Low';
+  const rowRe = new RegExp(`^\\d+\\s*([A-Z].+?)([1-9]\\.\\d{2})(${LABELS})`);
+  for (const line of text.split('\n').map(l => l.trim()).filter(Boolean)) {
+    const m = rowRe.exec(line);
+    if (m) {
+      // Store by lowercase key so INDEX_META keys like 'NIFTY 50' match 'Nifty 50'
+      result[m[1].trim().toLowerCase()] = { score: parseFloat(m[2]), label: m[3] };
+    }
   }
   return result;
 }
@@ -515,7 +518,7 @@ export default async function handler(req, res) {
       }
       year = prev.getFullYear(); month = prev.getMonth();
       const indices = parsePdfText(fallback.text);
-      const enrichedFallback = indices.map(idx => { const r = riskMap[idx.name]; return r ? { ...idx, riskScore: r.score, riskLabel: r.label } : idx; });
+      const enrichedFallback = indices.map(idx => { const r = riskMap[idx.name.toLowerCase()]; return r ? { ...idx, riskScore: r.score, riskLabel: r.label } : idx; });
       const allFallback = [...enrichedFallback, ...fiHybrids];
       return res.status(200).json({ month: MONTH_FULL[month], year, asOf: `${year}-${String(month+1).padStart(2,'0')}-${new Date(year, month+1, 0).getDate()}`, count: allFallback.length, indices: allFallback, source: 'NSE Indices' });
     }
@@ -530,9 +533,9 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'PDF parsed but no indices found. Check runtime logs.', url: pdfUrl });
     }
 
-    // Merge riskometer scores
+    // Merge riskometer scores (case-insensitive: riskMap keys are lowercased)
     const enriched = indices.map(idx => {
-      const risk = riskMap[idx.name];
+      const risk = riskMap[idx.name.toLowerCase()];
       return risk ? { ...idx, riskScore: risk.score, riskLabel: risk.label } : idx;
     });
 
