@@ -1,21 +1,37 @@
-// middleware.js — Edge Middleware for server-side OG meta injection
-// Handles both SWP Backtester (?btMode=1) and SIP Backtester (?sipBTMode=1)
-// Only intercepts bot crawlers — regular browsers pass through unchanged
+// middleware.js — Edge Middleware
 //
-// NEXT.JS MIGRATION NOTE:
-// This file was previously a plain Vercel middleware. Now uses Next.js
-// middleware conventions (NextResponse). Logic is identical.
+// Two responsibilities:
+// 1. AUTH GUARD: Protected paths redirect to /login if no session cookie found.
+//    (Lightweight cookie-presence check — full session validation happens
+//    server-side in each page/API route via auth() from @/auth.)
+//
+// 2. OG INJECTION: For bot crawlers hitting / with share params (?btMode / ?sipBTMode),
+//    inject pre-rendered OG meta tags so social previews work without JS.
 
 import { NextResponse } from 'next/server';
 
-export const config = { matcher: '/' };
+// ── Protected paths ────────────────────────────────────────────────────────
+// Add/remove paths here to change what requires login.
+// No other code needs to change.
+const PROTECTED_PATHS = [
+  '/cas-tracker',
+];
 
+// ── Bot UA list (for OG injection) ────────────────────────────────────────
 const BOT_UA = [
   'twitterbot','facebookexternalhit','facebot','linkedinbot','whatsapp',
   'telegrambot','slackbot','discordbot','googlebot','bingbot','applebot',
   'pinterest','curl','wget','python-requests','go-http-client','opengraph',
   'iframely','embedly','rogerbot','outbrain','w3c_validator',
 ];
+
+export const config = {
+  matcher: [
+    '/',           // OG injection for share links
+    '/cas-tracker',  // auth guard
+    '/cas-tracker/:path*',
+  ],
+};
 
 function isBot(ua) {
   if (!ua) return false;
@@ -38,8 +54,26 @@ function esc(str) {
 
 export default function middleware(request) {
   const url = new URL(request.url);
-  const p   = url.searchParams;
+  const pathname = url.pathname;
+  const p = url.searchParams;
 
+  // ── 1. AUTH GUARD ────────────────────────────────────────────────────────
+  const isProtected = PROTECTED_PATHS.some(path => pathname.startsWith(path));
+  if (isProtected) {
+    // Auth.js v5 cookie name: authjs.session-token (dev) or __Secure-authjs.session-token (prod)
+    const sessionToken =
+      request.cookies.get('__Secure-authjs.session-token') ||
+      request.cookies.get('authjs.session-token');
+
+    if (!sessionToken) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('from', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    return NextResponse.next();
+  }
+
+  // ── 2. OG INJECTION (/ only) ─────────────────────────────────────────────
   const isSWPBT = !!p.get('btMode');
   const isSIPBT = !!p.get('sipBTMode');
 
