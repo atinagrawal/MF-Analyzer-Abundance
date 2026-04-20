@@ -31,7 +31,7 @@ const nextConfig = {
   async rewrites() {
     return [
       // NOTE: / (index.html) has been removed — app/page.js now serves it.
-      { source: '/portfolio',         destination: '/portfolio.html' },
+      { source: '/portfolio', destination: '/portfolio.html' },
       { source: '/xls-pdf-extractor', destination: '/xls-pdf-extractor.html' },
     ];
   },
@@ -42,7 +42,7 @@ const nextConfig = {
       {
         source: '/api/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Origin',  value: '*' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
         ],
       },
@@ -58,14 +58,7 @@ const nextConfig = {
   // ── SEO Redirects: .html → clean URL (301) ──
   async redirects() {
     return [
-      { source: '/index.html',             destination: '/',                  permanent: true },
-      { source: '/cas-tracker.html',       destination: '/cas-tracker',       permanent: true },
-      { source: '/portfolio.html',         destination: '/portfolio',         permanent: true },
-      { source: '/rolling.html',           destination: '/rolling',           permanent: true },
-      { source: '/industry.html',          destination: '/industry',          permanent: true },
-      { source: '/report.html',            destination: '/report',            permanent: true },
-      { source: '/geography.html',         destination: '/geography',         permanent: true },
-      { source: '/indices.html',           destination: '/indices',           permanent: true },
+      { source: '/portfolio.html', destination: '/portfolio', permanent: true },
       { source: '/xls-pdf-extractor.html', destination: '/xls-pdf-extractor', permanent: true },
     ];
   },
