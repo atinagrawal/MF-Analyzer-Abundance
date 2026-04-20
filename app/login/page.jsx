@@ -12,17 +12,12 @@
  */
 
 import { signIn, useSession } from 'next-auth/react';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
-export const metadata = {
-  title: 'Sign In | Abundance',
-  robots: { index: false, follow: false },
-};
-
-export default function LoginPage() {
+function LoginContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -175,5 +170,17 @@ export default function LoginPage() {
 
       <Footer />
     </>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="sk" style={{ width: 120, height: 16, borderRadius: 8 }} />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
