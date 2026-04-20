@@ -2,6 +2,7 @@ import './globals.css';
 import Script from 'next/script';
 import { SITE, SITE_NAME, THEME_COLOR } from '@/lib/metadata';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import AuthProvider from '@/components/AuthProvider';
 
 /**
  * app/layout.js — Root layout for the entire application
@@ -10,9 +11,8 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
  * - Raleway + JetBrains Mono fonts via Google Fonts
  * - Global metadata (site name, theme color, PWA manifest, favicons)
  * - Vercel Speed Insights
- * - Google Analytics (gtag) via next/script — required so the script
- *   actually executes on the client. Raw <script> tags inside JSX are
- *   inert: React strips them during hydration.
+ * - Google Analytics (gtag) via next/script
+ * - AuthProvider (NextAuth SessionProvider) for useSession() in client components
  *
  * Individual pages export their own metadata via getPageMeta() which
  * merges with these defaults.
@@ -85,7 +85,10 @@ export default function RootLayout({ children }) {
         <link rel="icon" type="image/x-icon" href="https://www.getabundance.in/favicon.ico" />
       </head>
       <body>
-        {children}
+        {/* AuthProvider makes useSession() available in all client components */}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <SpeedInsights />
 
         {/* Google Analytics — must use next/script so the tag actually
