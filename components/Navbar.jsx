@@ -30,35 +30,66 @@ const NAV_ITEMS = [
 // ── Avatar dropdown ──────────────────────────────────────────────────────────
 function UserAvatar({ session }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const [dropPos, setDropPos] = useState({ top: 0, right: 0 });
+  const btnRef = useRef(null);
+  const dropRef = useRef(null);
+
+  // Calculate position from button rect on open — position:fixed escapes
+  // ALL overflow and stacking contexts, so the dropdown is always visible.
+  const toggleOpen = () => {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setDropPos({
+        top:   rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setOpen(o => !o);
+  };
 
   // Close on outside click
   useEffect(() => {
+    if (!open) return;
     function handler(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (
+        dropRef.current && !dropRef.current.contains(e.target) &&
+        btnRef.current  && !btnRef.current.contains(e.target)
+      ) setOpen(false);
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [open]);
+
+  // Close on scroll/resize (position would be stale)
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener('scroll', close, { passive: true });
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close);
+      window.removeEventListener('resize', close);
+    };
+  }, [open]);
 
   const handleSignOut = () => {
-    // Return to current page after sign-out
     const callbackUrl = typeof window !== 'undefined' ? window.location.href : '/';
     signOut({ callbackUrl });
   };
 
-  const user = session.user;
-  const name  = user?.name  || 'User';
-  const email = user?.email || '';
-  const image = user?.image || null;
-  const role  = user?.role  || 'client';
+  const user     = session.user;
+  const name     = user?.name  || 'User';
+  const email    = user?.email || '';
+  const image    = user?.image || null;
+  const role     = user?.role  || 'client';
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      {/* Avatar button */}
+    <>
+      {/* Avatar trigger button */}
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={btnRef}
+        onClick={toggleOpen}
         aria-label="Account menu"
         style={{
           width: 32, height: 32,
@@ -91,27 +122,28 @@ function UserAvatar({ session }) {
         )}
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown — position:fixed so no ancestor can clip or bury it */}
       {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-          background: 'var(--surface)',
-          border: '1.5px solid var(--border)',
-          borderRadius: 'var(--r)',
-          boxShadow: 'var(--shadow)',
-          minWidth: 200,
-          zIndex: 999,
-          overflow: 'hidden',
-        }}>
+        <div
+          ref={dropRef}
+          style={{
+            position: 'fixed',
+            top:   dropPos.top,
+            right: dropPos.right,
+            background: 'var(--surface)',
+            border: '1.5px solid var(--border)',
+            borderRadius: 'var(--r)',
+            boxShadow: '0 8px 24px rgba(0,0,0,.12)',
+            minWidth: 210,
+            zIndex: 9999,
+            overflow: 'hidden',
+          }}
+        >
           {/* User info */}
-          <div style={{
-            padding: '12px 14px',
-            borderBottom: '1px solid var(--border)',
-          }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
             <div style={{
-              fontSize: '.78rem', fontWeight: 700,
-              color: 'var(--text)', marginBottom: 2,
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              fontSize: '.78rem', fontWeight: 700, color: 'var(--text)',
+              marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
               {name}
             </div>
@@ -123,8 +155,7 @@ function UserAvatar({ session }) {
               {email}
             </div>
             <div style={{
-              display: 'inline-block',
-              marginTop: 6,
+              display: 'inline-block', marginTop: 6,
               fontSize: '.52rem', fontWeight: 800,
               letterSpacing: '.5px', textTransform: 'uppercase',
               padding: '2px 7px', borderRadius: 4,
@@ -137,17 +168,14 @@ function UserAvatar({ session }) {
             </div>
           </div>
 
-          {/* CAS Tracker link */}
+          {/* My Portfolios */}
           <a
             href="/cas-tracker"
             onClick={() => setOpen(false)}
             style={{
-              display: 'block',
-              padding: '10px 14px',
-              fontSize: '.75rem', fontWeight: 600,
-              color: 'var(--text)',
-              textDecoration: 'none',
-              borderBottom: '1px solid var(--border)',
+              display: 'block', padding: '10px 14px',
+              fontSize: '.75rem', fontWeight: 600, color: 'var(--text)',
+              textDecoration: 'none', borderBottom: '1px solid var(--border)',
               transition: 'background .12s',
             }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--s2)'}
@@ -163,11 +191,9 @@ function UserAvatar({ session }) {
               display: 'block', width: '100%',
               padding: '10px 14px',
               fontSize: '.75rem', fontWeight: 600,
-              color: 'var(--neg)',
-              background: 'transparent',
+              color: 'var(--neg)', background: 'transparent',
               border: 'none', cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'background .12s',
+              textAlign: 'left', transition: 'background .12s',
               fontFamily: 'Raleway, sans-serif',
             }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--neg-bg)'}
@@ -177,9 +203,10 @@ function UserAvatar({ session }) {
           </button>
         </div>
       )}
-    </div>
+    </>
   );
 }
+
 
 // ── Main Navbar ──────────────────────────────────────────────────────────────
 export default function Navbar({ activePage, variant = 'default' }) {

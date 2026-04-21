@@ -3384,6 +3384,13 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .nav-link:hover{color:var(--g2);border-color:var(--border2);background:var(--g-xlight)}
 .nav-tag{font-size:.64rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:7px 14px;border-radius:8px;background:var(--g-xlight);border:1.5px solid var(--g-light);color:var(--g2)}
 
+/* ── Navbar overrides: must come after homepage minified block above ── */
+.navbar { position: relative !important; z-index: 100 !important; }
+.nav-right { flex-wrap: nowrap !important; gap: 4px !important; overflow-x: auto !important; scrollbar-width: none !important; }
+.nav-right::-webkit-scrollbar { display: none !important; }
+.nav-link { padding: 5px 9px !important; font-size: .68rem !important; white-space: nowrap !important; flex-shrink: 0 !important; }
+.nav-tag  { padding: 5px 9px !important; font-size: .68rem !important; white-space: nowrap !important; flex-shrink: 0 !important; }
+
 /* ════════════════════════════════════════
    BRAND STRIP — live ticker + IST clock
 ════════════════════════════════════════ */
