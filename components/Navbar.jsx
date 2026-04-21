@@ -228,7 +228,7 @@ export default function Navbar({ activePage, variant = 'default' }) {
         </div>
       </a>
 
-      {/* ── Nav links + auth ── */}
+      {/* ── Nav links (scrollable row) ── */}
       <div className="nav-right">
         {NAV_ITEMS.map((item) => {
           const isActive = item.key === activePage;
@@ -253,19 +253,21 @@ export default function Navbar({ activePage, variant = 'default' }) {
             </a>
           );
         })}
+      </div>
 
-        {/* ── Auth section ── */}
+      {/* ── Auth — outside nav-right so overflow:auto doesn't clip the dropdown ── */}
+      <div style={{ flexShrink: 0, marginLeft: 4 }}>
         {status === 'authenticated' && session ? (
           <UserAvatar session={session} />
         ) : status === 'unauthenticated' ? (
           <a
             href="/login"
             className="nav-link"
-            style={{ color: 'var(--g1)', borderColor: 'var(--g-light)', background: 'var(--g-xlight)' }}
+            style={{ color: 'var(--g1)', borderColor: 'var(--g-light)', background: 'var(--g-xlight)', whiteSpace: 'nowrap' }}
           >
             Sign in
           </a>
-        ) : null /* loading — show nothing to avoid flash */}
+        ) : null}
       </div>
     </nav>
   );
