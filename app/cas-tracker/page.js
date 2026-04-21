@@ -244,39 +244,47 @@ function CasTrackerInner() {
 
     setLoadingText('Fetching live NAVs…');
 
-    for (const entry of allHoldings) {
-      const { h, pan } = entry;
-      const scheme = h.scheme;
-      let currentNav = h.liveNav;
+    // 1. Collect unique AMFI codes — same fund can appear in multiple folios,
+    //    no point fetching the same code more than once.
+    const uniqueAmfi = [...new Set(
+      allHoldings.map(({ h }) => h.scheme.amfi).filter(Boolean)
+    )];
 
-      if (scheme.amfi) {
+    // 2. Fetch all unique NAVs concurrently. allSettled so one failure
+    //    doesn't abort the rest. Build amfiCode → nav lookup map.
+    const navMap = {};
+    await Promise.allSettled(
+      uniqueAmfi.map(async (amfi) => {
         try {
-          const navRes = await fetch(`/api/mf?code=${scheme.amfi}&latest=1`);
+          const navRes = await fetch(`/api/mf?code=${amfi}&latest=1`);
           if (navRes.ok) {
             const resJson = await navRes.json();
-            if (resJson.status === 'SUCCESS' && resJson.data && resJson.data.length > 0) {
-              currentNav = parseFloat(resJson.data[0].nav);
-              h.isLive = true;
+            if (resJson.status === 'SUCCESS' && resJson.data?.length > 0) {
+              navMap[amfi] = parseFloat(resJson.data[0].nav);
             }
           }
-        } catch (e) {
-          // Non-fatal
+        } catch {
+          // Non-fatal — holdings for this fund will use CAS-reported NAV
         }
-      }
+      })
+    );
 
-      h.liveNav = currentNav;
+    // 3. Apply resolved NAVs and compute metrics for every holding.
+    for (const { h, pan } of allHoldings) {
+      const scheme = h.scheme;
+      if (scheme.amfi && navMap[scheme.amfi] !== undefined) {
+        h.liveNav = navMap[scheme.amfi];
+        h.isLive  = true;
+      }
+      const currentNav = h.liveNav;
       const fifo = calculateFifoCost(scheme, currentNav);
-      h.value = h.units * currentNav;
-      h.invested = fifo.invested;
+      h.value       = h.units * currentNav;
+      h.invested    = fifo.invested;
       h.lockedValue = fifo.lockedValue;
-      
       const casCost = parseFloat(scheme.valuation?.cost || 0);
       h.avgPurchaseNav = h.units > 0 && casCost > 0 ? casCost / h.units : 0;
-
-      portfolioData[pan].current += h.value;
+      portfolioData[pan].current  += h.value;
       portfolioData[pan].invested += h.invested;
-
-      // Clean up - don't keep raw scheme data in memory
       delete h.scheme;
     }
 
