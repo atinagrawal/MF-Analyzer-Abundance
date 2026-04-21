@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
@@ -106,7 +106,7 @@ function calculateFifoCost(scheme, currentNav) {
   };
 }
 
-export default function CasTrackerPage() {
+function CasTrackerInner() {
   const [uploadState, setUploadState] = useState('idle'); // idle, loading, error, success
   const [loadingText, setLoadingText] = useState('');
   const [errorText, setErrorText] = useState('');
@@ -678,5 +678,17 @@ export default function CasTrackerPage() {
 
       <Footer />
     </>
+  );
+}
+
+export default function CasTrackerPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="sk" style={{ width: 140, height: 16, borderRadius: 8 }} />
+      </div>
+    }>
+      <CasTrackerInner />
+    </Suspense>
   );
 }
