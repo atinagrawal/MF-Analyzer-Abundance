@@ -79,6 +79,8 @@ a { color: inherit; text-decoration: none; }
   border-bottom: 1.5px solid var(--border);
   gap: 16px;
   flex-wrap: wrap;
+  position: relative;  /* establishes stacking context for dropdown */
+  z-index: 100;        /* above all page sections */
 }
 .logo-wrap { display: flex; align-items: center; gap: 12px; }
 .logo-img { height: 38px; width: auto; border-radius: 6px; }
@@ -90,19 +92,32 @@ a { color: inherit; text-decoration: none; }
 }
 .logo-text .brand { font-size: .95rem; font-weight: 800; color: var(--g1); }
 .logo-text .sub { font-size: .62rem; font-weight: 600; color: var(--muted); }
-.nav-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;   /* single line — scroll on tiny screens */
+  overflow-x: auto;
+  -ms-overflow-style: none;  /* hide scrollbar on IE/Edge */
+  scrollbar-width: none;     /* hide scrollbar on Firefox */
+}
+.nav-right::-webkit-scrollbar { display: none; } /* hide scrollbar on Chrome/Safari */
 .nav-link {
-  padding: 7px 12px; border-radius: 8px;
-  font-size: .72rem; font-weight: 700;
+  padding: 5px 9px; border-radius: 8px;
+  font-size: .68rem; font-weight: 700;
   color: var(--g2); background: var(--s2);
   border: 1.5px solid var(--border);
   transition: .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .nav-link:hover { background: var(--s3); border-color: var(--border2); }
 .nav-tag {
-  padding: 7px 12px; border-radius: 8px;
-  font-size: .72rem; font-weight: 700;
+  padding: 5px 9px; border-radius: 8px;
+  font-size: .68rem; font-weight: 700;
   background: var(--g1); color: #fff;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -586,11 +601,6 @@ a { color: inherit; text-decoration: none; }
 .table-wrap {
   overflow-x: auto;
 }
-/* Themed horizontal scrollbar for the index table */
-.table-wrap::-webkit-scrollbar        { height: 5px; }
-.table-wrap::-webkit-scrollbar-track  { background: var(--s2); }
-.table-wrap::-webkit-scrollbar-thumb  { background: var(--border2); border-radius: 10px; }
-.table-wrap::-webkit-scrollbar-thumb:hover { background: var(--g3); }
 
 .idx-table {
   width: 100%;
@@ -615,24 +625,10 @@ a { color: inherit; text-decoration: none; }
   white-space: nowrap;
   transition: .15s;
 }
-.idx-table .idx-name-th {
+.idx-table th:first-child {
   text-align: left;
   padding-left: 16px;
   width: 220px;
-  position: sticky;
-  left: 0;
-  background: var(--s2);
-  z-index: 2;
-}
-/* ::before for the sticky divider — NOT ::after.
-   Sort arrows use ::after; using ::before here means zero specificity conflict,
-   regardless of what sorted-asc/sorted-desc does to the same element. */
-.idx-table .idx-name-th::before {
-  content: '';
-  position: absolute;
-  right: -1px; top: 0; bottom: 0;
-  width: 1.5px;
-  background: var(--border);
 }
 .idx-table th:hover {
   color: var(--g2);
@@ -664,21 +660,6 @@ a { color: inherit; text-decoration: none; }
   padding-left: 16px;
   font-family: 'Raleway', sans-serif;
   font-weight: 600;
-  white-space: normal;     /* override parent nowrap so long names wrap */
-  max-width: 280px;
-  min-width: 160px;
-  line-height: 1.3;
-  position: sticky;
-  left: 0;
-  background: var(--surface);
-  z-index: 1;
-}
-.idx-table td:first-child::before {
-  content: '';
-  position: absolute;
-  right: -1px; top: -1px; bottom: -1px;
-  width: 1.5px;
-  background: var(--border);
 }
 .idx-table tr:last-child td {
   border-bottom: none;
@@ -759,41 +740,6 @@ a { color: inherit; text-decoration: none; }
 .risk-m { background: #fff8e1; color: #f57f17; }
 .risk-l { background: #e8f5e9; color: #1b5e20; }
 .risk-n { background: #f5f5f5; color: #757575; } /* no risk data — neutral */
-
-/* ── Riskometer SVG gauge ── */
-.td-gauge {
-  padding: 5px 10px;
-  vertical-align: middle;
-  text-align: center;
-  white-space: nowrap;
-}
-.risk-gauge {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  cursor: default;
-  transition: transform .15s;
-}
-.risk-gauge:hover { transform: scale(1.08); }
-.risk-gauge-svg {
-  display: block;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,.12));
-}
-.risk-gauge-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: .46rem;
-  font-weight: 800;
-  letter-spacing: .3px;
-  text-transform: uppercase;
-  line-height: 1;
-  color: var(--gauge-color, var(--muted));
-}
-.risk-gauge-empty {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: .72rem;
-  color: var(--muted);
-}
 
 /* Source text */
 .src-text {
