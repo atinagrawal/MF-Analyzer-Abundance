@@ -80,7 +80,7 @@ a { color: inherit; text-decoration: none; }
   gap: 16px;
   flex-wrap: wrap;
   position: relative;  /* establishes stacking context for dropdown */
-  z-index: 100;        /* above all page sections */
+  z-index: 2000;       /* above all page sections (including brand strip) */
 }
 .logo-wrap { display: flex; align-items: center; gap: 12px; }
 .logo-img { height: 38px; width: auto; border-radius: 6px; }
@@ -3385,7 +3385,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .nav-tag{font-size:.64rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:7px 14px;border-radius:8px;background:var(--g-xlight);border:1.5px solid var(--g-light);color:var(--g2)}
 
 /* ── Navbar overrides: must come after homepage minified block above ── */
-.navbar { position: relative !important; z-index: 100 !important; }
+.navbar { position: relative !important; z-index: 2000 !important; }
 .nav-right { flex-wrap: nowrap !important; gap: 4px !important; overflow-x: auto !important; scrollbar-width: none !important; }
 .nav-right::-webkit-scrollbar { display: none !important; }
 .nav-link { padding: 5px 9px !important; font-size: .68rem !important; white-space: nowrap !important; flex-shrink: 0 !important; }
