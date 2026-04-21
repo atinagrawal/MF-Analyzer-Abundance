@@ -15,6 +15,7 @@ import { NextResponse } from 'next/server';
 // No other code needs to change.
 const PROTECTED_PATHS = [
   '/cas-tracker',
+  '/admin',
 ];
 
 // ── Bot UA list (for OG injection) ────────────────────────────────────────
@@ -27,9 +28,11 @@ const BOT_UA = [
 
 export const config = {
   matcher: [
-    '/',           // OG injection for share links
-    '/cas-tracker',  // auth guard
+    '/',                   // OG injection for share links
+    '/cas-tracker',        // auth guard
     '/cas-tracker/:path*',
+    '/admin',              // admin guard
+    '/admin/:path*',
   ],
 };
 
@@ -70,6 +73,8 @@ export default function middleware(request) {
       loginUrl.searchParams.set('from', pathname);
       return NextResponse.redirect(loginUrl);
     }
+    // /admin requires admin role — validated server-side in the page itself.
+    // Middleware only checks session presence; role check is in app/admin/page.jsx.
     return NextResponse.next();
   }
 
