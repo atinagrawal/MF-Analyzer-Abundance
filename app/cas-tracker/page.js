@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
@@ -111,6 +112,24 @@ export default function CasTrackerPage() {
   const [portfolioDataByPan, setPortfolioDataByPan] = useState({});
   const [activePan, setActivePan] = useState('');
   const [fromCache, setFromCache] = useState(false);
+
+  // ── Auth + saved portfolios ──
+  const { data: session, status: authStatus } = useSession();
+  const isSignedIn = authStatus === 'authenticated' && !!session;
+  const [savedPortfolios, setSavedPortfolios] = useState([]);
+  const [loadingSaved, setLoadingSaved] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(''); // '', 'saving', 'saved', 'error'
+
+  // Fetch saved portfolios when signed in
+  useEffect(() => {
+    if (!isSignedIn) return;
+    setLoadingSaved(true);
+    fetch('/api/cas/list')
+      .then(r => r.json())
+      .then(d => setSavedPortfolios(d.portfolios || []))
+      .catch(() => {})
+      .finally(() => setLoadingSaved(false));
+  }, [isSignedIn]);
 
   async function processCasData(data, cached) {
     const portfolioData = {};
@@ -263,6 +282,30 @@ export default function CasTrackerPage() {
     setUploadState('success');
   }
 
+  async function saveToBlobIfSignedIn(data, fileName, panCount) {
+    if (!isSignedIn) return;
+    setSaveStatus('saving');
+    try {
+      const res = await fetch('/api/cas/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parsedData: data, fileName, panCount }),
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        setSavedPortfolios(prev => [
+          { id: saved.id, file_name: fileName, pan_count: panCount, uploaded_at: saved.uploadedAt, blob_key: saved.blobKey },
+          ...prev,
+        ]);
+        setSaveStatus('saved');
+      } else {
+        setSaveStatus('error');
+      }
+    } catch {
+      setSaveStatus('error');
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setUploadState('loading');
@@ -302,6 +345,12 @@ export default function CasTrackerPage() {
 
         data = await parseRes.json();
         writeCache(pdfFile, data);
+        // Auto-save to Vercel Blob (fire-and-forget, non-blocking)
+        const panCount = (data.folios || []).reduce((acc, f) => {
+          const pan = (f.PAN || '').toUpperCase().trim();
+          return pan && pan.length === 10 ? acc.add(pan) : acc;
+        }, new Set()).size;
+        saveToBlobIfSignedIn(data, pdfFile.name, panCount);
       }
 
       await processCasData(data, cached);
@@ -316,6 +365,22 @@ export default function CasTrackerPage() {
     setPortfolioDataByPan({});
     setActivePan('');
     setFromCache(false);
+    setSaveStatus('');
+  }
+
+  async function loadSavedPortfolio(blobKey) {
+    setUploadState('loading');
+    setLoadingText('Loading saved portfolio…');
+    try {
+      // Fetch blob via a signed-read proxy
+      const res = await fetch(`/api/cas/load?key=${encodeURIComponent(blobKey)}`);
+      if (!res.ok) throw new Error('Could not load saved portfolio.');
+      const data = await res.json();
+      await processCasData(data, false);
+    } catch (err) {
+      setErrorText(err.message);
+      setUploadState('error');
+    }
   }
 
   const panKeys = Object.keys(portfolioDataByPan);
@@ -375,9 +440,62 @@ export default function CasTrackerPage() {
               </button>
 
               <div className="security-note">
-                🔒 100% Local Processing · No Data Stored
+                {isSignedIn
+                  ? saveStatus === 'saving' ? '☁ Saving to your account…'
+                  : saveStatus === 'saved'  ? '✅ Saved to your account'
+                  : saveStatus === 'error'  ? '⚠ Could not save (will retry)'
+                  : '☁ Uploads saved to your account automatically'
+                  : '🔒 100% Local Processing · No Data Stored · Sign in to save'}
               </div>
             </form>
+
+            {/* Saved portfolios */}
+            {isSignedIn && (savedPortfolios.length > 0 || loadingSaved) && (
+              <div style={{ marginTop: 24, maxWidth: 520, margin: '24px auto 0' }}>
+                <div style={{
+                  fontSize: '.62rem', fontWeight: 800, letterSpacing: '1.5px',
+                  textTransform: 'uppercase', color: 'var(--muted)',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  marginBottom: 10,
+                }}>
+                  📁 Your Saved Portfolios
+                </div>
+                {loadingSaved ? (
+                  <div className="sk" style={{ height: 44, borderRadius: 10 }} />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {savedPortfolios.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => loadSavedPortfolio(p.blob_key)}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '10px 14px', borderRadius: 10,
+                          border: '1.5px solid var(--border)', background: 'var(--s2)',
+                          cursor: 'pointer', textAlign: 'left', width: '100%',
+                          transition: 'border-color .15s, background .15s',
+                          fontFamily: 'Raleway, sans-serif',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--s3)'; e.currentTarget.style.borderColor = 'var(--border2)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'var(--s2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>
+                            📄 {p.file_name}
+                          </div>
+                          <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+                            {p.pan_count} PAN{p.pan_count !== 1 ? 's' : ''} · {new Date(p.uploaded_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--g2)', flexShrink: 0, marginLeft: 8 }}>
+                          Load →
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         )}
 
