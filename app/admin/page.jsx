@@ -302,13 +302,31 @@ export default function AdminPage() {
                       <div key={p.id} style={{
                         padding: '10px 12px', borderRadius: 10,
                         border: '1.5px solid var(--border)', background: 'var(--s2)',
+                        display: 'flex', alignItems: 'center',
+                        justifyContent: 'space-between', gap: 8,
                       }}>
-                        <div style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
-                          📄 {p.file_name}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
+                            📄 {p.file_name}
+                          </div>
+                          <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+                            {p.pan_count} PAN{p.pan_count !== 1 ? 's' : ''} · {fmtDate(p.uploaded_at)}
+                          </div>
                         </div>
-                        <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
-                          {p.pan_count} PAN{p.pan_count !== 1 ? 's' : ''} · {fmtDate(p.uploaded_at)}
-                        </div>
+                        <a
+                          href={`/cas-tracker?load=${encodeURIComponent(p.blob_key)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            flexShrink: 0, fontSize: '.65rem', fontWeight: 700,
+                            padding: '5px 11px', borderRadius: 6,
+                            background: 'var(--g1)', color: '#fff',
+                            textDecoration: 'none', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          View →
+                        </a>
                       </div>
                     ))}
                   </div>
