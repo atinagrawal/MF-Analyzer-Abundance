@@ -30,22 +30,10 @@ const NAV_ITEMS = [
 // ── Avatar dropdown ──────────────────────────────────────────────────────────
 function UserAvatar({ session }) {
   const [open, setOpen] = useState(false);
-  const [dropPos, setDropPos] = useState({ top: 0, right: 0 });
   const btnRef = useRef(null);
   const dropRef = useRef(null);
 
-  // Calculate position from button rect on open — position:fixed escapes
-  // ALL overflow and stacking contexts, so the dropdown is always visible.
-  const toggleOpen = () => {
-    if (!open && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setDropPos({
-        top:   rect.bottom + 8,
-        right: window.innerWidth - rect.right,
-      });
-    }
-    setOpen(o => !o);
-  };
+  const toggleOpen = () => setOpen(o => !o);
 
   // Close on outside click
   useEffect(() => {
@@ -58,18 +46,6 @@ function UserAvatar({ session }) {
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  // Close on scroll/resize (position would be stale)
-  useEffect(() => {
-    if (!open) return;
-    const close = () => setOpen(false);
-    window.addEventListener('scroll', close, { passive: true });
-    window.addEventListener('resize', close);
-    return () => {
-      window.removeEventListener('scroll', close);
-      window.removeEventListener('resize', close);
-    };
   }, [open]);
 
   const handleSignOut = () => {
@@ -85,7 +61,7 @@ function UserAvatar({ session }) {
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <>
+    <div style={{ position: 'relative', display: 'inline-block' }}>
       {/* Avatar trigger button */}
       <button
         ref={btnRef}
@@ -122,14 +98,14 @@ function UserAvatar({ session }) {
         )}
       </button>
 
-      {/* Dropdown — position:fixed so no ancestor can clip or bury it */}
+      {/* Dropdown — position:absolute relative to the button container */}
       {open && (
         <div
           ref={dropRef}
           style={{
-            position: 'fixed',
-            top:   dropPos.top,
-            right: dropPos.right,
+            position: 'absolute',
+            top:   'calc(100% + 8px)',
+            right: 0,
             background: 'var(--surface)',
             border: '1.5px solid var(--border)',
             borderRadius: 'var(--r)',
@@ -137,6 +113,7 @@ function UserAvatar({ session }) {
             minWidth: 210,
             zIndex: 9999,
             overflow: 'hidden',
+            animation: 'fadeUp .2s ease-out',
           }}
         >
           {/* User info */}
@@ -203,7 +180,7 @@ function UserAvatar({ session }) {
           </button>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
