@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -116,9 +117,22 @@ export default function CasTrackerPage() {
   // ── Auth + saved portfolios ──
   const { data: session, status: authStatus } = useSession();
   const isSignedIn = authStatus === 'authenticated' && !!session;
+  const isAdmin    = session?.user?.role === 'admin';
+  const searchParams = useSearchParams();
   const [savedPortfolios, setSavedPortfolios] = useState([]);
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [saveStatus, setSaveStatus] = useState(''); // '', 'saving', 'saved', 'error'
+
+  // Auto-load a portfolio passed via ?load=blobKey (admin viewing another user's data)
+  useEffect(() => {
+    if (authStatus !== 'authenticated') return;
+    const loadKey = searchParams.get('load');
+    if (!loadKey || !isAdmin) return;
+    // Small delay so processCasData has the session in scope
+    const t = setTimeout(() => loadSavedPortfolio(loadKey), 100);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authStatus, isAdmin]);
 
   // Fetch saved portfolios when signed in
   useEffect(() => {
