@@ -14,8 +14,7 @@ import { NextResponse } from 'next/server';
 // Add/remove paths here to change what requires login.
 // No other code needs to change.
 const PROTECTED_PATHS = [
-  '/cas-tracker',
-  '/admin',
+  '/admin',   // cas-tracker is intentionally public for SEO — auth gate is in-page
 ];
 
 // ── Bot UA list (for OG injection) ────────────────────────────────────────
@@ -28,10 +27,8 @@ const BOT_UA = [
 
 export const config = {
   matcher: [
-    '/',                   // OG injection for share links
-    '/cas-tracker',        // auth guard
-    '/cas-tracker/:path*',
-    '/admin',              // admin guard
+    '/',             // OG injection for share links
+    '/admin',        // admin auth guard
     '/admin/:path*',
   ],
 };
