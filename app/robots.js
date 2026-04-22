@@ -8,7 +8,7 @@ export default function robots() {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/'],
+        disallow: ['/api/', '/admin', '/admin/', '/login'],
       },
     ],
     sitemap: 'https://mfcalc.getabundance.in/sitemap.xml',
