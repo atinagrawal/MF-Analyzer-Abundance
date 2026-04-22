@@ -67,19 +67,18 @@ function LoginContent() {
             textAlign: 'center',
           }}>
             {/* Logo / brand */}
-            <div style={{
-              width: 52,
-              height: 52,
-              borderRadius: '50%',
-              background: 'var(--s2)',
-              border: '1.5px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.5rem',
-              margin: '0 auto 20px',
-            }}>
-              📊
+            <div style={{ margin: '0 auto 20px', textAlign: 'center' }}>
+              <img
+                src="/logo-navbar.png"
+                alt="Abundance Financial Services"
+                style={{
+                  height: 52,
+                  width: 'auto',
+                  objectFit: 'contain',
+                  display: 'block',
+                  margin: '0 auto',
+                }}
+              />
             </div>
 
             <h1 style={{
