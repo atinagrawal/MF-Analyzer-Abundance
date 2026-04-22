@@ -41,7 +41,7 @@ export default function CasTrackerLayout({ children }) {
         "name": "Is it safe to upload my CAS PDF with my PAN password?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. The decryption and parsing are done entirely in temporary, isolated serverless functions. We never store your PDF, your password, or your portfolio data."
+          "text": "Yes. The PDF is parsed in an isolated serverless function and deleted immediately after. Your password is never stored. For signed-in users, the parsed portfolio data (not the PDF) is saved privately to your account so you can access it without re-uploading — only you and your AMFI-registered distributor can view it."
         }
       },
       {
