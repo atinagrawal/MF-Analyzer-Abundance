@@ -37,7 +37,8 @@ function buildEmail({ url, host }) {
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafb;padding:40px 16px;">
 <tr><td align="center"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
   <tr><td align="center" style="padding-bottom:24px;">
-    <div style="font-size:22px;font-weight:900;color:${brand};letter-spacing:-.5px;">Abundance Financial Services</div>
+    <img src="https://mfcalc.getabundance.in/logo-192.png" alt="Abundance Financial Services" width="80" height="80" style="display:block;margin:0 auto 14px;border-radius:14px;border:1.5px solid #e2e8f0;" />
+    <div style="font-size:20px;font-weight:900;color:${brand};letter-spacing:-.5px;">Abundance Financial Services</div>
     <div style="font-size:12px;color:${muted};margin-top:4px;font-family:'Courier New',monospace;">ARN-251838 · Haldwani, Uttarakhand</div>
   </td></tr>
   <tr><td style="background:#fff;border-radius:12px;border:1.5px solid #e2e8f0;border-top:4px solid ${brand};padding:36px 32px;box-shadow:0 4px 20px rgba(0,0,0,.06);">
