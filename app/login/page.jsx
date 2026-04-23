@@ -89,7 +89,7 @@ function LoginContent() {
     setEmailStep('sending');
     setErrMsg('');
     try {
-      const res = await signIn('nodemailer', { email: trimmed, callbackUrl: from, redirect: false });
+      const res = await signIn('resend', { email: trimmed, callbackUrl: from, redirect: false });
       if (res?.error) {
         setEmailStep('error');
         setErrMsg(res.error === 'EmailSignin'
