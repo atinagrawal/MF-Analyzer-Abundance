@@ -3,29 +3,25 @@
  *
  * Sign-in methods:
  *   1. Google OAuth  — for users with Google/Gmail accounts
- *   2. Email magic link (Nodemailer/Microsoft 365) — for all other users
+ *   2. Email magic link (Resend) — for all other users
  *
- * Microsoft 365 SMTP settings:
- *   host: smtp.office365.com, port: 587, STARTTLS
+ * Resend setup (one-time):
+ *   1. Create account at resend.com
+ *   2. Add domain getabundance.in → copy the DNS records they give you → add to your DNS
+ *   3. Create an API key → copy it
+ *   4. Add to Vercel env vars:
+ *        RESEND_KEY = re_xxxxxxxxxxxx  (the API key)
+ *   No other env vars needed for email.
  *
- * Required env vars (add in Vercel → Settings → Environment Variables):
- *   EMAIL_FROM            — sender address, e.g. noreply@getabundance.in
- *   EMAIL_SERVER_PASSWORD — M365 password (or App Password if MFA is on)
- *
- * Required DB table (run once in Vercel Postgres if not present):
- *   CREATE TABLE IF NOT EXISTS verification_token (
- *     identifier TEXT NOT NULL,
- *     expires    TIMESTAMPTZ NOT NULL,
- *     token      TEXT NOT NULL,
- *     PRIMARY KEY (identifier, token)
- *   );
+ * Required DB table (already created):
+ *   verification_token — already confirmed EXISTS
  *
  * Role values: 'client' | 'distributor' | 'admin'
  */
 
 import NextAuth        from 'next-auth';
 import Google          from 'next-auth/providers/google';
-import Nodemailer      from 'next-auth/providers/nodemailer';
+import Resend          from 'next-auth/providers/resend';
 import PostgresAdapter from '@auth/pg-adapter';
 import pool            from '@/lib/db';
 
@@ -75,38 +71,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
 
-    // 2. Magic link via Microsoft 365 SMTP
-    Nodemailer({
-      server: {
-        host:       'smtp.office365.com',
-        port:       587,
-        secure:     false,      // STARTTLS — NOT SSL on 465
-        requireTLS: true,
-        auth: {
-          user: process.env.EMAIL_FROM,
-          pass: process.env.EMAIL_SERVER_PASSWORD,
-        },
-        tls: { rejectUnauthorized: true },
-        connectionTimeout: 10000,
-        greetingTimeout:   10000,
-      },
-      from: process.env.EMAIL_FROM,
+    // 2. Email magic link via Resend
+    Resend({
+      apiKey: process.env.RESEND_KEY,
+      from:   'Abundance Financial Services <noreply@getabundance.in>',
 
+      // Branded email template
       async sendVerificationRequest({ identifier: email, url, provider }) {
-        const nodemailer = (await import('nodemailer')).default;
-        const transport  = nodemailer.createTransport(provider.server);
-        const host       = new URL(url).host;
+        const host = new URL(url).host;
         const { subject, html, text } = buildEmail({ url, host });
 
-        const result = await transport.sendMail({
-          to:      email,
-          from:    `Abundance Financial Services <${provider.from}>`,
-          subject, html, text,
+        const res = await fetch('https://api.resend.com/emails', {
+          method:  'POST',
+          headers: {
+            'Authorization': `Bearer ${provider.apiKey}`,
+            'Content-Type':  'application/json',
+          },
+          body: JSON.stringify({ from: provider.from, to: email, subject, html, text }),
         });
 
-        const failed = (result.rejected ?? []).concat(result.pending ?? []).filter(Boolean);
-        if (failed.length) {
-          throw new Error(`Email delivery failed for: ${failed.join(', ')}`);
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(`Resend error ${res.status}: ${JSON.stringify(error)}`);
         }
       },
     }),
