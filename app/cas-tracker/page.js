@@ -127,13 +127,17 @@ function CasTrackerInner() {
   const [manualHoldings, setManualHoldings] = useState([]);
   const [sifNavMap,      setSifNavMap]      = useState({}); // scheme_id → nav
   const [manualLoading,  setManualLoading]  = useState(false);
+  const [viewFilter,     setViewFilter]     = useState('all'); // 'all' | 'mf' | 'sif'
+  const [viewedUserId,   setViewedUserId]   = useState('');   // client userId when admin viewing
 
   // Auto-load a portfolio passed via ?load=blobKey (admin viewing another user's data)
   useEffect(() => {
     if (authStatus !== 'authenticated') return;
     const loadKey = searchParams.get('load');
     if (!loadKey || !isAdmin) return;
-    // Small delay so processCasData has the session in scope
+    // Extract client userId from blob key: cas/{userId}/{ts}-{file}.json
+    const parts = loadKey.split('/');
+    if (parts.length >= 2) setViewedUserId(parts[1]);
     const t = setTimeout(() => loadSavedPortfolio(loadKey), 100);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -151,15 +155,18 @@ function CasTrackerInner() {
   }, [isSignedIn]);
 
   // Fetch manual holdings + SIF NAVs when signed in
+  // Admin viewing a client: use ?userId={clientId} to get their holdings
   useEffect(() => {
     if (!isSignedIn) return;
     setManualLoading(true);
-    fetch('/api/holdings')
+    const url = (isAdmin && viewedUserId)
+      ? `/api/holdings?userId=${viewedUserId}`
+      : '/api/holdings';
+    fetch(url)
       .then(r => r.json())
       .then(async d => {
         const holdings = d.holdings || [];
         setManualHoldings(holdings);
-        // Fetch SIF NAVs if any SIF-type holdings exist
         const hasSIF = holdings.some(h => h.fund_type === 'SIF');
         if (hasSIF) {
           const r2 = await fetch('/api/sif-nav').catch(() => null);
@@ -167,8 +174,8 @@ function CasTrackerInner() {
             const sifData = await r2.json();
             const navMap = {};
             (sifData.schemes || []).forEach(s => {
-              navMap[s.scheme_id] = s.nav;  // SIF-33 → 9.95
-              if (s.isin_po) navMap[s.isin_po] = s.nav;  // ISIN fallback
+              navMap[s.scheme_id] = s.nav;
+              if (s.isin_po) navMap[s.isin_po] = s.nav;
             });
             setSifNavMap(navMap);
           }
@@ -176,7 +183,7 @@ function CasTrackerInner() {
       })
       .catch(() => {})
       .finally(() => setManualLoading(false));
-  }, [isSignedIn]);
+  }, [isSignedIn, isAdmin, viewedUserId]);
 
   async function processCasData(data, cached) {
     const portfolioData = {};
@@ -675,227 +682,230 @@ function CasTrackerInner() {
               </div>
             )}
 
-            <div className="stat-grid animate-stagger">
-              <div className="stat-card">
-                <div className="sc-label">Current Value</div>
-                <div className="sc-val">₹{fmtINR(currentInfo.current)}</div>
-              </div>
-
-              <div className="stat-card">
-                <div className="sc-label">Total Invested</div>
-                <div className="sc-val" style={{ color: 'var(--text2)' }}>₹{fmtINR(currentInfo.invested)}</div>
-              </div>
-
-              <div className="stat-card gain-card">
-                <div className={`gain-accent ${isProfit ? 'pos' : 'neg'}`}></div>
-                <div className="sc-label">Wealth Gain</div>
-                <div className="gain-row">
-                  <div className={`sc-val${isProfit ? '' : ' neg'}`} style={{ fontSize: '1.5rem' }}>
-                    {isProfit ? '+' : ''}₹{fmtINR(gain)}
+{/* ── Merged totals including manual holdings ── */}
+            {(() => {
+              // Map manual holdings to comparable shape for totals
+              const manualMapped = manualHoldings.map(h => {
+                const pu = parseFloat(h.purchase_nav), u = parseFloat(h.units);
+                const ln = h.fund_type === 'SIF' ? (sifNavMap[h.amfi_code] ?? null) : null;
+                return { value: (ln ?? pu) * u, invested: pu * u };
+              });
+              const totalCurrent  = currentInfo.current  + manualMapped.reduce((s,h) => s + h.value,    0);
+              const totalInvested = currentInfo.invested  + manualMapped.reduce((s,h) => s + h.invested, 0);
+              const totalGain     = totalCurrent - totalInvested;
+              const totalGainPct  = totalInvested > 0 ? ((totalGain / totalInvested) * 100).toFixed(2) : '0.00';
+              const tProfit       = totalGain >= 0;
+              return (
+                <div className="stat-grid animate-stagger">
+                  <div className="stat-card">
+                    <div className="sc-label">Current Value</div>
+                    <div className="sc-val">₹{fmtINR(totalCurrent)}</div>
                   </div>
-                  <div className={`gain-pct ${isProfit ? 'pos' : 'neg'}`}>
-                    {isProfit ? '+' : ''}{gainPct}%
+                  <div className="stat-card">
+                    <div className="sc-label">Total Invested</div>
+                    <div className="sc-val" style={{ color: 'var(--text2)' }}>₹{fmtINR(totalInvested)}</div>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="fund-grid animate-stagger">
-              {currentInfo.holdings.map((fund, idx) => {
-                const fGain = fund.value - fund.invested;
-                const fGainPct = fund.invested > 0 ? ((fGain / fund.invested) * 100).toFixed(1) : '0.0';
-                const fProfit = fGain >= 0;
-                const avgNavDisplay = fund.avgPurchaseNav > 0 ? `₹${fmtDec(fund.avgPurchaseNav, 2)}` : '—';
-
-                return (
-                  <div key={idx} className="fund-card">
-                    <div>
-                      <div className="fund-name">{fund.name}</div>
-                      
-                      <div className="folio-meta">
-                        <div className="folio-row">
-                          <div>
-                            <span className="label">Folio</span><br />
-                            <span className="value">{fund.folio || 'N/A'}</span>
-                          </div>
-                          <div>
-                            <span className="label">Nominee</span><br />
-                            <span className="value">{fund.nominee}</span>
-                          </div>
-                          <div className="folio-full">
-                            <span className="label">Advisor</span><br />
-                            <span className="value">{fund.advisor}</span>
-                          </div>
-                        </div>
+                  <div className="stat-card gain-card">
+                    <div className={`gain-accent ${tProfit ? 'pos' : 'neg'}`}></div>
+                    <div className="sc-label">Wealth Gain</div>
+                    <div className="gain-row">
+                      <div className={`sc-val${tProfit ? '' : ' neg'}`} style={{ fontSize: '1.5rem' }}>
+                        {tProfit ? '+' : ''}₹{fmtINR(totalGain)}
                       </div>
-
-                      {fund.isELSS && (
-                        fund.lockedValue > 0 ? (
-                          <div className="elss-badge elss-locked">
-                            🔒 ₹{fmtINR(fund.lockedValue)} Locked
-                          </div>
-                        ) : (
-                          <div className="elss-badge elss-unlocked">
-                            🔓 ELSS Unlocked
-                          </div>
-                        )
-                      )}
-                    </div>
-
-                    <div className="nav-grid">
-                      <div className="nav-left">
-                        <div className="nav-item">
-                          <div className="ni-label">
-                            Avg Buy NAV <span className="cas-tag">(CAS)</span>
-                          </div>
-                          <div className="ni-val">{avgNavDisplay}</div>
-                        </div>
-                        
-                        <div className="nav-item">
-                          <div className="ni-label">
-                            Live NAV {fund.isLive && <span className="live-indicator"></span>}
-                          </div>
-                          <div className="ni-val">₹{fmtDec(fund.liveNav)}</div>
-                        </div>
-                        
-                        <div className="nav-item">
-                          <div className="ni-label">Units</div>
-                          <div className="ni-val sm">{fmtDec(fund.units)}</div>
-                        </div>
-                        
-                        <div className="nav-item">
-                          <div className="ni-label">Invested</div>
-                          <div className="ni-val sm">₹{fmtINR(fund.invested)}</div>
-                        </div>
-                      </div>
-
-                      <div className="nav-right-col">
-                        <div className="ni-label">Current Value</div>
-                        <div className="ni-val">₹{fmtINR(fund.value)}</div>
-                        <div className={`fund-gain-pct ${fProfit ? 'pos' : 'neg'}`}>
-                          {fProfit ? '+' : ''}{fGainPct}%
-                        </div>
+                      <div className={`gain-pct ${tProfit ? 'pos' : 'neg'}`}>
+                        {tProfit ? '+' : ''}{totalGainPct}%
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-
-            {/* ── Additional Holdings (manual, incl. SIF) ──────────────────── */}
-            {isSignedIn && (manualLoading || manualHoldings.length > 0) && (
-              <div style={{ marginTop: 28 }}>
-                <div style={{
-                  fontSize: '.62rem', fontWeight: 800, letterSpacing: '1.5px',
-                  textTransform: 'uppercase', color: 'var(--muted)',
-                  fontFamily: "'JetBrains Mono', monospace", marginBottom: 14,
-                }}>
-                  📋 Additional Holdings
                 </div>
+              );
+            })()}
 
-                {manualLoading ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 14 }}>
-                    {[1,2].map(i => <div key={i} className="sk" style={{ height: 140, borderRadius: 16 }} />)}
-                  </div>
-                ) : (
-                  <div className="fund-grid">
-                    {manualHoldings.map((h, idx) => {
-                      // Resolve live NAV: SIF uses sifNavMap by amfi_code (scheme_id like SIF-33)
-                      // Other types: amfi_code is a regular AMFI MF code — no live NAV in this view
-                      const isSIF = h.fund_type === 'SIF';
-                      const liveNav = isSIF
-                        ? (sifNavMap[h.amfi_code] ?? null)
-                        : null;  // MF live NAV via AMFI not fetched here (CAS holdings have it)
-                      const purchaseNav = parseFloat(h.purchase_nav);
-                      const units       = parseFloat(h.units);
-                      const currentVal  = liveNav != null ? units * liveNav : units * purchaseNav;
-                      const invested    = units * purchaseNav;
-                      const gain        = currentVal - invested;
-                      const gainPct     = invested > 0 ? ((gain / invested) * 100).toFixed(1) : '0.0';
-                      const isProfit    = gain >= 0;
-                      const hasLive     = liveNav != null;
+            {/* ── Filter toggle (only when SIF holdings exist) ── */}
+            {(() => {
+              const hasSIF = manualHoldings.some(h => h.fund_type === 'SIF');
+              if (!hasSIF || manualLoading) return null;
+              return (
+                <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+                  {[['all','All'],['mf','Mutual Funds'],['sif','SIF']].map(([key,label]) => (
+                    <button key={key} onClick={() => setViewFilter(key)}
+                      style={{
+                        padding: '6px 16px', borderRadius: 20, border: '1.5px solid',
+                        fontFamily: 'Raleway, sans-serif', fontSize: '.72rem', fontWeight: 700,
+                        cursor: 'pointer', transition: 'all .15s',
+                        borderColor: viewFilter === key ? 'var(--g2)' : 'var(--border)',
+                        background:  viewFilter === key ? 'var(--g-xlight)' : 'var(--s2)',
+                        color:       viewFilter === key ? 'var(--g1)' : 'var(--muted)',
+                      }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
 
-                      return (
-                        <div key={h.id} className="fund-card">
-                          <div>
-                            <div className="fund-name">{h.fund_name}</div>
-                            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+            {/* ── Unified fund grid: CAS + manual holdings ── */}
+            {(() => {
+              // Normalise manual holdings into the same shape as CAS holdings
+              const manualMapped = manualHoldings.map(h => {
+                const pu = parseFloat(h.purchase_nav);
+                const u  = parseFloat(h.units);
+                const ln = h.fund_type === 'SIF' ? (sifNavMap[h.amfi_code] ?? null) : null;
+                const val = (ln ?? pu) * u;
+                return {
+                  // shared display fields
+                  name:          h.fund_name,
+                  folio:         h.folio || null,
+                  units:         u,
+                  liveNav:       ln ?? pu,
+                  isLive:        ln != null,
+                  invested:      pu * u,
+                  value:         val,
+                  avgPurchaseNav:pu,
+                  isELSS:        false,
+                  lockedValue:   0,
+                  nominee:       null,
+                  advisor:       null,
+                  notes:         h.notes || null,
+                  // classification
+                  source:        'manual',
+                  fund_type:     h.fund_type,
+                };
+              });
+
+              const casHoldings = (currentInfo.holdings || []).map(h => ({
+                ...h, source: 'cas', fund_type: 'Mutual Fund',
+              }));
+
+              const allHoldings = [...casHoldings, ...manualMapped];
+              const filtered    = viewFilter === 'sif' ? allHoldings.filter(h => h.fund_type === 'SIF')
+                                : viewFilter === 'mf'  ? allHoldings.filter(h => h.fund_type !== 'SIF')
+                                : allHoldings;
+
+              return (
+                <div className="fund-grid animate-stagger">
+                  {filtered.map((fund, idx) => {
+                    const fGain    = fund.value - fund.invested;
+                    const fGainPct = fund.invested > 0 ? ((fGain / fund.invested) * 100).toFixed(1) : '0.0';
+                    const fProfit  = fGain >= 0;
+                    const avgNavDisplay = fund.avgPurchaseNav > 0 ? `₹${fmtDec(fund.avgPurchaseNav, 2)}` : '—';
+                    const isManual = fund.source === 'manual';
+
+                    return (
+                      <div key={idx} className="fund-card">
+                        <div>
+                          <div className="fund-name">{fund.name}</div>
+
+                          {/* Type + source badges */}
+                          <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
+                            {fund.fund_type === 'SIF' && (
                               <span style={{
-                                fontSize: '.52rem', fontWeight: 800, padding: '2px 7px',
-                                borderRadius: 4, border: '1px solid var(--border)',
-                                background: isSIF ? '#e0f2f1' : 'var(--s2)',
-                                color: isSIF ? '#00695c' : 'var(--muted)',
-                                fontFamily: "'JetBrains Mono', monospace",
-                                letterSpacing: '.5px', textTransform: 'uppercase',
-                              }}>
-                                {h.fund_type}
-                              </span>
-                              <span style={{
-                                fontSize: '.52rem', fontWeight: 700, padding: '2px 7px',
-                                borderRadius: 4, background: 'var(--s2)',
-                                border: '1px solid var(--border)', color: 'var(--muted)',
-                                fontFamily: "'JetBrains Mono', monospace",
-                              }}>
-                                Manual
-                              </span>
-                            </div>
-                            {h.folio && (
-                              <div className="folio-meta" style={{ marginTop: 8 }}>
-                                <div className="folio-row">
-                                  <div>
-                                    <span className="label">Folio</span><br />
-                                    <span className="value">{h.folio}</span>
-                                  </div>
-                                </div>
-                              </div>
+                                fontSize: '.52rem', fontWeight: 800, padding: '2px 7px', borderRadius: 4,
+                                background: '#e0f2f1', color: '#00695c', border: '1px solid #b2dfdb',
+                                fontFamily: "'JetBrains Mono', monospace", letterSpacing: '.5px',
+                              }}>SIF</span>
                             )}
-                            {h.notes && (
-                              <div style={{ fontSize: '.62rem', color: 'var(--muted)', marginTop: 6, lineHeight: 1.4 }}>
-                                {h.notes}
-                              </div>
+                            {/* Admin-only badge: admin can see source, clients cannot */}
+                            {isAdmin && isManual && (
+                              <span style={{
+                                fontSize: '.52rem', fontWeight: 800, padding: '2px 7px', borderRadius: 4,
+                                background: '#fff8e1', color: '#f57f17', border: '1px solid #ffe082',
+                                fontFamily: "'JetBrains Mono', monospace", letterSpacing: '.5px',
+                              }}>Admin Added</span>
                             )}
                           </div>
 
-                          <div className="nav-grid">
-                            <div className="nav-left">
-                              <div className="nav-item">
-                                <div className="ni-label">Purchase NAV</div>
-                                <div className="ni-val">₹{fmtDec(purchaseNav)}</div>
-                              </div>
-                              <div className="nav-item">
-                                <div className="ni-label">
-                                  {hasLive ? 'Live NAV' : 'Est. NAV'}{' '}
-                                  {hasLive && <span className="live-indicator"></span>}
-                                  {!hasLive && <span className="cas-tag">(purchase)</span>}
+                          {/* CAS-only metadata */}
+                          {!isManual && (
+                            <div className="folio-meta">
+                              <div className="folio-row">
+                                <div>
+                                  <span className="label">Folio</span><br />
+                                  <span className="value">{fund.folio || 'N/A'}</span>
                                 </div>
-                                <div className="ni-val">₹{fmtDec(liveNav ?? purchaseNav)}</div>
-                              </div>
-                              <div className="nav-item">
-                                <div className="ni-label">Units</div>
-                                <div className="ni-val sm">{fmtDec(units)}</div>
-                              </div>
-                              <div className="nav-item">
-                                <div className="ni-label">Invested</div>
-                                <div className="ni-val sm">₹{fmtINR(invested)}</div>
+                                <div>
+                                  <span className="label">Nominee</span><br />
+                                  <span className="value">{fund.nominee}</span>
+                                </div>
+                                <div className="folio-full">
+                                  <span className="label">Advisor</span><br />
+                                  <span className="value">{fund.advisor}</span>
+                                </div>
                               </div>
                             </div>
-                            <div className="nav-right-col">
+                          )}
+
+                          {/* Manual-only: folio if present */}
+                          {isManual && fund.folio && (
+                            <div className="folio-meta">
+                              <div className="folio-row">
+                                <div>
+                                  <span className="label">Folio</span><br />
+                                  <span className="value">{fund.folio}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Manual: notes */}
+                          {isManual && fund.notes && (
+                            <div style={{ fontSize: '.62rem', color: 'var(--muted)', marginTop: 6, lineHeight: 1.4 }}>
+                              {fund.notes}
+                            </div>
+                          )}
+
+                          {/* ELSS badges (CAS only) */}
+                          {!isManual && fund.isELSS && (
+                            fund.lockedValue > 0 ? (
+                              <div className="elss-badge elss-locked">
+                                🔒 ₹{fmtINR(fund.lockedValue)} Locked
+                              </div>
+                            ) : (
+                              <div className="elss-badge elss-unlocked">
+                                🔓 ELSS Unlocked
+                              </div>
+                            )
+                          )}
+                        </div>
+
+                        <div className="nav-grid">
+                          <div className="nav-left">
+                            <div className="nav-item">
                               <div className="ni-label">
-                                {hasLive ? 'Current Value' : 'Approx. Value'}
+                                {isManual ? 'Purchase NAV' : <>Avg Buy NAV <span className="cas-tag">(CAS)</span></>}
                               </div>
-                              <div className="ni-val">₹{fmtINR(currentVal)}</div>
-                              <div className={`fund-gain-pct ${isProfit ? 'pos' : 'neg'}`}>
-                                {isProfit ? '+' : ''}{gainPct}%
+                              <div className="ni-val">{avgNavDisplay}</div>
+                            </div>
+                            <div className="nav-item">
+                              <div className="ni-label">
+                                {isManual && !fund.isLive ? 'Est. NAV' : 'Live NAV'}
+                                {fund.isLive && <span className="live-indicator"></span>}
                               </div>
+                              <div className="ni-val">₹{fmtDec(fund.liveNav)}</div>
+                            </div>
+                            <div className="nav-item">
+                              <div className="ni-label">Units</div>
+                              <div className="ni-val sm">{fmtDec(fund.units)}</div>
+                            </div>
+                            <div className="nav-item">
+                              <div className="ni-label">Invested</div>
+                              <div className="ni-val sm">₹{fmtINR(fund.invested)}</div>
+                            </div>
+                          </div>
+                          <div className="nav-right-col">
+                            <div className="ni-label">Current Value</div>
+                            <div className="ni-val">₹{fmtINR(fund.value)}</div>
+                            <div className={`fund-gain-pct ${fProfit ? 'pos' : 'neg'}`}>
+                              {fProfit ? '+' : ''}{fGainPct}%
                             </div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </section>
         )}
       </div>
