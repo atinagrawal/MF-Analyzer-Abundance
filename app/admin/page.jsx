@@ -486,11 +486,16 @@ function ManualHoldingsTab() {
   const [users, setUsers]           = useState([]);
   const [selUserId, setSelUserId]   = useState('');
   const [holdings, setHoldings]     = useState([]);
+  const [navMap, setNavMap]         = useState({});   // scheme_id/amfi_code → current nav
   const [loading, setLoading]       = useState(false);
   const [saving, setSaving]         = useState(false);
   const [msg, setMsg]               = useState({ type: '', text: '' });
   const [showForm, setShowForm]     = useState(false);
-  const [editIdx, setEditIdx]       = useState(null); // null = new
+  const [editIdx, setEditIdx]       = useState(null);
+  // SIF scheme search
+  const [sifSchemes, setSifSchemes] = useState([]);   // all 53 SIF schemes
+  const [sifSearch, setSifSearch]   = useState('');   // search query
+  const [showSifDrop, setShowSifDrop] = useState(false);
 
   const emptyForm = {
     fund_name: '', amfi_code: '', fund_type: 'Equity MF',
@@ -506,13 +511,61 @@ function ManualHoldingsTab() {
       .catch(() => {});
   }, []);
 
-  // Load holdings when user selected
+  // Load SIF schemes once (for the search dropdown)
   useEffect(() => {
-    if (!selUserId) { setHoldings([]); return; }
+    fetch('/api/sif-nav')
+      .then(r => r.json())
+      .then(d => setSifSchemes(d.schemes || []))
+      .catch(() => {});
+  }, []);
+
+  // Load holdings + resolve live NAVs when user selected
+  useEffect(() => {
+    if (!selUserId) { setHoldings([]); setNavMap({}); return; }
     setLoading(true);
     fetch(`/api/admin/holdings?userId=${selUserId}`)
       .then(r => r.json())
-      .then(d => setHoldings(d.holdings || []))
+      .then(async d => {
+        const rows = d.holdings || [];
+        setHoldings(rows);
+        // Build NAV map: SIF from /api/sif-nav, others from AMFI
+        const nm = {};
+        const hasSIF   = rows.some(h => h.fund_type === 'SIF' && h.amfi_code);
+        const mfCodes  = rows
+          .filter(h => h.fund_type !== 'SIF' && h.amfi_code)
+          .map(h => h.amfi_code.trim())
+          .filter(Boolean);
+
+        // SIF NAVs
+        if (hasSIF) {
+          try {
+            const r2 = await fetch('/api/sif-nav');
+            if (r2.ok) {
+              const sd = await r2.json();
+              (sd.schemes || []).forEach(s => {
+                nm[s.scheme_id] = s.nav;
+              });
+            }
+          } catch {}
+        }
+
+        // MF NAVs from AMFI (individual calls, concurrently, capped at 10)
+        if (mfCodes.length) {
+          await Promise.allSettled(
+            mfCodes.slice(0, 10).map(async code => {
+              try {
+                const r3 = await fetch(`https://api.mfapi.in/mf/${code}/latest`);
+                if (r3.ok) {
+                  const md = await r3.json();
+                  const nav = parseFloat(md?.data?.[0]?.nav);
+                  if (!isNaN(nav)) nm[code] = nav;
+                }
+              } catch {}
+            })
+          );
+        }
+        setNavMap(nm);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [selUserId]);
@@ -520,6 +573,8 @@ function ManualHoldingsTab() {
   function openNew() {
     setForm(emptyForm);
     setEditIdx(null);
+    setSifSearch('');
+    setShowSifDrop(false);
     setShowForm(true);
   }
 
@@ -535,6 +590,8 @@ function ManualHoldingsTab() {
       folio:         h.folio         || '',
       notes:         h.notes         || '',
     });
+    setSifSearch(h.fund_name || '');
+    setShowSifDrop(false);
     setEditIdx(idx);
     setShowForm(true);
   }
@@ -573,19 +630,40 @@ function ManualHoldingsTab() {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
+      // Update local holdings and re-resolve NAV for new holding
+      let updated;
       if (editIdx !== null) {
-        setHoldings(prev => prev.map((h, i) => i === editIdx ? d.holding : h));
+        updated = holdings.map((h, i) => i === editIdx ? d.holding : h);
       } else {
-        setHoldings(prev => [...prev, d.holding]);
+        updated = [...holdings, d.holding];
+      }
+      setHoldings(updated);
+      // If new MF code was added, fetch its NAV
+      if (payload.fund_type !== 'SIF' && payload.amfi_code && !navMap[payload.amfi_code]) {
+        try {
+          const r2 = await fetch(`https://api.mfapi.in/mf/${payload.amfi_code}/latest`);
+          if (r2.ok) {
+            const md = await r2.json();
+            const nav = parseFloat(md?.data?.[0]?.nav);
+            if (!isNaN(nav)) setNavMap(prev => ({ ...prev, [payload.amfi_code]: nav }));
+          }
+        } catch {}
       }
       setMsg({ type: 'ok', text: editIdx !== null ? 'Holding updated' : 'Holding added' });
       setShowForm(false);
+      setSifSearch('');
     } catch (err) {
       setMsg({ type: 'err', text: err.message });
     } finally {
       setSaving(false);
     }
   }
+
+  // SIF scheme filtered list
+  const sifFiltered = sifSchemes.filter(s => {
+    const q = sifSearch.toLowerCase();
+    return !q || s.nav_name.toLowerCase().includes(q) || s.sif_name.toLowerCase().includes(q) || s.scheme_id.toLowerCase().includes(q);
+  }).slice(0, 12);
 
   return (
     <div>
@@ -628,7 +706,7 @@ function ManualHoldingsTab() {
         </div>
       )}
 
-      {/* Add / Edit form */}
+      {/* ── Add / Edit form ─────────────────────────────────────────────── */}
       {showForm && (
         <div className="upload-card" style={{ margin: '0 0 20px', maxWidth: 600 }}>
           <div style={{ fontSize: '.78rem', fontWeight: 800, color: 'var(--g1)', marginBottom: 16 }}>
@@ -637,18 +715,15 @@ function ManualHoldingsTab() {
           <form onSubmit={handleSave}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px' }}>
 
-              <div style={{ gridColumn: '1/-1' }}>
-                <div className="field-label">Fund Name *</div>
-                <input type="text" required value={form.fund_name}
-                  onChange={e => setForm(f => ({ ...f, fund_name: e.target.value }))}
-                  placeholder="e.g. Mirae Asset Large Cap Fund — Direct Growth"
-                  className="field-input" />
-              </div>
-
               <div>
                 <div className="field-label">Fund Type *</div>
                 <select value={form.fund_type}
-                  onChange={e => setForm(f => ({ ...f, fund_type: e.target.value }))}
+                  onChange={e => {
+                    const t = e.target.value;
+                    setForm(f => ({ ...f, fund_type: t, amfi_code: '', fund_name: t === 'SIF' ? '' : f.fund_name }));
+                    setSifSearch('');
+                    setShowSifDrop(false);
+                  }}
                   style={{
                     width: '100%', padding: '10px 14px',
                     border: '1.5px solid var(--border2)', borderRadius: 10,
@@ -659,13 +734,87 @@ function ManualHoldingsTab() {
                 </select>
               </div>
 
-              <div>
-                <div className="field-label">AMFI Code</div>
-                <input type="text" value={form.amfi_code}
-                  onChange={e => setForm(f => ({ ...f, amfi_code: e.target.value }))}
-                  placeholder="e.g. 118834 (for live NAV)"
-                  className="field-input" />
-              </div>
+              {/* SIF: searchable picker replaces both fund_name and amfi_code */}
+              {form.fund_type === 'SIF' ? (
+                <div style={{ gridColumn: '1/-1', position: 'relative' }}>
+                  <div className="field-label">SIF Scheme *</div>
+                  <input
+                    type="text"
+                    required
+                    value={sifSearch}
+                    onChange={e => {
+                      setSifSearch(e.target.value);
+                      setShowSifDrop(true);
+                      // clear selection if user edits after picking
+                      setForm(f => ({ ...f, fund_name: '', amfi_code: '' }));
+                    }}
+                    onFocus={() => setShowSifDrop(true)}
+                    placeholder="Search by fund name or scheme ID (e.g. Magnum, SIF-14)"
+                    className="field-input"
+                    autoComplete="off"
+                  />
+                  {form.amfi_code && (
+                    <div style={{
+                      marginTop: 4, fontSize: '.62rem', color: 'var(--g1)', fontWeight: 700,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}>
+                      ✓ {form.amfi_code} selected — {form.fund_name}
+                    </div>
+                  )}
+                  {showSifDrop && sifFiltered.length > 0 && !form.amfi_code && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+                      background: 'var(--surface)', border: '1.5px solid var(--border2)',
+                      borderRadius: 10, boxShadow: 'var(--shadow)',
+                      maxHeight: 280, overflowY: 'auto', marginTop: 2,
+                    }}>
+                      {sifFiltered.map(s => (
+                        <button
+                          key={s.scheme_id}
+                          type="button"
+                          onClick={() => {
+                            setForm(f => ({ ...f, fund_name: s.nav_name, amfi_code: s.scheme_id }));
+                            setSifSearch(s.nav_name);
+                            setShowSifDrop(false);
+                          }}
+                          style={{
+                            display: 'block', width: '100%', padding: '10px 14px',
+                            textAlign: 'left', border: 'none', borderBottom: '1px solid var(--border)',
+                            background: 'transparent', cursor: 'pointer',
+                            fontFamily: 'Raleway, sans-serif',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--g-xlight)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <div style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--text)' }}>
+                            {s.nav_name}
+                          </div>
+                          <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>
+                            {s.scheme_id} · {s.sif_name} · NAV ₹{s.nav} ({s.nav_date})
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <div className="field-label">Fund Name *</div>
+                    <input type="text" required value={form.fund_name}
+                      onChange={e => setForm(f => ({ ...f, fund_name: e.target.value }))}
+                      placeholder="e.g. Mirae Asset Large Cap Fund — Direct Growth"
+                      className="field-input" />
+                  </div>
+                  <div>
+                    <div className="field-label">AMFI Code (for live NAV)</div>
+                    <input type="text" value={form.amfi_code}
+                      onChange={e => setForm(f => ({ ...f, amfi_code: e.target.value }))}
+                      placeholder="e.g. 118834"
+                      className="field-input" />
+                  </div>
+                </>
+              )}
 
               <div>
                 <div className="field-label">Units *</div>
@@ -702,7 +851,7 @@ function ManualHoldingsTab() {
                 <div className="field-label">Notes</div>
                 <input type="text" value={form.notes}
                   onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                  placeholder="e.g. SIF — manually entered, pre-statement purchase"
+                  placeholder="e.g. pre-statement purchase"
                   className="field-input" />
               </div>
             </div>
@@ -711,7 +860,8 @@ function ManualHoldingsTab() {
               <button type="submit" className="submit-btn" disabled={saving} style={{ flex: 1 }}>
                 {saving ? 'Saving…' : (editIdx !== null ? 'Update Holding' : 'Add Holding')}
               </button>
-              <button type="button" onClick={() => { setShowForm(false); setMsg({ type: '', text: '' }); }}
+              <button type="button"
+                onClick={() => { setShowForm(false); setMsg({ type: '', text: '' }); setSifSearch(''); setShowSifDrop(false); }}
                 style={{
                   padding: '12px 20px', border: '1.5px solid var(--border)',
                   borderRadius: 10, background: 'var(--s2)', cursor: 'pointer',
@@ -725,70 +875,99 @@ function ManualHoldingsTab() {
         </div>
       )}
 
-      {/* Holdings table */}
+      {/* ── Holdings table ───────────────────────────────────────────────── */}
       {selUserId && !loading && holdings.length > 0 && (
         <div className="table-card">
           <div className="table-wrap">
-            <table className="idx-table" style={{ minWidth: 700 }}>
+            <table className="idx-table" style={{ minWidth: 820 }}>
               <thead>
                 <tr>
                   <th style={{ textAlign: 'left', paddingLeft: 16 }}>Fund</th>
                   <th>Type</th>
                   <th>Units</th>
                   <th>Purchase NAV</th>
-                  <th>Purchase Date</th>
-                  <th>Folio</th>
+                  <th>Current NAV</th>
+                  <th>Current Value</th>
+                  <th>Gain / Loss</th>
                   <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {holdings.map((h, i) => (
-                  <tr key={h.id}>
-                    <td style={{ textAlign: 'left', paddingLeft: 16 }}>
-                      <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text)' }}>{h.fund_name}</div>
-                      {h.notes && (
-                        <div style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 2 }}>{h.notes}</div>
-                      )}
-                    </td>
-                    <td>
-                      <span style={{
-                        fontSize: '.52rem', fontWeight: 800, padding: '2px 6px',
-                        borderRadius: 4, background: h.fund_type === 'SIF' ? '#e0f2f1' : 'var(--s2)',
-                        color: h.fund_type === 'SIF' ? '#00695c' : 'var(--muted)',
-                        border: '1px solid var(--border)',
-                        fontFamily: "'JetBrains Mono', monospace",
-                      }}>
-                        {h.fund_type}
-                      </span>
-                    </td>
-                    <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{parseFloat(h.units).toFixed(4)}</td>
-                    <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>₹{parseFloat(h.purchase_nav).toFixed(4)}</td>
-                    <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.65rem' }}>{fmtDate(h.purchase_date)}</td>
-                    <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.65rem' }}>{h.folio || '—'}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                        <button onClick={() => openEdit(i)}
-                          style={{
-                            padding: '3px 10px', borderRadius: 6, border: '1.5px solid var(--border)',
-                            background: 'var(--s2)', cursor: 'pointer', fontSize: '.65rem',
-                            fontWeight: 700, color: 'var(--g2)', fontFamily: 'Raleway, sans-serif',
-                          }}>
-                          Edit
-                        </button>
-                        <button onClick={() => handleDelete(h.id)}
-                          style={{
-                            padding: '3px 10px', borderRadius: 6, border: '1.5px solid #ffcdd2',
-                            background: 'var(--neg-bg)', cursor: 'pointer', fontSize: '.65rem',
-                            fontWeight: 700, color: 'var(--neg)', fontFamily: 'Raleway, sans-serif',
-                          }}>
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {holdings.map((h, i) => {
+                  const purchaseNav = parseFloat(h.purchase_nav);
+                  const units       = parseFloat(h.units);
+                  const liveNav     = h.amfi_code ? (navMap[h.amfi_code.trim()] ?? null) : null;
+                  const currentVal  = liveNav != null ? units * liveNav : units * purchaseNav;
+                  const invested    = units * purchaseNav;
+                  const gain        = currentVal - invested;
+                  const gainPct     = invested > 0 ? ((gain / invested) * 100).toFixed(2) : '0.00';
+                  const isProfit    = gain >= 0;
+                  const hasLive     = liveNav != null;
+
+                  return (
+                    <tr key={h.id}>
+                      <td style={{ textAlign: 'left', paddingLeft: 16 }}>
+                        <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text)' }}>{h.fund_name}</div>
+                        {h.notes && (
+                          <div style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 2 }}>{h.notes}</div>
+                        )}
+                      </td>
+                      <td>
+                        <span style={{
+                          fontSize: '.52rem', fontWeight: 800, padding: '2px 6px',
+                          borderRadius: 4, background: h.fund_type === 'SIF' ? '#e0f2f1' : 'var(--s2)',
+                          color: h.fund_type === 'SIF' ? '#00695c' : 'var(--muted)',
+                          border: '1px solid var(--border)',
+                          fontFamily: "'JetBrains Mono', monospace",
+                        }}>
+                          {h.fund_type}
+                        </span>
+                      </td>
+                      <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{units.toFixed(4)}</td>
+                      <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>₹{purchaseNav.toFixed(4)}</td>
+                      <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        {hasLive
+                          ? <span>₹{liveNav.toFixed(4)} <span style={{ fontSize: '.52rem', color: 'var(--g1)' }}>●</span></span>
+                          : <span style={{ color: 'var(--muted)' }}>—</span>
+                        }
+                      </td>
+                      <td style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
+                        ₹{Math.round(currentVal).toLocaleString('en-IN')}
+                        {!hasLive && <div style={{ fontSize: '.52rem', color: 'var(--muted)', fontWeight: 400 }}>est.</div>}
+                      </td>
+                      <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        <span style={{ color: isProfit ? 'var(--pos)' : 'var(--neg)', fontWeight: 700 }}>
+                          {isProfit ? '+' : ''}{gainPct}%
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                          <button onClick={() => openEdit(i)}
+                            style={{
+                              padding: '3px 10px', borderRadius: 6, border: '1.5px solid var(--border)',
+                              background: 'var(--s2)', cursor: 'pointer', fontSize: '.65rem',
+                              fontWeight: 700, color: 'var(--g2)', fontFamily: 'Raleway, sans-serif',
+                            }}>
+                            Edit
+                          </button>
+                          <button onClick={() => handleDelete(h.id)}
+                            style={{
+                              padding: '3px 10px', borderRadius: 6, border: '1.5px solid #ffcdd2',
+                              background: 'var(--neg-bg)', cursor: 'pointer', fontSize: '.65rem',
+                              fontWeight: 700, color: 'var(--neg)', fontFamily: 'Raleway, sans-serif',
+                            }}>
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+          <div className="src-text">
+            Current NAV: SIF from AMFI · MF from mfapi.in · Live indicator ● = NAV fetched
           </div>
         </div>
       )}
@@ -809,6 +988,7 @@ function ManualHoldingsTab() {
     </div>
   );
 }
+
 
 // ── Main Admin Page ───────────────────────────────────────────────────────────
 
