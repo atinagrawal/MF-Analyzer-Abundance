@@ -1,12 +1,6 @@
 /**
  * app/api/auth-diag/route.js — TEMPORARY diagnostic endpoint
- *
- * Tests the two things that cause "Error: Configuration":
- *   1. verification_token table exists in Postgres
- *   2. SMTP connection to smtp.office365.com succeeds
- *
- * DELETE THIS FILE once email login is working.
- * Access: GET /api/auth-diag
+ * DELETE once email login is confirmed working.
  */
 
 import pool from '@/lib/db';
@@ -17,54 +11,38 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const results = {};
 
-  // ── 1. Check AUTH_SECRET ─────────────────────────────────────────────────
   results.auth_secret = process.env.AUTH_SECRET
-    ? `set (${process.env.AUTH_SECRET.length} chars)`
-    : 'MISSING';
+    ? `set (${process.env.AUTH_SECRET.length} chars)` : 'MISSING';
+  results.resend_key = process.env.RESEND_KEY
+    ? `set (${process.env.RESEND_KEY.length} chars, starts: ${process.env.RESEND_KEY.slice(0,5)}...)` : 'MISSING';
 
-  // ── 2. Check email env vars ──────────────────────────────────────────────
-  results.email_from     = process.env.EMAIL_FROM     || 'MISSING';
-  results.email_password = process.env.EMAIL_SERVER_PASSWORD
-    ? `set (${process.env.EMAIL_SERVER_PASSWORD.length} chars)`
-    : 'MISSING';
-
-  // ── 3. Check verification_token table ───────────────────────────────────
+  // DB table check
   try {
     const r = await pool.query(`
       SELECT COUNT(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_name = 'verification_token'
     `);
-    results.verification_token_table = parseInt(r.rows[0].count) > 0
-      ? 'EXISTS'
-      : 'MISSING — run: CREATE TABLE verification_token (identifier TEXT NOT NULL, expires TIMESTAMPTZ NOT NULL, token TEXT NOT NULL, PRIMARY KEY (identifier, token));';
+    results.verification_token_table = parseInt(r.rows[0].count) > 0 ? 'EXISTS' : 'MISSING';
   } catch (e) {
     results.verification_token_table = `DB error: ${e.message}`;
   }
 
-  // ── 4. Test SMTP connection (no email sent) ──────────────────────────────
+  // Resend API check (validates key without sending)
   try {
-    const nodemailer = (await import('nodemailer')).default;
-    const transport = nodemailer.createTransport({
-      host:       'smtp.office365.com',
-      port:       587,
-      secure:     false,
-      requireTLS: true,
-      auth: {
-        user: process.env.EMAIL_FROM,
-        pass: process.env.EMAIL_SERVER_PASSWORD,
-      },
-      tls: { rejectUnauthorized: true },
-      connectionTimeout: 10000,
-      greetingTimeout:   10000,
+    const res = await fetch('https://api.resend.com/domains', {
+      headers: { Authorization: `Bearer ${process.env.RESEND_KEY}` },
     });
-
-    await transport.verify();
-    results.smtp = 'OK — connection and auth verified';
+    if (res.ok) {
+      const d = await res.json();
+      const domains = (d.data || []).map(x => `${x.name} (${x.status})`);
+      results.resend_api = `OK — key valid, domains: ${domains.join(', ') || 'none yet'}`;
+    } else {
+      const err = await res.json().catch(() => ({}));
+      results.resend_api = `FAILED ${res.status}: ${JSON.stringify(err)}`;
+    }
   } catch (e) {
-    results.smtp = `FAILED: ${e.message}`;
+    results.resend_api = `Error: ${e.message}`;
   }
 
-  return Response.json(results, {
-    headers: { 'Cache-Control': 'no-store' },
-  });
+  return Response.json(results, { headers: { 'Cache-Control': 'no-store' } });
 }
