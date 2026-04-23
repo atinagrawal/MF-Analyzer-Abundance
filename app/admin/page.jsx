@@ -63,6 +63,8 @@ function UsersTab({ session }) {
   const [portfolios, setPortfolios]     = useState([]);
   const [portsLoading, setPortsLoading] = useState(false);
   const [roleChanging, setRoleChanging] = useState('');
+  const [notifying,    setNotifying]    = useState('');
+  const [notifyMsg,    setNotifyMsg]    = useState({ id: '', type: '', text: '' });
 
   useEffect(() => {
     fetch('/api/admin/users')
@@ -96,6 +98,28 @@ function UsersTab({ session }) {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
     } catch (e) { alert(e.message); }
     finally { setRoleChanging(''); }
+  }
+
+  async function notifyClient(portfolio) {
+    setNotifying(portfolio.id);
+    setNotifyMsg({ id: '', type: '', text: '' });
+    try {
+      const res = await fetch('/api/admin/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedUser.id, email: selectedUser.email,
+          name: selectedUser.name, fileName: portfolio.file_name,
+          blobKey: portfolio.blob_key, panCount: portfolio.pan_count,
+          uploadedAt: portfolio.uploaded_at,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to send');
+      setNotifyMsg({ id: portfolio.id, type: 'ok', text: 'Sent ✓' });
+    } catch (err) {
+      setNotifyMsg({ id: portfolio.id, type: 'err', text: err.message });
+    } finally { setNotifying(''); }
   }
 
   if (error) return <div className="error-box">⚠ {error}</div>;
@@ -242,21 +266,32 @@ function UsersTab({ session }) {
                         {p.pan_count} PAN{p.pan_count !== 1 ? 's' : ''} · {fmtDate(p.uploaded_at)}
                       </div>
                     </div>
-                    <a
-                      href={`/cas-tracker?load=${encodeURIComponent(p.blob_key)}`}
-                      target="_blank" rel="noopener noreferrer"
-                      onClick={e => e.stopPropagation()}
-                      style={{
-                        flexShrink: 0, fontSize: '.65rem', fontWeight: 700,
-                        padding: '5px 11px', borderRadius: 6,
-                        background: 'var(--g1)', color: '#fff',
-                        textDecoration: 'none', whiteSpace: 'nowrap',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--g2)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
-                    >
-                      View →
-                    </a>
+                    <div style={{ display:'flex', flexDirection:'column', gap:4, flexShrink:0, alignItems:'flex-end' }}>
+                      <div style={{ display:'flex', gap:5 }}>
+                        <button onClick={e=>{e.stopPropagation();notifyClient(p);}} disabled={notifying===p.id}
+                          style={{ fontSize:'.6rem', fontWeight:700, padding:'4px 9px', borderRadius:6,
+                            border:'1.5px solid var(--border)', background:notifying===p.id?'var(--s3)':'var(--s2)',
+                            color:'var(--g2)', cursor:notifying===p.id?'not-allowed':'pointer',
+                            whiteSpace:'nowrap', fontFamily:'Raleway, sans-serif' }}>
+                          {notifying===p.id?'…':'✉'}
+                        </button>
+                        <a href={`/cas-tracker?load=${encodeURIComponent(p.blob_key)}`}
+                          target="_blank" rel="noopener noreferrer"
+                          onClick={e=>e.stopPropagation()}
+                          style={{ fontSize:'.65rem', fontWeight:700, padding:'5px 11px', borderRadius:6,
+                            background:'var(--g1)', color:'#fff', textDecoration:'none', whiteSpace:'nowrap' }}
+                          onMouseEnter={e=>e.currentTarget.style.background='var(--g2)'}
+                          onMouseLeave={e=>e.currentTarget.style.background='var(--g1)'}>
+                          View →
+                        </a>
+                      </div>
+                      {notifyMsg.id===p.id&&(
+                        <div style={{ fontSize:'.58rem', fontWeight:700,
+                          color:notifyMsg.type==='ok'?'var(--g1)':'var(--neg)' }}>
+                          {notifyMsg.text}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
