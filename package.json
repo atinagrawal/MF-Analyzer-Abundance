@@ -24,7 +24,8 @@
     "pg": "^8.20.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "nodemailer": "^6.9.16"
   },
   "devDependencies": {
     "canvas": "^3.2.3"
