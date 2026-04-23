@@ -5048,3 +5048,97 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .faq-q{font-size:.82rem;padding:13px 14px}
   .faq-a{padding:0 14px 13px;font-size:.78rem}
 }
+
+
+/* ════════════════════════════════════════
+   MOBILE RESPONSIVE FIXES — indices, admin, report
+════════════════════════════════════════ */
+
+/* ── Indices page: name column max-width on mobile ── */
+@media (max-width: 900px) {
+  .idx-table th:first-child,
+  .idx-table td:first-child {
+    max-width: 160px;
+    min-width: 120px;
+  }
+}
+@media (max-width: 600px) {
+  .idx-table th:first-child,
+  .idx-table td:first-child {
+    max-width: 120px;
+    min-width: 90px;
+    font-size: .65rem;
+  }
+  .idx-table {
+    font-size: .65rem;
+    min-width: 600px;
+  }
+  .idx-table th {
+    padding: 8px 8px;
+    font-size: .52rem;
+  }
+  .idx-table td {
+    padding: 7px 8px;
+  }
+  .table-wrap {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── Admin page: users table on mobile ── */
+@media (max-width: 700px) {
+  /* Stack grid from 2-col to 1-col */
+  div[style*="grid-template-columns"][style*="340px"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Shrink role select */
+  .idx-table select {
+    font-size: .58rem;
+    padding: 2px 4px;
+  }
+  /* Hide less-important columns */
+  .idx-table th:nth-child(4),
+  .idx-table td:nth-child(4),
+  .idx-table th:nth-child(5),
+  .idx-table td:nth-child(5) {
+    display: none;
+  }
+}
+
+/* ── CAS tracker: fund cards on small screens ── */
+@media (max-width: 600px) {
+  .fund-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .fund-card {
+    padding: 14px;
+  }
+  .nav-grid {
+    gap: 10px;
+  }
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stat-card {
+    padding: 14px;
+  }
+  .sc-val {
+    font-size: 1.1rem;
+  }
+}
+@media (max-width: 400px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Report card: canvas responsiveness ── */
+@media (max-width: 600px) {
+  .report-card-canvas,
+  canvas.report-canvas {
+    max-width: 100%;
+    height: auto !important;
+  }
+}
