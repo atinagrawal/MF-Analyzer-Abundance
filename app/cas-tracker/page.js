@@ -130,16 +130,26 @@ function CasTrackerInner() {
   const [viewFilter,     setViewFilter]     = useState('all'); // 'all' | 'mf' | 'sif'
   const [viewedUserId,   setViewedUserId]   = useState('');   // client userId when admin viewing
 
-  // Auto-load a portfolio passed via ?load=blobKey (admin viewing another user's data)
+  // Auto-load via ?load=blobKey (admin CAS view) or ?userId= (manual-only client)
   useEffect(() => {
     if (authStatus !== 'authenticated') return;
-    const loadKey = searchParams.get('load');
-    if (!loadKey || !isAdmin) return;
-    // Extract client userId from blob key: cas/{userId}/{ts}-{file}.json
-    const parts = loadKey.split('/');
-    if (parts.length >= 2) setViewedUserId(parts[1]);
-    const t = setTimeout(() => loadSavedPortfolio(loadKey), 100);
-    return () => clearTimeout(t);
+    if (!isAdmin) return;
+    const loadKey   = searchParams.get('load');
+    const paramUid  = searchParams.get('userId');
+    const paramName = decodeURIComponent(searchParams.get('uname') || '');
+    if (loadKey) {
+      const parts = loadKey.split('/');
+      if (parts.length >= 2) setViewedUserId(parts[1]);
+      const t = setTimeout(() => loadSavedPortfolio(loadKey), 100);
+      return () => clearTimeout(t);
+    } else if (paramUid) {
+      setViewedUserId(paramUid);
+      setPortfolioDataByPan({
+        '__manual__': { investorName: paramName || 'Client', current: 0, invested: 0, holdings: [] },
+      });
+      setActivePan('__manual__');
+      setUploadState('success');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authStatus, isAdmin]);
 
@@ -663,9 +673,9 @@ function CasTrackerInner() {
               </button>
             </div>
 
-            {panKeys.length > 1 && (
+            {panKeys.filter(p => p !== '__manual__').length > 1 && (
               <div className="pan-tabs">
-                {panKeys.map(pan => {
+                {panKeys.filter(p => p !== '__manual__').map(pan => {
                   const info = portfolioDataByPan[pan];
                   const firstName = info.investorName.split(' ')[0];
                   return (
@@ -909,6 +919,55 @@ function CasTrackerInner() {
           </section>
         )}
       </div>
+
+      {/* ── FAQ — visible to all, crawlable ─────────────────────────────── */}
+      <section style={{ padding: '64px 0 0', borderTop: '1px solid var(--border)', marginTop: 64 }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 20px' }}>
+          <div className="page-eyebrow" style={{ marginBottom: 10 }}>
+            <span className="eyebrow-text">Help & Support</span>
+          </div>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-.4px', marginBottom: 28 }}>
+            Frequently Asked Questions
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {[
+              ['Is it safe to upload my CAS PDF with my PAN password?',
+               'Yes. The PDF is parsed inside an isolated serverless function and deleted immediately after. Your password is never stored. For signed-in users, only the parsed portfolio data (not the PDF) is saved privately — only you and your AMFI-registered distributor can view it.'],
+              ['What is a Consolidated Account Statement (CAS)?',
+               'A CAS consolidates all your mutual fund holdings across every AMC linked to your PAN. Download it from camsonline.com or kfintech.com using your PAN and registered email. Use your PAN in ALL CAPS as the PDF password.'],
+              ['Does this support Family CAS with multiple PANs?',
+               'Yes. The parser detects multiple PANs in one CAS and creates separate dashboard tabs per family member. Switch between them with one click.'],
+              ['How is current value calculated?',
+               'Current Value = Units x Live NAV from AMFI official end-of-day data, fetched fresh on each page load.'],
+              ['What is FIFO capital gains calculation?',
+               'FIFO (First In, First Out) is the SEBI-mandated method for mutual fund redemptions. Our tracker uses CAS purchase history to compute unrealised gain/loss correctly under FIFO accounting.'],
+              ['How does ELSS lock-in tracking work?',
+               'ELSS investments are locked for 3 years from each purchase date. We compute the locked value and unlocked portion for each ELSS fund separately so you know exactly what is redeemable today.'],
+              ['Which CAS formats are supported?',
+               'Both CAMS (camsonline.com) and KFintech (kfintech.com) password-protected PDFs are supported. Enter your PAN in ALL CAPS as the password.'],
+              ['Does this support SIF (Specialised Investment Funds)?',
+               'Yes. SIF holdings added by your distributor appear alongside mutual funds with live NAVs from AMFI. Standard CAS PDFs do not yet include SIF statements, so your distributor adds them separately.'],
+            ].map(([q, a], i, arr) => (
+              <details key={i} style={{
+                borderTop: '1px solid var(--border)',
+                borderBottom: i === arr.length - 1 ? '1px solid var(--border)' : 'none',
+              }}>
+                <summary style={{
+                  padding: '16px 4px', cursor: 'pointer', listStyle: 'none',
+                  fontSize: '.82rem', fontWeight: 800, color: 'var(--text)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}>
+                  {q}
+                  <span style={{ fontSize: '1rem', color: 'var(--muted)', flexShrink: 0, marginLeft: 12 }}>+</span>
+                </summary>
+                <div style={{ padding: '0 4px 16px', fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.7 }}>
+                  {a}
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <Footer />
     </>
