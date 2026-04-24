@@ -359,7 +359,7 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '.72rem', fontWeight: 700, color: 'var(--text)' }}>
             <input type="checkbox" checked={skipLocked} onChange={e => setSkipLocked(e.target.checked)}
               style={{ width: 15, height: 15, accentColor: 'var(--g1)', cursor: 'pointer' }} />
-            Skip ELSS locked units (< 3 years from purchase)
+            Skip ELSS locked units ({'<'} 3 years from purchase)
           </label>
         </div>
 
