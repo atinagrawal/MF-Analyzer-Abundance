@@ -247,8 +247,24 @@ function UsersTab({ session }) {
                 {[1, 2].map(i => <div key={i} className="sk" style={{ height: 52, borderRadius: 10 }} />)}
               </div>
             ) : portfolios.length === 0 ? (
-              <div style={{ fontSize: '.72rem', color: 'var(--muted)', textAlign: 'center', padding: '20px 0' }}>
-                No uploads yet
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginBottom: 12 }}>
+                  No CAS uploads yet
+                </div>
+                <a
+                  href={`/cas-tracker?userId=${selectedUser.id}&uname=${encodeURIComponent(selectedUser.name || selectedUser.email || '')}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-block', fontSize: '.65rem', fontWeight: 700,
+                    padding: '7px 14px', borderRadius: 7,
+                    background: 'var(--g1)', color: '#fff',
+                    textDecoration: 'none', whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--g2)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
+                >
+                  View Manual Holdings →
+                </a>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
