@@ -139,6 +139,37 @@ function RedemptionPlanner({ fund, onClose }) {
     : Math.min((parseFloat(redeemUnits) || 0) / currentNav, maxUnits);
 
   // ── FIFO lot consumption ─────────────────────────────────────────────────
+  // Fetch Jan 31 2018 grandfathering NAV when any lot predates that date
+  const [gran18Nav, setGran18Nav] = useState(null);  // { nav, fetching }
+  const GRAN_DATE = new Date('2018-01-31');
+
+  useEffect(() => {
+    if (!fund.amfiCode) return;
+    const hasPreGran = (fund.buyLots || []).some(l => {
+      const d = l.date instanceof Date ? l.date : new Date(l.date);
+      return d < GRAN_DATE;
+    });
+    if (!hasPreGran) return;
+    setGran18Nav({ nav: null, fetching: true });
+    fetch(`https://api.mfapi.in/mf/${fund.amfiCode}`)
+      .then(r => r.json())
+      .then(d => {
+        const rows = d.data || [];
+        // Find closest date on or before Jan 31 2018 (data is newest-first)
+        const target = 20180131; // YYYYMMDD for comparison
+        for (const row of rows) {
+          const parts = row.date.split('-'); // DD-MM-YYYY
+          const ymd = parseInt(parts[2] + parts[1] + parts[0]);
+          if (ymd <= target) {
+            setGran18Nav({ nav: parseFloat(row.nav), fetching: false });
+            return;
+          }
+        }
+        setGran18Nav({ nav: null, fetching: false }); // fund too new
+      })
+      .catch(() => setGran18Nav({ nav: null, fetching: false }));
+  }, [fund.amfiCode, fund.buyLots]);
+
   const result = useMemo(() => {
     if (unitsToRedeem <= 0) return null;
     const lots  = fund.buyLots || [];
@@ -150,7 +181,7 @@ function RedemptionPlanner({ fund, onClose }) {
     let ltcgGain   = 0;
     let proceeds   = 0;
     const lotRows  = [];
-    let hasPreApr2023 = false; // for debt grandfathering note
+    let granApplied = false;
 
     for (const lot of lots) {
       if (remaining <= 0) break;
@@ -159,38 +190,51 @@ function RedemptionPlanner({ fund, onClose }) {
       const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
       const heldMs  = today - buyDate;
       const isLTCG  = heldMs >= cutoffMs;
-      const gain    = take * (currentNav - lot.nav);
       const saleVal = take * currentNav;
       proceeds     += saleVal;
-      if (category === 'debt' && buyDate < new Date('2023-04-01')) hasPreApr2023 = true;
+
+      // Grandfathering: for equity LTCG units purchased before Jan 31 2018,
+      // effective cost = max(purchase nav, jan31_2018 nav) per Section 112A
+      let effectiveNav = lot.nav;
+      let isGrandfathered = false;
+      if ((category === 'equity' || category === 'hybrid') && isLTCG && buyDate < GRAN_DATE) {
+        const g18 = gran18Nav?.nav;
+        if (g18 != null && g18 > lot.nav) {
+          effectiveNav = g18;
+          isGrandfathered = true;
+          granApplied = true;
+        }
+      }
+
+      const gain    = take * (currentNav - effectiveNav);
       if (isLTCG) ltcgGain += gain; else stcgGain += gain;
       const heldDays = Math.floor(heldMs / (24*3600*1000));
       lotRows.push({
-        date:    buyDate.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }),
-        buyNav:  lot.nav,
-        units:   take,
+        date: buyDate.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }),
+        buyNav: lot.nav,
+        effectiveNav,
+        units: take,
         gain,
         isLTCG,
         heldDays,
+        isGrandfathered,
       });
     }
 
-    // Tax computation
     let stcgTax = 0, ltcgTax = 0;
     if (category === 'equity' || category === 'hybrid') {
-      stcgTax  = stcgGain * TAX[category].stcg;
+      stcgTax = stcgGain * TAX[category].stcg;
       const taxableLTCG = Math.max(0, ltcgGain - TAX[category].exemption);
-      ltcgTax  = taxableLTCG * TAX[category].ltcg;
+      ltcgTax = taxableLTCG * TAX[category].ltcg;
     } else {
-      // Debt: all slab (simplified — note pre-Apr-2023 shown separately)
       stcgTax = stcgGain * (slabPct / 100);
       ltcgTax = ltcgGain * (slabPct / 100);
     }
-    const totalTax     = stcgTax + ltcgTax;
-    const postTax      = proceeds - totalTax;
+    const totalTax = stcgTax + ltcgTax;
+    const postTax  = proceeds - totalTax;
 
-    return { lotRows, stcgGain, ltcgGain, stcgTax, ltcgTax, totalTax, proceeds, postTax, hasPreApr2023 };
-  }, [unitsToRedeem, category, slabPct, fund, currentNav, today]);
+    return { lotRows, stcgGain, ltcgGain, stcgTax, ltcgTax, totalTax, proceeds, postTax, granApplied };
+  }, [unitsToRedeem, category, slabPct, fund, currentNav, today, gran18Nav]);
 
   const fmt = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
   const fmtD = (n) => n.toFixed(4);
@@ -325,7 +369,14 @@ function RedemptionPlanner({ fund, onClose }) {
                       <tr key={i} style={{ borderBottom: i < result.lotRows.length-1 ? '1px solid var(--border)' : 'none' }}>
                         <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>{row.date}</td>
                         <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace", textAlign: 'right' }}>{fmtD(row.units)}</td>
-                        <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace' }}>₹{row.buyNav.toFixed(4)}</td>
+                        <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace" }}>
+                          ₹{row.buyNav.toFixed(4)}
+                          {row.isGrandfathered && (
+                            <div style={{ fontSize: '.48rem', color: 'var(--g1)', fontWeight: 800 }}>
+                              G ₹{row.effectiveNav.toFixed(4)}
+                            </div>
+                          )}
+                        </td>
                         <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace", textAlign: 'right', color: row.gain >= 0 ? 'var(--pos)' : 'var(--neg)', fontWeight: 700 }}>
                           {row.gain >= 0 ? '+' : ''}{fmt(row.gain)}
                         </td>
@@ -371,7 +422,14 @@ function RedemptionPlanner({ fund, onClose }) {
                 <strong>Rates (Budget 2024, w.e.f. July 23 2024):</strong> STCG 20% · LTCG 12.5% above ₹1.25L annual exemption. LTCG exemption shown here per redemption — actual exemption is shared across all equity gains in the FY.
                 {result?.stcgGain === 0 && result?.ltcgGain === 0 ? null : (
                   <div style={{ marginTop: 6, color: 'var(--g2)', fontWeight: 700 }}>
-                    ⚠ Grandfathering (Jan 31 2018 NAV) not applied — units purchased before that date may have lower taxable LTCG.
+                    {gran18Nav?.fetching
+                      ? '⏳ Fetching Jan 31 2018 NAV for grandfathering…'
+                      : result?.granApplied
+                        ? '✓ Grandfathering applied (Jan 31 2018 NAV) for pre-2018 lots. Effective cost shown as "G ₹nav" in the lot table.'
+                        : gran18Nav?.nav == null && (fund.buyLots||[]).some(l => (l.date instanceof Date ? l.date : new Date(l.date)) < new Date('2018-01-31'))
+                          ? '⚠ Could not fetch Jan 31 2018 NAV — grandfathering not applied.'
+                          : '✓ No pre-2018 lots — grandfathering not applicable.'
+                    }
                   </div>
                 )}
               </>
@@ -622,6 +680,7 @@ function CasTrackerInner() {
       h.buyLots     = fifo.buyLots;  // FIFO lots for redemption planner
       const casCost = parseFloat(scheme.valuation?.cost || 0);
       h.avgPurchaseNav = h.units > 0 && casCost > 0 ? casCost / h.units : 0;
+      h.amfiCode       = scheme.amfi || null;  // preserved for FIFO planner
       portfolioData[pan].current  += h.value;
       portfolioData[pan].invested += h.invested;
       delete h.scheme;
@@ -1296,4 +1355,4 @@ export default function CasTrackerPage() {
       <CasTrackerInner />
     </Suspense>
   );
-}
+    }
