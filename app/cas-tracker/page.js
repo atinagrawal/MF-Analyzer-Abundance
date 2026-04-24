@@ -123,6 +123,366 @@ function calculateFifoCost(scheme, currentNav) {
 }
 
 
+
+// ── Exit load helper ──────────────────────────────────────────────────────────
+// Standard rules: Equity/Hybrid 1% within 365 days. Debt varies (noted in UI).
+// ELSS: locked units excluded upstream, unlocked treated as equity.
+function calcExitLoad(lot, redeemDate, category) {
+  if (category === 'debt') return 0; // too varied — flagged in UI
+  const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
+  if (lot.synthetic) return 0; // unknown purchase date — can't determine
+  const heldDays = Math.floor((redeemDate - buyDate) / (24 * 3600 * 1000));
+  return heldDays < 365 ? 0.01 : 0; // 1% within 1 year, standard
+}
+
+// ── Portfolio-level redemption scoring (for sort order) ──────────────────────
+function fundScore(holding, strategy, today) {
+  const lots  = holding.buyLots || [];
+  const ltcgMs = 12 * 30.44 * 24 * 3600 * 1000;
+  const gain   = holding.value - holding.invested;
+  const hasLoss = gain < 0;
+  const allLTCG = lots.length > 0 && lots.every(l => {
+    const d = l.date instanceof Date ? l.date : new Date(l.date);
+    return (today - d) >= ltcgMs || l.synthetic;
+  });
+  if (strategy === 'tax') {
+    // Loss-making → LTCG → STCG; within each group: sort by gain/loss magnitude
+    if (hasLoss)  return -1e12 + gain; // losses first (most negative first)
+    if (allLTCG)  return 0 + gain;     // LTCG next (smallest gain first)
+    return 1e12 + gain;                // STCG last
+  }
+  if (strategy === 'exitload') {
+    // Prefer funds with oldest lots (minimise exit load)
+    if (!lots.length) return 0;
+    const oldest = lots.reduce((m, l) => {
+      const d = l.date instanceof Date ? l.date : new Date(l.date);
+      return d < m ? d : m;
+    }, new Date());
+    return -(today - oldest); // most negative = oldest = redeem first
+  }
+  // 'largest': sort by value desc (largest fund first)
+  return -holding.value;
+}
+
+// ── PortfolioRedemptionPlanner ────────────────────────────────────────────────
+function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [targetAmt,  setTargetAmt]  = useState('');
+  const [strategy,   setStrategy]   = useState('tax');
+  const [slabPct,    setSlabPct]    = useState(30);
+  const [skipLocked, setSkipLocked] = useState(true);
+
+  const fmt     = n => '₹' + Math.round(Math.abs(n)).toLocaleString('en-IN');
+  const fmtD    = n => parseFloat(n).toFixed(4);
+  const fmtPct  = n => (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+
+  const target  = parseFloat(targetAmt) || 0;
+  const ltcgMs  = 12 * 30.44 * 24 * 3600 * 1000;
+
+  const plan = useMemo(() => {
+    if (target <= 0) return null;
+
+    // Build a working list of eligible holdings (skip zero-value, __manual__)
+    let eligible = holdings
+      .filter(h => h.value > 0 && (h.buyLots?.length > 0))
+      .map(h => ({
+        ...h,
+        category: inferCategory(h.name),
+        score: fundScore(h, strategy, today),
+      }))
+      .sort((a, b) => a.score - b.score);
+
+    let remaining = target;
+    const rows = [];
+    let totalProceeds = 0, totalExitLoad = 0, totalSTCG = 0, totalLTCG = 0;
+    let totalTax = 0, totalNet = 0;
+
+    for (const fund of eligible) {
+      if (remaining <= 0) break;
+
+      const lots = [...(fund.buyLots || [])];
+      const cat  = fund.category;
+      const currentNav = fund.liveNav;
+
+      let fundUnits = 0, fundProceeds = 0, fundExitLoad = 0;
+      let fundSTCG  = 0, fundLTCG    = 0;
+      const lotBreakdown = [];
+
+      for (const lot of lots) {
+        if (remaining <= 0) break;
+
+        // Skip ELSS locked units
+        const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
+        const isELSS  = fund.isELSS;
+        if (skipLocked && isELSS && !lot.synthetic) {
+          const elssUnlockDate = new Date(buyDate);
+          elssUnlockDate.setFullYear(elssUnlockDate.getFullYear() + 3);
+          if (today < elssUnlockDate) continue;
+        }
+
+        // How many units of this lot to consume?
+        const maxFromLot   = lot.units;
+        const maxByProceeds = remaining / currentNav;
+        const take         = Math.min(maxFromLot, maxByProceeds);
+        if (take < 0.0001) continue;
+
+        const saleVal   = take * currentNav;
+        const exitLoad  = calcExitLoad(lot, today, cat) * saleVal;
+        const netSale   = saleVal - exitLoad;
+        const heldMs    = lot.synthetic ? Infinity : (today - buyDate);
+        const isLTCG    = heldMs >= ltcgMs;
+
+        let effectiveNav = lot.nav;
+        if (isLTCG && !lot.synthetic && buyDate < new Date('2018-01-31')) {
+          // Grandfathering: simplify to purchase nav here (live fetch not available at portfolio level)
+          // Flag it in UI
+        }
+        const gain = take * (currentNav - effectiveNav);
+
+        fundUnits    += take;
+        fundProceeds += saleVal;
+        fundExitLoad += exitLoad;
+        if (isLTCG) fundLTCG += gain; else fundSTCG += gain;
+        remaining    -= netSale; // reduce remaining by net (after exit load)
+        lotBreakdown.push({ lot, take, saleVal, exitLoad, isLTCG, gain, heldDays: lot.synthetic ? null : Math.floor(heldMs / (24*3600*1000)) });
+      }
+
+      if (fundUnits < 0.0001) continue;
+
+      // Tax for this fund
+      let fundTax = 0;
+      if (cat === 'equity' || cat === 'hybrid') {
+        fundTax  = fundSTCG * TAX.equity.stcg;
+        const taxableLTCG = Math.max(0, fundLTCG - TAX.equity.exemption);
+        fundTax += taxableLTCG * TAX.equity.ltcg;
+      } else {
+        fundTax = (fundSTCG + fundLTCG) * (slabPct / 100);
+      }
+      const fundNet = fundProceeds - fundExitLoad - fundTax;
+
+      rows.push({
+        name:       fund.name,
+        category:   cat,
+        isELSS:     fund.isELSS,
+        units:      fundUnits,
+        proceeds:   fundProceeds,
+        exitLoad:   fundExitLoad,
+        stcg:       fundSTCG,
+        ltcg:       fundLTCG,
+        tax:        fundTax,
+        net:        fundNet,
+        lotBreakdown,
+        hasSynthetic: (fund.buyLots || []).some(l => l.synthetic),
+      });
+
+      totalProceeds += fundProceeds;
+      totalExitLoad += fundExitLoad;
+      totalSTCG     += fundSTCG;
+      totalLTCG     += fundLTCG;
+      totalTax      += fundTax;
+      totalNet      += fundNet;
+    }
+
+    const shortfall = remaining > 0.5; // can't meet target
+    return { rows, totalProceeds, totalExitLoad, totalSTCG, totalLTCG, totalTax, totalNet, shortfall };
+  }, [target, strategy, slabPct, skipLocked, holdings, today]);
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}
+      onClick={onClose}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.35)', backdropFilter: 'blur(2px)' }} />
+
+      {/* Wide panel */}
+      <div onClick={e => e.stopPropagation()} style={{
+        position: 'relative', zIndex: 1,
+        width: '100%', maxWidth: 700,
+        height: '100dvh', overflowY: 'auto',
+        background: 'var(--surface)',
+        boxShadow: '-8px 0 40px rgba(0,0,0,.15)',
+        display: 'flex', flexDirection: 'column',
+      }}>
+
+        {/* Header */}
+        <div style={{ padding: '20px 28px 16px', borderBottom: '1.5px solid var(--border)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontSize: '.6rem', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 6 }}>
+                Portfolio Redemption Planner
+              </div>
+              <div style={{ fontSize: '.9rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-.3px' }}>
+                {investorName}
+              </div>
+              <div style={{ fontSize: '.65rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginTop: 3 }}>
+                FIFO · Budget 2024 tax rates · Equity exit load 1% within 365 days
+              </div>
+            </div>
+            <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--muted)', padding: '4px 8px', marginTop: -4 }}>✕</button>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div style={{ padding: '20px 28px', borderBottom: '1.5px solid var(--border)', background: 'var(--s2)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+
+            <div>
+              <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 5 }}>Target Amount (₹)</div>
+              <input type="number" min="0" step="1000" value={targetAmt}
+                onChange={e => setTargetAmt(e.target.value)}
+                placeholder="e.g. 500000"
+                style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--border2)', borderRadius: 9, fontFamily: "'JetBrains Mono', monospace", fontSize: '.82rem', background: 'var(--surface)', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div>
+              <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 5 }}>Strategy</div>
+              <select value={strategy} onChange={e => setStrategy(e.target.value)}
+                style={{ width: '100%', padding: '9px 10px', border: '1.5px solid var(--border2)', borderRadius: 9, fontFamily: 'Raleway, sans-serif', fontSize: '.75rem', fontWeight: 700, background: 'var(--surface)', color: 'var(--text)', outline: 'none' }}>
+                <option value="tax">Tax-Efficient (Losses → LTCG → STCG)</option>
+                <option value="exitload">Least Exit Load (Oldest lots first)</option>
+                <option value="largest">Largest Fund First</option>
+              </select>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 5 }}>Slab (for Debt)</div>
+              <select value={slabPct} onChange={e => setSlabPct(Number(e.target.value))}
+                style={{ width: '100%', padding: '9px 10px', border: '1.5px solid var(--border2)', borderRadius: 9, fontFamily: 'Raleway, sans-serif', fontSize: '.75rem', fontWeight: 700, background: 'var(--surface)', color: 'var(--text)', outline: 'none' }}>
+                <option value={5}>5%</option>
+                <option value={20}>20%</option>
+                <option value={30}>30%</option>
+              </select>
+            </div>
+          </div>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '.72rem', fontWeight: 700, color: 'var(--text)' }}>
+            <input type="checkbox" checked={skipLocked} onChange={e => setSkipLocked(e.target.checked)}
+              style={{ width: 15, height: 15, accentColor: 'var(--g1)', cursor: 'pointer' }} />
+            Skip ELSS locked units (< 3 years from purchase)
+          </label>
+        </div>
+
+        {/* Results */}
+        <div style={{ padding: '20px 28px', flex: 1 }}>
+
+          {!plan && (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--muted)', fontSize: '.78rem' }}>
+              Enter a target amount above to see which funds to redeem and the estimated tax impact.
+            </div>
+          )}
+
+          {plan && plan.shortfall && (
+            <div style={{ padding: '10px 14px', background: '#fff8e1', border: '1.5px solid #ffe082', borderRadius: 10, marginBottom: 16, fontSize: '.72rem', color: '#795548', fontWeight: 600 }}>
+              ⚠ Portfolio value is insufficient to meet the full target after exit loads. Showing maximum redeemable.
+            </div>
+          )}
+
+          {plan && plan.rows.length === 0 && (
+            <div style={{ padding: '10px 14px', background: 'var(--neg-bg)', border: '1.5px solid #ffcdd2', borderRadius: 10, fontSize: '.72rem', color: 'var(--neg)', fontWeight: 600 }}>
+              No redeemable holdings found. All units may be ELSS-locked or have no cost data.
+            </div>
+          )}
+
+          {plan && plan.rows.length > 0 && (
+            <>
+              {/* Summary cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
+                {[
+                  ['Gross Proceeds', plan.totalProceeds, 'var(--text)'],
+                  ['Exit Load',      plan.totalExitLoad, 'var(--neg)'],
+                  ['Est. Tax',       plan.totalTax,      'var(--neg)'],
+                  ['Net in Hand',    plan.totalNet,       'var(--g1)'],
+                ].map(([label, val, color]) => (
+                  <div key={label} style={{ background: 'var(--s2)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 14px' }}>
+                    <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 5 }}>{label}</div>
+                    <div style={{ fontSize: '.95rem', fontWeight: 900, color, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '-.5px' }}>
+                      {val < 0 ? '−' : ''}{fmt(val)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Fund-level table */}
+              <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 10 }}>Redemption Order</div>
+              <div style={{ overflowX: 'auto', borderRadius: 12, border: '1.5px solid var(--border)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.67rem', minWidth: 620 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--s2)' }}>
+                      {['Fund', 'Units', 'Gross', 'Exit Load', 'STCG', 'LTCG', 'Tax', 'Net'].map(h => (
+                        <th key={h} style={{ padding: '9px 10px', textAlign: h === 'Fund' ? 'left' : 'right', fontWeight: 800, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", fontSize: '.55rem', letterSpacing: '.5px', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {plan.rows.map((row, i) => {
+                      const isLoss = row.stcg + row.ltcg < 0;
+                      return (
+                        <tr key={i} style={{ borderBottom: i < plan.rows.length - 1 ? '1px solid var(--border)' : 'none', background: i % 2 === 0 ? 'transparent' : 'var(--s2)' }}>
+                          <td style={{ padding: '9px 10px', textAlign: 'left', maxWidth: 200 }}>
+                            <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '.65rem', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 190 }}>
+                              {row.name}
+                            </div>
+                            <div style={{ display: 'flex', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '.48rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: row.category === 'debt' ? '#e3f2fd' : row.category === 'hybrid' ? '#f3e5f5' : 'var(--g-xlight)', color: row.category === 'debt' ? '#1565c0' : row.category === 'hybrid' ? '#6a1b9a' : 'var(--g1)', border: '1px solid var(--border)', fontFamily: "'JetBrains Mono', monospace" }}>
+                                {row.category.toUpperCase()}
+                              </span>
+                              {row.isELSS && <span style={{ fontSize: '.48rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: '#fff8e1', color: '#f57f17', border: '1px solid #ffe082', fontFamily: "'JetBrains Mono', monospace" }}>ELSS</span>}
+                              {row.hasSynthetic && <span style={{ fontSize: '.48rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)', fontFamily: "'JetBrains Mono', monospace" }}>SUM</span>}
+                            </div>
+                          </td>
+                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>{fmtD(row.units)}</td>
+                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>{fmt(row.proceeds)}</td>
+                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: row.exitLoad > 0 ? 'var(--neg)' : 'var(--muted)' }}>
+                            {row.exitLoad > 0 ? '−' + fmt(row.exitLoad) : '—'}
+                          </td>
+                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: row.stcg < 0 ? 'var(--neg)' : row.stcg > 0 ? 'var(--text)' : 'var(--muted)' }}>
+                            {row.stcg !== 0 ? (row.stcg < 0 ? '−' : '+') + fmt(row.stcg) : '—'}
+                          </td>
+                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: row.ltcg < 0 ? 'var(--neg)' : row.ltcg > 0 ? 'var(--text)' : 'var(--muted)' }}>
+                            {row.ltcg !== 0 ? (row.ltcg < 0 ? '−' : '+') + fmt(row.ltcg) : '—'}
+                          </td>
+                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: row.tax > 0 ? 'var(--neg)' : 'var(--muted)' }}>
+                            {row.tax > 0 ? '−' + fmt(row.tax) : '—'}
+                          </td>
+                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, color: 'var(--g1)' }}>
+                            {fmt(row.net)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {/* Totals row */}
+                    <tr style={{ background: 'var(--g-xlight)', borderTop: '2px solid var(--g-light)' }}>
+                      <td style={{ padding: '10px 10px', fontWeight: 900, fontSize: '.67rem', color: 'var(--g1)' }}>TOTAL</td>
+                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800 }}>—</td>
+                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800 }}>{fmt(plan.totalProceeds)}</td>
+                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, color: 'var(--neg)' }}>{plan.totalExitLoad > 0 ? '−' + fmt(plan.totalExitLoad) : '—'}</td>
+                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800 }}>{plan.totalSTCG !== 0 ? (plan.totalSTCG < 0 ? '−' : '+') + fmt(plan.totalSTCG) : '—'}</td>
+                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800 }}>{plan.totalLTCG !== 0 ? (plan.totalLTCG < 0 ? '−' : '+') + fmt(plan.totalLTCG) : '—'}</td>
+                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, color: 'var(--neg)' }}>−{fmt(plan.totalTax)}</td>
+                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 900, color: 'var(--g1)', fontSize: '.75rem' }}>{fmt(plan.totalNet)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Footnotes */}
+              <div style={{ marginTop: 14, fontSize: '.62rem', color: 'var(--muted)', lineHeight: 1.7, padding: '12px 14px', background: 'var(--s2)', borderRadius: 10, border: '1.5px solid var(--border)' }}>
+                <strong>Notes:</strong> Tax rates per Budget 2024 (w.e.f. July 23 2024) — Equity STCG 20%, LTCG 12.5% above ₹1.25L annual exemption (shown per redemption; actual exemption is shared across all equity gains in the FY). Debt: all gains at selected slab rate.
+                Exit load: 1% within 365 days for equity/hybrid; debt exit load varies by fund and is not included.
+                SUM = Summary CAS — purchase date unknown, all gains treated as LTCG, exit load not applied.
+                Grandfathering (Jan 31 2018 NAV) is not applied at portfolio level — use per-fund planner for pre-2018 lots.
+                This is an estimate only. Consult a tax professional before redeeming.
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // ── FIFO Tax constants (Budget 2024, effective July 23, 2024) ─────────────────
 const TAX = {
   equity:     { stcg: 0.20, ltcg: 0.125, ltcgMonths: 12,  exemption: 125000 },
@@ -520,7 +880,8 @@ function CasTrackerInner() {
   const [manualLoading,  setManualLoading]  = useState(false);
   const [viewFilter,     setViewFilter]     = useState('all'); // 'all' | 'mf' | 'sif'
   const [viewedUserId,   setViewedUserId]   = useState('');   // client userId when admin viewing
-  const [planFund,       setPlanFund]       = useState(null); // holding object for FIFO planner
+  const [planFund,       setPlanFund]       = useState(null);  // holding object for per-fund planner
+  const [planPortfolio,  setPlanPortfolio]  = useState(false); // portfolio-level redemption planner
 
   // Auto-load via ?load=blobKey (admin CAS view) or ?userId= (manual-only client)
   useEffect(() => {
@@ -1062,9 +1423,27 @@ function CasTrackerInner() {
                 </h2>
                 <p className="dash-sub">Computed using FIFO accounting · Live NAVs from AMFI</p>
               </div>
-              <button onClick={handleNewUpload} className="new-upload-btn">
-                ↑ New Upload
-              </button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  onClick={() => setPlanPortfolio(true)}
+                  style={{
+                    padding: '8px 16px', borderRadius: 9,
+                    border: '1.5px solid var(--g2)',
+                    background: 'var(--g-xlight)', cursor: 'pointer',
+                    fontSize: '.72rem', fontWeight: 800,
+                    color: 'var(--g1)', fontFamily: 'Raleway, sans-serif',
+                    letterSpacing: '-.2px', whiteSpace: 'nowrap',
+                    transition: 'all .15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background='var(--g1)'; e.currentTarget.style.color='#fff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background='var(--g-xlight)'; e.currentTarget.style.color='var(--g1)'; }}
+                >
+                  📊 Redemption Planner
+                </button>
+                <button onClick={handleNewUpload} className="new-upload-btn">
+                  ↑ New Upload
+                </button>
+              </div>
             </div>
 
             {panKeys.filter(p => p !== '__manual__').length > 1 && (
@@ -1338,8 +1717,15 @@ function CasTrackerInner() {
         )}
       </div>
 
-      {/* ── FIFO Redemption Planner overlay ─────────────────────────────── */}
+      {/* ── FIFO Redemption Planner overlays ─────────────────────────────── */}
       {planFund && <RedemptionPlanner fund={planFund} onClose={() => setPlanFund(null)} />}
+      {planPortfolio && (
+        <PortfolioRedemptionPlanner
+          holdings={currentInfo.holdings || []}
+          investorName={currentInfo.investorName}
+          onClose={() => setPlanPortfolio(false)}
+        />
+      )}
 
       {/* ── FAQ — visible to all, crawlable ─────────────────────────────── */}
       <section style={{ padding: '64px 0 0', borderTop: '1px solid var(--border)', marginTop: 64 }}>
