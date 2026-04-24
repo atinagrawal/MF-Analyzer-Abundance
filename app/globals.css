@@ -5142,3 +5142,57 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
     height: auto !important;
   }
 }
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — Geography, Industry, Rolling, Report Card
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Geography: geo-table horizontal scroll on mobile ── */
+@media (max-width: 768px) {
+  .geo-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .geo-table { min-width: 480px; }
+  .geo-filters { flex-wrap: wrap; gap: 6px; }
+  .geo-filter-btn { font-size: .62rem; padding: 5px 10px; }
+  .geo-table th, .geo-table td { padding: 7px 8px; font-size: .67rem; }
+}
+@media (max-width: 480px) {
+  .geo-layout { gap: 12px; }
+  .map-card { padding: 12px; }
+  .geo-table th, .geo-table td { padding: 5px 6px; font-size: .6rem; }
+}
+
+/* ── Industry: cat-table compact on mobile ── */
+@media (max-width: 768px) {
+  .cat-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .cat-table { min-width: 500px; font-size: .67rem; }
+  .cat-table th { padding: 8px 8px; font-size: .6rem; }
+  .cat-table td { padding: 7px 8px; }
+}
+@media (max-width: 480px) {
+  .cat-table { min-width: 400px; font-size: .6rem; }
+}
+
+/* ── Rolling: returns chart canvas responsive ── */
+@media (max-width: 640px) {
+  .returns-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .returns-table { min-width: 520px; font-size: .65rem; }
+  .chart-wrap, .canvas-wrap { overflow-x: auto; }
+  .chart-wrap canvas { max-width: 100%; }
+  .period-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .bench-chips { flex-wrap: wrap; }
+  .fund-slot { flex-direction: column; }
+  .fund-slot-label { font-size: .58rem; }
+}
+
+/* ── Report Card: canvas + table on small screens ── */
+@media (max-width: 640px) {
+  .report-wrap, .rc-canvas-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .rc-canvas-wrap canvas { max-width: 100%; height: auto !important; }
+  .rc-table-wrap { overflow-x: auto; }
+  .rc-table { min-width: 440px; font-size: .65rem; }
+}
+@media (max-width: 480px) {
+  .rc-stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rc-stat-card { padding: 12px 10px; }
+}
