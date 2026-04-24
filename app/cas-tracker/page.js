@@ -100,6 +100,21 @@ function calculateFifoCost(scheme, currentNav) {
     finalInvested = directCost;
   }
 
+  // SUMMARY CAS: no transaction history → synthesise a single lot from CAS cost basis.
+  // Date set to epoch (Jan 1 1970) → always classified as LTCG, which is a safe default.
+  if (buyLots.length === 0 && units > 0) {
+    const casCost = parseFloat(scheme.valuation?.cost || 0);
+    if (casCost > 0) {
+      buyLots.push({
+        units,
+        amount: casCost,
+        nav: casCost / units,
+        date: new Date(0),  // epoch = very old, always LTCG
+        synthetic: true,    // flag for UI notice
+      });
+    }
+  }
+
   return {
     invested:   Math.max(0, finalInvested),
     lockedValue: lockedUnits * currentNav,
@@ -285,6 +300,37 @@ function RedemptionPlanner({ fund, onClose }) {
 
         {/* Body */}
         <div style={{ padding: '20px 24px', flex: 1 }}>
+
+          {/* Summary CAS notice — no transaction history available */}
+          {fund.buyLots?.every(l => l.synthetic) && (
+            <div style={{
+              marginBottom: 16, padding: '10px 14px',
+              background: '#fff8e1', border: '1.5px solid #ffe082',
+              borderRadius: 10, fontSize: '.7rem', lineHeight: 1.6,
+            }}>
+              <strong style={{ color: '#f57f17' }}>⚠ Summary CAS detected</strong>
+              <div style={{ color: '#795548', marginTop: 3 }}>
+                Your CAS has no transaction history — results use the CAS cost basis and
+                classify all gains as LTCG (purchase date unknown).
+                For accurate FIFO lot-level analysis, download a <strong>Detailed CAS</strong> from{' '}
+                <a href="https://www.camsonline.com" target="_blank" rel="noopener noreferrer"
+                  style={{ color: '#f57f17' }}>camsonline.com</a> or{' '}
+                <a href="https://www.kfintech.com" target="_blank" rel="noopener noreferrer"
+                  style={{ color: '#f57f17' }}>kfintech.com</a>.
+              </div>
+            </div>
+          )}
+
+          {/* No cost data at all */}
+          {(!fund.buyLots || fund.buyLots.length === 0) && (
+            <div style={{
+              marginBottom: 16, padding: '10px 14px',
+              background: 'var(--neg-bg)', border: '1.5px solid #ffcdd2',
+              borderRadius: 10, fontSize: '.7rem', color: 'var(--neg)',
+            }}>
+              No cost data available for this fund. Download a Detailed CAS to use this planner.
+            </div>
+          )}
 
           {/* Input toggle */}
           <div style={{ display: 'flex', gap: 0, marginBottom: 12, borderRadius: 8, overflow: 'hidden', border: '1.5px solid var(--border)' }}>
@@ -1259,8 +1305,8 @@ function CasTrackerInner() {
                           </div>
                         </div>
 
-                        {/* Plan Redemption — CAS holdings only (have buy lot history) */}
-                        {!isManual && fund.buyLots && fund.buyLots.length > 0 && (
+                        {/* Plan Redemption — CAS holdings only */}
+                        {!isManual && (
                           <button
                             onClick={() => setPlanFund(fund)}
                             style={{
