@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
@@ -101,9 +101,296 @@ function calculateFifoCost(scheme, currentNav) {
   }
 
   return {
-    invested: Math.max(0, finalInvested),
-    lockedValue: lockedUnits * currentNav
+    invested:   Math.max(0, finalInvested),
+    lockedValue: lockedUnits * currentNav,
+    buyLots,   // remaining lots (oldest first) — used by FIFO Redemption Planner
   };
+}
+
+
+// ── FIFO Tax constants (Budget 2024, effective July 23, 2024) ─────────────────
+const TAX = {
+  equity:     { stcg: 0.20, ltcg: 0.125, ltcgMonths: 12,  exemption: 125000 },
+  debt:       { stcg: null,  ltcg: null,  ltcgMonths: 36,  exemption: 0 },    // slab for all
+  hybrid:     { stcg: 0.20, ltcg: 0.125, ltcgMonths: 12,  exemption: 125000 }, // equity-oriented default
+};
+
+function inferCategory(name) {
+  const n = (name || '').toUpperCase();
+  if (/LIQUID|OVERNIGHT|ULTRA.?SHORT|LOW.?DURA|SHORT.?DURA|MEDIUM.?DURA|LONG.?DURA|GILT|MONEY.?MARKET|BANKING.?PSU|CORPORATE.?BOND|CREDIT.?RISK|FMP|FIXED.?MATURITY/.test(n)) return 'debt';
+  if (/BALANCED|HYBRID|ARBITRAGE|DYNAMIC.?ASSET|MULTI.?ASSET|EQUITY.?SAVINGS|CONSERVATIVE/.test(n)) return 'hybrid';
+  return 'equity'; // default — covers large/mid/small/flexi/ELSS/index
+}
+
+function RedemptionPlanner({ fund, onClose }) {
+  const maxUnits = fund.units;
+  const currentNav = fund.liveNav;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const [redeemUnits, setRedeemUnits] = useState('');
+  const [inputMode, setInputMode]     = useState('units'); // 'units' | 'amount'
+  const [category, setCategory]       = useState(() => inferCategory(fund.name));
+  const [slabPct,  setSlabPct]        = useState(30); // assumed slab rate %
+
+  // Derive units from amount input
+  const unitsToRedeem = inputMode === 'units'
+    ? Math.min(parseFloat(redeemUnits) || 0, maxUnits)
+    : Math.min((parseFloat(redeemUnits) || 0) / currentNav, maxUnits);
+
+  // ── FIFO lot consumption ─────────────────────────────────────────────────
+  const result = useMemo(() => {
+    if (unitsToRedeem <= 0) return null;
+    const lots  = fund.buyLots || [];
+    const rule  = TAX[category] || TAX.equity;
+    const cutoffMs = rule.ltcgMonths * 30.44 * 24 * 3600 * 1000;
+
+    let remaining  = unitsToRedeem;
+    let stcgGain   = 0;
+    let ltcgGain   = 0;
+    let proceeds   = 0;
+    const lotRows  = [];
+    let hasPreApr2023 = false; // for debt grandfathering note
+
+    for (const lot of lots) {
+      if (remaining <= 0) break;
+      const take   = Math.min(lot.units, remaining);
+      remaining   -= take;
+      const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
+      const heldMs  = today - buyDate;
+      const isLTCG  = heldMs >= cutoffMs;
+      const gain    = take * (currentNav - lot.nav);
+      const saleVal = take * currentNav;
+      proceeds     += saleVal;
+      if (category === 'debt' && buyDate < new Date('2023-04-01')) hasPreApr2023 = true;
+      if (isLTCG) ltcgGain += gain; else stcgGain += gain;
+      const heldDays = Math.floor(heldMs / (24*3600*1000));
+      lotRows.push({
+        date:    buyDate.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }),
+        buyNav:  lot.nav,
+        units:   take,
+        gain,
+        isLTCG,
+        heldDays,
+      });
+    }
+
+    // Tax computation
+    let stcgTax = 0, ltcgTax = 0;
+    if (category === 'equity' || category === 'hybrid') {
+      stcgTax  = stcgGain * TAX[category].stcg;
+      const taxableLTCG = Math.max(0, ltcgGain - TAX[category].exemption);
+      ltcgTax  = taxableLTCG * TAX[category].ltcg;
+    } else {
+      // Debt: all slab (simplified — note pre-Apr-2023 shown separately)
+      stcgTax = stcgGain * (slabPct / 100);
+      ltcgTax = ltcgGain * (slabPct / 100);
+    }
+    const totalTax     = stcgTax + ltcgTax;
+    const postTax      = proceeds - totalTax;
+
+    return { lotRows, stcgGain, ltcgGain, stcgTax, ltcgTax, totalTax, proceeds, postTax, hasPreApr2023 };
+  }, [unitsToRedeem, category, slabPct, fund, currentNav, today]);
+
+  const fmt = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
+  const fmtD = (n) => n.toFixed(4);
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 3000,
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
+    }}
+      onClick={onClose}
+    >
+      {/* Backdrop */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.35)', backdropFilter: 'blur(2px)' }} />
+
+      {/* Panel */}
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'relative', zIndex: 1,
+          width: '100%', maxWidth: 480,
+          height: '100dvh', overflowY: 'auto',
+          background: 'var(--surface)',
+          boxShadow: '-8px 0 40px rgba(0,0,0,.15)',
+          display: 'flex', flexDirection: 'column',
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '20px 24px 16px',
+          borderBottom: '1.5px solid var(--border)',
+          position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontSize: '.6rem', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 6 }}>
+                FIFO Redemption Planner
+              </div>
+              <div style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1.3, maxWidth: 340 }}>
+                {fund.name}
+              </div>
+              <div style={{ fontSize: '.65rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginTop: 4 }}>
+                {fund.units.toFixed(4)} units · Live NAV ₹{currentNav.toFixed(4)}
+              </div>
+            </div>
+            <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--muted)', padding: '4px 8px', marginTop: -4 }}>✕</button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '20px 24px', flex: 1 }}>
+
+          {/* Input toggle */}
+          <div style={{ display: 'flex', gap: 0, marginBottom: 12, borderRadius: 8, overflow: 'hidden', border: '1.5px solid var(--border)' }}>
+            {[['units','Units'],['amount','₹ Amount']].map(([m,l]) => (
+              <button key={m} onClick={() => { setInputMode(m); setRedeemUnits(''); }}
+                style={{
+                  flex: 1, padding: '8px', border: 'none', cursor: 'pointer',
+                  fontFamily: 'Raleway, sans-serif', fontSize: '.72rem', fontWeight: 700,
+                  background: inputMode===m ? 'var(--g1)' : 'var(--s2)',
+                  color: inputMode===m ? '#fff' : 'var(--muted)',
+                }}>
+                Redeem by {l}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+            <input
+              type="number" min="0" step="any"
+              value={redeemUnits}
+              onChange={e => setRedeemUnits(e.target.value)}
+              placeholder={inputMode === 'units' ? `Max ${maxUnits.toFixed(4)} units` : `Max ${fmt(maxUnits * currentNav)}`}
+              style={{
+                flex: 1, padding: '11px 14px',
+                border: '1.5px solid var(--border2)', borderRadius: 10,
+                fontFamily: "'JetBrains Mono', monospace", fontSize: '.82rem',
+                background: 'var(--s2)', color: 'var(--text)', outline: 'none',
+              }}
+            />
+            <button onClick={() => { setInputMode('units'); setRedeemUnits(maxUnits.toFixed(4)); }}
+              style={{
+                padding: '11px 14px', borderRadius: 10, border: '1.5px solid var(--border)',
+                background: 'var(--s2)', cursor: 'pointer',
+                fontFamily: 'Raleway, sans-serif', fontSize: '.72rem', fontWeight: 700,
+                color: 'var(--g2)', whiteSpace: 'nowrap',
+              }}>
+              Max
+            </button>
+          </div>
+
+          {/* Category + slab */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+            <div>
+              <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 5 }}>Fund Category</div>
+              <select value={category} onChange={e => setCategory(e.target.value)}
+                style={{ width: '100%', padding: '9px 10px', border: '1.5px solid var(--border2)', borderRadius: 9, fontFamily: 'Raleway, sans-serif', fontSize: '.75rem', fontWeight: 700, background: 'var(--s2)', color: 'var(--text)', outline: 'none' }}>
+                <option value="equity">Equity (&gt;65%)</option>
+                <option value="hybrid">Hybrid / Equity-oriented</option>
+                <option value="debt">Debt</option>
+              </select>
+            </div>
+            {category === 'debt' && (
+              <div>
+                <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 5 }}>Your Tax Slab</div>
+                <select value={slabPct} onChange={e => setSlabPct(Number(e.target.value))}
+                  style={{ width: '100%', padding: '9px 10px', border: '1.5px solid var(--border2)', borderRadius: 9, fontFamily: 'Raleway, sans-serif', fontSize: '.75rem', fontWeight: 700, background: 'var(--s2)', color: 'var(--text)', outline: 'none' }}>
+                  <option value={5}>5%</option>
+                  <option value={20}>20%</option>
+                  <option value={30}>30%</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Lot table */}
+          {result && result.lotRows.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 10 }}>
+                FIFO Lots Consumed
+              </div>
+              <div style={{ overflowX: 'auto', borderRadius: 10, border: '1.5px solid var(--border)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.65rem', minWidth: 380 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--s2)' }}>
+                      {['Purchase Date','Units','Buy NAV','Gain / Loss','Holding','Type'].map(h => (
+                        <th key={h} style={{ padding: '8px 10px', textAlign: h === 'Units' || h === 'Gain / Loss' ? 'right' : 'left', fontWeight: 800, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", fontSize: '.55rem', letterSpacing: '.5px', textTransform: 'uppercase', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.lotRows.map((row, i) => (
+                      <tr key={i} style={{ borderBottom: i < result.lotRows.length-1 ? '1px solid var(--border)' : 'none' }}>
+                        <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>{row.date}</td>
+                        <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace", textAlign: 'right' }}>{fmtD(row.units)}</td>
+                        <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace' }}>₹{row.buyNav.toFixed(4)}</td>
+                        <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace", textAlign: 'right', color: row.gain >= 0 ? 'var(--pos)' : 'var(--neg)', fontWeight: 700 }}>
+                          {row.gain >= 0 ? '+' : ''}{fmt(row.gain)}
+                        </td>
+                        <td style={{ padding: '8px 10px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{row.heldDays}d</td>
+                        <td style={{ padding: '8px 10px' }}>
+                          <span style={{ fontSize: '.52rem', fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: row.isLTCG ? 'var(--g-xlight)' : '#fff3e0', color: row.isLTCG ? 'var(--g1)' : '#e65100', border: `1px solid ${row.isLTCG ? 'var(--g-light)' : '#ffe0b2'}`, fontFamily: "'JetBrains Mono', monospace" }}>
+                            {row.isLTCG ? 'LTCG' : 'STCG'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Tax summary */}
+          {result && (
+            <div style={{ background: 'var(--s2)', borderRadius: 12, border: '1.5px solid var(--border)', padding: '16px 18px', marginBottom: 16 }}>
+              <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 12 }}>Tax Summary</div>
+              {[
+                ['Gross Proceeds', result.proceeds, 'var(--text)'],
+                ['STCG Gains', result.stcgGain, result.stcgGain >= 0 ? 'var(--pos)' : 'var(--neg)'],
+                ...(category !== 'debt' ? [['LTCG Gains', result.ltcgGain, result.ltcgGain >= 0 ? 'var(--pos)' : 'var(--neg)']] : []),
+                ['Est. Tax', -result.totalTax, 'var(--neg)'],
+                ['Post-Tax Proceeds', result.postTax, 'var(--g1)'],
+              ].map(([label, val, color]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: label === 'Est. Tax' ? '1px solid var(--border)' : 'none', marginBottom: label === 'Est. Tax' ? 4 : 0 }}>
+                  <span style={{ fontSize: '.72rem', color: 'var(--muted)', fontWeight: label === 'Post-Tax Proceeds' ? 800 : 600 }}>{label}</span>
+                  <span style={{ fontSize: label === 'Post-Tax Proceeds' ? '.85rem' : '.75rem', fontWeight: 800, color, fontFamily: "'JetBrains Mono', monospace" }}>
+                    {val >= 0 ? '' : '−'}{fmt(Math.abs(val))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Tax rule context */}
+          <div style={{ fontSize: '.65rem', color: 'var(--muted)', lineHeight: 1.6, padding: '12px 14px', background: 'var(--s2)', borderRadius: 10, border: '1.5px solid var(--border)' }}>
+            {category === 'equity' || category === 'hybrid' ? (
+              <>
+                <strong>Rates (Budget 2024, w.e.f. July 23 2024):</strong> STCG 20% · LTCG 12.5% above ₹1.25L annual exemption. LTCG exemption shown here per redemption — actual exemption is shared across all equity gains in the FY.
+                {result?.stcgGain === 0 && result?.ltcgGain === 0 ? null : (
+                  <div style={{ marginTop: 6, color: 'var(--g2)', fontWeight: 700 }}>
+                    ⚠ Grandfathering (Jan 31 2018 NAV) not applied — units purchased before that date may have lower taxable LTCG.
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <strong>Debt funds:</strong> Purchases after April 1, 2023 — all gains taxed at slab rate. Purchases before April 1, 2023 — STCG at slab, LTCG (≥3 years) at 20% with indexation (V2 feature — using slab for all here).
+              </>
+            )}
+          </div>
+
+          {!result && (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--muted)', fontSize: '.78rem' }}>
+              Enter units or amount to redeem above to see the FIFO breakdown and estimated tax.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function CasTrackerInner() {
@@ -129,6 +416,7 @@ function CasTrackerInner() {
   const [manualLoading,  setManualLoading]  = useState(false);
   const [viewFilter,     setViewFilter]     = useState('all'); // 'all' | 'mf' | 'sif'
   const [viewedUserId,   setViewedUserId]   = useState('');   // client userId when admin viewing
+  const [planFund,       setPlanFund]       = useState(null); // holding object for FIFO planner
 
   // Auto-load via ?load=blobKey (admin CAS view) or ?userId= (manual-only client)
   useEffect(() => {
@@ -331,6 +619,7 @@ function CasTrackerInner() {
       h.value       = h.units * currentNav;
       h.invested    = fifo.invested;
       h.lockedValue = fifo.lockedValue;
+      h.buyLots     = fifo.buyLots;  // FIFO lots for redemption planner
       const casCost = parseFloat(scheme.valuation?.cost || 0);
       h.avgPurchaseNav = h.units > 0 && casCost > 0 ? casCost / h.units : 0;
       portfolioData[pan].current  += h.value;
@@ -910,6 +1199,26 @@ function CasTrackerInner() {
                             </div>
                           </div>
                         </div>
+
+                        {/* Plan Redemption — CAS holdings only (have buy lot history) */}
+                        {!isManual && fund.buyLots && fund.buyLots.length > 0 && (
+                          <button
+                            onClick={() => setPlanFund(fund)}
+                            style={{
+                              marginTop: 12, width: '100%',
+                              padding: '8px 0', borderRadius: 8,
+                              border: '1.5px solid var(--border)',
+                              background: 'var(--s2)', cursor: 'pointer',
+                              fontSize: '.7rem', fontWeight: 700,
+                              color: 'var(--g2)', fontFamily: 'Raleway, sans-serif',
+                              transition: 'all .15s',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background='var(--g-xlight)'; e.currentTarget.style.borderColor='var(--g2)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background='var(--s2)'; e.currentTarget.style.borderColor='var(--border)'; }}
+                          >
+                            📊 Plan Redemption
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -919,6 +1228,9 @@ function CasTrackerInner() {
           </section>
         )}
       </div>
+
+      {/* ── FIFO Redemption Planner overlay ─────────────────────────────── */}
+      {planFund && <RedemptionPlanner fund={planFund} onClose={() => setPlanFund(null)} />}
 
       {/* ── FAQ — visible to all, crawlable ─────────────────────────────── */}
       <section style={{ padding: '64px 0 0', borderTop: '1px solid var(--border)', marginTop: 64 }}>
