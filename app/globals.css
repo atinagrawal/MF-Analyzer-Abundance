@@ -5196,3 +5196,64 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .rc-stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   .rc-stat-card { padding: 12px 10px; }
 }
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PRINT STYLES — Redemption Planner
+   ════════════════════════════════════════════════════════════════════════════ */
+
+@media print {
+  /* Hide everything except the planner panel */
+  body > * { display: none !important; }
+
+  /* Show only the fixed planner overlay when printing */
+  body [style*="position: fixed"][style*="z-index: 3000"],
+  body [style*="position:fixed"][style*="z-index:3000"] {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  /* Backdrop: hide */
+  body [style*="position: absolute"][style*="background: rgba"] {
+    display: none !important;
+  }
+
+  /* Panel: full width, no scroll */
+  body [style*="maxWidth: 700"] {
+    max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+
+  /* Hide interactive controls on print */
+  .no-print { display: none !important; }
+
+  /* Show print-only elements */
+  .print-only { display: inline !important; }
+
+  /* Make header sticky non-sticky on print */
+  [style*="position: sticky"] { position: static !important; }
+
+  /* Page setup */
+  @page {
+    size: A4 landscape;
+    margin: 15mm;
+  }
+
+  /* Table: fit on page */
+  table {
+    font-size: 9pt !important;
+    width: 100% !important;
+    page-break-inside: auto;
+  }
+  tr { page-break-inside: avoid; }
+  th, td { padding: 5px 6px !important; }
+
+  /* Remove hover effects and transitions */
+  * { transition: none !important; }
+}

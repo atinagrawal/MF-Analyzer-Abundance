@@ -124,15 +124,61 @@ function calculateFifoCost(scheme, currentNav) {
 
 
 
-// ── Exit load helper ──────────────────────────────────────────────────────────
-// Standard rules: Equity/Hybrid 1% within 365 days. Debt varies (noted in UI).
-// ELSS: locked units excluded upstream, unlocked treated as equity.
-function calcExitLoad(lot, redeemDate, category) {
-  if (category === 'debt') return 0; // too varied — flagged in UI
+// ── Exit load rules ──────────────────────────────────────────────────────────
+// Returns the exit load RATE (0–1) for a given lot, based on category + scheme name.
+// Override: pass overrideRate (decimal, e.g. 0.01) to use a custom rate directly.
+//
+// Category rules (SEBI/AMFI standard, as of 2024):
+//   'liquid'     — 0%      (Liquid, Overnight, Money Market)
+//   'ultrashort' — 0–0.07% (varies; using 0 as safe default)
+//   'debt'       — 0%      (most debt categories: Short/Medium/Long Duration, Gilt,
+//                            Banking & PSU, Corporate Bond, Credit Risk, FMP)
+//   'hybrid'     — 1% within 365 days (Aggressive Hybrid, Balanced Advantage,
+//                    Multi-Asset, Equity Savings); 0% for Conservative Hybrid & Arbitrage
+//   'equity'     — 1% within 365 days (all equity categories incl. Sectoral/Thematic)
+//                  Index funds/ETFs often 0% — detected by name
+//
+// For accurate planning: use the per-fund override in the UI.
+function inferExitLoadCategory(fundName) {
+  const n = (fundName || '').toUpperCase();
+  if (/LIQUID|OVERNIGHT|MONEY.?MARKET/.test(n)) return 'liquid';
+  if (/ULTRA.?SHORT|LOW.?DURA/.test(n)) return 'ultrashort';
+  if (/GILT|BANKING.?PSU|CORP.?BOND|CREDIT.?RISK|FMP|FIXED.?MATURITY|ARBITRAGE|CONSERVATIVE.?HYBRID/.test(n)) return 'debt';
+  if (/SHORT.?DURA|MEDIUM.?DURA|LONG.?DURA/.test(n)) return 'debt';
+  if (/INDEX|ETF|NIFTY|SENSEX/.test(n)) return 'index'; // many index funds have 0%
+  return 'equity_hybrid'; // default — equity and most hybrid
+}
+
+function getExitLoadRate(fundName) {
+  const cat = inferExitLoadCategory(fundName);
+  // Rate per period: [rate, days] — rate applied if held < days
+  switch (cat) {
+    case 'liquid':       return [];                      // 0% always
+    case 'ultrashort':   return [];                      // 0% (conservative)
+    case 'debt':         return [];                      // 0% for most debt
+    case 'index':        return [];                      // 0% for most index/ETF
+    case 'equity_hybrid':return [{ rate: 0.01, days: 365 }]; // 1% within 1yr
+    default:             return [{ rate: 0.01, days: 365 }];
+  }
+}
+
+// Compute actual exit load rate for a specific lot
+function calcExitLoad(lot, redeemDate, fundName, overrideRate) {
+  if (overrideRate != null) {
+    // User-specified override — still apply holding-period logic
+    if (lot.synthetic) return 0;
+    const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
+    const heldDays = Math.floor((redeemDate - buyDate) / (24 * 3600 * 1000));
+    return heldDays < 365 ? overrideRate : 0;
+  }
+  if (lot.synthetic) return 0; // unknown purchase date
   const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
-  if (lot.synthetic) return 0; // unknown purchase date — can't determine
   const heldDays = Math.floor((redeemDate - buyDate) / (24 * 3600 * 1000));
-  return heldDays < 365 ? 0.01 : 0; // 1% within 1 year, standard
+  const schedule = getExitLoadRate(fundName);
+  for (const { rate, days } of schedule) {
+    if (heldDays < days) return rate;
+  }
+  return 0;
 }
 
 // ── Portfolio-level redemption scoring (for sort order) ──────────────────────
@@ -169,10 +215,11 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [targetAmt,  setTargetAmt]  = useState('');
-  const [strategy,   setStrategy]   = useState('tax');
-  const [slabPct,    setSlabPct]    = useState(30);
-  const [skipLocked, setSkipLocked] = useState(true);
+  const [targetAmt,       setTargetAmt]       = useState('');
+  const [strategy,        setStrategy]        = useState('tax');
+  const [slabPct,         setSlabPct]         = useState(30);
+  const [skipLocked,      setSkipLocked]      = useState(true);
+  const [exitLoadOverrides, setExitLoadOverrides] = useState({}); // fund.name → rate (0-1)
 
   const fmt     = n => '₹' + Math.round(Math.abs(n)).toLocaleString('en-IN');
   const fmtD    = n => parseFloat(n).toFixed(4);
@@ -189,7 +236,10 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
       .filter(h => h.value > 0 && (h.buyLots?.length > 0))
       .map(h => ({
         ...h,
-        category: inferCategory(h.name),
+        category:     inferCategory(h.name),
+        exitLoadRate: exitLoadOverrides[h.name] != null
+          ? exitLoadOverrides[h.name]
+          : getExitLoadRate(h.name)[0]?.rate ?? 0, // inferred default
         score: fundScore(h, strategy, today),
       }))
       .sort((a, b) => a.score - b.score);
@@ -229,7 +279,9 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
         if (take < 0.0001) continue;
 
         const saleVal   = take * currentNav;
-        const exitLoad  = calcExitLoad(lot, today, cat) * saleVal;
+        const elRate    = calcExitLoad(lot, today, fund.name,
+                            exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : undefined);
+        const exitLoad  = elRate * saleVal;
         const netSale   = saleVal - exitLoad;
         const heldMs    = lot.synthetic ? Infinity : (today - buyDate);
         const isLTCG    = heldMs >= ltcgMs;
@@ -287,7 +339,7 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
 
     const shortfall = remaining > 0.5; // can't meet target
     return { rows, totalProceeds, totalExitLoad, totalSTCG, totalLTCG, totalTax, totalNet, shortfall };
-  }, [target, strategy, slabPct, skipLocked, holdings, today]);
+  }, [target, strategy, slabPct, skipLocked, holdings, today, exitLoadOverrides]);
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}
@@ -315,10 +367,29 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
                 {investorName}
               </div>
               <div style={{ fontSize: '.65rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginTop: 3 }}>
-                FIFO · Budget 2024 tax rates · Equity exit load 1% within 365 days
+                FIFO · Budget 2024 tax rates · Per-category exit load · Override per row
               </div>
             </div>
-            <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--muted)', padding: '4px 8px', marginTop: -4 }}>✕</button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+              <button
+                className="no-print"
+                onClick={() => window.print()}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '6px 13px', borderRadius: 8,
+                  border: '1.5px solid var(--border2)',
+                  background: '#fff', color: 'var(--g2)',
+                  fontFamily: 'Raleway, sans-serif', fontSize: '.72rem',
+                  fontWeight: 700, cursor: 'pointer',
+                  letterSpacing: '.3px', transition: 'all .15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--g-xlight)'}
+                onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+              >
+                🖨 Print
+              </button>
+              <button onClick={onClose} className="no-print" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--muted)', padding: '4px 8px', marginTop: -4 }}>✕</button>
+            </div>
           </div>
         </div>
 
@@ -409,7 +480,7 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.67rem', minWidth: 620 }}>
                   <thead>
                     <tr style={{ background: 'var(--s2)' }}>
-                      {['Fund', 'Units', 'Gross', 'Exit Load', 'STCG', 'LTCG', 'Tax', 'Net'].map(h => (
+                      {['Fund', 'Exit Load %', 'Units', 'Gross', 'Exit Load ₹', 'STCG', 'LTCG', 'Tax', 'Net'].map(h => (
                         <th key={h} style={{ padding: '9px 10px', textAlign: h === 'Fund' ? 'left' : 'right', fontWeight: 800, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", fontSize: '.55rem', letterSpacing: '.5px', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
@@ -429,6 +500,36 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
                               </span>
                               {row.isELSS && <span style={{ fontSize: '.48rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: '#fff8e1', color: '#f57f17', border: '1px solid #ffe082', fontFamily: "'JetBrains Mono', monospace" }}>ELSS</span>}
                               {row.hasSynthetic && <span style={{ fontSize: '.48rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)', fontFamily: "'JetBrains Mono', monospace" }}>SUM</span>}
+                            </div>
+                          </td>
+                          {/* Editable exit load % — pre-filled with inferred rate, user can override */}
+                          <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                              <input
+                                type="number" min="0" max="5" step="0.1"
+                                value={exitLoadOverrides[row.name] != null
+                                  ? (exitLoadOverrides[row.name] * 100).toFixed(2)
+                                  : (row.exitLoadRate * 100).toFixed(2)}
+                                onChange={e => {
+                                  const v = parseFloat(e.target.value);
+                                  setExitLoadOverrides(prev => ({
+                                    ...prev,
+                                    [row.name]: isNaN(v) ? 0 : Math.min(v, 5) / 100,
+                                  }));
+                                }}
+                                className="no-print"
+                                style={{
+                                  width: 48, padding: '3px 4px', textAlign: 'right',
+                                  border: '1px solid var(--border2)', borderRadius: 5,
+                                  fontFamily: "'JetBrains Mono', monospace", fontSize: '.65rem',
+                                  background: 'var(--surface)', color: 'var(--text)', outline: 'none',
+                                }}
+                              />
+                              <span style={{ fontSize: '.65rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>%</span>
+                              {/* Print-only: show static rate */}
+                              <span className="print-only" style={{ display: 'none', fontSize: '.65rem', fontFamily: "'JetBrains Mono', monospace" }}>
+                                {((exitLoadOverrides[row.name] ?? row.exitLoadRate) * 100).toFixed(2)}%
+                              </span>
                             </div>
                           </td>
                           <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>{fmtD(row.units)}</td>
@@ -454,6 +555,7 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
                     {/* Totals row */}
                     <tr style={{ background: 'var(--g-xlight)', borderTop: '2px solid var(--g-light)' }}>
                       <td style={{ padding: '10px 10px', fontWeight: 900, fontSize: '.67rem', color: 'var(--g1)' }}>TOTAL</td>
+                      <td style={{ padding: '10px 10px', textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", color: 'var(--muted)' }}>—</td>
                       <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800 }}>—</td>
                       <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800 }}>{fmt(plan.totalProceeds)}</td>
                       <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, color: 'var(--neg)' }}>{plan.totalExitLoad > 0 ? '−' + fmt(plan.totalExitLoad) : '—'}</td>
@@ -469,7 +571,7 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
               {/* Footnotes */}
               <div style={{ marginTop: 14, fontSize: '.62rem', color: 'var(--muted)', lineHeight: 1.7, padding: '12px 14px', background: 'var(--s2)', borderRadius: 10, border: '1.5px solid var(--border)' }}>
                 <strong>Notes:</strong> Tax rates per Budget 2024 (w.e.f. July 23 2024) — Equity STCG 20%, LTCG 12.5% above ₹1.25L annual exemption (shown per redemption; actual exemption is shared across all equity gains in the FY). Debt: all gains at selected slab rate.
-                Exit load: 1% within 365 days for equity/hybrid; debt exit load varies by fund and is not included.
+                Exit load rates are auto-inferred by fund category (Equity/Hybrid: 1% within 365 days; Liquid/Overnight/Debt/Index: 0%). Override per row using the Exit Load % field. CAS files do not contain structured exit load schedules — verify rates in your fund's SID or AMC website.
                 SUM = Summary CAS — purchase date unknown, all gains treated as LTCG, exit load not applied.
                 Grandfathering (Jan 31 2018 NAV) is not applied at portfolio level — use per-fund planner for pre-2018 lots.
                 This is an estimate only. Consult a tax professional before redeeming.
