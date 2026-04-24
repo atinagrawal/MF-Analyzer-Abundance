@@ -1272,58 +1272,62 @@ function CasTrackerInner() {
                           )}
                         </div>
 
-                        <div className="nav-grid">
-                          <div className="nav-left">
-                            <div className="nav-item">
-                              <div className="ni-label">
-                                {isManual ? 'Purchase NAV' : <>Avg Buy NAV <span className="cas-tag">(CAS)</span></>}
+                        {/* Bottom section: nav metrics + Plan Redemption button wrapped together
+                             so space-between doesn't push the button to the far bottom in a stretched grid card */}
+                        <div>
+                          <div className="nav-grid">
+                            <div className="nav-left">
+                              <div className="nav-item">
+                                <div className="ni-label">
+                                  {isManual ? 'Purchase NAV' : <>Avg Buy NAV <span className="cas-tag">(CAS)</span></>}
+                                </div>
+                                <div className="ni-val">{avgNavDisplay}</div>
                               </div>
-                              <div className="ni-val">{avgNavDisplay}</div>
-                            </div>
-                            <div className="nav-item">
-                              <div className="ni-label">
-                                {isManual && !fund.isLive ? 'Est. NAV' : 'Live NAV'}
-                                {fund.isLive && <span className="live-indicator"></span>}
+                              <div className="nav-item">
+                                <div className="ni-label">
+                                  {isManual && !fund.isLive ? 'Est. NAV' : 'Live NAV'}
+                                  {fund.isLive && <span className="live-indicator"></span>}
+                                </div>
+                                <div className="ni-val">₹{fmtDec(fund.liveNav)}</div>
                               </div>
-                              <div className="ni-val">₹{fmtDec(fund.liveNav)}</div>
+                              <div className="nav-item">
+                                <div className="ni-label">Units</div>
+                                <div className="ni-val sm">{fmtDec(fund.units)}</div>
+                              </div>
+                              <div className="nav-item">
+                                <div className="ni-label">Invested</div>
+                                <div className="ni-val sm">₹{fmtINR(fund.invested)}</div>
+                              </div>
                             </div>
-                            <div className="nav-item">
-                              <div className="ni-label">Units</div>
-                              <div className="ni-val sm">{fmtDec(fund.units)}</div>
-                            </div>
-                            <div className="nav-item">
-                              <div className="ni-label">Invested</div>
-                              <div className="ni-val sm">₹{fmtINR(fund.invested)}</div>
+                            <div className="nav-right-col">
+                              <div className="ni-label">Current Value</div>
+                              <div className="ni-val">₹{fmtINR(fund.value)}</div>
+                              <div className={`fund-gain-pct ${fProfit ? 'pos' : 'neg'}`}>
+                                {fProfit ? '+' : ''}{fGainPct}%
+                              </div>
                             </div>
                           </div>
-                          <div className="nav-right-col">
-                            <div className="ni-label">Current Value</div>
-                            <div className="ni-val">₹{fmtINR(fund.value)}</div>
-                            <div className={`fund-gain-pct ${fProfit ? 'pos' : 'neg'}`}>
-                              {fProfit ? '+' : ''}{fGainPct}%
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* Plan Redemption — CAS holdings only */}
-                        {!isManual && (
-                          <button
-                            onClick={() => setPlanFund(fund)}
-                            style={{
-                              marginTop: 12, width: '100%',
-                              padding: '8px 0', borderRadius: 8,
-                              border: '1.5px solid var(--border)',
-                              background: 'var(--s2)', cursor: 'pointer',
-                              fontSize: '.7rem', fontWeight: 700,
-                              color: 'var(--g2)', fontFamily: 'Raleway, sans-serif',
-                              transition: 'all .15s',
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.background='var(--g-xlight)'; e.currentTarget.style.borderColor='var(--g2)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background='var(--s2)'; e.currentTarget.style.borderColor='var(--border)'; }}
-                          >
-                            📊 Plan Redemption
-                          </button>
-                        )}
+                          {/* Plan Redemption button — CAS holdings only, always visible */}
+                          {!isManual && (
+                            <button
+                              onClick={() => setPlanFund(fund)}
+                              style={{
+                                marginTop: 12, width: '100%',
+                                padding: '9px 0', borderRadius: 8,
+                                border: 'none',
+                                background: 'var(--g1)', cursor: 'pointer',
+                                fontSize: '.72rem', fontWeight: 800,
+                                color: '#fff', fontFamily: 'Raleway, sans-serif',
+                                letterSpacing: '-.2px', transition: 'background .15s',
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'var(--g2)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
+                            >
+                              📊 Plan Redemption
+                            </button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
