@@ -60,7 +60,7 @@ export async function GET(req) {
 
     const result = await pool.query(
       `SELECT id, fund_name, amfi_code, fund_type, units, purchase_nav,
-              purchase_date, folio, notes, created_at, updated_at
+              purchase_date, folio, notes, pan, created_at, updated_at
        FROM manual_holdings
        WHERE user_id = $1
        ORDER BY created_at DESC`,
@@ -85,7 +85,7 @@ export async function POST(req) {
 
     const body = await req.json();
     const { userId, fund_name, amfi_code, fund_type, units, purchase_nav,
-            purchase_date, folio, notes } = body;
+            purchase_date, folio, notes, pan } = body;
 
     if (!userId) return Response.json({ error: 'userId is required' }, { status: 400 });
 
@@ -95,8 +95,8 @@ export async function POST(req) {
     const result = await pool.query(
       `INSERT INTO manual_holdings
          (user_id, fund_name, amfi_code, fund_type, units, purchase_nav,
-          purchase_date, folio, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+          purchase_date, folio, notes, pan)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
        RETURNING *`,
       [
         userId,
@@ -108,6 +108,7 @@ export async function POST(req) {
         purchase_date        || null,
         folio?.trim()        || null,
         notes?.trim()        || null,
+        pan?.trim().toUpperCase() || null,
       ]
     );
 
@@ -129,7 +130,7 @@ export async function PUT(req) {
 
     const body = await req.json();
     const { id, userId, fund_name, amfi_code, fund_type, units, purchase_nav,
-            purchase_date, folio, notes } = body;
+            purchase_date, folio, notes, pan } = body;
 
     if (!id || !userId) return Response.json({ error: 'id and userId are required' }, { status: 400 });
 
@@ -153,8 +154,9 @@ export async function PUT(req) {
          purchase_date = $6,
          folio         = $7,
          notes         = $8,
+         pan           = $9,
          updated_at    = NOW()
-       WHERE id = $9 AND user_id = $10
+       WHERE id = $10 AND user_id = $11
        RETURNING *`,
       [
         fund_name.trim(),
@@ -165,6 +167,7 @@ export async function PUT(req) {
         purchase_date        || null,
         folio?.trim()        || null,
         notes?.trim()        || null,
+        pan?.trim().toUpperCase() || null,
         id, userId,
       ]
     );

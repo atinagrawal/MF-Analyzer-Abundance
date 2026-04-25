@@ -5517,7 +5517,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   gap: 14px;
   margin: -28px 0 28px;
   position: relative;
-  z-index: 2;
+  /* z-index removed — was creating stacking context above nav panel */
 }
 .pf-stat-card {
   background: var(--surface);
@@ -5975,6 +5975,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   transition: background .15s, border-color .15s;
 }
 .nav-hamburger:hover { background: var(--s3); border-color: var(--border2); }
+.nav-hamburger.open {
+  background: var(--g-xlight);
+  border-color: var(--g2);
+  color: var(--g1);
+}
+.pf-hero .nav-hamburger.open {
+  background: rgba(255,255,255,.22);
+  border-color: rgba(255,255,255,.5);
+  color: #fff;
+}
 
 /* Mobile menu panel
    - position:fixed so it overlays the whole page
@@ -5990,6 +6000,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   right: 0;
   bottom: 0;               /* full-height overlay so nothing bleeds through */
   z-index: 9998;
+  isolation: isolate;      /* force new stacking context — prevents page elements bleeding through */
   pointer-events: none;
   opacity: 0;
   transition: opacity .22s ease;

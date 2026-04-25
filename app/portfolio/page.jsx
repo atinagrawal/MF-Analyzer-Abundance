@@ -152,16 +152,18 @@ function PortfolioInner() {
         setPortfolios(ports);
         setManualHoldings(manual);
 
-        // 2. SIF NAVs if manual SIF holdings exist
+        // 2. SIF NAVs — localSifMap used directly in computation (state update is async)
+        let localSifMap = {};
         const hasSIF = manual.some(h => h.fund_type === 'SIF');
         if (hasSIF) {
-          const sifRes = await fetch('/api/sif-nav');
-          if (sifRes.ok) {
-            const sifData = await sifRes.json();
-            const nm = {};
-            (sifData.schemes || []).forEach(s => { nm[s.scheme_id] = s.nav; });
-            setSifNavMap(nm);
-          }
+          try {
+            const sifRes = await fetch('/api/sif-nav');
+            if (sifRes.ok) {
+              const sifData = await sifRes.json();
+              (sifData.schemes || []).forEach(s => { localSifMap[s.scheme_id] = s.nav; });
+              setSifNavMap(localSifMap);
+            }
+          } catch {}
         }
 
         // 3. Load latest CAS if available
@@ -263,28 +265,31 @@ function PortfolioInner() {
               });
             });
 
-            setPanPortfolios(panMap);
-
-            // Manual holdings value (attributed to 'all', not a specific PAN)
+            // Manual holdings: attribute to specific PAN if set, always include in 'all'
             let manualVal = 0;
             manual.forEach(h => {
-              const pu = parseFloat(h.purchase_nav);
-              const u  = parseFloat(h.units);
-              const ln = h.fund_type === 'SIF' ? (sifNavMap[h.amfi_code] ?? null) : null;
-              manualVal += (ln ?? pu) * u;
-              holdings.push({
-                name:      h.fund_name,
-                value:     (ln ?? pu) * u,
-                invested:  pu * u,
-                liveNav:   ln ?? pu,
-                units:     u,
-                isLive:    ln != null,
-                category:  h.fund_type === 'SIF' ? 'sif' : inferCategory(h.fund_name),
-                isSIF:     h.fund_type === 'SIF',
-                isManual:  true,
-              });
+              const pu  = parseFloat(h.purchase_nav);
+              const u   = parseFloat(h.units);
+              const ln  = h.fund_type === 'SIF' ? (localSifMap[h.amfi_code] ?? null) : null;
+              const val = (ln ?? pu) * u;
+              manualVal += val;
+              const mh = {
+                name: h.fund_name, value: val, invested: pu * u,
+                liveNav: ln ?? pu, units: u, isLive: ln != null,
+                category: h.fund_type === 'SIF' ? 'sif' : inferCategory(h.fund_name),
+                isSIF: h.fund_type === 'SIF', isManual: true,
+              };
+              holdings.push(mh);
+              // Attribute to specific PAN if set and that PAN exists in the CAS
+              const hp = (h.pan || '').toUpperCase().trim();
+              if (hp && PAN_RE.test(hp) && panMap[hp]) {
+                panMap[hp].current  += val;
+                panMap[hp].invested += pu * u;
+                panMap[hp].holdings.push(mh);
+              }
             });
 
+            setPanPortfolios(panMap);
             setTotals({ current: casCurrent + manualVal, invested: casInvested, manual: manualVal });
             setTopHoldings(holdings.sort((a, b) => b.value - a.value).slice(0, 6));
             setPhase('ready');
@@ -298,7 +303,7 @@ function PortfolioInner() {
           manual.forEach(h => {
             const pu = parseFloat(h.purchase_nav);
             const u  = parseFloat(h.units);
-            const ln = h.fund_type === 'SIF' ? (sifNavMap[h.amfi_code] ?? null) : null;
+            const ln = h.fund_type === 'SIF' ? (localSifMap[h.amfi_code] ?? null) : null;
             manualVal += (ln ?? pu) * u;
             mhList.push({
               name:     h.fund_name,

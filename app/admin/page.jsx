@@ -515,7 +515,7 @@ function ManualHoldingsTab() {
 
   const emptyForm = {
     fund_name: '', amfi_code: '', fund_type: 'Equity MF',
-    units: '', purchase_nav: '', purchase_date: '', folio: '', notes: '',
+    units: '', purchase_nav: '', purchase_date: '', folio: '', notes: '', pan: '',
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -605,6 +605,7 @@ function ManualHoldingsTab() {
       purchase_date: h.purchase_date ? h.purchase_date.split('T')[0] : '',
       folio:         h.folio         || '',
       notes:         h.notes         || '',
+      pan:           h.pan           || '',
     });
     setSifSearch(h.fund_name || '');
     setShowSifDrop(false);
@@ -634,6 +635,7 @@ function ManualHoldingsTab() {
         purchase_date: form.purchase_date || null,
         folio:         form.folio.trim()  || null,
         notes:         form.notes.trim()  || null,
+        pan:           form.pan.trim().toUpperCase() || null,
         ...(editIdx !== null ? { id: holdings[editIdx].id } : {}),
       };
       if (!payload.fund_name || isNaN(payload.units) || isNaN(payload.purchase_nav)) {
@@ -861,6 +863,19 @@ function ManualHoldingsTab() {
                   onChange={e => setForm(f => ({ ...f, folio: e.target.value }))}
                   placeholder="optional"
                   className="field-input" />
+              </div>
+
+              <div>
+                <div className="field-label">PAN of Holder</div>
+                <input type="text" value={form.pan || ''}
+                  onChange={e => setForm(f => ({ ...f, pan: e.target.value.toUpperCase() }))}
+                  placeholder="e.g. ABCDE1234F"
+                  maxLength={10}
+                  className="field-input"
+                  style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1px' }} />
+                <div style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 3, lineHeight: 1.5 }}>
+                  Links this holding to the correct family member in the client portfolio view
+                </div>
               </div>
 
               <div style={{ gridColumn: '1/-1' }}>
