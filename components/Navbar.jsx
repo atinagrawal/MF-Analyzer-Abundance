@@ -259,8 +259,15 @@ export default function Navbar({ activePage, variant = 'default' }) {
       </nav>
 
       {/* ── Mobile menu panel ── */}
-      <div className={`nav-mobile-panel${menuOpen ? ' open' : ''}`} aria-hidden={!menuOpen}>
-        <div className="nav-mobile-inner">
+      {/* clicking the backdrop (outer div) closes the menu */}
+      <div
+        className={`nav-mobile-panel${menuOpen ? ' open' : ''}`}
+        aria-hidden={!menuOpen}
+        onClick={() => setMenuOpen(false)}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="nav-mobile-inner" onClick={e => e.stopPropagation()}>
           {NAV_ITEMS.map(item => {
             const isActive = item.key === activePage;
             const linkProps = item.external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
