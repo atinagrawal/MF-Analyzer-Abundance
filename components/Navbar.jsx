@@ -238,7 +238,7 @@ export default function Navbar({ activePage, variant = 'default' }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 4 }}>
           {/* Hamburger — mobile only */}
           <button
-            className="nav-hamburger"
+            className={`nav-hamburger${menuOpen ? ' open' : ''}`}
             onClick={() => setMenuOpen(o => !o)}
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={menuOpen}
