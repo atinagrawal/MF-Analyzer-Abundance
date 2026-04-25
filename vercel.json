@@ -39,5 +39,16 @@
       "path": "/api/cron/fetch-pms",
       "schedule": "0 2 5-12 * *"
     }
+  ],
+  "functions": {
+    "api/parse.py": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/og-cas.png",
+      "destination": "/api/og-cas"
+    }
   ]
 }
