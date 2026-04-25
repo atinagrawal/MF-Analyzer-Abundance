@@ -307,23 +307,86 @@ function PortfolioInner() {
     loadAll();
   }, [status, session]);
 
-  // ── Auth loading ────────────────────────────────────────────────────────────
+  // ── Unauthenticated gate ─────────────────────────────────────────────────────
+  if (status === 'unauthenticated') {
+    return (
+      <>
+        <div className="pf-hero" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+          <div className="container" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Navbar activePage="portfolio" />
+            <div className="pf-hero-inner pf-gate-inner">
+              <div className="pf-gate-logo">
+                <img src="/logo-192.png" alt="Abundance" style={{ width: 56, height: 56, borderRadius: 14, border: '2px solid rgba(255,255,255,.2)', marginBottom: 20 }} />
+              </div>
+              <div className="pf-greeting">Your wealth, beautifully organised</div>
+              <h1 className="pf-gate-title">Sign in to view<br />your portfolio</h1>
+              <p className="pf-gate-sub">
+                Your mutual fund holdings, live NAVs, FIFO gains, and ELSS lock-in status —
+                all in one place. Managed by Abundance Financial Services (ARN-251838).
+              </p>
+              <div className="pf-gate-actions">
+                <a href={`/login?from=/portfolio`} className="pf-gate-btn-primary">
+                  Sign in to Abundance →
+                </a>
+                <a href="/cas-tracker" className="pf-gate-btn-secondary">
+                  Try without signing in
+                </a>
+              </div>
+              <div className="pf-gate-features">
+                {['Live AMFI NAVs', 'FIFO capital gains', 'ELSS lock-in tracker', 'SIF holdings', 'Redemption planner'].map(f => (
+                  <span key={f} className="pf-gate-feature">✓ {f}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  // ── Auth / data loading — animated skeleton ───────────────────────────────
   if (status === 'loading' || (status === 'authenticated' && phase === 'loading')) {
     return (
       <>
         <div className="pf-hero">
           <div className="container">
             <Navbar activePage="portfolio" />
-            <div className="pf-hero-inner">
-              <div className="sk" style={{ width: 200, height: 20, marginBottom: 10, borderRadius: 8 }} />
-              <div className="sk" style={{ width: 300, height: 52, marginBottom: 8, borderRadius: 10 }} />
-              <div className="sk" style={{ width: 140, height: 18, borderRadius: 8 }} />
+            <div className="pf-hero-inner pf-loading-inner">
+              {/* Animated greeting shimmer */}
+              <div className="pf-sk-line" style={{ width: 160, height: 12 }} />
+              <div className="pf-sk-line" style={{ width: 280, height: 44, marginTop: 10, borderRadius: 10 }} />
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 14 }}>
+                <div className="pf-sk-pill" style={{ width: 100 }} />
+                <div className="pf-sk-pill" style={{ width: 80 }} />
+              </div>
+              {/* Loading indicator */}
+              <div className="pf-loading-dots">
+                <span /><span /><span />
+              </div>
             </div>
           </div>
         </div>
         <div className="container">
-          <div className="pf-stat-row">
-            {[1,2,3].map(i => <div key={i} className="sk" style={{ height: 96, borderRadius: 14 }} />)}
+          <div className="pf-stat-row" style={{ marginTop: -28 }}>
+            {[1,2,3].map(i => (
+              <div key={i} className="pf-stat-card pf-sk-card" style={{ height: 96 }}>
+                <div className="pf-sk-line" style={{ width: '55%', height: 10, marginBottom: 10 }} />
+                <div className="pf-sk-line" style={{ width: '80%', height: 24 }} />
+                <div className="pf-sk-line" style={{ width: '40%', height: 10, marginTop: 8 }} />
+              </div>
+            ))}
+          </div>
+          <div className="pf-sk-tabs" />
+          <div className="pf-section">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="pf-holding-row pf-sk-row" style={{ animationDelay: `${i * 0.08}s` }}>
+                <div className="pf-sk-badge" />
+                <div className="pf-sk-line" style={{ width: `${55 + i * 7}%`, height: 12 }} />
+                <div className="pf-sk-line" style={{ width: 60, height: 12 }} />
+                <div className="pf-sk-line" style={{ width: 48, height: 12 }} />
+              </div>
+            ))}
           </div>
         </div>
       </>
@@ -344,9 +407,12 @@ function PortfolioInner() {
             <Navbar activePage="portfolio" />
             <div className="pf-hero-inner">
               <div className="pf-greeting">{g}, {first} 👋</div>
-              <div className="pf-hero-title">Your portfolio is waiting</div>
-              <p className="pf-hero-sub">Upload your CAS statement to see your complete mutual fund portfolio with live NAVs, gains, and FIFO analysis.</p>
-              <a href="/cas-tracker" className="pf-cta-btn">📄 Upload CAS Statement</a>
+              <h1 className="pf-gate-title" style={{ fontSize: 'clamp(1.6rem,5vw,2.6rem)' }}>Your portfolio<br />is waiting</h1>
+              <p className="pf-gate-sub">Upload your CAMS or KFintech CAS statement to see your complete mutual fund portfolio with live NAVs, FIFO gains, and ELSS lock-in analysis.</p>
+              <div className="pf-gate-actions">
+                <a href="/cas-tracker" className="pf-gate-btn-primary">📄 Upload CAS Statement</a>
+                <a href="/login?from=/portfolio" className="pf-gate-btn-secondary">Sign in first</a>
+              </div>
             </div>
           </div>
         </div>

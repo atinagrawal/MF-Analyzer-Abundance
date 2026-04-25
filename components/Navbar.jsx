@@ -3,39 +3,36 @@
 /**
  * components/Navbar.jsx — Shared navigation bar
  *
- * Props:
- *   activePage: string — key of the currently active page
- *   variant: 'default' | 'home'
+ * Desktop (>768px): scrollable horizontal nav row, always visible.
+ * Mobile (≤768px):  hamburger button opens a slide-down menu panel.
+ *                   Logo + hamburger + auth always visible.
  *
- * Auth: shows a Google avatar + dropdown when signed in.
- *   Sign-out returns the user to the current page (window.location.pathname).
+ * Key change from v1: "My Portfolio" replaces "CAS Tracker" in nav.
+ * CAS Tracker is accessible from the Portfolio page.
  */
 
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useRef, useEffect } from 'react';
 
 const NAV_ITEMS = [
-  { key: 'home',          label: '🏠 Home',            href: 'https://www.getabundance.in', external: true },
-  { key: 'calculator',    label: '📊 MF Calculator',   href: '/' },
-  { key: 'industry',      label: '📈 Industry Pulse',  href: '/industry' },
-  { key: 'report',        label: '📋 Report Card',     href: '/report' },
-  { key: 'geography',     label: '🗺 Geography',       href: '/geography' },
-  { key: 'rolling',       label: '📉 Rolling Returns', href: '/rolling' },
-  { key: 'indices',       label: '📊 Index Dashboard', href: '/indices' },
-  { key: 'pms-screener',  label: '🏆 PMS Screener',   href: '/pms-screener' },
-  { key: 'cas-tracker',   label: '📋 CAS Tracker',     href: '/cas-tracker' },
-  { key: 'contact',       label: '📞 Contact',         href: 'https://www.getabundance.in/contact-us', external: true },
+  { key: 'home',         label: '🏠 Home',            href: 'https://www.getabundance.in', external: true },
+  { key: 'calculator',   label: '📊 MF Calculator',   href: '/' },
+  { key: 'portfolio',    label: '💼 My Portfolio',     href: '/portfolio' },
+  { key: 'industry',     label: '📈 Industry Pulse',  href: '/industry' },
+  { key: 'report',       label: '📋 Report Card',     href: '/report' },
+  { key: 'geography',    label: '🗺 Geography',       href: '/geography' },
+  { key: 'rolling',      label: '📉 Rolling Returns', href: '/rolling' },
+  { key: 'indices',      label: '📊 Index Dashboard', href: '/indices' },
+  { key: 'pms-screener', label: '🏆 PMS Screener',   href: '/pms-screener' },
+  { key: 'contact',      label: '📞 Contact',         href: 'https://www.getabundance.in/contact-us', external: true },
 ];
 
 // ── Avatar dropdown ──────────────────────────────────────────────────────────
-function UserAvatar({ session }) {
+function UserAvatar({ session, onNavClose }) {
   const [open, setOpen] = useState(false);
-  const btnRef = useRef(null);
+  const btnRef  = useRef(null);
   const dropRef = useRef(null);
 
-  const toggleOpen = () => setOpen(o => !o);
-
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     function handler(e) {
@@ -62,10 +59,9 @@ function UserAvatar({ session }) {
 
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
-      {/* Avatar trigger button */}
       <button
         ref={btnRef}
-        onClick={toggleOpen}
+        onClick={() => { setOpen(o => !o); }}
         aria-label="Account menu"
         style={{
           width: 32, height: 32,
@@ -81,54 +77,36 @@ function UserAvatar({ session }) {
         }}
       >
         {image ? (
-          <img
-            src={image}
-            alt={name}
-            width={32} height={32}
+          <img src={image} alt={name} width={32} height={32}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            referrerPolicy="no-referrer"
-          />
+            referrerPolicy="no-referrer" />
         ) : (
-          <span style={{
-            fontSize: '.6rem', fontWeight: 800,
-            color: 'var(--g1)', fontFamily: "'JetBrains Mono', monospace",
-          }}>
+          <span style={{ fontSize: '.6rem', fontWeight: 800, color: 'var(--g1)', fontFamily: "'JetBrains Mono', monospace" }}>
             {initials}
           </span>
         )}
       </button>
 
-      {/* Dropdown — position:absolute relative to the button container */}
       {open && (
-        <div
-          ref={dropRef}
-          style={{
-            position: 'absolute',
-            top:   'calc(100% + 8px)',
-            right: 0,
-            background: 'var(--surface)',
-            border: '1.5px solid var(--border)',
-            borderRadius: 'var(--r)',
-            boxShadow: '0 8px 24px rgba(0,0,0,.12)',
-            minWidth: 210,
-            zIndex: 9999,
-            overflow: 'hidden',
-            animation: 'fadeUp .2s ease-out',
-          }}
-        >
+        <div ref={dropRef} style={{
+          position: 'absolute',
+          top: 'calc(100% + 8px)',
+          right: 0,
+          background: 'var(--surface)',
+          border: '1.5px solid var(--border)',
+          borderRadius: 'var(--r)',
+          boxShadow: '0 8px 24px rgba(0,0,0,.12)',
+          minWidth: 210,
+          zIndex: 9999,
+          overflow: 'hidden',
+          animation: 'fadeUp .2s ease-out',
+        }}>
           {/* User info */}
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
-            <div style={{
-              fontSize: '.78rem', fontWeight: 700, color: 'var(--text)',
-              marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>
+            <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {name}
             </div>
-            <div style={{
-              fontSize: '.62rem', color: 'var(--muted)',
-              fontFamily: "'JetBrains Mono', monospace",
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>
+            <div style={{ fontSize: '.62rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {email}
             </div>
             <div style={{
@@ -145,37 +123,37 @@ function UserAvatar({ session }) {
             </div>
           </div>
 
-          {/* My Portfolios */}
-          <a
-            href="/cas-tracker"
-            onClick={() => setOpen(false)}
-            style={{
-              display: 'block', padding: '10px 14px',
-              fontSize: '.75rem', fontWeight: 600, color: 'var(--text)',
-              textDecoration: 'none', borderBottom: '1px solid var(--border)',
-              transition: 'background .12s',
-            }}
+          {/* My Portfolio */}
+          <a href="/portfolio" onClick={() => { setOpen(false); onNavClose?.(); }}
+            style={{ display: 'block', padding: '10px 14px', fontSize: '.75rem', fontWeight: 600, color: 'var(--text)', textDecoration: 'none', borderBottom: '1px solid var(--border)', transition: 'background .12s' }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--s2)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-          >
-            📋 My Portfolios
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+            💼 My Portfolio
           </a>
 
+          {/* CAS Tracker */}
+          <a href="/cas-tracker" onClick={() => { setOpen(false); onNavClose?.(); }}
+            style={{ display: 'block', padding: '10px 14px', fontSize: '.75rem', fontWeight: 600, color: 'var(--text)', textDecoration: 'none', borderBottom: '1px solid var(--border)', transition: 'background .12s' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--s2)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+            📋 CAS Tracker
+          </a>
+
+          {/* Admin panel — admin only */}
+          {role === 'admin' && (
+            <a href="/admin" onClick={() => { setOpen(false); onNavClose?.(); }}
+              style={{ display: 'block', padding: '10px 14px', fontSize: '.75rem', fontWeight: 600, color: 'var(--text)', textDecoration: 'none', borderBottom: '1px solid var(--border)', transition: 'background .12s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--s2)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              ⚙ Admin Panel
+            </a>
+          )}
+
           {/* Sign out */}
-          <button
-            onClick={handleSignOut}
-            style={{
-              display: 'block', width: '100%',
-              padding: '10px 14px',
-              fontSize: '.75rem', fontWeight: 600,
-              color: 'var(--neg)', background: 'transparent',
-              border: 'none', cursor: 'pointer',
-              textAlign: 'left', transition: 'background .12s',
-              fontFamily: 'Raleway, sans-serif',
-            }}
+          <button onClick={handleSignOut}
+            style={{ display: 'block', width: '100%', padding: '10px 14px', fontSize: '.75rem', fontWeight: 600, color: 'var(--neg)', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', transition: 'background .12s', fontFamily: 'Raleway, sans-serif' }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--neg-bg)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-          >
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
             Sign out
           </button>
         </div>
@@ -184,95 +162,118 @@ function UserAvatar({ session }) {
   );
 }
 
+// ── Hamburger icon ────────────────────────────────────────────────────────────
+function HamburgerIcon({ open }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <style>{`
+        .hb-top, .hb-mid, .hb-bot { transition: all .25s cubic-bezier(.4,0,.2,1); transform-origin: center; }
+      `}</style>
+      <line className="hb-top" x1="3" y1={open ? 10 : 5}  x2="17" y2={open ? 10 : 5}  stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+        style={{ transform: open ? 'rotate(45deg)' : 'none' }} />
+      <line className="hb-mid" x1="3" y1="10" x2="17" y2="10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+        style={{ opacity: open ? 0 : 1 }} />
+      <line className="hb-bot" x1="3" y1={open ? 10 : 15} x2="17" y2={open ? 10 : 15} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+        style={{ transform: open ? 'rotate(-45deg)' : 'none' }} />
+    </svg>
+  );
+}
 
 // ── Main Navbar ──────────────────────────────────────────────────────────────
 export default function Navbar({ activePage, variant = 'default' }) {
   const isHome = variant === 'home';
   const { data: session, status } = useSession();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Close mobile menu on route change / resize
+  useEffect(() => {
+    function onResize() { if (window.innerWidth > 768) setMenuOpen(false); }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const navbarStyle = isHome
     ? { borderBottom: 'none', marginBottom: 0, paddingBottom: 16 }
     : {};
 
   return (
-    <nav className="navbar" style={navbarStyle}>
-      {/* ── Logo ── */}
-      <a
-        className="logo-wrap"
-        href="https://www.getabundance.in"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <img
-          className="logo-img"
-          src="/logo-navbar.png"
-          alt="Abundance Financial Services® — AMFI Registered Mutual Fund Distributor"
-          width={140}
-          height={56}
-          loading="eager"
-          fetchPriority="high"
-          onError={(e) => {
-            e.target.style.display = 'none';
-            e.target.nextElementSibling.style.display = 'flex';
-          }}
-        />
-        <div className="logo-icon" aria-hidden="true">A</div>
-
-        <div className="logo-text">
-          <div className="brand">Abundance</div>
-          <div className="sub">
-            Financial Services
-            <sup style={{ fontSize: '.55em', letterSpacing: 0, verticalAlign: 'super', opacity: .75 }}>®</sup>
-          </div>
-          {isHome && (
-            <div className="sub" style={{ fontSize: '.52rem', letterSpacing: '1.2px', marginTop: 2, color: 'var(--g3)' }}>
-              Serving Investors Across India
+    <>
+      <nav className="navbar" style={navbarStyle}>
+        {/* ── Logo ── */}
+        <a className="logo-wrap" href="https://www.getabundance.in" target="_blank" rel="noopener noreferrer">
+          <img className="logo-img" src="/logo-navbar.png"
+            alt="Abundance Financial Services® — AMFI Registered Mutual Fund Distributor"
+            width={140} height={56} loading="eager" fetchPriority="high"
+            onError={e => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }}
+          />
+          <div className="logo-icon" aria-hidden="true">A</div>
+          <div className="logo-text">
+            <div className="brand">Abundance</div>
+            <div className="sub">
+              Financial Services
+              <sup style={{ fontSize: '.55em', letterSpacing: 0, verticalAlign: 'super', opacity: .75 }}>®</sup>
             </div>
-          )}
-        </div>
-      </a>
-
-      {/* ── Nav links (scrollable row) ── */}
-      <div className="nav-right">
-        {NAV_ITEMS.map((item) => {
-          const isActive = item.key === activePage;
-          const linkProps = item.external
-            ? { target: '_blank', rel: 'noopener noreferrer' }
-            : {};
-
-          if (isActive) {
-            const tagStyle = isHome
-              ? { background: 'var(--g-xlight)', border: '1.5px solid var(--g-light)', color: 'var(--g2)' }
-              : {};
-            return (
-              <div key={item.key} className="nav-tag" style={tagStyle}>
-                {item.label}
+            {isHome && (
+              <div className="sub" style={{ fontSize: '.52rem', letterSpacing: '1.2px', marginTop: 2, color: 'var(--g3)' }}>
+                Serving Investors Across India
               </div>
-            );
-          }
+            )}
+          </div>
+        </a>
 
-          return (
-            <a key={item.key} className="nav-link" href={item.href} {...linkProps}>
-              {item.label}
-            </a>
-          );
-        })}
-      </div>
+        {/* ── Desktop nav links ── */}
+        <div className="nav-right nav-desktop">
+          {NAV_ITEMS.map(item => {
+            const isActive = item.key === activePage;
+            const linkProps = item.external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
+            if (isActive) {
+              const tagStyle = isHome ? { background: 'var(--g-xlight)', border: '1.5px solid var(--g-light)', color: 'var(--g2)' } : {};
+              return <div key={item.key} className="nav-tag" style={tagStyle}>{item.label}</div>;
+            }
+            return <a key={item.key} className="nav-link" href={item.href} {...linkProps}>{item.label}</a>;
+          })}
+        </div>
 
-      {/* ── Auth — outside nav-right so overflow:auto doesn't clip the dropdown ── */}
-      <div style={{ flexShrink: 0, marginLeft: 4 }}>
-        {status === 'authenticated' && session ? (
-          <UserAvatar session={session} />
-        ) : status === 'unauthenticated' ? (
-          <a
-            href="/login"
-            className="nav-link"
-            style={{ color: 'var(--g1)', borderColor: 'var(--g-light)', background: 'var(--g-xlight)', whiteSpace: 'nowrap' }}
+        {/* ── Right side: hamburger (mobile) + auth ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 4 }}>
+          {/* Hamburger — mobile only */}
+          <button
+            className="nav-hamburger"
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
           >
-            Sign in
-          </a>
-        ) : null}
+            <HamburgerIcon open={menuOpen} />
+          </button>
+
+          {/* Auth */}
+          {status === 'authenticated' && session ? (
+            <UserAvatar session={session} onNavClose={() => setMenuOpen(false)} />
+          ) : status === 'unauthenticated' ? (
+            <a href="/login" className="nav-link"
+              style={{ color: 'var(--g1)', borderColor: 'var(--g-light)', background: 'var(--g-xlight)', whiteSpace: 'nowrap' }}>
+              Sign in
+            </a>
+          ) : null}
+        </div>
+      </nav>
+
+      {/* ── Mobile menu panel ── */}
+      <div className={`nav-mobile-panel${menuOpen ? ' open' : ''}`} aria-hidden={!menuOpen}>
+        <div className="nav-mobile-inner">
+          {NAV_ITEMS.map(item => {
+            const isActive = item.key === activePage;
+            const linkProps = item.external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
+            return (
+              <a key={item.key} href={item.href} {...linkProps}
+                onClick={() => setMenuOpen(false)}
+                className={`nav-mobile-item${isActive ? ' active' : ''}`}>
+                {item.label}
+              </a>
+            );
+          })}
+        </div>
       </div>
-    </nav>
+    </>
   );
 }

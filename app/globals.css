@@ -5946,3 +5946,296 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .pf-holding-cat { display: none; }
   .pf-advisor-card { flex-wrap: wrap; }
 }
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   NAVBAR — Responsive hamburger menu  (replaces overflow-x hack)
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* Hide hamburger on desktop */
+.nav-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border);
+  background: var(--s2);
+  color: var(--g2);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s, border-color .15s;
+}
+.nav-hamburger:hover { background: var(--s3); border-color: var(--border2); }
+
+/* Mobile menu panel — hidden by default */
+.nav-mobile-panel {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1999;
+  background: var(--surface);
+  border-bottom: 1.5px solid var(--border);
+  box-shadow: 0 8px 32px rgba(0,0,0,.1);
+  transform: translateY(-100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1), opacity .2s;
+  opacity: 0;
+  pointer-events: none;
+  padding-top: 80px; /* clear navbar height */
+}
+.nav-mobile-panel.open {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: all;
+}
+.nav-mobile-inner {
+  padding: 12px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+}
+.nav-mobile-item {
+  display: block;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+  transition: background .12s, color .12s;
+  border: 1.5px solid transparent;
+}
+.nav-mobile-item:hover {
+  background: var(--s2);
+  border-color: var(--border);
+}
+.nav-mobile-item.active {
+  background: var(--g-xlight);
+  border-color: var(--g-light);
+  color: var(--g1);
+}
+
+/* Desktop: show normal nav-right, hide hamburger */
+@media (min-width: 769px) {
+  .nav-hamburger { display: none !important; }
+  .nav-desktop { display: flex !important; }
+  .nav-mobile-panel { display: none !important; }
+}
+
+/* Mobile: hide desktop nav, show hamburger */
+@media (max-width: 768px) {
+  .nav-hamburger { display: flex !important; }
+  .nav-desktop   { display: none !important; }
+  .nav-mobile-panel { display: block; }
+  /* Remove the old overflow-x scroll hack */
+  .nav-right { overflow-x: visible; flex-wrap: nowrap; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PORTFOLIO PAGE — Loading skeleton animations
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* Shimmer animation for dark hero background */
+@keyframes pf-shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+@keyframes pf-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pf-dots {
+  0%, 80%, 100% { opacity: .2; transform: scale(.6); }
+  40%            { opacity: 1;  transform: scale(1); }
+}
+
+/* Skeleton elements inside hero (dark background — lighter shimmer) */
+.pf-sk-line {
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,.08) 25%,
+    rgba(255,255,255,.16) 50%,
+    rgba(255,255,255,.08) 75%
+  );
+  background-size: 600px 100%;
+  animation: pf-shimmer 1.4s ease-in-out infinite;
+}
+
+.pf-sk-pill {
+  height: 24px;
+  border-radius: 100px;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,.08) 25%,
+    rgba(255,255,255,.16) 50%,
+    rgba(255,255,255,.08) 75%
+  );
+  background-size: 600px 100%;
+  animation: pf-shimmer 1.4s ease-in-out infinite;
+}
+
+/* Skeleton card (light background) */
+.pf-sk-card {
+  overflow: hidden;
+}
+.pf-sk-card .pf-sk-line {
+  background: linear-gradient(
+    90deg,
+    var(--s2) 25%,
+    var(--s3) 50%,
+    var(--s2) 75%
+  );
+  background-size: 600px 100%;
+}
+
+/* Loading dots */
+.pf-loading-dots {
+  display: flex;
+  gap: 6px;
+  margin-top: 20px;
+}
+.pf-loading-dots span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.4);
+  animation: pf-dots 1.4s ease-in-out infinite;
+}
+.pf-loading-dots span:nth-child(2) { animation-delay: .16s; }
+.pf-loading-dots span:nth-child(3) { animation-delay: .32s; }
+
+/* Skeleton row for holdings list */
+.pf-sk-row {
+  opacity: 0;
+  animation: pf-fade-in .4s ease-out forwards;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+/* Skeleton badge/badge */
+.pf-sk-badge {
+  width: 52px; height: 24px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--s2) 25%, var(--s3) 50%, var(--s2) 75%);
+  background-size: 600px 100%;
+  animation: pf-shimmer 1.4s ease-in-out infinite;
+}
+
+/* Skeleton tab bar */
+.pf-sk-tabs {
+  height: 44px;
+  border-bottom: 1.5px solid var(--border);
+  margin-bottom: 28px;
+  position: relative;
+}
+.pf-sk-tabs::before {
+  content: '';
+  position: absolute;
+  left: 0; bottom: -1.5px;
+  width: 100px; height: 2.5px;
+  background: var(--border2);
+  border-radius: 2px;
+}
+
+/* Loading hero inner */
+.pf-loading-inner {
+  animation: pf-fade-in .5s ease-out;
+}
+
+/* ── Unauthenticated gate ── */
+.pf-gate-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 640px;
+  animation: pf-fade-in .6s ease-out;
+}
+
+.pf-gate-title {
+  font-family: 'Raleway', sans-serif;
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -1.5px;
+  line-height: 1.05;
+  margin-bottom: 16px;
+}
+
+.pf-gate-sub {
+  font-size: .88rem;
+  color: rgba(255,255,255,.65);
+  line-height: 1.7;
+  margin-bottom: 28px;
+  max-width: 520px;
+}
+
+.pf-gate-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.pf-gate-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 24px;
+  background: #fff;
+  color: var(--g1);
+  border-radius: 10px;
+  font-family: 'Raleway', sans-serif;
+  font-size: .82rem;
+  font-weight: 900;
+  text-decoration: none;
+  transition: all .2s;
+  letter-spacing: -.2px;
+}
+.pf-gate-btn-primary:hover {
+  background: var(--g-xlight);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.15);
+}
+
+.pf-gate-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 24px;
+  background: rgba(255,255,255,.1);
+  border: 1.5px solid rgba(255,255,255,.25);
+  color: rgba(255,255,255,.85);
+  border-radius: 10px;
+  font-family: 'Raleway', sans-serif;
+  font-size: .82rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all .2s;
+  backdrop-filter: blur(6px);
+}
+.pf-gate-btn-secondary:hover {
+  background: rgba(255,255,255,.18);
+  transform: translateY(-2px);
+}
+
+.pf-gate-features {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pf-gate-feature {
+  font-size: .65rem;
+  font-weight: 700;
+  color: rgba(255,255,255,.5);
+  font-family: 'JetBrains Mono', monospace;
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 100px;
+  background: rgba(255,255,255,.05);
+}
