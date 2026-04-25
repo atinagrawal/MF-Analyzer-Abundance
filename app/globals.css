@@ -6402,3 +6402,180 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 /* ── Logo-wrap — prevent shrinking on very narrow screens ────────────────── */
 .logo-wrap { flex-shrink: 0; min-width: 0; }
 .logo-text  { min-width: 0; overflow: hidden; }
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   GLOBAL RESPONSIVE PATCH v2 — Phases 2–8
+   Appended 2026-04-26. Completes all remaining pages from implementation plan.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Phase 2: CAS Tracker — missing bits ─────────────────────────────────── */
+
+/* Fund name overflow on long AMFI fund names */
+.fund-name { word-break: break-word; }
+
+/* gain-row: already stacks at 620px — ensure flex-start alignment */
+@media (max-width: 620px) {
+  .gain-row { align-items: flex-start; }
+}
+
+/* Folio-row: ensure full-width on very narrow */
+@media (max-width: 360px) {
+  .folio-row { grid-template-columns: 1fr; }
+  .folio-row .label, .folio-row .value { font-size: .55rem; }
+}
+
+/* Redemption planner modal — summary cards at 420px */
+@media (max-width: 420px) {
+  /* Summary stats inside planner: force 2×2 grid */
+  [class*="planner"] [style*="grid-template-columns: repeat(4"],
+  [class*="planner"] [style*="grid-template-columns:repeat(4"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  /* Planner inner container gets narrower padding */
+  [style*="maxWidth: 700px"], [style*="max-width: 700px"] {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
+/* ── Phase 3: Index Dashboard — controls + hero stats ────────────────────── */
+
+/* Index page: hero stats strip (5 cards) → 3-col then 2-col */
+@media (max-width: 900px) {
+  .idx-hero-stats,
+  [class*="idx-stat-row"],
+  [class*="idx-stat-strip"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+@media (max-width: 600px) {
+  .idx-hero-stats,
+  [class*="idx-stat-row"],
+  [class*="idx-stat-strip"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Index controls bar (filters + period row): wrap on ≤600px */
+@media (max-width: 600px) {
+  .idx-controls,
+  .idx-filter-row,
+  .idx-controls-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .idx-controls > *,
+  .idx-filter-row > * {
+    flex: 1 1 auto;
+    min-width: 80px;
+  }
+}
+
+/* ── Phase 4: PMS Screener — remaining gap at 680px ─────────────────────── */
+/* .pms-controls already has row-gap: 8px at 680px but missing flex-wrap */
+@media (max-width: 680px) {
+  .pms-controls { flex-wrap: wrap; }
+}
+
+/* ── Phase 5: Calculators — SIP/SWP/Goal Planner gaps ───────────────────── */
+
+/* SIP left panel: stack at 768px too (currently only 900px) */
+@media (max-width: 768px) {
+  .sip-split-body { grid-template-columns: 1fr; min-height: unset; }
+  .sip-left { border-right: none; border-bottom: 1.5px solid var(--border); }
+}
+
+/* SIP chart: cap height on mobile so it doesn't grow too tall */
+@media (max-width: 640px) {
+  .sip-chart-wrap { height: 200px; }
+}
+
+/* sbr-corpus safety at ≤320px (very narrow) */
+@media (max-width: 320px) {
+  .sbr-corpus { word-break: break-all; font-size: 1.3rem; }
+}
+
+/* Goal planner north star: stack on mobile */
+@media (max-width: 480px) {
+  .gp-north-star {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px 16px;
+    gap: 8px;
+  }
+  .gpns-sentence { font-size: .78rem; }
+}
+
+/* ── Phase 6: Geography — layout collapse at ≤900px already ✅
+   Industry: cat-controls (period selector bar) scroll on ≤600px ────────── */
+@media (max-width: 600px) {
+  /* The industry period/filter bar — targets flexible button groups */
+  .cat-controls,
+  .cat-filter-row,
+  [class*="cat-period"] {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .cat-controls::-webkit-scrollbar,
+  .cat-filter-row::-webkit-scrollbar { display: none; }
+  .cat-controls > *, .cat-filter-row > * { flex-shrink: 0; }
+}
+
+/* Rolling: bench-chips already flex-wrap: wrap at 640px ✅
+   Add period-bar scroll hint text for clarity */
+@media (max-width: 640px) {
+  .period-bar-wrap { position: relative; }
+}
+
+/* ── Phase 7: Report Card — section heads + fund selector ────────────────── */
+@media (max-width: 640px) {
+  .rc-section-head {
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .rc-section-head .rc-section-label {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .rc-fund-selector {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
+
+/* Report card: 5-col stat band uses .stat-grid — already patched ✅ */
+
+/* ── Phase 8: Footer — remaining gaps ────────────────────────────────────── */
+
+/* dfc-stats: already has flex-wrap: wrap ✅
+   Force 2-col grid at ≤400px so pills don't all squish into 1 line */
+@media (max-width: 400px) {
+  .dfc-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .dfc-stat {
+    min-width: unset;
+    width: 100%;
+  }
+}
+
+/* Disclaimer paragraph font clamp for 360px monospace text */
+@media (max-width: 360px) {
+  .dark-footer-disclaimer p {
+    font-size: .55rem;
+    line-height: 1.7;
+  }
+  .dark-footer-inner {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}

@@ -1107,6 +1107,7 @@
   /* Controls: search + provider each take full row */
   .pms-controls {
     row-gap: 8px;
+    flex-wrap: wrap;
   }
 
   .pms-search {
