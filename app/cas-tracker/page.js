@@ -316,16 +316,17 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
       const fundNet = fundProceeds - fundExitLoad - fundTax;
 
       rows.push({
-        name:       fund.name,
-        category:   cat,
-        isELSS:     fund.isELSS,
-        units:      fundUnits,
-        proceeds:   fundProceeds,
-        exitLoad:   fundExitLoad,
-        stcg:       fundSTCG,
-        ltcg:       fundLTCG,
-        tax:        fundTax,
-        net:        fundNet,
+        name:         fund.name,
+        category:     cat,
+        isELSS:       fund.isELSS,
+        units:        fundUnits,
+        proceeds:     fundProceeds,
+        exitLoad:     fundExitLoad,
+        exitLoadRate: fund.exitLoadRate ?? 0,  // ← was missing; caused NaN display
+        stcg:         fundSTCG,
+        ltcg:         fundLTCG,
+        tax:          fundTax,
+        net:          fundNet,
         lotBreakdown,
         hasSynthetic: (fund.buyLots || []).some(l => l.synthetic),
       });

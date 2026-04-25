@@ -5198,94 +5198,138 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 }
 
 
-
-
 /* ════════════════════════════════════════════════════════════════════════════
-   CAS TRACKER — Full mobile & tablet responsiveness
+   CAS TRACKER — Complete mobile & tablet responsiveness  (all screen sizes)
    ════════════════════════════════════════════════════════════════════════════ */
 
-/* Dashboard stat-grid */
+/* ── Upload card ── */
+@media (max-width: 560px) {
+  .upload-card { padding: 22px 18px; }
+}
+@media (max-width: 380px) {
+  .upload-card { padding: 18px 14px; border-radius: 14px; }
+  .field-input, .file-input { font-size: .75rem; }
+  .submit-btn { font-size: .8rem; padding: 11px 20px; }
+}
+
+/* ── File input: prevent overflow on narrow phones ── */
+@media (max-width: 420px) {
+  .file-input { font-size: .7rem; }
+  .file-input::file-selector-button { padding: 8px 12px; font-size: .68rem; margin-right: 8px; }
+}
+
+/* ── Dashboard stat-grid ── */
 @media (max-width: 620px) {
   .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   .stat-card { padding: 14px 12px; }
   .sc-val { font-size: 1rem; }
-  .gain-card .gain-row { flex-direction: column; gap: 2px; }
-  .gain-pct { font-size: .8rem !important; }
+  .gain-row { flex-direction: column; gap: 2px; }
+  .gain-pct { font-size: .82rem !important; }
 }
 @media (max-width: 380px) {
   .stat-grid { grid-template-columns: 1fr; }
 }
 
-/* Fund grid */
+/* ── Fund grid ── */
 @media (max-width: 640px) {
   .fund-grid { grid-template-columns: 1fr; gap: 12px; }
-  .fund-card { padding: 14px 13px; }
+  .fund-card  { padding: 14px 13px; }
 }
 
-/* Dashboard header — stack on small screens */
+/* ── Fund card internals on narrow screens ── */
+@media (max-width: 400px) {
+  .nav-left { grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+  .ni-val { font-size: .78rem; }
+  .ni-val.sm { font-size: .68rem; }
+  .fund-gain-pct { font-size: .95rem; }
+  .folio-row { flex-wrap: wrap; gap: 10px; }
+  .folio-full { display: none; } /* hide advisor on very narrow */
+}
+@media (max-width: 340px) {
+  .nav-grid { grid-template-columns: 1fr; gap: 10px; }
+  .nav-right-col { text-align: left; }
+}
+
+/* ── Dashboard header ── */
 @media (max-width: 560px) {
   .dash-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
-  .dash-header > div:last-child {
-    align-self: flex-start;
-  }
+  .dash-header > div:last-child { align-self: flex-start; }
+}
+@media (max-width: 380px) {
+  .dash-title { font-size: 1rem; }
+  .dash-sub   { font-size: .6rem; }
 }
 
-/* Pan tabs */
+/* ── Pan tabs ── */
 @media (max-width: 480px) {
-  .pan-tabs { gap: 6px; overflow-x: auto; }
-  .pan-tab { padding: 6px 10px; font-size: .65rem; white-space: nowrap; }
+  .pan-tabs { gap: 6px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .pan-tab  { padding: 6px 10px; font-size: .65rem; white-space: nowrap; flex-shrink: 0; }
+  .pan-code { font-size: .55rem; }
 }
 
-/* Upload card */
-@media (max-width: 480px) {
-  .upload-card { padding: 24px 16px; }
+/* ── Filter toggle (All / Mutual Funds / SIF) ── */
+@media (max-width: 420px) {
+  /* filter buttons already use flex-wrap: wrap so they wrap naturally */
+  button[onClick*="setViewFilter"] { font-size: .65rem !important; padding: 5px 11px !important; }
+}
+
+/* ── Redemption planner panel ── */
+@media (max-width: 700px) {
+  /* Already uses min(700px,100vw) but ensure inner padding is mobile-friendly */
+}
+@media (max-width: 420px) {
+  /* Planner summary cards: 2×2 layout */
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   PRINT — Redemption Planner panel
+   PRINT — Redemption Planner  (portrait A4, no scroll)
    ════════════════════════════════════════════════════════════════════════════ */
 
+.no-print   { }          /* visible by default */
+.print-only { display: none; }  /* hidden by default, shown on print */
+
 @media print {
-  /* Hide everything except the planner */
+  /* Show only planner panel, hide everything else */
   body > * { display: none !important; }
 
-  /* Reveal the fixed-position planner overlay */
-  body > div:has([style*="Portfolio Redemption"]),
-  body [style*="z-index: 3000"] {
+  /* The planner is inside a fixed-pos div — make it static for print */
+  body [style*="position: fixed"][style*="z-index: 3000"],
+  body [style*="position:fixed"][style*="z-index:3000"] {
     display: block !important;
     position: static !important;
     width: 100% !important;
     height: auto !important;
+    box-shadow: none !important;
   }
 
-  /* Hide the backdrop */
-  body [style*="rgba(0,0,0,.35)"],
-  body [style*="rgba(0,0,0,0.35)"] {
-    display: none !important;
-  }
+  /* Hide backdrop */
+  body [style*="rgba(0,0,0,.35)"] { display: none !important; }
 
-  /* Panel: full width, no scroll */
-  body [style*="maxWidth: \'min(700px"] { max-width: 100% !important; }
-  [style*="height: 100dvh"]  { height: auto !important; overflow: visible !important; }
+  /* Panel: full width */
+  body [style*="maxWidth"] { max-width: 100% !important; }
+  [style*="height: 100dvh"]   { height: auto !important; overflow: visible !important; }
   [style*="position: sticky"] { position: static !important; }
-  [style*="overflowY: \'auto\'"] { overflow: visible !important; }
+  [style*="overflowY: auto"]  { overflow: visible !important; }
 
   /* No-print elements */
   .no-print { display: none !important; }
+
+  /* Print-only elements */
   .print-only { display: inline !important; }
 
-  /* Fund cards: avoid page breaks inside */
-  div[style*="border: 1.5px solid var(--border)"][style*="border-radius: 12"] {
+  /* Page setup — portrait for cards */
+  @page { size: A4 portrait; margin: 12mm; }
+
+  /* Font size */
+  body { font-size: 11pt; }
+
+  /* Fund cards: keep together */
+  div[style*="border: 1.5px solid var(--border)"][style*="border-radius: 12px"] {
     page-break-inside: avoid;
     break-inside: avoid;
   }
-
-  /* Typography */
-  * { font-size: 90% !important; }
-
-  @page { size: A4 portrait; margin: 14mm; }
 }
