@@ -77,10 +77,11 @@ a { color: inherit; text-decoration: none; }
   padding: 20px 0 18px;
   margin-bottom: 28px;
   border-bottom: 1.5px solid var(--border);
-  gap: 16px;
-  flex-wrap: wrap;
+  gap: 12px;
+  flex-wrap: nowrap;   /* hamburger handles overflow — never wrap */
   position: relative;  /* establishes stacking context for dropdown */
-  z-index: 2000;       /* above all page sections (including brand strip) */
+  z-index: 9999;       /* above all page sections */
+  min-width: 0;
 }
 .logo-wrap { display: flex; align-items: center; gap: 12px; }
 .logo-img { height: 38px; width: auto; border-radius: 6px; }
@@ -5959,12 +5960,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
                                  and panel content appears below navbar)
    ════════════════════════════════════════════════════════════════════════════ */
 
-/* Ensure navbar is always topmost */
-.navbar {
-  z-index: 9999 !important;
-  position: relative !important;
-}
-
 /* Hamburger button — hidden on wide screens */
 .nav-hamburger {
   display: none;
@@ -6054,16 +6049,25 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 
 /* Wide screens (>1100px): full desktop nav, no hamburger */
 @media (min-width: 1101px) {
-  .nav-hamburger    { display: none !important; }
-  .nav-desktop      { display: flex !important; }
-  .nav-mobile-panel { display: none !important; }
+  .nav-hamburger { display: none !important; }
+  .nav-desktop   { display: flex !important; }
+  /* mobile panel: keep it in DOM but invisible via opacity/pointer-events */
 }
 
 /* Narrow screens (≤1100px): hamburger, no desktop row */
 @media (max-width: 1100px) {
   .nav-hamburger { display: flex !important; }
   .nav-desktop   { display: none !important; }
-  .nav-mobile-panel { display: block; }
+  .navbar { gap: 8px; }
+  /* tighten logo text on very narrow screens */
+  .logo-text .brand { font-size: .85rem; }
+}
+
+@media (max-width: 480px) {
+  .navbar { padding: 14px 0 12px; margin-bottom: 20px; }
+  .logo-img { height: 32px; }
+  .logo-text .brand { font-size: .78rem; }
+  .logo-text .sub   { display: none; } /* hide tagline on phones to save space */
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -6272,3 +6276,129 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   border-radius: 100px;
   background: rgba(255,255,255,.05);
 }
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   GLOBAL RESPONSIVE PATCH — Phase 1 / Phase 2 / Phase 3
+   Appended 2026-04-25. All rules are ADDITIVE — no existing rules removed.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Container tightening on small screens ────────────────────────────────── */
+@media (max-width: 480px) {
+  .container { padding: 0 14px; }
+}
+@media (max-width: 360px) {
+  .container { padding: 0 10px; }
+}
+
+/* ── Page title / subtitle — clamp for fluid typography ──────────────────── */
+.page-title {
+  font-size: clamp(1.25rem, 5vw, 1.6rem);
+}
+.page-subtitle {
+  font-size: clamp(.74rem, 3.5vw, .82rem);
+}
+
+/* ── Stat grid — desktop is repeat(5,1fr); needs to shrink ───────────────── */
+@media (max-width: 900px) {
+  .stat-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 400px) {
+  .stat-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Navbar — hero dark background overrides for hamburger + nav items ────── */
+.pf-hero .nav-hamburger {
+  background: rgba(255,255,255,.12);
+  border-color: rgba(255,255,255,.25);
+  color: rgba(255,255,255,.9);
+}
+.pf-hero .nav-hamburger:hover {
+  background: rgba(255,255,255,.2);
+}
+/* Active nav tag on dark hero */
+.pf-hero .nav-tag {
+  background: rgba(255,255,255,.18);
+  color: #fff;
+  border: 1.5px solid rgba(255,255,255,.3);
+}
+
+/* ── Portfolio page — additional responsive fixes ─────────────────────────── */
+
+/* Hero stat-row negative margin scaling */
+@media (max-width: 360px) {
+  .pf-stat-row { margin-top: -12px; }
+}
+
+/* Gate page: center on mobile */
+@media (max-width: 640px) {
+  .pf-gate-inner {
+    align-items: center;
+    text-align: center;
+    max-width: 100%;
+  }
+  .pf-gate-title { font-size: clamp(1.8rem, 7vw, 3rem); }
+  .pf-gate-actions { justify-content: center; }
+  .pf-gate-features { justify-content: center; }
+  .pf-gate-btn-primary,
+  .pf-gate-btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Holdings card metric values — prevent overflow on narrow cards */
+.pf-hc-mval { word-break: break-word; }
+.pf-hc-name { word-break: break-word; }
+
+/* Action cards — fix icon + text alignment on mobile */
+@media (max-width: 480px) {
+  .pf-action-card { align-items: flex-start; padding: 14px; }
+  .pf-action-icon { font-size: 1.2rem; }
+}
+
+/* Holdings overview row — tighten at 480px */
+@media (max-width: 480px) {
+  .pf-holding-row {
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    padding: 10px;
+  }
+  .pf-holding-name { font-size: .68rem; }
+  .pf-holding-val  { font-size: .68rem; }
+  .pf-holding-gain { font-size: .64rem; }
+}
+
+/* Wealth hero row — stack on very small screens */
+@media (max-width: 420px) {
+  .pf-wealth-row    { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .pf-gain-pill     { font-size: .7rem; padding: 6px 12px; }
+}
+
+/* Advisor card — tighten on small phones */
+@media (max-width: 400px) {
+  .pf-advisor-card { padding: 14px; gap: 12px; }
+  .pf-advisor-logo { width: 36px; height: 36px; }
+}
+
+/* Upload items — prevent file-name overflow on narrow screens */
+.pf-upload-name { word-break: break-word; white-space: normal; }
+
+/* Section head — ensure it wraps gracefully */
+@media (max-width: 480px) {
+  .pf-section-head { flex-wrap: wrap; gap: 8px; }
+}
+
+/* ── Mobile menu panel — safe-area padding for notched phones ─────────────── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .nav-mobile-inner {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ── Logo-wrap — prevent shrinking on very narrow screens ────────────────── */
+.logo-wrap { flex-shrink: 0; min-width: 0; }
+.logo-text  { min-width: 0; overflow: hidden; }
