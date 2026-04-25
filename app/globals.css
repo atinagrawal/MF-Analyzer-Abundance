@@ -5981,7 +5981,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   color: var(--g1);
 }
 .pf-hero .nav-hamburger.open {
-  background: rgba(255,255,255,.22);
+  background: var(--g1);
   border-color: rgba(255,255,255,.5);
   color: #fff;
 }
