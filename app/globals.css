@@ -5198,62 +5198,94 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 }
 
 
+
+
 /* ════════════════════════════════════════════════════════════════════════════
-   PRINT STYLES — Redemption Planner
+   CAS TRACKER — Full mobile & tablet responsiveness
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* Dashboard stat-grid */
+@media (max-width: 620px) {
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { padding: 14px 12px; }
+  .sc-val { font-size: 1rem; }
+  .gain-card .gain-row { flex-direction: column; gap: 2px; }
+  .gain-pct { font-size: .8rem !important; }
+}
+@media (max-width: 380px) {
+  .stat-grid { grid-template-columns: 1fr; }
+}
+
+/* Fund grid */
+@media (max-width: 640px) {
+  .fund-grid { grid-template-columns: 1fr; gap: 12px; }
+  .fund-card { padding: 14px 13px; }
+}
+
+/* Dashboard header — stack on small screens */
+@media (max-width: 560px) {
+  .dash-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .dash-header > div:last-child {
+    align-self: flex-start;
+  }
+}
+
+/* Pan tabs */
+@media (max-width: 480px) {
+  .pan-tabs { gap: 6px; overflow-x: auto; }
+  .pan-tab { padding: 6px 10px; font-size: .65rem; white-space: nowrap; }
+}
+
+/* Upload card */
+@media (max-width: 480px) {
+  .upload-card { padding: 24px 16px; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PRINT — Redemption Planner panel
    ════════════════════════════════════════════════════════════════════════════ */
 
 @media print {
-  /* Hide everything except the planner panel */
+  /* Hide everything except the planner */
   body > * { display: none !important; }
 
-  /* Show only the fixed planner overlay when printing */
-  body [style*="position: fixed"][style*="z-index: 3000"],
-  body [style*="position:fixed"][style*="z-index:3000"] {
+  /* Reveal the fixed-position planner overlay */
+  body > div:has([style*="Portfolio Redemption"]),
+  body [style*="z-index: 3000"] {
     display: block !important;
     position: static !important;
     width: 100% !important;
     height: auto !important;
-    box-shadow: none !important;
-    background: #fff !important;
   }
 
-  /* Backdrop: hide */
-  body [style*="position: absolute"][style*="background: rgba"] {
+  /* Hide the backdrop */
+  body [style*="rgba(0,0,0,.35)"],
+  body [style*="rgba(0,0,0,0.35)"] {
     display: none !important;
   }
 
   /* Panel: full width, no scroll */
-  body [style*="maxWidth: 700"] {
-    max-width: 100% !important;
-    height: auto !important;
-    overflow: visible !important;
-    box-shadow: none !important;
-  }
+  body [style*="maxWidth: \'min(700px"] { max-width: 100% !important; }
+  [style*="height: 100dvh"]  { height: auto !important; overflow: visible !important; }
+  [style*="position: sticky"] { position: static !important; }
+  [style*="overflowY: \'auto\'"] { overflow: visible !important; }
 
-  /* Hide interactive controls on print */
+  /* No-print elements */
   .no-print { display: none !important; }
-
-  /* Show print-only elements */
   .print-only { display: inline !important; }
 
-  /* Make header sticky non-sticky on print */
-  [style*="position: sticky"] { position: static !important; }
-
-  /* Page setup */
-  @page {
-    size: A4 landscape;
-    margin: 15mm;
+  /* Fund cards: avoid page breaks inside */
+  div[style*="border: 1.5px solid var(--border)"][style*="border-radius: 12"] {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
-  /* Table: fit on page */
-  table {
-    font-size: 9pt !important;
-    width: 100% !important;
-    page-break-inside: auto;
-  }
-  tr { page-break-inside: avoid; }
-  th, td { padding: 5px 6px !important; }
+  /* Typography */
+  * { font-size: 90% !important; }
 
-  /* Remove hover effects and transitions */
-  * { transition: none !important; }
+  @page { size: A4 portrait; margin: 14mm; }
 }

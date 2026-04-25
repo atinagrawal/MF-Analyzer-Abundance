@@ -219,7 +219,8 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
   const [strategy,        setStrategy]        = useState('tax');
   const [slabPct,         setSlabPct]         = useState(30);
   const [skipLocked,      setSkipLocked]      = useState(true);
-  const [exitLoadOverrides, setExitLoadOverrides] = useState({}); // fund.name → rate (0-1)
+  const [exitLoadOverrides,  setExitLoadOverrides]  = useState({}); // fund.name → rate (0-1)
+  const [exitLoadInputs,     setExitLoadInputs]     = useState({}); // raw strings while typing
 
   const fmt     = n => '₹' + Math.round(Math.abs(n)).toLocaleString('en-IN');
   const fmtD    = n => parseFloat(n).toFixed(4);
@@ -349,7 +350,7 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
       {/* Wide panel */}
       <div onClick={e => e.stopPropagation()} style={{
         position: 'relative', zIndex: 1,
-        width: '100%', maxWidth: 700,
+        width: '100%', maxWidth: 'min(700px, 100vw)',
         height: '100dvh', overflowY: 'auto',
         background: 'var(--surface)',
         boxShadow: '-8px 0 40px rgba(0,0,0,.15)',
@@ -394,8 +395,8 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
         </div>
 
         {/* Controls */}
-        <div style={{ padding: '20px 28px', borderBottom: '1.5px solid var(--border)', background: 'var(--s2)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1.5px solid var(--border)', background: 'var(--s2)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 12 }}>
 
             <div>
               <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 5 }}>Target Amount (₹)</div>
@@ -458,7 +459,7 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
           {plan && plan.rows.length > 0 && (
             <>
               {/* Summary cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 20 }}>
                 {[
                   ['Gross Proceeds', plan.totalProceeds, 'var(--text)'],
                   ['Exit Load',      plan.totalExitLoad, 'var(--neg)'],
@@ -474,106 +475,147 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
                 ))}
               </div>
 
-              {/* Fund-level table */}
-              <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 10 }}>Redemption Order</div>
-              <div style={{ overflowX: 'auto', borderRadius: 12, border: '1.5px solid var(--border)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.67rem', minWidth: 620 }}>
-                  <thead>
-                    <tr style={{ background: 'var(--s2)' }}>
-                      {['Fund', 'Exit Load %', 'Units', 'Gross', 'Exit Load ₹', 'STCG', 'LTCG', 'Tax', 'Net'].map(h => (
-                        <th key={h} style={{ padding: '9px 10px', textAlign: h === 'Fund' ? 'left' : 'right', fontWeight: 800, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", fontSize: '.55rem', letterSpacing: '.5px', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {plan.rows.map((row, i) => {
-                      const isLoss = row.stcg + row.ltcg < 0;
-                      return (
-                        <tr key={i} style={{ borderBottom: i < plan.rows.length - 1 ? '1px solid var(--border)' : 'none', background: i % 2 === 0 ? 'transparent' : 'var(--s2)' }}>
-                          <td style={{ padding: '9px 10px', textAlign: 'left', maxWidth: 200 }}>
-                            <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '.65rem', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 190 }}>
-                              {row.name}
+              {/* Redemption Order — card layout: no horizontal scroll, works on all screens */}
+              <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase',
+                color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 10 }}>
+                Redemption Order
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {plan.rows.map((row, i) => {
+                  const ikey = row.name;
+                  const rawStr = exitLoadInputs[ikey];
+                  const dispVal = rawStr != null
+                    ? rawStr
+                    : ((exitLoadOverrides[ikey] ?? row.exitLoadRate) * 100).toFixed(2);
+                  return (
+                    <div key={i} style={{ border: '1.5px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+                      {/* Row A: fund name + exit load input */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                        gap: 10, padding: '11px 14px 9px', background: 'var(--s2)',
+                        borderBottom: '1px solid var(--border)' }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '.72rem',
+                            lineHeight: 1.4, wordBreak: 'break-word' }}>
+                            {row.name}
+                          </div>
+                          <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3,
+                              border: '1px solid var(--border)',
+                              background: row.category === 'debt' ? '#e3f2fd' : row.category === 'hybrid' ? '#f3e5f5' : 'var(--g-xlight)',
+                              color:      row.category === 'debt' ? '#1565c0' : row.category === 'hybrid' ? '#6a1b9a'  : 'var(--g1)',
+                              fontFamily: "'JetBrains Mono', monospace" }}>
+                              {row.category.toUpperCase()}
+                            </span>
+                            {row.isELSS      && <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: '#fff8e1', color: '#f57f17', border: '1px solid #ffe082', fontFamily: "'JetBrains Mono', monospace" }}>ELSS</span>}
+                            {row.hasSynthetic && <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)', fontFamily: "'JetBrains Mono', monospace" }}>SUM CAS</span>}
+                          </div>
+                        </div>
+
+                        {/* Exit load % — text input avoids toFixed fighting typing */}
+                        <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                          <div style={{ fontSize: '.52rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 3 }}>Exit Load %</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <input type="text" inputMode="decimal"
+                              value={dispVal}
+                              className="no-print"
+                              onChange={e => {
+                                const raw = e.target.value;
+                                if (raw !== '' && !/^\d*\.?\d{0,2}$/.test(raw)) return;
+                                setExitLoadInputs(prev => ({ ...prev, [ikey]: raw }));
+                                const v = parseFloat(raw);
+                                if (!isNaN(v) && v >= 0 && v <= 5) {
+                                  setExitLoadOverrides(prev => ({ ...prev, [ikey]: v / 100 }));
+                                }
+                              }}
+                              onBlur={() => {
+                                const v = parseFloat(exitLoadInputs[ikey] ?? '');
+                                const norm = isNaN(v) ? '0.00' : Math.min(v, 5).toFixed(2);
+                                setExitLoadInputs(prev => ({ ...prev, [ikey]: norm }));
+                                setExitLoadOverrides(prev => ({ ...prev, [ikey]: parseFloat(norm) / 100 }));
+                              }}
+                              style={{ width: 54, padding: '4px 6px', textAlign: 'right',
+                                border: '1.5px solid var(--border2)', borderRadius: 7,
+                                fontFamily: "'JetBrains Mono', monospace", fontSize: '.75rem',
+                                background: 'var(--surface)', color: 'var(--text)', outline: 'none' }}
+                            />
+                            <span style={{ fontSize: '.65rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>%</span>
+                            <span className="print-only" style={{ display: 'none', fontSize: '.72rem', fontFamily: "'JetBrains Mono', monospace" }}>{dispVal}%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Row B: financial metrics — wraps on narrow screens */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
+                        gap: 0, padding: '10px 14px 6px' }}>
+                        {[
+                          ['Units',    fmtD(row.units),                                            'var(--text)'],
+                          ['Gross',    fmt(row.proceeds),                                           'var(--text)'],
+                          ['Exit Load', row.exitLoad > 0 ? '−' + fmt(row.exitLoad) : '—',          row.exitLoad > 0 ? 'var(--neg)' : 'var(--muted)'],
+                          ['Tax',       row.tax > 0 ? '−' + fmt(row.tax) : '—',                   row.tax > 0 ? 'var(--neg)' : 'var(--muted)'],
+                          ['Net',       fmt(row.net),                                               'var(--g1)'],
+                        ].map(([lbl, val, col]) => (
+                          <div key={lbl} style={{ paddingRight: 10, marginBottom: 6 }}>
+                            <div style={{ fontSize: '.52rem', fontWeight: 800, letterSpacing: '.5px', textTransform: 'uppercase',
+                              color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 2 }}>{lbl}</div>
+                            <div style={{ fontSize: lbl === 'Net' ? '.78rem' : '.72rem', fontWeight: lbl === 'Net' ? 900 : 700,
+                              color: col, fontFamily: "'JetBrains Mono', monospace" }}>{val}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Row C: STCG / LTCG (only when non-zero) */}
+                      {(row.stcg !== 0 || row.ltcg !== 0) && (
+                        <div style={{ display: 'flex', gap: 20, padding: '0 14px 10px', flexWrap: 'wrap' }}>
+                          {[['STCG', row.stcg], ['LTCG', row.ltcg]].filter(([, v]) => v !== 0).map(([lbl, val]) => (
+                            <div key={lbl}>
+                              <div style={{ fontSize: '.5rem', fontWeight: 800, letterSpacing: '.5px', textTransform: 'uppercase',
+                                color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 1 }}>{lbl}</div>
+                              <div style={{ fontSize: '.7rem', fontWeight: 700,
+                                color: val < 0 ? 'var(--neg)' : 'var(--text)',
+                                fontFamily: "'JetBrains Mono', monospace" }}>
+                                {val < 0 ? '−' : '+'}{fmt(val)}
+                              </div>
                             </div>
-                            <div style={{ display: 'flex', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
-                              <span style={{ fontSize: '.48rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: row.category === 'debt' ? '#e3f2fd' : row.category === 'hybrid' ? '#f3e5f5' : 'var(--g-xlight)', color: row.category === 'debt' ? '#1565c0' : row.category === 'hybrid' ? '#6a1b9a' : 'var(--g1)', border: '1px solid var(--border)', fontFamily: "'JetBrains Mono', monospace" }}>
-                                {row.category.toUpperCase()}
-                              </span>
-                              {row.isELSS && <span style={{ fontSize: '.48rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: '#fff8e1', color: '#f57f17', border: '1px solid #ffe082', fontFamily: "'JetBrains Mono', monospace" }}>ELSS</span>}
-                              {row.hasSynthetic && <span style={{ fontSize: '.48rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)', fontFamily: "'JetBrains Mono', monospace" }}>SUM</span>}
-                            </div>
-                          </td>
-                          {/* Editable exit load % — pre-filled with inferred rate, user can override */}
-                          <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-                              <input
-                                type="number" min="0" max="5" step="0.1"
-                                value={exitLoadOverrides[row.name] != null
-                                  ? (exitLoadOverrides[row.name] * 100).toFixed(2)
-                                  : (row.exitLoadRate * 100).toFixed(2)}
-                                onChange={e => {
-                                  const v = parseFloat(e.target.value);
-                                  setExitLoadOverrides(prev => ({
-                                    ...prev,
-                                    [row.name]: isNaN(v) ? 0 : Math.min(v, 5) / 100,
-                                  }));
-                                }}
-                                className="no-print"
-                                style={{
-                                  width: 48, padding: '3px 4px', textAlign: 'right',
-                                  border: '1px solid var(--border2)', borderRadius: 5,
-                                  fontFamily: "'JetBrains Mono', monospace", fontSize: '.65rem',
-                                  background: 'var(--surface)', color: 'var(--text)', outline: 'none',
-                                }}
-                              />
-                              <span style={{ fontSize: '.65rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>%</span>
-                              {/* Print-only: show static rate */}
-                              <span className="print-only" style={{ display: 'none', fontSize: '.65rem', fontFamily: "'JetBrains Mono', monospace" }}>
-                                {((exitLoadOverrides[row.name] ?? row.exitLoadRate) * 100).toFixed(2)}%
-                              </span>
-                            </div>
-                          </td>
-                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>{fmtD(row.units)}</td>
-                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>{fmt(row.proceeds)}</td>
-                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: row.exitLoad > 0 ? 'var(--neg)' : 'var(--muted)' }}>
-                            {row.exitLoad > 0 ? '−' + fmt(row.exitLoad) : '—'}
-                          </td>
-                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: row.stcg < 0 ? 'var(--neg)' : row.stcg > 0 ? 'var(--text)' : 'var(--muted)' }}>
-                            {row.stcg !== 0 ? (row.stcg < 0 ? '−' : '+') + fmt(row.stcg) : '—'}
-                          </td>
-                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: row.ltcg < 0 ? 'var(--neg)' : row.ltcg > 0 ? 'var(--text)' : 'var(--muted)' }}>
-                            {row.ltcg !== 0 ? (row.ltcg < 0 ? '−' : '+') + fmt(row.ltcg) : '—'}
-                          </td>
-                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: row.tax > 0 ? 'var(--neg)' : 'var(--muted)' }}>
-                            {row.tax > 0 ? '−' + fmt(row.tax) : '—'}
-                          </td>
-                          <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, color: 'var(--g1)' }}>
-                            {fmt(row.net)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {/* Totals row */}
-                    <tr style={{ background: 'var(--g-xlight)', borderTop: '2px solid var(--g-light)' }}>
-                      <td style={{ padding: '10px 10px', fontWeight: 900, fontSize: '.67rem', color: 'var(--g1)' }}>TOTAL</td>
-                      <td style={{ padding: '10px 10px', textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", color: 'var(--muted)' }}>—</td>
-                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800 }}>—</td>
-                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800 }}>{fmt(plan.totalProceeds)}</td>
-                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, color: 'var(--neg)' }}>{plan.totalExitLoad > 0 ? '−' + fmt(plan.totalExitLoad) : '—'}</td>
-                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800 }}>{plan.totalSTCG !== 0 ? (plan.totalSTCG < 0 ? '−' : '+') + fmt(plan.totalSTCG) : '—'}</td>
-                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800 }}>{plan.totalLTCG !== 0 ? (plan.totalLTCG < 0 ? '−' : '+') + fmt(plan.totalLTCG) : '—'}</td>
-                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, color: 'var(--neg)' }}>−{fmt(plan.totalTax)}</td>
-                      <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 900, color: 'var(--g1)', fontSize: '.75rem' }}>{fmt(plan.totalNet)}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Totals card */}
+                <div style={{ border: '2px solid var(--g-light)', borderRadius: 12,
+                  background: 'var(--g-xlight)', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '.58rem', fontWeight: 900, color: 'var(--g1)',
+                    letterSpacing: '1px', textTransform: 'uppercase',
+                    fontFamily: "'JetBrains Mono', monospace", marginBottom: 10 }}>Total</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 0 }}>
+                    {[
+                      ['Gross',      fmt(plan.totalProceeds),                                           'var(--text)'],
+                      ['Exit Load',  plan.totalExitLoad > 0 ? '−' + fmt(plan.totalExitLoad) : '—',     plan.totalExitLoad > 0 ? 'var(--neg)' : 'var(--muted)'],
+                      ['Total Tax',  plan.totalTax > 0 ? '−' + fmt(plan.totalTax) : '—',               plan.totalTax > 0 ? 'var(--neg)' : 'var(--muted)'],
+                      ['Net in Hand',fmt(plan.totalNet),                                                'var(--g1)'],
+                    ].map(([lbl, val, col]) => (
+                      <div key={lbl} style={{ paddingRight: 10 }}>
+                        <div style={{ fontSize: '.52rem', fontWeight: 800, letterSpacing: '.5px', textTransform: 'uppercase',
+                          color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 2 }}>{lbl}</div>
+                        <div style={{ fontSize: lbl === 'Net in Hand' ? '.9rem' : '.78rem',
+                          fontWeight: 900, color: col, fontFamily: "'JetBrains Mono', monospace",
+                          letterSpacing: '-.3px' }}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Footnotes */}
-              <div style={{ marginTop: 14, fontSize: '.62rem', color: 'var(--muted)', lineHeight: 1.7, padding: '12px 14px', background: 'var(--s2)', borderRadius: 10, border: '1.5px solid var(--border)' }}>
-                <strong>Notes:</strong> Tax rates per Budget 2024 (w.e.f. July 23 2024) — Equity STCG 20%, LTCG 12.5% above ₹1.25L annual exemption (shown per redemption; actual exemption is shared across all equity gains in the FY). Debt: all gains at selected slab rate.
-                Exit load rates are auto-inferred by fund category (Equity/Hybrid: 1% within 365 days; Liquid/Overnight/Debt/Index: 0%). Override per row using the Exit Load % field. CAS files do not contain structured exit load schedules — verify rates in your fund's SID or AMC website.
-                SUM = Summary CAS — purchase date unknown, all gains treated as LTCG, exit load not applied.
-                Grandfathering (Jan 31 2018 NAV) is not applied at portfolio level — use per-fund planner for pre-2018 lots.
+              <div style={{ marginTop: 14, fontSize: '.62rem', color: 'var(--muted)', lineHeight: 1.7,
+                padding: '12px 14px', background: 'var(--s2)', borderRadius: 10, border: '1.5px solid var(--border)' }}>
+                <strong>Notes:</strong> Tax rates per Budget 2024 — Equity STCG 20%, LTCG 12.5% above ₹1.25L annual exemption.
+                Debt: all gains at selected slab rate. Exit load inferred by category (Equity/Hybrid 1% within 365 days;
+                Liquid/Debt/Index 0%) — override using the Exit Load % input on each card. SUM CAS = purchase date unknown,
+                gains treated as LTCG, exit load not applied. Grandfathering not applied at portfolio level.
                 This is an estimate only. Consult a tax professional before redeeming.
               </div>
             </>
