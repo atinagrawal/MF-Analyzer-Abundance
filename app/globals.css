@@ -6579,3 +6579,50 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
     padding-right: 12px;
   }
 }
+
+/* ── Portfolio PAN / family member selector ── */
+.pf-pan-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.pf-pan-label {
+  font-size: .6rem;
+  font-weight: 800;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.45);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+.pf-pan-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pf-pan-chip {
+  padding: 5px 13px;
+  border-radius: 100px;
+  border: 1.5px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.7);
+  font-family: 'Raleway', sans-serif;
+  font-size: .68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.pf-pan-chip:hover {
+  background: rgba(255,255,255,.14);
+  border-color: rgba(255,255,255,.3);
+  color: #fff;
+}
+.pf-pan-chip.active {
+  background: rgba(255,255,255,.18);
+  border-color: rgba(255,255,255,.5);
+  color: #fff;
+  font-weight: 800;
+}

@@ -124,16 +124,13 @@ function PortfolioInner() {
   const [errMsg, setErrMsg]        = useState('');
 
   // Derived values
-  const [totals, setTotals] = useState({ current: 0, invested: 0, manual: 0 });
-  const [topHoldings, setTopHoldings] = useState([]);
-  const [investorName, setInvestorName] = useState('');
+  const [panPortfolios, setPanPortfolios] = useState({}); // PAN → {name, current, invested, holdings}
+  const [activePan, setActivePan]         = useState('all'); // 'all' | specific PAN
+  const [totals, setTotals]               = useState({ current: 0, invested: 0, manual: 0 });
+  const [topHoldings, setTopHoldings]     = useState([]);
+  const [investorName, setInvestorName]   = useState('');
 
-  // Auth guard
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.replace('/login?from=/portfolio');
-    }
-  }, [status, router]);
+  // No redirect — unauthenticated users see the gate UI below (better SEO + UX)
 
   // Main data fetch
   useEffect(() => {
@@ -220,31 +217,55 @@ function PortfolioInner() {
               } catch {}
             }));
 
-            // Build holdings list
+            // Build per-PAN portfolio map
+            const panMap = {}; // PAN → { name, current, invested, holdings }
+            const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
             (data.folios || []).forEach(folio => {
+              const pan = (folio.PAN || '').toUpperCase().trim();
+              const validPan = pan.length === 10 && PAN_RE.test(pan) ? pan : 'SHARED';
+
+              // Resolve investor name for this PAN
+              if (!panMap[validPan]) {
+                const txnName = panInvestorMap[validPan] || '';
+                const maskedPan = validPan !== 'SHARED'
+                  ? `${validPan.slice(0,3)}**${validPan.slice(-2)}`
+                  : 'Shared';
+                panMap[validPan] = {
+                  pan:      validPan,
+                  name:     txnName || maskedPan,
+                  current:  0,
+                  invested: 0,
+                  holdings: [],
+                };
+              }
+
               (folio.schemes || []).forEach(scheme => {
                 const units = parseFloat(scheme.close) || 0;
                 if (units < 0.001) return;
                 const casCost = parseFloat(scheme.valuation?.cost || 0);
                 const liveNav = navMap[scheme.amfi] || parseFloat(scheme.valuation?.nav || 0);
                 const value   = units * liveNav;
-                const invested = casCost > 0 ? casCost : units * liveNav;
+                const invested = casCost > 0 ? casCost : value;
                 casCurrent  += value;
                 casInvested += invested;
-                holdings.push({
-                  name:      scheme.scheme,
-                  value,
-                  invested,
-                  liveNav,
-                  units,
-                  isLive:    !!navMap[scheme.amfi],
-                  category:  inferCategory(scheme.scheme),
-                  isSIF:     false,
-                });
+                panMap[validPan].current  += value;
+                panMap[validPan].invested += invested;
+                const h = {
+                  name:     scheme.scheme,
+                  value, invested, liveNav, units,
+                  isLive:   !!navMap[scheme.amfi],
+                  category: inferCategory(scheme.scheme),
+                  isSIF:    false,
+                };
+                panMap[validPan].holdings.push(h);
+                holdings.push(h);
               });
             });
 
-            // Manual holdings value
+            setPanPortfolios(panMap);
+
+            // Manual holdings value (attributed to 'all', not a specific PAN)
             let manualVal = 0;
             manual.forEach(h => {
               const pu = parseFloat(h.purchase_nav);
@@ -265,7 +286,6 @@ function PortfolioInner() {
             });
 
             setTotals({ current: casCurrent + manualVal, invested: casInvested, manual: manualVal });
-            // Top 6 by value
             setTopHoldings(holdings.sort((a, b) => b.value - a.value).slice(0, 6));
             setPhase('ready');
           } else {
@@ -393,10 +413,25 @@ function PortfolioInner() {
     );
   }
 
-  const gain       = totals.current - totals.invested;
-  const gainPct    = totals.invested > 0 ? ((gain / totals.invested) * 100).toFixed(2) : '0.00';
+  // ── PAN selector computed values ─────────────────────────────────────────────
+  const panKeys = Object.keys(panPortfolios); // e.g. ['ABCDE1234F', 'XYZPQ9876G']
+  const hasMultiPan = panKeys.length > 1;
+
+  // Active display: if activePan is 'all' or not in panPortfolios, show combined
+  const displayHoldings = (activePan !== 'all' && panPortfolios[activePan])
+    ? panPortfolios[activePan].holdings
+    : topHoldings;
+  const displayTotals = (activePan !== 'all' && panPortfolios[activePan])
+    ? { current: panPortfolios[activePan].current, invested: panPortfolios[activePan].invested, manual: 0 }
+    : totals;
+  const displayName = (activePan !== 'all' && panPortfolios[activePan])
+    ? panPortfolios[activePan].name
+    : investorName;
+
+  const gain       = displayTotals.current - displayTotals.invested;
+  const gainPct    = displayTotals.invested > 0 ? ((gain / displayTotals.invested) * 100).toFixed(2) : '0.00';
   const isProfit   = gain >= 0;
-  const { g, first } = greeting(investorName);
+  const { g, first } = greeting(displayName);
 
   // ── Empty state ─────────────────────────────────────────────────────────────
   if (phase === 'empty') {
@@ -437,7 +472,7 @@ function PortfolioInner() {
             <div className="pf-wealth-row">
               <div className="pf-wealth-block">
                 <div className="pf-wealth-label">Total Portfolio Value</div>
-                <CountUp to={totals.current} duration={1400} className="pf-wealth-num" />
+                <CountUp to={displayTotals.current} duration={1400} className="pf-wealth-num" key={activePan} />
               </div>
               <div className="pf-gain-pill" data-pos={isProfit ? 'true' : 'false'}>
                 <Sparkline positive={isProfit} />
@@ -446,7 +481,7 @@ function PortfolioInner() {
               </div>
             </div>
 
-            {/* Hero meta */}
+            {/* Hero meta + PAN selector (only when multi-PAN) */}
             <div className="pf-hero-meta">
               {portfolios.length > 0 && (
                 <span className="pf-meta-chip">
@@ -458,6 +493,30 @@ function PortfolioInner() {
                 <span className="pf-meta-chip">{manualHoldings.length} manual holding{manualHoldings.length !== 1 ? 's' : ''}</span>
               )}
             </div>
+
+            {/* PAN / family member selector — only when CAS has 2+ PANs */}
+            {hasMultiPan && (
+              <div className="pf-pan-selector">
+                <span className="pf-pan-label">Viewing:</span>
+                <div className="pf-pan-chips">
+                  <button
+                    className={`pf-pan-chip${activePan === 'all' ? ' active' : ''}`}
+                    onClick={() => setActivePan('all')}
+                  >
+                    All members
+                  </button>
+                  {panKeys.map(pan => (
+                    <button
+                      key={pan}
+                      className={`pf-pan-chip${activePan === pan ? ' active' : ''}`}
+                      onClick={() => setActivePan(pan)}
+                    >
+                      {panPortfolios[pan].name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -468,8 +527,8 @@ function PortfolioInner() {
         {/* ── Stat row ── */}
         <div className="pf-stat-row">
           {[
-            { label: 'Current Value', val: totals.current, color: 'var(--g1)', big: true },
-            { label: 'Total Invested', val: totals.invested, color: 'var(--text2)' },
+            { label: 'Current Value', val: displayTotals.current, color: 'var(--g1)', big: true },
+            { label: 'Total Invested', val: displayTotals.invested, color: 'var(--text2)' },
             { label: isProfit ? 'Unrealised Gain' : 'Unrealised Loss', val: gain, color: isProfit ? 'var(--g2)' : 'var(--neg)', signed: true },
           ].map(({ label, val, color, big, signed }) => (
             <div key={label} className="pf-stat-card">
@@ -513,12 +572,12 @@ function PortfolioInner() {
               </div>
 
               <div className="pf-holdings-list">
-                {topHoldings.slice(0, 4).map((h, i) => {
+                {displayHoldings.slice(0, 4).map((h, i) => {
                   const cat   = CATEGORY_COLOR[h.category] || CATEGORY_COLOR.equity;
                   const gain  = h.value - h.invested;
                   const gPct  = h.invested > 0 ? ((gain / h.invested) * 100).toFixed(1) : '0.0';
                   const gPos  = gain >= 0;
-                  const pct   = totals.current > 0 ? (h.value / totals.current * 100).toFixed(1) : '0';
+                  const pct   = displayTotals.current > 0 ? (h.value / displayTotals.current * 100).toFixed(1) : '0';
                   return (
                     <div key={i} className="pf-holding-row">
                       <div className="pf-holding-cat" style={{ background: cat.bg }}>
@@ -590,12 +649,12 @@ function PortfolioInner() {
         {activeTab === 'holdings' && (
           <div className="pf-section">
             <div className="pf-holdings-full">
-              {topHoldings.map((h, i) => {
+              {displayHoldings.map((h, i) => {
                 const cat  = CATEGORY_COLOR[h.category] || CATEGORY_COLOR.equity;
                 const gain = h.value - h.invested;
                 const gPct = h.invested > 0 ? ((gain / h.invested) * 100).toFixed(2) : '0.00';
                 const gPos = gain >= 0;
-                const pct  = totals.current > 0 ? (h.value / totals.current * 100).toFixed(1) : '0';
+                const pct  = displayTotals.current > 0 ? (h.value / displayTotals.current * 100).toFixed(1) : '0';
                 return (
                   <div key={i} className="pf-holding-card">
                     <div className="pf-hc-head">
