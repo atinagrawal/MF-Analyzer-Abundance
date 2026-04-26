@@ -7517,3 +7517,80 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .sif-hist-stat { border-bottom: 1px solid rgba(255,255,255,.07); }
   .sif-hist-header, .sif-hist-controls, .sif-hist-body { padding-left: 18px; padding-right: 18px; }
 }
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   NAVBAR — Two-row desktop layout
+   Primary row: Home · MF Calculator · My Portfolio · SIF Screener · Contact
+   Tools row:   Industry · Report Card · Geography · Rolling · Indices · PMS
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* Outer flex wrapper — column, right-aligned */
+.nav-two-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Each row */
+.nav-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+.nav-row-tools { gap: 2px; }
+
+/* Tools row links — smaller, muted, no border by default */
+.nav-link-sm {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 7px;
+  font-family: 'Raleway', sans-serif;
+  font-size: .62rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: transparent;
+  border: 1.5px solid transparent;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color .13s, background .13s, border-color .13s;
+  cursor: pointer;
+}
+.nav-link-sm:hover {
+  color: var(--g2);
+  background: var(--s2);
+  border-color: var(--border);
+}
+
+/* Active page tag — tools row (inline, not block, so it doesn't stretch) */
+.nav-tag-sm {
+  display: inline-block;   /* critical: prevents row height explosion */
+  padding: 3px 8px;
+  border-radius: 7px;
+  font-family: 'Raleway', sans-serif;
+  font-size: .62rem;
+  font-weight: 800;
+  background: var(--g1);
+  color: #fff;
+  white-space: nowrap;
+  line-height: normal;
+}
+
+/* Dark hero overrides */
+.pf-hero  .nav-link-sm,
+.sif-hero .nav-link-sm { color: rgba(255,255,255,.55); }
+.pf-hero  .nav-link-sm:hover,
+.sif-hero .nav-link-sm:hover {
+  color: rgba(255,255,255,.9);
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.12);
+}
+.pf-hero  .nav-tag-sm,
+.sif-hero .nav-tag-sm {
+  background: rgba(255,255,255,.18);
+  color: #fff;
+}

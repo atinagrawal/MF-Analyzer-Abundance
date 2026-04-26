@@ -37,6 +37,8 @@ async function fetchFromAMFI() {
     for (const cat of typeGroup.categories ?? []) {
       for (const grp of cat.groups ?? []) {
         for (const s of grp.schemes ?? []) {
+          // Filter out Direct plans — screener shows Regular plans only
+          if (/direct/i.test(s.NavName)) continue;
           schemes.push({
             sif_name:  s.SIFName,
             sif_id:    s.sifId,
