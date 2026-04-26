@@ -311,6 +311,12 @@ function NavHistoryModal({ scheme, onClose }) {
     }
   }
 
+  // Auto-fetch on mount
+  useEffect(() => {
+    fetchHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Computed stats
   const stats = records.length >= 2 ? (() => {
     const first = records[0].nav, last = records[records.length - 1].nav;

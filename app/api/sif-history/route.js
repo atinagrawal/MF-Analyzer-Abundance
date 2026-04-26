@@ -4,11 +4,7 @@
  * CORS proxy for AMFI's undocumented SIF NAV history APIs.
  * Browser-to-amfiindia.com calls are blocked by CORS; this route runs server-side.
  *
- * GET /api/sif-history?sif_id=47
- *   → Fetches available strategies for a given SIF.
- *     Returns Regular plans only (Direct plans are not shown in the screener).
- *     Response: { strategies: [{ nav_id, nav_name }] }
- *
+
  * GET /api/sif-history?sd_id=SIF-34&from=2025-10-28&to=2026-04-26
  *   → Fetches historical NAV records for a specific strategy.
  *     Response: { mf_name, scheme_name, date_range, records: [{ date, nav }] }
@@ -22,33 +18,7 @@ const HEADERS   = { 'User-Agent': 'Mozilla/5.0 (compatible; MFCalc/2.0)' };
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
-  const sifId = searchParams.get('sif_id');
-  const sdId  = searchParams.get('sd_id');
-
-  // ── Strategy lookup ──────────────────────────────────────────────────────
-  if (sifId) {
-    try {
-      const res = await fetch(
-        `${AMFI_BASE}/sif-nav-history/navs?sif_id=${sifId}`,
-        { headers: HEADERS, signal: AbortSignal.timeout(10_000) }
-      );
-      if (!res.ok) throw new Error(`AMFI returned ${res.status}`);
-      const data = await res.json();
-
-      // Filter to Regular plans only — Direct plans match the screener's exclusion rule
-      const all = data?.data ?? [];
-      const strategies = all
-        .filter(s => !/direct/i.test(s.nav_name))
-        .map(s => ({ nav_id: s.nav_id, nav_name: s.nav_name }));
-
-      return Response.json({ strategies }, {
-        headers: { 'Cache-Control': 'public, max-age=3600' },
-      });
-    } catch (err) {
-      console.error('[sif-history strategies]', err.message);
-      return Response.json({ error: err.message }, { status: 502 });
-    }
-  }
+  const sdId = searchParams.get('sd_id');
 
   // ── Historical NAV ────────────────────────────────────────────────────────
   if (sdId) {
@@ -91,5 +61,5 @@ export async function GET(req) {
     }
   }
 
-  return Response.json({ error: 'sif_id or sd_id required' }, { status: 400 });
+  return Response.json({ error: 'sd_id required' }, { status: 400 });
 }
