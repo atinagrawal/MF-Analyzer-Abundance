@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { key: 'home',         label: '🏠 Home',            href: 'https://www.getabundance.in', external: true },
   { key: 'calculator',   label: '📊 MF Calculator',   href: '/' },
   { key: 'portfolio',    label: '💼 My Portfolio',     href: '/portfolio' },
+  { key: 'sifs',        label: '🔬 SIF Screener',     href: '/sifs' },
   { key: 'industry',     label: '📈 Industry Pulse',  href: '/industry' },
   { key: 'report',       label: '📋 Report Card',     href: '/report' },
   { key: 'geography',    label: '🗺 Geography',       href: '/geography' },
@@ -164,31 +165,17 @@ function UserAvatar({ session, onNavClose }) {
 
 // ── Hamburger icon ────────────────────────────────────────────────────────────
 function HamburgerIcon({ open }) {
-  // Coordinates animate directly — no CSS transform, no rotation, no class names.
-  // Open: two diagonals forming ×   Closed: three horizontal lines
-  const T = 'all .25s cubic-bezier(.4,0,.2,1)';
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      {/* Top line → diagonal \ */}
-      <line
-        x1={open ? 4 : 3}   y1={open ? 4  : 5}
-        x2={open ? 16 : 17} y2={open ? 16 : 5}
-        stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
-        style={{ transition: T }}
-      />
-      {/* Middle line → fades out */}
-      <line
-        x1="3" y1="10" x2="17" y2="10"
-        stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
-        style={{ transition: T, opacity: open ? 0 : 1 }}
-      />
-      {/* Bottom line → diagonal / */}
-      <line
-        x1={open ? 4 : 3}   y1={open ? 16 : 15}
-        x2={open ? 16 : 17} y2={open ? 4  : 15}
-        stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
-        style={{ transition: T }}
-      />
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <style>{`
+        .hb-top, .hb-mid, .hb-bot { transition: all .25s cubic-bezier(.4,0,.2,1); transform-origin: center; }
+      `}</style>
+      <line className="hb-top" x1="3" y1={open ? 10 : 5}  x2="17" y2={open ? 10 : 5}  stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+        style={{ transform: open ? 'rotate(45deg)' : 'none' }} />
+      <line className="hb-mid" x1="3" y1="10" x2="17" y2="10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+        style={{ opacity: open ? 0 : 1 }} />
+      <line className="hb-bot" x1="3" y1={open ? 10 : 15} x2="17" y2={open ? 10 : 15} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+        style={{ transform: open ? 'rotate(-45deg)' : 'none' }} />
     </svg>
   );
 }

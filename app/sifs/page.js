@@ -18,11 +18,18 @@ export const metadata = {
     url: 'https://mfcalc.getabundance.in/sifs',
     type: 'website',
     siteName: 'Abundance MF Analyzer',
+    images: [{
+      url:    'https://mfcalc.getabundance.in/api/og-sif',
+      width:  1200,
+      height: 630,
+      alt:    'SIF Screener — Specialised Investment Funds | Abundance',
+    }],
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'SIF Screener — Live NAVs | Abundance MF Analyzer',
+    card:        'summary_large_image',
+    title:       'SIF Screener — Live NAVs | Abundance MF Analyzer',
     description: 'All 57 Specialised Investment Funds with live AMFI NAVs. Filter by strategy and type.',
+    images:      ['https://mfcalc.getabundance.in/api/og-sif'],
   },
 };
 
