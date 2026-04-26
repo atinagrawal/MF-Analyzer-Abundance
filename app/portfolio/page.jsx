@@ -129,6 +129,7 @@ function PortfolioInner() {
   const [totals, setTotals]               = useState({ current: 0, invested: 0, manual: 0 });
   const [topHoldings, setTopHoldings]     = useState([]);
   const [investorName, setInvestorName]   = useState('');
+  const [navDate, setNavDate]             = useState(null);
 
   // No redirect — unauthenticated users see the gate UI below (better SEO + UX)
 
@@ -162,6 +163,7 @@ function PortfolioInner() {
               const sifData = await sifRes.json();
               (sifData.schemes || []).forEach(s => { localSifMap[s.scheme_id] = s.nav; });
               setSifNavMap(localSifMap);
+              if (sifData.nav_date) setNavDate(sifData.nav_date);
             }
           } catch {}
         }
@@ -207,6 +209,7 @@ function PortfolioInner() {
 
             // Fetch NAVs
             const navMap = {};
+            let maxDateStr = null;
             await Promise.allSettled([...allAmfi].map(async amfi => {
               try {
                 const r = await fetch(`/api/mf?code=${amfi}&latest=1`);
@@ -214,10 +217,20 @@ function PortfolioInner() {
                   const d = await r.json();
                   if (d.status === 'SUCCESS' && d.data?.[0]) {
                     navMap[amfi] = parseFloat(d.data[0].nav);
+                    if (!maxDateStr) maxDateStr = d.data[0].date;
                   }
                 }
               } catch {}
             }));
+
+            // Parse fetched DD-MM-YYYY date for display
+            if (maxDateStr) {
+              const [dd, mm, yy] = maxDateStr.split('-');
+              if (dd && mm && yy) {
+                const dObj = new Date(`${yy}-${mm}-${dd}`);
+                setNavDate(dObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
+              }
+            }
 
             // Build per-PAN portfolio map
             const panMap = {}; // PAN → { name, current, invested, holdings }
@@ -491,7 +504,7 @@ function PortfolioInner() {
               {portfolios.length > 0 && (
                 <span className="pf-meta-chip">
                   <span className="pf-live-dot" />
-                  Live NAVs · {fmtDate(portfolios[0]?.uploaded_at)}
+                  Live NAVs · {navDate || fmtDate(portfolios[0]?.uploaded_at)}
                 </span>
               )}
               {manualHoldings.length > 0 && (
