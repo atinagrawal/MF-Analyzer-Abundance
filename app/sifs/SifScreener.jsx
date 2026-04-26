@@ -510,11 +510,41 @@ export default function SifScreener({ initialData }) {
   const [query,      setQuery]      = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterFam,  setFilterFam]  = useState('all');
+  const [filterSif,  setFilterSif]  = useState('all'); // SIF company (sif_name)
+  const [filterCat,  setFilterCat]  = useState('all'); // Full strategy category
   const [sortBy,     setSortBy]     = useState('nav_desc');
   const [view,       setView]       = useState('grid'); // 'grid' | 'list'
   const [watchlist,  setWatchlist]  = useState(new Set());
   const [showWatchOnly, setShowWatchOnly] = useState(false);
   const [historyScheme, setHistoryScheme] = useState(null); // scheme for history modal
+
+  // Back button: push a hash when modal opens so browser back closes it, not navigates away
+  function openHistory(scheme) {
+    setHistoryScheme(scheme);
+    // Push a dummy history entry so browser back has something to pop
+    window.history.pushState({ sifModal: true }, '', window.location.pathname + '#sif-history');
+  }
+  function closeHistory() {
+    setHistoryScheme(null);
+    // If we're on the hash entry, go back to clean URL without triggering navigation
+    if (window.location.hash === '#sif-history') {
+      window.history.back();
+    }
+  }
+
+  // Listen for browser back button — close modal if it was open
+  useEffect(() => {
+    function onPopState(e) {
+      if (historyScheme) {
+        // Back was pressed while modal open — close it, stay on page
+        setHistoryScheme(null);
+        // Prevent default navigation by re-pushing clean state
+        window.history.pushState(null, '', window.location.pathname);
+      }
+    }
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [historyScheme]);
 
   // Load data + watchlist
   useEffect(() => {
@@ -540,9 +570,17 @@ export default function SifScreener({ initialData }) {
     });
   }
 
-  // Derived: unique types + families
+  // Derived filter options — all dynamic from API data so new additions appear automatically
   const types    = useMemo(() => ['all', ...new Set(schemes.map(s => s.type))], [schemes]);
-  const families = useMemo(() => ['all', 'Equity', 'Hybrid'], []);
+  const sifNames = useMemo(() => ['all', ...new Set(schemes.map(s => s.sif_name)).values()].sort(), [schemes]);
+  const categories = useMemo(() => {
+    // Full category string, shortened to the part after ' - '
+    const seen = new Map();
+    schemes.forEach(s => {
+      if (!seen.has(s.category)) seen.set(s.category, s.category.split(' - ').pop());
+    });
+    return [{ value: 'all', label: 'All Strategies' }, ...[...seen.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([value, label]) => ({ value, label }))];
+  }, [schemes]);
 
   // Filtered + sorted list
   const filtered = useMemo(() => {
@@ -555,6 +593,8 @@ export default function SifScreener({ initialData }) {
     );
     if (filterType !== 'all')  list = list.filter(s => s.type === filterType);
     if (filterFam  !== 'all')  list = list.filter(s => STRATEGY_FAMILY(s.category) === filterFam);
+    if (filterSif  !== 'all')  list = list.filter(s => s.sif_name === filterSif);
+    if (filterCat  !== 'all')  list = list.filter(s => s.category === filterCat);
 
     return [...list].sort((a, b) => {
       if (sortBy === 'nav_desc')  return b.nav - a.nav;
@@ -563,7 +603,7 @@ export default function SifScreener({ initialData }) {
       if (sortBy === 'name_desc') return b.nav_name.localeCompare(a.nav_name);
       return 0;
     });
-  }, [schemes, query, filterType, filterFam, sortBy, watchlist, showWatchOnly]);
+  }, [schemes, query, filterType, filterFam, filterSif, filterCat, sortBy, watchlist, showWatchOnly]);
 
   return (
     <>
@@ -641,11 +681,18 @@ export default function SifScreener({ initialData }) {
               ))}
             </select>
 
-            {/* Strategy family filter */}
-            <select className="sif-select" value={filterFam} onChange={e => setFilterFam(e.target.value)} aria-label="Filter by strategy">
-              <option value="all">All Strategies</option>
-              {families.filter(f => f !== 'all').map(f => (
-                <option key={f} value={f}>{f}</option>
+            {/* SIF company filter */}
+            <select className="sif-select" value={filterSif} onChange={e => { setFilterSif(e.target.value); setFilterCat('all'); }} aria-label="Filter by SIF company">
+              <option value="all">All Companies</option>
+              {sifNames.filter(n => n !== 'all').map(n => (
+                <option key={n} value={n}>{n.replace(' SIF', '')}</option>
+              ))}
+            </select>
+
+            {/* Strategy category filter (full, dynamic) */}
+            <select className="sif-select" value={filterCat} onChange={e => { setFilterCat(e.target.value); setFilterFam('all'); }} aria-label="Filter by strategy category">
+              {categories.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
               ))}
             </select>
 
@@ -688,9 +735,9 @@ export default function SifScreener({ initialData }) {
             <span>
               {loading ? 'Loading…' : `${filtered.length} of ${schemes.length} funds`}
             </span>
-            {(query || filterType !== 'all' || filterFam !== 'all' || showWatchOnly) && !loading && (
+            {(query || filterType !== 'all' || filterFam !== 'all' || filterSif !== 'all' || filterCat !== 'all' || showWatchOnly) && !loading && (
               <button className="sif-clear-filters"
-                onClick={() => { setQuery(''); setFilterType('all'); setFilterFam('all'); setShowWatchOnly(false); }}>
+                onClick={() => { setQuery(''); setFilterType('all'); setFilterFam('all'); setFilterSif('all'); setFilterCat('all'); setShowWatchOnly(false); }}>
                 Clear filters
               </button>
             )}
@@ -735,7 +782,7 @@ export default function SifScreener({ initialData }) {
                 scheme={s}
                 watched={watchlist.has(s.scheme_id)}
                 onToggleWatch={toggleWatch}
-                onViewHistory={setHistoryScheme}
+                onViewHistory={openHistory}
               />
             ))}
           </div>
@@ -764,7 +811,7 @@ export default function SifScreener({ initialData }) {
                     idx={i}
                     watched={watchlist.has(s.scheme_id)}
                     onToggleWatch={toggleWatch}
-                    onViewHistory={setHistoryScheme}
+                    onViewHistory={openHistory}
                   />
                 ))}
               </tbody>
@@ -829,7 +876,7 @@ export default function SifScreener({ initialData }) {
       {historyScheme && (
         <NavHistoryModal
           scheme={historyScheme}
-          onClose={() => setHistoryScheme(null)}
+          onClose={closeHistory}
         />
       )}
 
