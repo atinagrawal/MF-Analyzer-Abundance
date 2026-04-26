@@ -82,10 +82,7 @@ a { color: inherit; text-decoration: none; }
   position: relative;  /* establishes stacking context for dropdown */
   z-index: 9999;       /* above all page sections */
   min-width: 0;
-  background: var(--surface); /* opaque — button always visible above mobile panel */
 }
-/* Hero pages: let the dark green background show through */
-.pf-hero .navbar { background: transparent; }
 .logo-wrap { display: flex; align-items: center; gap: 12px; }
 .logo-img { height: 38px; width: auto; border-radius: 6px; }
 .logo-icon {
@@ -5984,9 +5981,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   color: var(--g1);
 }
 .pf-hero .nav-hamburger.open {
-  background: rgba(0,0,0,.35);  /* dark pill — clear contrast on green hero */
-  border-color: rgba(255,255,255,.4);
+  background: rgba(0,0,0,.40);
+  border-color: rgba(255,255,255,.45);
   color: #fff;
+}
+/* Lock open-state colours on hover — prevent generic :hover from winning */
+.nav-hamburger.open:hover {
+  background: var(--g-xlight) !important;
+  border-color: var(--g1) !important;
+  color: var(--g1) !important;
+}
+.pf-hero .nav-hamburger.open:hover {
+  background: rgba(0,0,0,.55) !important;
+  border-color: rgba(255,255,255,.55) !important;
+  color: #fff !important;
 }
 
 /* Mobile menu panel
