@@ -271,11 +271,6 @@ const PRESETS = [
 
 // ── NAV History Modal ─────────────────────────────────────────────────────────
 function NavHistoryModal({ scheme, onClose }) {
-  const [strategies,    setStrategies]    = useState([]);
-  const [selectedSd,    setSelectedSd]    = useState('');
-  const [stratLoading,  setStratLoading]  = useState(true);
-  const [stratError,    setStratError]    = useState('');
-
   const [fromDate, setFromDate] = useState(subtractDays(todayStr(), 180));
   const [toDate,   setToDate]   = useState(todayStr());
   const [preset,   setPreset]   = useState('6M');
@@ -285,20 +280,6 @@ function NavHistoryModal({ scheme, onClose }) {
   const [navError,     setNavError]     = useState('');
   const [mfMeta,       setMfMeta]       = useState({});
   const [fetched,      setFetched]      = useState(false);
-
-  // Load strategies on open
-  useEffect(() => {
-    setStratLoading(true);
-    fetch(`/api/sif-history?sif_id=${scheme.sif_id}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.error) throw new Error(d.error);
-        setStrategies(d.strategies || []);
-        if (d.strategies?.length) setSelectedSd(d.strategies[0].nav_id);
-        setStratLoading(false);
-      })
-      .catch(e => { setStratError(e.message); setStratLoading(false); });
-  }, [scheme.sif_id]);
 
   // Compute min date = scheme inception (all SIFs post-2024)
   const inception = '2024-01-01';
@@ -313,12 +294,11 @@ function NavHistoryModal({ scheme, onClose }) {
   }
 
   async function fetchHistory() {
-    if (!selectedSd) return;
     setNavLoading(true);
     setNavError('');
     setFetched(false);
     try {
-      const res = await fetch(`/api/sif-history?sd_id=${selectedSd}&from=${fromDate}&to=${toDate}`);
+      const res = await fetch(`/api/sif-history?sd_id=${scheme.scheme_id}&from=${fromDate}&to=${toDate}`);
       const d   = await res.json();
       if (d.error) throw new Error(d.error);
       setRecords(d.records || []);
@@ -367,24 +347,6 @@ function NavHistoryModal({ scheme, onClose }) {
 
         {/* Controls */}
         <div className="sif-hist-controls">
-          {/* Strategy picker */}
-          <div className="sif-hist-ctrl-group">
-            <label className="sif-hist-label">Strategy</label>
-            {stratLoading ? (
-              <div className="sif-hist-sk" style={{ width: 200, height: 36 }} />
-            ) : stratError ? (
-              <div className="sif-hist-err-sm">⚠ {stratError}</div>
-            ) : strategies.length === 0 ? (
-              <div className="sif-hist-err-sm">No strategies available</div>
-            ) : strategies.length === 1 ? (
-              <div className="sif-hist-strategy-name">{strategies[0].nav_name}</div>
-            ) : (
-              <select className="sif-hist-select" value={selectedSd} onChange={e => setSelectedSd(e.target.value)}>
-                {strategies.map(s => <option key={s.nav_id} value={s.nav_id}>{s.nav_name}</option>)}
-              </select>
-            )}
-          </div>
-
           {/* Date range */}
           <div className="sif-hist-ctrl-group">
             <label className="sif-hist-label">Period</label>
@@ -417,7 +379,7 @@ function NavHistoryModal({ scheme, onClose }) {
           <button
             className="sif-hist-fetch-btn"
             onClick={fetchHistory}
-            disabled={navLoading || !selectedSd || stratLoading}
+            disabled={navLoading}
           >
             {navLoading ? '⏳ Loading…' : 'Fetch History →'}
           </button>
@@ -533,10 +495,10 @@ function NavHistoryModal({ scheme, onClose }) {
 }
 
 
-export default function SifScreener() {
-  const [schemes,    setSchemes]    = useState([]);
-  const [navDate,    setNavDate]    = useState('');
-  const [loading,    setLoading]    = useState(true);
+export default function SifScreener({ initialData }) {
+  const [schemes,    setSchemes]    = useState(initialData?.schemes || []);
+  const [navDate,    setNavDate]    = useState(initialData?.nav_date || '');
+  const [loading,    setLoading]    = useState(!initialData);
   const [error,      setError]      = useState('');
 
   const [query,      setQuery]      = useState('');
@@ -551,15 +513,17 @@ export default function SifScreener() {
   // Load data + watchlist
   useEffect(() => {
     setWatchlist(getWatchlist());
-    fetch('/api/sif-nav')
-      .then(r => r.json())
-      .then(d => {
-        setSchemes(d.schemes || []);
-        setNavDate(d.nav_date || '');
-        setLoading(false);
-      })
-      .catch(e => { setError(e.message); setLoading(false); });
-  }, []);
+    if (!initialData) {
+      fetch('/api/sif-nav')
+        .then(r => r.json())
+        .then(d => {
+          setSchemes(d.schemes || []);
+          setNavDate(d.nav_date || '');
+          setLoading(false);
+        })
+        .catch(e => { setError(e.message); setLoading(false); });
+    }
+  }, [initialData]);
 
   function toggleWatch(id) {
     setWatchlist(prev => {
