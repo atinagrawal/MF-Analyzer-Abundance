@@ -3,34 +3,43 @@
  *
  * OG image for the SIF Screener — edge-rendered PNG, 1200×630.
  *
- * Fix: removed <img src="https://..."> which caused 503 in edge runtime.
- * @vercel/og can't fetch external images via <img> tag — use text/SVG logo instead.
- *
- * Improvement: fetches live fund count from /api/sif-nav and shows it dynamically.
- * Falls back to static count if fetch fails (edge functions have 25ms network budget).
+ * Logo fix: @vercel/og cannot load external images via <img src="https://..."> string.
+ * Correct pattern: fetch the logo as ArrayBuffer, pass the buffer directly to <img src>.
+ * This is the documented Vercel OG image pattern for external assets.
  */
 
 import { ImageResponse } from '@vercel/og';
 
 export const runtime = 'edge';
 
-// Fetch live count — very fast (Blob-cached, <50ms)
-async function getLiveCount() {
-  try {
-    const r = await fetch('https://mfcalc.getabundance.in/api/sif-nav', {
-      signal: AbortSignal.timeout(3000),
-      headers: { 'Cache-Control': 'no-store' },
-    });
-    if (!r.ok) return { count: 29, navDate: '' };
-    const d = await r.json();
-    return { count: d.count ?? 29, navDate: d.nav_date ?? '' };
-  } catch {
-    return { count: 29, navDate: '' };
+const LOGO_URL  = 'https://mfcalc.getabundance.in/logo-og.png';
+const SIF_NAV   = 'https://mfcalc.getabundance.in/api/sif-nav';
+
+async function getAssets() {
+  // Fetch logo and live count in parallel — both Blob-cached / static assets, very fast
+  const [logoRes, navRes] = await Promise.allSettled([
+    fetch(LOGO_URL,  { signal: AbortSignal.timeout(3000) }),
+    fetch(SIF_NAV,   { signal: AbortSignal.timeout(3000), headers: { 'Cache-Control': 'no-store' } }),
+  ]);
+
+  const logoData = logoRes.status === 'fulfilled' && logoRes.value.ok
+    ? await logoRes.value.arrayBuffer()
+    : null;
+
+  let count   = 29;
+  let navDate = '';
+  if (navRes.status === 'fulfilled' && navRes.value.ok) {
+    const d = await navRes.value.json();
+    count   = d.count   ?? 29;
+    navDate = d.nav_date ?? '';
   }
+
+  return { logoData, count, navDate };
 }
 
 export async function GET() {
-  const { count, navDate } = await getLiveCount();
+  const { logoData, count, navDate } = await getAssets();
+
   const dateLabel = navDate
     ? navDate.toUpperCase()
     : new Date().toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }).toUpperCase();
@@ -58,54 +67,37 @@ export async function GET() {
           display: 'flex',
         }} />
 
-        {/* Background decorative circles */}
+        {/* Background circles */}
         <div style={{
           position: 'absolute', top: -120, right: -60,
           width: 420, height: 420, borderRadius: '50%',
-          background: 'rgba(67,160,71,.06)',
-          display: 'flex',
+          background: 'rgba(67,160,71,.06)', display: 'flex',
         }} />
         <div style={{
           position: 'absolute', bottom: -80, left: -40,
           width: 300, height: 300, borderRadius: '50%',
-          background: 'rgba(46,125,50,.08)',
-          display: 'flex',
+          background: 'rgba(46,125,50,.08)', display: 'flex',
         }} />
 
         {/* ── Header row ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Live NAV badge */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
             background: 'rgba(67,160,71,.15)',
             border: '1.5px solid rgba(67,160,71,.4)',
-            borderRadius: 30,
-            padding: '8px 20px',
+            borderRadius: 30, padding: '8px 20px',
           }}>
-            <div style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: '#69f0ae',
-              display: 'flex',
-            }} />
-            <div style={{
-              color: '#a5d6a7', fontSize: 14, fontWeight: 700,
-              letterSpacing: '1px', display: 'flex',
-            }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#69f0ae', display: 'flex' }} />
+            <div style={{ color: '#a5d6a7', fontSize: 14, fontWeight: 700, letterSpacing: '1px', display: 'flex' }}>
               AMFI LIVE NAVs · {dateLabel}
             </div>
           </div>
-
-          {/* ARN badge */}
           <div style={{
             display: 'flex',
             background: 'rgba(255,255,255,.06)',
             border: '1px solid rgba(255,255,255,.12)',
-            borderRadius: 20,
-            padding: '8px 18px',
-            color: 'rgba(255,255,255,.55)',
-            fontSize: 13,
-            fontWeight: 600,
-            letterSpacing: '0.5px',
+            borderRadius: 20, padding: '8px 18px',
+            color: 'rgba(255,255,255,.55)', fontSize: 13, fontWeight: 600, letterSpacing: '0.5px',
           }}>
             ARN-251838
           </div>
@@ -113,43 +105,25 @@ export async function GET() {
 
         {/* ── Main content ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Category label */}
-          <div style={{
-            display: 'flex',
-            color: '#81c784', fontSize: 16, fontWeight: 700,
-            letterSpacing: '2px', textTransform: 'uppercase',
-          }}>
+          <div style={{ display: 'flex', color: '#81c784', fontSize: 16, fontWeight: 700, letterSpacing: '2px' }}>
             SEBI Regulated · New Asset Class
           </div>
-
-          {/* Headline */}
           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.0 }}>
-            <div style={{
-              fontSize: 80, fontWeight: 900, color: '#fff',
-              letterSpacing: '-3px', display: 'flex',
-            }}>
+            <div style={{ fontSize: 80, fontWeight: 900, color: '#fff', letterSpacing: '-3px', display: 'flex' }}>
               Specialised
             </div>
-            <div style={{
-              fontSize: 80, fontWeight: 900, color: '#66bb6a',
-              letterSpacing: '-3px', display: 'flex',
-            }}>
+            <div style={{ fontSize: 80, fontWeight: 900, color: '#66bb6a', letterSpacing: '-3px', display: 'flex' }}>
               Investment Funds
             </div>
           </div>
-
-          {/* Strategy pills */}
           <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
             {['Equity Long-Short', 'Hybrid Long-Short', 'Active Allocator'].map(t => (
               <div key={t} style={{
                 display: 'flex',
                 background: 'rgba(255,255,255,.06)',
                 border: '1px solid rgba(165,214,167,.2)',
-                borderRadius: 8,
-                padding: '7px 16px',
-                color: '#c8e6c9',
-                fontSize: 16,
-                fontWeight: 600,
+                borderRadius: 8, padding: '7px 16px',
+                color: '#c8e6c9', fontSize: 16, fontWeight: 600,
               }}>
                 {t}
               </div>
@@ -157,30 +131,31 @@ export async function GET() {
           </div>
         </div>
 
-        {/* ── Footer row ── */}
+        {/* ── Footer row: logo + stats ── */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
 
-          {/* Brand — text only (no external img) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            {/* Logo mark — geometric A */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 6 }}>
+          {/* Logo + brand */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {/* Logo image — fetched as ArrayBuffer (required by @vercel/og for external images) */}
+            {logoData ? (
+              <img
+                src={logoData}
+                style={{ height: 84, objectFit: 'contain', objectPosition: 'left', marginBottom: 8 }}
+              />
+            ) : (
               <div style={{
-                width: 48, height: 48, borderRadius: 12,
-                background: 'linear-gradient(135deg, #1b5e20, #2e7d32)',
-                border: '2px solid rgba(165,214,167,.3)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 22, fontWeight: 900, color: '#fff',
+                height: 84, marginBottom: 8,
+                display: 'flex', alignItems: 'center',
+                color: '#fff', fontSize: 28, fontWeight: 900, letterSpacing: '-1px',
               }}>
-                A
+                Abundance
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div style={{ color: '#fff', fontSize: 20, fontWeight: 800, display: 'flex', letterSpacing: '-0.3px' }}>
-                  Abundance Financial Services
-                </div>
-                <div style={{ color: '#81c784', fontSize: 13, display: 'flex', marginTop: 1 }}>
-                  Atin Kumar Agrawal · AMFI Registered SIF Distributor
-                </div>
-              </div>
+            )}
+            <div style={{ color: '#fff', fontSize: 20, fontWeight: 800, display: 'flex', letterSpacing: '-0.3px' }}>
+              Abundance Financial Services — Atin Kumar Agrawal
+            </div>
+            <div style={{ color: '#81c784', fontSize: 13, display: 'flex', marginTop: 1 }}>
+              AMFI Registered Mutual Fund and SIF Distributor · ARN-251838
             </div>
           </div>
 
