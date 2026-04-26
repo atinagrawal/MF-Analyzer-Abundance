@@ -14,19 +14,27 @@
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useRef, useEffect } from 'react';
 
-const NAV_ITEMS = [
-  { key: 'home',         label: '🏠 Home',            href: 'https://www.getabundance.in', external: true },
-  { key: 'calculator',   label: '📊 MF Calculator',   href: '/' },
-  { key: 'portfolio',    label: '💼 My Portfolio',     href: '/portfolio' },
-  { key: 'sifs',        label: '🔬 SIF Screener',     href: '/sifs' },
+// ── Primary nav: core product (always visible on desktop) ──────────────────
+const NAV_PRIMARY = [
+  { key: 'home',       label: '🏠 Home',          href: 'https://www.getabundance.in', external: true },
+  { key: 'calculator', label: '📊 MF Calculator', href: '/' },
+  { key: 'portfolio',  label: '💼 My Portfolio',  href: '/portfolio' },
+  { key: 'sifs',       label: '🔬 SIF Screener',  href: '/sifs' },
+  { key: 'contact',    label: '📞 Contact',        href: 'https://www.getabundance.in/contact-us', external: true },
+];
+
+// ── Secondary nav: analytics tools (second row on desktop) ─────────────────
+const NAV_TOOLS = [
   { key: 'industry',     label: '📈 Industry Pulse',  href: '/industry' },
   { key: 'report',       label: '📋 Report Card',     href: '/report' },
   { key: 'geography',    label: '🗺 Geography',       href: '/geography' },
   { key: 'rolling',      label: '📉 Rolling Returns', href: '/rolling' },
   { key: 'indices',      label: '📊 Index Dashboard', href: '/indices' },
   { key: 'pms-screener', label: '🏆 PMS Screener',   href: '/pms-screener' },
-  { key: 'contact',      label: '📞 Contact',         href: 'https://www.getabundance.in/contact-us', external: true },
 ];
+
+// Combined for mobile hamburger menu
+const NAV_ITEMS = [...NAV_PRIMARY, ...NAV_TOOLS];
 
 // ── Avatar dropdown ──────────────────────────────────────────────────────────
 function UserAvatar({ session, onNavClose }) {
@@ -222,17 +230,30 @@ export default function Navbar({ activePage, variant = 'default' }) {
           </div>
         </a>
 
-        {/* ── Desktop nav links ── */}
-        <div className="nav-right nav-desktop">
-          {NAV_ITEMS.map(item => {
-            const isActive = item.key === activePage;
-            const linkProps = item.external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
-            if (isActive) {
-              const tagStyle = isHome ? { background: 'var(--g-xlight)', border: '1.5px solid var(--g-light)', color: 'var(--g2)' } : {};
-              return <div key={item.key} className="nav-tag" style={tagStyle}>{item.label}</div>;
-            }
-            return <a key={item.key} className="nav-link" href={item.href} {...linkProps}>{item.label}</a>;
-          })}
+        {/* ── Desktop nav: two rows ── */}
+        <div className="nav-desktop nav-two-row">
+          {/* Row 1: primary */}
+          <div className="nav-row nav-row-primary">
+            {NAV_PRIMARY.map(item => {
+              const isActive = item.key === activePage;
+              const linkProps = item.external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
+              if (isActive) {
+                const tagStyle = isHome ? { background: 'var(--g-xlight)', border: '1.5px solid var(--g-light)', color: 'var(--g2)' } : {};
+                return <div key={item.key} className="nav-tag" style={tagStyle}>{item.label}</div>;
+              }
+              return <a key={item.key} className="nav-link" href={item.href} {...linkProps}>{item.label}</a>;
+            })}
+          </div>
+          {/* Row 2: tools (smaller, subtle) */}
+          <div className="nav-row nav-row-tools">
+            {NAV_TOOLS.map(item => {
+              const isActive = item.key === activePage;
+              if (isActive) {
+                return <div key={item.key} className="nav-tag nav-tag-sm">{item.label}</div>;
+              }
+              return <a key={item.key} className="nav-link nav-link-sm" href={item.href}>{item.label}</a>;
+            })}
+          </div>
         </div>
 
         {/* ── Right side: hamburger (mobile) + auth ── */}

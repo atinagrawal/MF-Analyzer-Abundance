@@ -73,7 +73,7 @@ function SkeletonCard() {
 }
 
 // ── SIF Card (grid view) ──────────────────────────────────────────────────────
-function SifCard({ scheme, watched, onToggleWatch }) {
+function SifCard({ scheme, watched, onToggleWatch, onViewHistory }) {
   const family   = STRATEGY_FAMILY(scheme.category);
   const fStyle   = FAMILY_STYLE[family] || FAMILY_STYLE.Equity;
   const stratShort = STRATEGY_SHORT(scheme.category);
@@ -116,12 +116,19 @@ function SifCard({ scheme, watched, onToggleWatch }) {
           <span className="sif-pill sif-id-pill">{scheme.scheme_id}</span>
         </div>
       </div>
+      <button
+        className="sif-hist-trigger"
+        onClick={() => onViewHistory(scheme)}
+        aria-label={`View NAV history for ${scheme.nav_name}`}
+      >
+        📈 View History
+      </button>
     </div>
   );
 }
 
 // ── SIF Row (list view) ───────────────────────────────────────────────────────
-function SifRow({ scheme, watched, onToggleWatch, idx }) {
+function SifRow({ scheme, watched, onToggleWatch, idx, onViewHistory }) {
   const family = STRATEGY_FAMILY(scheme.category);
   const fStyle = FAMILY_STYLE[family] || FAMILY_STYLE.Equity;
   return (
@@ -142,7 +149,7 @@ function SifRow({ scheme, watched, onToggleWatch, idx }) {
       </td>
       <td className="sif-td sif-td-nav mono">₹{scheme.nav.toFixed(4)}</td>
       <td className="sif-td sif-td-date mono">{fmtDate(scheme.nav_date)}</td>
-      <td className="sif-td sif-td-action">
+      <td className="sif-td sif-td-action" style={{ whiteSpace: 'nowrap' }}>
         <button
           className={`sif-star${watched ? ' active' : ''}`}
           onClick={() => onToggleWatch(scheme.scheme_id)}
@@ -150,12 +157,382 @@ function SifRow({ scheme, watched, onToggleWatch, idx }) {
         >
           {watched ? '★' : '☆'}
         </button>
+        <button
+          className="sif-hist-trigger-sm"
+          onClick={() => onViewHistory(scheme)}
+          title="View NAV history"
+        >
+          📈
+        </button>
       </td>
     </tr>
   );
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
+
+// ── Pure SVG Area Chart ────────────────────────────────────────────────────────
+function SifAreaChart({ records, color = '#43a047' }) {
+  if (!records.length) return null;
+  const W = 640, H = 200, PL = 52, PR = 12, PT = 12, PB = 28;
+  const plotW = W - PL - PR, plotH = H - PT - PB;
+
+  const navs  = records.map(r => r.nav);
+  const minNav = Math.min(...navs);
+  const maxNav = Math.max(...navs);
+  const rangeNav = maxNav - minNav || 1;
+
+  const px = (i) => PL + (i / (records.length - 1)) * plotW;
+  const py = (nav) => PT + plotH - ((nav - minNav) / rangeNav) * plotH;
+
+  const pathLine  = records.map((r, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(r.nav).toFixed(1)}`).join(' ');
+  const pathArea  = pathLine + ` L${px(records.length - 1).toFixed(1)},${(PT + plotH).toFixed(1)} L${PL},${(PT + plotH).toFixed(1)} Z`;
+
+  // Y-axis ticks (4 levels)
+  const yTicks = [0, 1, 2, 3].map(i => minNav + (rangeNav * i) / 3);
+  // X-axis labels (first, mid, last)
+  const xLabels = [0, Math.floor(records.length / 2), records.length - 1];
+
+  const fmtNav   = v => '₹' + v.toFixed(2);
+  const fmtLabel = d => {
+    const dt = new Date(d);
+    return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  };
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}
+      aria-label="NAV history chart"
+    >
+      <defs>
+        <linearGradient id="sif-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.03" />
+        </linearGradient>
+      </defs>
+
+      {/* Grid lines */}
+      {yTicks.map((v, i) => (
+        <g key={i}>
+          <line
+            x1={PL} y1={py(v).toFixed(1)}
+            x2={W - PR} y2={py(v).toFixed(1)}
+            stroke="rgba(255,255,255,.07)" strokeWidth="1"
+          />
+          <text
+            x={PL - 4} y={py(v)} dy="0.35em"
+            textAnchor="end" fontSize="9"
+            fill="rgba(255,255,255,.4)" fontFamily="'JetBrains Mono',monospace"
+          >
+            {fmtNav(v)}
+          </text>
+        </g>
+      ))}
+
+      {/* Area fill */}
+      <path d={pathArea} fill="url(#sif-grad)" />
+
+      {/* Line */}
+      <path d={pathLine} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+
+      {/* First & last dots */}
+      {[0, records.length - 1].map(i => (
+        <circle key={i} cx={px(i)} cy={py(records[i].nav)} r="3.5" fill={color} stroke="#1b1b1b" strokeWidth="1.5" />
+      ))}
+
+      {/* X-axis labels */}
+      {xLabels.map(i => (
+        <text key={i} x={px(i)} y={H - 6}
+          textAnchor={i === 0 ? 'start' : i === records.length - 1 ? 'end' : 'middle'}
+          fontSize="9" fill="rgba(255,255,255,.4)" fontFamily="'JetBrains Mono',monospace"
+        >
+          {fmtLabel(records[i].date)}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
+// ── Date helpers ──────────────────────────────────────────────────────────────
+function subtractDays(d, days) {
+  const dt = new Date(d);
+  dt.setDate(dt.getDate() - days);
+  return dt.toISOString().slice(0, 10);
+}
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+const PRESETS = [
+  { label: '1M',  days: 30  },
+  { label: '3M',  days: 90  },
+  { label: '6M',  days: 180 },
+  { label: 'Max', days: 999 },
+];
+
+// ── NAV History Modal ─────────────────────────────────────────────────────────
+function NavHistoryModal({ scheme, onClose }) {
+  const [strategies,    setStrategies]    = useState([]);
+  const [selectedSd,    setSelectedSd]    = useState('');
+  const [stratLoading,  setStratLoading]  = useState(true);
+  const [stratError,    setStratError]    = useState('');
+
+  const [fromDate, setFromDate] = useState(subtractDays(todayStr(), 180));
+  const [toDate,   setToDate]   = useState(todayStr());
+  const [preset,   setPreset]   = useState('6M');
+
+  const [records,      setRecords]      = useState([]);
+  const [navLoading,   setNavLoading]   = useState(false);
+  const [navError,     setNavError]     = useState('');
+  const [mfMeta,       setMfMeta]       = useState({});
+  const [fetched,      setFetched]      = useState(false);
+
+  // Load strategies on open
+  useEffect(() => {
+    setStratLoading(true);
+    fetch(`/api/sif-history?sif_id=${scheme.sif_id}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) throw new Error(d.error);
+        setStrategies(d.strategies || []);
+        if (d.strategies?.length) setSelectedSd(d.strategies[0].nav_id);
+        setStratLoading(false);
+      })
+      .catch(e => { setStratError(e.message); setStratLoading(false); });
+  }, [scheme.sif_id]);
+
+  // Compute min date = scheme inception (all SIFs post-2024)
+  const inception = '2024-01-01';
+
+  function applyPreset(label) {
+    setPreset(label);
+    const today = todayStr();
+    setToDate(today);
+    if (label === 'Max') { setFromDate(inception); return; }
+    const p = PRESETS.find(p => p.label === label);
+    if (p) setFromDate(subtractDays(today, p.days));
+  }
+
+  async function fetchHistory() {
+    if (!selectedSd) return;
+    setNavLoading(true);
+    setNavError('');
+    setFetched(false);
+    try {
+      const res = await fetch(`/api/sif-history?sd_id=${selectedSd}&from=${fromDate}&to=${toDate}`);
+      const d   = await res.json();
+      if (d.error) throw new Error(d.error);
+      setRecords(d.records || []);
+      setMfMeta({ mf_name: d.mf_name, scheme_name: d.scheme_name, date_range: d.date_range });
+      setFetched(true);
+    } catch (e) {
+      setNavError(e.message);
+    } finally {
+      setNavLoading(false);
+    }
+  }
+
+  // Computed stats
+  const stats = records.length >= 2 ? (() => {
+    const first = records[0].nav, last = records[records.length - 1].nav;
+    const ret   = ((last - first) / first) * 100;
+    const navs  = records.map(r => r.nav);
+    return {
+      ret, high: Math.max(...navs), low: Math.min(...navs),
+      current: last, inception: first, points: records.length,
+    };
+  })() : null;
+
+  const isProfit = stats && stats.ret >= 0;
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = e => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div className="sif-hist-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="NAV History">
+      <div className="sif-hist-panel" onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="sif-hist-header">
+          <div className="sif-hist-header-left">
+            <div className="sif-hist-eyebrow">NAV History</div>
+            <div className="sif-hist-title">{scheme.nav_name}</div>
+            <div className="sif-hist-sub">{scheme.sif_name} · {scheme.scheme_id}</div>
+          </div>
+          <button className="sif-hist-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+
+        {/* Controls */}
+        <div className="sif-hist-controls">
+          {/* Strategy picker */}
+          <div className="sif-hist-ctrl-group">
+            <label className="sif-hist-label">Strategy</label>
+            {stratLoading ? (
+              <div className="sif-hist-sk" style={{ width: 200, height: 36 }} />
+            ) : stratError ? (
+              <div className="sif-hist-err-sm">⚠ {stratError}</div>
+            ) : strategies.length === 0 ? (
+              <div className="sif-hist-err-sm">No strategies available</div>
+            ) : strategies.length === 1 ? (
+              <div className="sif-hist-strategy-name">{strategies[0].nav_name}</div>
+            ) : (
+              <select className="sif-hist-select" value={selectedSd} onChange={e => setSelectedSd(e.target.value)}>
+                {strategies.map(s => <option key={s.nav_id} value={s.nav_id}>{s.nav_name}</option>)}
+              </select>
+            )}
+          </div>
+
+          {/* Date range */}
+          <div className="sif-hist-ctrl-group">
+            <label className="sif-hist-label">Period</label>
+            <div className="sif-hist-presets">
+              {PRESETS.map(p => (
+                <button
+                  key={p.label}
+                  className={`sif-hist-preset${preset === p.label ? ' active' : ''}`}
+                  onClick={() => applyPreset(p.label)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="sif-hist-ctrl-group">
+            <label className="sif-hist-label">Custom Range</label>
+            <div className="sif-hist-dates">
+              <input type="date" className="sif-hist-date-input"
+                value={fromDate} min={inception} max={toDate}
+                onChange={e => { setFromDate(e.target.value); setPreset(''); }} />
+              <span className="sif-hist-date-sep">→</span>
+              <input type="date" className="sif-hist-date-input"
+                value={toDate} min={fromDate} max={todayStr()}
+                onChange={e => { setToDate(e.target.value); setPreset(''); }} />
+            </div>
+          </div>
+
+          <button
+            className="sif-hist-fetch-btn"
+            onClick={fetchHistory}
+            disabled={navLoading || !selectedSd || stratLoading}
+          >
+            {navLoading ? '⏳ Loading…' : 'Fetch History →'}
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="sif-hist-body">
+
+          {/* Loading skeleton */}
+          {navLoading && (
+            <div>
+              <div className="sif-hist-sk sif-hist-sk-chart" />
+              <div style={{ display: 'flex', gap: 10, margin: '16px 0 12px' }}>
+                {[1,2,3,4].map(i => <div key={i} className="sif-hist-sk" style={{ flex:1, height: 56 }} />)}
+              </div>
+              <div className="sif-hist-sk" style={{ height: 120, borderRadius: 10 }} />
+            </div>
+          )}
+
+          {/* Error */}
+          {navError && !navLoading && (
+            <div className="sif-hist-error">⚠ {navError}</div>
+          )}
+
+          {/* Empty */}
+          {fetched && !navLoading && records.length === 0 && (
+            <div className="sif-hist-empty">
+              <div style={{ fontSize: '1.8rem', marginBottom: 10 }}>📭</div>
+              <div style={{ fontWeight: 700, color: 'rgba(255,255,255,.7)' }}>No data available</div>
+              <div style={{ fontSize: '.75rem', color: 'rgba(255,255,255,.4)', marginTop: 6 }}>
+                AMFI has no records for this period. Try a different date range.
+              </div>
+            </div>
+          )}
+
+          {/* Results */}
+          {fetched && !navLoading && records.length > 0 && (
+            <>
+              {/* Stats row */}
+              {stats && (
+                <div className="sif-hist-stats">
+                  {[
+                    ['Period Return', (isProfit ? '+' : '') + stats.ret.toFixed(2) + '%', isProfit ? '#69f0ae' : '#ef5350'],
+                    ['Current NAV',   '₹' + stats.current.toFixed(4), 'rgba(255,255,255,.9)'],
+                    ['Period High',   '₹' + stats.high.toFixed(4),    '#a5d6a7'],
+                    ['Period Low',    '₹' + stats.low.toFixed(4),     '#ef9a9a'],
+                    ['Data Points',   stats.points + ' days',          'rgba(255,255,255,.5)'],
+                  ].map(([label, val, color]) => (
+                    <div key={label} className="sif-hist-stat">
+                      <div className="sif-hist-stat-label">{label}</div>
+                      <div className="sif-hist-stat-val" style={{ color }}>{val}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Chart */}
+              <div className="sif-hist-chart-wrap">
+                <SifAreaChart records={records} color={isProfit ? '#43a047' : '#ef5350'} />
+              </div>
+
+              {/* Date range label */}
+              <div className="sif-hist-range-label">
+                {mfMeta.date_range || `${fromDate} → ${toDate}`} · {records.length} data points
+              </div>
+
+              {/* Data table */}
+              <div className="sif-hist-table-wrap">
+                <table className="sif-hist-table" aria-label="NAV history data">
+                  <thead>
+                    <tr>
+                      <th className="sif-hist-th">#</th>
+                      <th className="sif-hist-th">Date</th>
+                      <th className="sif-hist-th sif-hist-th-right">NAV (₹)</th>
+                      <th className="sif-hist-th sif-hist-th-right">Day Δ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...records].reverse().map((row, i, arr) => {
+                      const prev = arr[i + 1];
+                      const delta = prev ? ((row.nav - prev.nav) / prev.nav * 100) : null;
+                      const dPos  = delta !== null && delta >= 0;
+                      return (
+                        <tr key={row.date} className="sif-hist-tr">
+                          <td className="sif-hist-td sif-hist-td-num">{records.length - i}</td>
+                          <td className="sif-hist-td">{new Date(row.date).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}</td>
+                          <td className="sif-hist-td sif-hist-td-right sif-hist-td-nav">₹{row.nav.toFixed(4)}</td>
+                          <td className="sif-hist-td sif-hist-td-right" style={{ color: delta === null ? 'rgba(255,255,255,.3)' : dPos ? '#69f0ae' : '#ef5350', fontWeight: 600 }}>
+                            {delta === null ? '—' : `${dPos ? '+' : ''}${delta.toFixed(3)}%`}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {/* Placeholder before first fetch */}
+          {!fetched && !navLoading && !navError && (
+            <div className="sif-hist-placeholder">
+              <div style={{ fontSize: '2.5rem', marginBottom: 12, opacity: .4 }}>📈</div>
+              <div style={{ color: 'rgba(255,255,255,.4)', fontSize: '.82rem' }}>
+                Select a strategy and period, then click <strong style={{ color: 'rgba(255,255,255,.6)' }}>Fetch History</strong>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 export default function SifScreener() {
   const [schemes,    setSchemes]    = useState([]);
   const [navDate,    setNavDate]    = useState('');
@@ -169,6 +546,7 @@ export default function SifScreener() {
   const [view,       setView]       = useState('grid'); // 'grid' | 'list'
   const [watchlist,  setWatchlist]  = useState(new Set());
   const [showWatchOnly, setShowWatchOnly] = useState(false);
+  const [historyScheme, setHistoryScheme] = useState(null); // scheme for history modal
 
   // Load data + watchlist
   useEffect(() => {
@@ -387,6 +765,7 @@ export default function SifScreener() {
                 scheme={s}
                 watched={watchlist.has(s.scheme_id)}
                 onToggleWatch={toggleWatch}
+                onViewHistory={setHistoryScheme}
               />
             ))}
           </div>
@@ -415,6 +794,7 @@ export default function SifScreener() {
                     idx={i}
                     watched={watchlist.has(s.scheme_id)}
                     onToggleWatch={toggleWatch}
+                    onViewHistory={setHistoryScheme}
                   />
                 ))}
               </tbody>
@@ -474,6 +854,14 @@ export default function SifScreener() {
 
         <div style={{ height: 48 }} />
       </div>
+
+      {/* NAV History Modal */}
+      {historyScheme && (
+        <NavHistoryModal
+          scheme={historyScheme}
+          onClose={() => setHistoryScheme(null)}
+        />
+      )}
 
       <Footer />
     </>
