@@ -7594,3 +7594,37 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   background: rgba(255,255,255,.18);
   color: #fff;
 }
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SIP PULSE — Industry page section
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.sip-pulse-section { margin-bottom: 36px; }
+
+/* Primary SIP inflow card — slightly elevated */
+.sip-stat-grid { grid-template-columns: 1.3fr 1fr 1fr; }
+
+.sip-primary-card {
+  background: linear-gradient(135deg, var(--g-xlight) 0%, var(--surface) 100%);
+  border-color: var(--g-light);
+  position: relative;
+  overflow: hidden;
+}
+.sip-primary-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--g1), var(--g3));
+  border-radius: 3px 3px 0 0;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .sip-stat-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .sip-stat-grid { grid-template-columns: 1fr 1fr; }
+  .sip-primary-card { grid-column: 1 / -1; }
+}

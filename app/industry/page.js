@@ -85,6 +85,8 @@ export default function IndustryPage() {
   /* trends */
   const [trendsLoading, setTrendsLoading] = useState(false);
   const [trendsData,    setTrendsData]    = useState(null);
+  const [sipData,       setSipData]       = useState(null);
+  const [sipLoading,    setSipLoading]    = useState(false);
 
   const flowCanvasRef = useRef(null);
   const trendSecRef   = useRef(null);
@@ -145,7 +147,16 @@ export default function IndustryPage() {
   }, []);
 
   /* ── auto-load on mount ── */
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+    // Fetch SIP metrics from AMFI Monthly Note PDF (fires once, cached server-side 24h)
+    setSipLoading(true);
+    fetch('/api/amfi-monthly-note')
+      .then(r => r.json())
+      .then(d => { if (d.ok && d.sipInflow) setSipData(d); })
+      .catch(() => {/* silent — graceful degradation */})
+      .finally(() => setSipLoading(false));
+  }, [loadData]);
 
   /* ── trends: 12-month parallel fetch ── */
   async function loadTrends(curMon, curYear) {
@@ -722,6 +733,85 @@ export default function IndustryPage() {
           <>
             {renderSummaryCards(data)}
             {renderAumBreakdown(data)}
+
+            {/* ── SIP Pulse Section ── */}
+            {(sipLoading || sipData) && (
+              <div className="section sip-pulse-section">
+                <div className="section-head">
+                  <div className="section-title">📈 Systematic Investment Plan (SIP) Pulse</div>
+                  {sipData?.month && <div className="section-badge">{sipData.month.toUpperCase()} · AMFI MONTHLY NOTE</div>}
+                </div>
+
+                {sipLoading && (
+                  <div className="sk-grid" style={{gridTemplateColumns:'repeat(3,1fr)'}}>
+                    {[1,2,3].map(i => (
+                      <div key={i} className="sk-card">
+                        <div className="sk" style={{height:12,width:'40%',marginBottom:10}}/>
+                        <div className="sk" style={{height:28,width:'70%',marginBottom:8}}/>
+                        <div className="sk" style={{height:10,width:'55%'}}/>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {sipData && !sipLoading && (
+                  <>
+                    <div className="stat-grid sip-stat-grid">
+
+                      {/* Primary: Monthly Inflow */}
+                      <div className="stat-card gain-card sip-primary-card">
+                        <div className="sc-label">SIP Monthly Inflow</div>
+                        <div className="sc-val" style={{color:'var(--g1)'}}>
+                          ₹{sipData.sipInflow || '—'}
+                        </div>
+                        <div className="sc-sub" style={{color:'var(--g3)',marginTop:4}}>
+                          Monthly SIP contribution · {sipData.month}
+                        </div>
+                      </div>
+
+                      {/* SIP AUM */}
+                      <div className="stat-card">
+                        <div className="sc-label">Total SIP AUM</div>
+                        <div className="sc-val">
+                          ₹{sipData.sipAum || '—'}
+                        </div>
+                        {sipData.sipAumPct && (
+                          <div className="sc-sub" style={{marginTop:4}}>
+                            {sipData.sipAumPct}% of total industry AUM
+                          </div>
+                        )}
+                        {!sipData.sipAumPct && data?.summary?.totalAum && sipData.sipAum && (
+                          <div className="sc-sub" style={{marginTop:4}}>of ₹{(data.summary.totalAum/100000).toFixed(2)} L Cr industry AUM</div>
+                        )}
+                      </div>
+
+                      {/* Active SIP Accounts */}
+                      <div className="stat-card">
+                        <div className="sc-label">Active SIP Accounts</div>
+                        <div className="sc-val">
+                          {sipData.sipAccounts || '—'}
+                        </div>
+                        <div className="sc-sub" style={{marginTop:4}}>
+                          Contributing (active) accounts · {sipData.month}
+                        </div>
+                      </div>
+
+                    </div>
+
+                    <div className="src-line" style={{marginTop:10}}>
+                      <div className="src-dot"/>
+                      Source: AMFI Monthly Note ·{' '}
+                      <a href="https://www.amfiindia.com/otherdata/amfi-monthlynote"
+                        target="_blank" rel="noopener noreferrer"
+                        style={{color:'var(--g2)',textDecoration:'none'}}>
+                        amfiindia.com
+                      </a>
+                      {' '}· {sipData.month}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="section">
               <div className="section-head">
