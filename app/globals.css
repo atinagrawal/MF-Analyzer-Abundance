@@ -6000,7 +6000,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   right: 0;
   bottom: 0;               /* full-height overlay so nothing bleeds through */
   z-index: 9998;
-  isolation: isolate;      /* force new stacking context — prevents page elements bleeding through */
   pointer-events: none;
   opacity: 0;
   transition: opacity .22s ease;
@@ -6746,7 +6745,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .sif-controls-bar {
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 2;          /* just above normal flow cards — nav panel at 9998 clears it easily */
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: 14px;
