@@ -344,11 +344,11 @@ export default function IndustryPage() {
       options: tOpts({ plugins:{ tooltip:{ callbacks:{ label: c => ` ${c.parsed.y} lakh new accounts` } } }, scaleY:{ ticks:{ callback: v => v+' L' } } }) });
 
     // SIP inflow chart — drawn only if sipTrendData is available
-    const c7 = document.getElementById('tSip');
-    if (c7 && sipTrendData) {
+    const cSip = document.getElementById('tSip');
+    if (cSip && sipTrendData) {
       const sipLabels = sipTrendData.map(s => s.label);
       const sipVals   = sipTrendData.map(s => s.sipInflowNum);
-      gTrendCharts.sip = new window.Chart(c7, {
+      gTrendCharts.sip = new window.Chart(cSip, {
         type: 'bar',
         data: {
           labels: sipLabels,
