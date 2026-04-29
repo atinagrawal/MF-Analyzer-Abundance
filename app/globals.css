@@ -7627,3 +7627,152 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .sip-stat-grid { grid-template-columns: 1fr 1fr; }
   .sip-primary-card { grid-column: 1 / -1; }
 }
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   MARKET VALUATION DASHBOARD  (indices page)
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.valuation-dashboard {
+  margin-bottom: 28px;
+  padding: 20px 24px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+
+.val-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.val-card {
+  padding: 18px 16px;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.val-name {
+  font-size: .72rem;
+  font-weight: 900;
+  color: var(--text2);
+  letter-spacing: -.2px;
+}
+
+.val-pe-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.val-pe-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+
+.val-badge {
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1.5px solid;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+/* Gauge track */
+.val-gauge-track {
+  position: relative;
+  height: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  cursor: help;
+}
+
+.val-gauge-zone {
+  height: 100%;
+  flex-shrink: 0;
+}
+.val-zone-green  { background: rgba(27,94,32,.25); }
+.val-zone-yellow { background: rgba(230,81,0,.2); }
+.val-zone-red    { background: rgba(183,28,28,.2); }
+
+.val-gauge-needle {
+  position: absolute;
+  top: -2px;
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: #212121;
+  transform: translateX(-50%);
+  box-shadow: 0 0 0 1.5px #fff;
+  transition: left .5s ease;
+}
+
+.val-gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: .55rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--muted);
+  margin-top: -4px;
+}
+
+.val-metrics {
+  display: flex;
+  gap: 16px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.val-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.val-metric-label {
+  font-size: .52rem;
+  font-weight: 800;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.val-metric-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .82rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.val-disclaimer {
+  margin-top: 12px;
+  font-size: .6rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .val-cards { grid-template-columns: 1fr; gap: 10px; }
+  .val-pe-num { font-size: 1.6rem; }
+}
+@media (max-width: 400px) {
+  .valuation-dashboard { padding: 14px 14px; }
+}

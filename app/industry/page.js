@@ -87,6 +87,7 @@ export default function IndustryPage() {
   const [trendsData,    setTrendsData]    = useState(null);
   const [sipData,       setSipData]       = useState(null);
   const [sipLoading,    setSipLoading]    = useState(false);
+  const [sipTrendData,  setSipTrendData]  = useState(null); // 12-month SIP inflow array
 
   const flowCanvasRef = useRef(null);
   const trendSecRef   = useRef(null);
@@ -171,18 +172,42 @@ export default function IndustryPage() {
       while (m < 0) { m += 12; y--; }
       monthList.push({ mon: MONTHS[m], year: y, label: MO_SHORT[m] + '-' + String(y).slice(2) });
     }
-    const results = await Promise.allSettled(
-      monthList.map(async ({ mon, year }) => {
-        const r = await fetch(`/api/amfi-industry?month=${mon}&year=${year}`);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const d = await r.json();
-        if (d.error) throw new Error(d.error);
-        return d;
-      })
-    );
-    const successful = results
+    // Fetch industry data + SIP monthly note data in parallel
+    const [industryResults, sipResults] = await Promise.all([
+      Promise.allSettled(
+        monthList.map(async ({ mon, year }) => {
+          const r = await fetch(`/api/amfi-industry?month=${mon}&year=${year}`);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const d = await r.json();
+          if (d.error) throw new Error(d.error);
+          return d;
+        })
+      ),
+      Promise.allSettled(
+        monthList.map(async ({ mon, year, label }) => {
+          try {
+            const r = await fetch(`/api/amfi-monthly-note?month=${mon}&year=${year}`);
+            if (!r.ok) return null;
+            const d = await r.json();
+            // Return numeric inflow + label even if other fields missing
+            return d.ok && d.sipInflowNum ? { label, sipInflowNum: d.sipInflowNum, sipInflow: d.sipInflow } : null;
+          } catch { return null; }
+        })
+      ),
+    ]);
+
+    const successful = industryResults
       .map((r, i) => r.status === 'fulfilled' && r.value?.summary?.totalAum ? { ...r.value, _label: monthList[i].label } : null)
       .filter(Boolean);
+
+    // SIP trend: preserve position alignment with industry months
+    const sipMonths = sipResults.map((r, i) => {
+      if (r.status === 'fulfilled' && r.value) return r.value;
+      return { label: monthList[i].label, sipInflowNum: null, sipInflow: null };
+    });
+    const hasSipData = sipMonths.some(s => s.sipInflowNum != null);
+    if (hasSipData) setSipTrendData(sipMonths);
+
     setTrendsLoading(false);
     if (successful.length >= 3) setTrendsData(successful);
   }
@@ -199,7 +224,7 @@ export default function IndustryPage() {
     if (!trendsData || typeof window === 'undefined' || !window.Chart) return;
     const timer = setTimeout(() => drawTrendCharts(trendsData), 80);
     return () => clearTimeout(timer);
-  }, [trendsData]);
+  }, [trendsData, sipTrendData]);
 
   /* ── intersection observer for trend animations ── */
   useEffect(() => {
@@ -317,6 +342,31 @@ export default function IndustryPage() {
     const c6 = document.getElementById('tMom');
     if (c6) gTrendCharts.mom = new window.Chart(c6, { type:'bar', data:{ labels:labels.slice(1), datasets:[{ label:'New accounts (L)', data:folioDelta, backgroundColor:'rgba(0,131,143,.72)', borderRadius:3 }] },
       options: tOpts({ plugins:{ tooltip:{ callbacks:{ label: c => ` ${c.parsed.y} lakh new accounts` } } }, scaleY:{ ticks:{ callback: v => v+' L' } } }) });
+
+    // SIP inflow chart — drawn only if sipTrendData is available
+    const c7 = document.getElementById('tSip');
+    if (c7 && sipTrendData) {
+      const sipLabels = sipTrendData.map(s => s.label);
+      const sipVals   = sipTrendData.map(s => s.sipInflowNum);
+      gTrendCharts.sip = new window.Chart(c7, {
+        type: 'bar',
+        data: {
+          labels: sipLabels,
+          datasets: [{
+            label: 'SIP monthly inflow (₹ Cr)',
+            data: sipVals,
+            backgroundColor: sipVals.map(v =>
+              v == null ? 'rgba(0,0,0,.08)' : 'rgba(21,101,192,.78)'
+            ),
+            borderRadius: 3,
+          }]
+        },
+        options: tOpts({
+          plugins: { tooltip: { callbacks: { label: c => c.raw == null ? ' Data unavailable' : ` ₹${c.raw.toLocaleString('en-IN')} Cr` } } },
+          scaleY: { ticks: { callback: v => '₹'+(v/1000).toFixed(0)+'K' } },
+        })
+      });
+    }
 
     const c7 = document.getElementById('tDiv');
     if (c7) gTrendCharts.div = new window.Chart(c7, { type:'line', data:{ labels, datasets:[
@@ -589,6 +639,20 @@ export default function IndustryPage() {
             <div className="chart-wrap" style={{height:175}}><canvas id="tComp"/></div>
           </div>
         </div>
+
+        {sipTrendData && sipTrendData.some(s => s.sipInflowNum != null) && (
+          <div className="trend-anim" style={{transitionDelay:'.5s'}}>
+            <div className="section-head" style={{marginBottom:14}}>
+              <div className="section-title">💰 SIP inflow trend — monthly contribution (₹ Cr)</div>
+              <div className="section-badge">AMFI MONTHLY NOTE · 12 MONTHS</div>
+            </div>
+            <div className="chart-card">
+              <div className="chart-title">Monthly SIP contributions — systematic investment plan inflows</div>
+              <div className="chart-sub">Bar = total SIP inflow for that month · source: AMFI Monthly Note PDFs</div>
+              <div className="chart-wrap" style={{height:200}}><canvas id="tSip"/></div>
+            </div>
+          </div>
+        )}
 
         <div className="src-line"><div className="src-dot"/>Data: AMFI official monthly disclosure reports · portal.amfiindia.com</div>
       </div>

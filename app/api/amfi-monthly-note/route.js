@@ -1,154 +1,171 @@
 /**
  * app/api/amfi-monthly-note/route.js
  *
- * Fetches the AMFI Monthly Note PDF (most recent), parses it with pdfminer
- * via a subprocess, and extracts three SIP metrics:
- *   - sipAum:          Rs X lakh crore
- *   - sipInflow:       Rs X,XXX crore
- *   - sipAccounts:     X.XX crore
- *   - sipAumPct:       X.X% of industry AUM
+ * Scrapes the AMFI Monthly Note page and parses SIP metrics from the PDF.
  *
- * Caching: s-maxage=86400, stale-while-revalidate=604800 (1 day / 1 week)
+ * GET /api/amfi-monthly-note              → latest month
+ * GET /api/amfi-monthly-note?month=Feb&year=2026 → specific historical month
  *
- * CRITICAL NOTE ON PDF PARSING:
- * pdf-parse (node) can hang on some PDFs. This route uses pdfminer.six via
- * a Python subprocess — already available in this project (api/parse.py).
- * Falls back gracefully to null values if any step fails.
+ * Caching:
+ *   latest   → s-maxage=86400, stale-while-revalidate=604800
+ *   historical → public, max-age=31536000, immutable  (PDF never changes)
  */
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const AMFI_NOTE_PAGE = 'https://www.amfiindia.com/otherdata/amfi-monthlynote';
-const PDF_RE = /href="(https:\/\/www\.amfiindia\.com\/(?:uploads|Themes\/Theme1\/downloads)\/[^"]+?Monthly_?Note[^"]+?\.pdf)"/i;
-const TTL    = 86400; // 1 day
+const PDF_RE = /href="(https:\/\/www\.amfiindia\.com\/(?:uploads|Themes\/Theme1\/downloads)\/[^"]+?Monthly_?Note[^"]+?\.pdf)"/gi;
 
-// ── PDF text extraction ────────────────────────────────────────────────────────
+// Handles both short (Jan) and full (January) month names in filenames
+const MONTH_RE = /(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[_\-\s]?(\d{4})/i;
+const FULL_TO_SHORT = {
+  january:'Jan', february:'Feb', march:'Mar', april:'Apr',
+  may:'May', june:'Jun', july:'Jul', august:'Aug',
+  september:'Sep', october:'Oct', november:'Nov', december:'Dec',
+};
+
+function parseMonthFromUrl(url) {
+  const fn  = url.split('/').pop();
+  const m   = fn.match(MONTH_RE);
+  if (!m) return null;
+  const raw   = m[1].toLowerCase();
+  const short = FULL_TO_SHORT[raw] ?? (m[1].slice(0, 3));
+  // Capitalise properly
+  const normalised = short.charAt(0).toUpperCase() + short.slice(1).toLowerCase();
+  return { short: normalised, year: m[2] };
+}
+
+async function fetchAllPdfLinks() {
+  const res = await fetch(AMFI_NOTE_PAGE, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MFCalc/2.0)' },
+    signal: AbortSignal.timeout(12_000),
+  });
+  if (!res.ok) throw new Error(`AMFI page returned ${res.status}`);
+  const html = await res.text();
+
+  // Use matchAll to get ALL pdf links (not just the first)
+  const links = [];
+  for (const m of html.matchAll(PDF_RE)) {
+    const url   = m[1];
+    const month = parseMonthFromUrl(url);
+    if (month) links.push({ url, ...month });
+  }
+  return links;
+}
+
 async function extractPdfText(pdfBuffer) {
-  // Use pdf-parse (installed in project)
   const pdfParse = (await import('pdf-parse')).default;
   const result   = await pdfParse(Buffer.from(pdfBuffer));
   return result.text || '';
 }
 
-// ── SIP metric extraction from PDF text ───────────────────────────────────────
 function parseSipMetrics(text, month) {
-  // Normalise whitespace — PDF extraction from pdfminer produces fragmented lines
   const flat = text.replace(/\s+/g, ' ');
-
-  let sipAum      = null; // "15.11 lakh crore"
-  let sipInflow   = null; // "32,087 crore"
-  let sipAccounts = null; // "9.72 crore"
-  let sipAumPct   = null; // "20.5"
-
-  // ── SIP AUM ─────────────────────────────────────────────────────────────────
-  // Pattern: "SIP assets stood at Rs X.XX lakh crore"
-  // Pattern: "SIP assets declined ... to Rs X.XX lakh crore"
-  // Pattern: "SIP assets (Rs lakh crore)   X.XX"  (table)
+  let sipAum = null, sipInflow = null, sipAccounts = null, sipAumPct = null;
   let m;
+
+  // SIP AUM — prose
   m = flat.match(/SIP assets[^.]*?Rs\s+([\d.]+)\s+lakh crore/i);
   if (m) sipAum = m[1] + ' lakh crore';
-
   if (!sipAum) {
-    // Table format: "SIP assets (Rs lakh crore)   15.11   ..."
     m = flat.match(/SIP assets\s*\(Rs lakh crore\)\s+([\d.]+)/i);
     if (m) sipAum = m[1] + ' lakh crore';
   }
 
-  // ── SIP Monthly Inflow ─────────────────────────────────────────────────────
-  // Pattern: "registering inflow of Rs 32,087 crore"
-  // Pattern: "SIP monthly contribution (crore)   32,087"
+  // SIP Monthly Inflow
   m = flat.match(/(?:registering inflow of|SIP.*?inflow.*?)Rs\s+([\d,]+)\s+crore/i);
   if (m) sipInflow = m[1] + ' crore';
-
   if (!sipInflow) {
     m = flat.match(/SIP monthly contribution[^0-9]*([\d,]+)/i);
     if (m) sipInflow = m[1] + ' crore';
   }
 
-  // ── Active SIP Accounts ────────────────────────────────────────────────────
-  // Pattern: "contributing (active) SIP accounts increased ... to 9.72 crore"
-  // Pattern: "Number of contributing SIP accounts (crore)   9.72"
+  // Raw numeric value for charting
+  const sipInflowNum = sipInflow
+    ? parseFloat(sipInflow.replace(/,/g, '').replace(' crore', ''))
+    : null;
+
+  // Active SIP Accounts
   m = flat.match(/contributing\s*\(active\)\s*SIP accounts[^0-9]*([\d.]+)\s+crore/i);
   if (m) sipAccounts = m[1] + ' crore';
-
   if (!sipAccounts) {
     m = flat.match(/Number of contributing SIP accounts[^0-9]*([\d.]+)/i);
     if (m) sipAccounts = m[1] + ' crore';
   }
-
   if (!sipAccounts) {
-    // Final fallback: "9.72 crore contributing accounts"
     m = flat.match(/([\d.]+)\s+crore contributing/i);
     if (m) sipAccounts = m[1] + ' crore';
   }
 
-  // ── SIP AUM % of industry ─────────────────────────────────────────────────
-  // Pattern: "representing 20.5% of the total mutual fund assets"
+  // SIP AUM % of industry
   m = flat.match(/representing\s+([\d.]+)%\s+of the total/i);
   if (m) sipAumPct = m[1];
-
   if (!sipAumPct) {
-    // Table: "SIP assets as a percentage of industry assets   20.5"
     m = flat.match(/SIP assets as a percentage of industry assets\s+([\d.]+)/i);
     if (m) sipAumPct = m[1];
   }
 
-  return { sipAum, sipInflow, sipAccounts, sipAumPct, month };
+  return { sipAum, sipInflow, sipInflowNum, sipAccounts, sipAumPct, month };
 }
 
-// ── Parse month from PDF filename ─────────────────────────────────────────────
-function parseMonthFromUrl(url) {
-  // e.g. AMFI_Monthly_Note_Mar_2026_1f0a1f5c48.pdf
-  const m = url.match(/(?:_)(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[_]?(\d{4})/i);
-  if (m) return `${m[1]} ${m[2]}`;
-  return null;
-}
+export async function GET(req) {
+  const { searchParams } = new URL(req.url);
+  const reqMonth = searchParams.get('month'); // e.g. "Feb"
+  const reqYear  = searchParams.get('year');  // e.g. "2026"
+  const isHistorical = !!(reqMonth && reqYear);
 
-// ── Handler ────────────────────────────────────────────────────────────────────
-export async function GET() {
   try {
-    // 1. Scrape the AMFI monthly note page for the PDF URL
-    const pageRes = await fetch(AMFI_NOTE_PAGE, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MFCalc/2.0)' },
-      signal: AbortSignal.timeout(12_000),
-    });
-    if (!pageRes.ok) throw new Error(`AMFI page returned ${pageRes.status}`);
-    const html = await pageRes.text();
+    // 1. Fetch all PDF links from AMFI page
+    const links = await fetchAllPdfLinks();
+    if (!links.length) throw new Error('No Monthly Note PDF links found on AMFI page');
 
-    const pdfMatch = html.match(PDF_RE);
-    if (!pdfMatch) throw new Error('No Monthly Note PDF link found on AMFI page');
-    const pdfUrl = pdfMatch[1];
-    const month  = parseMonthFromUrl(pdfUrl);
+    // 2. Find the right PDF
+    let target;
+    if (isHistorical) {
+      // Match by month + year
+      const mon = reqMonth.charAt(0).toUpperCase() + reqMonth.slice(1).toLowerCase();
+      target = links.find(l =>
+        l.short.toLowerCase() === mon.toLowerCase() &&
+        l.year === String(reqYear)
+      );
+      if (!target) {
+        return Response.json(
+          { ok: false, error: `No PDF found for ${mon} ${reqYear}`, sipAum: null, sipInflow: null, sipInflowNum: null, sipAccounts: null, sipAumPct: null, month: `${mon} ${reqYear}` },
+          { status: 200, headers: { 'Cache-Control': 'public, max-age=3600' } }
+        );
+      }
+    } else {
+      target = links[0]; // most recent = first match
+    }
 
-    console.log('[amfi-monthly-note] PDF:', pdfUrl);
+    console.log(`[amfi-monthly-note] ${isHistorical ? 'historical' : 'latest'} PDF: ${target.url}`);
 
-    // 2. Fetch the PDF
-    const pdfRes = await fetch(pdfUrl, {
+    // 3. Fetch + parse PDF
+    const pdfRes = await fetch(target.url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MFCalc/2.0)' },
       signal: AbortSignal.timeout(30_000),
     });
     if (!pdfRes.ok) throw new Error(`PDF fetch returned ${pdfRes.status}`);
-    const pdfBuffer = await pdfRes.arrayBuffer();
-
-    // 3. Extract text
-    const text = await extractPdfText(pdfBuffer);
+    const text = await extractPdfText(await pdfRes.arrayBuffer());
     if (!text) throw new Error('PDF text extraction returned empty');
 
-    // 4. Parse SIP metrics
-    const metrics = parseSipMetrics(text, month);
-    console.log('[amfi-monthly-note] Metrics:', metrics);
+    const metrics = parseSipMetrics(text, `${target.short} ${target.year}`);
+
+    // 4. Return with appropriate cache headers
+    const cacheHeader = isHistorical
+      ? 'public, max-age=31536000, immutable'       // historical: permanent
+      : `s-maxage=86400, stale-while-revalidate=${86400 * 7}`; // latest: 1 day
 
     return Response.json(
-      { ok: true, pdfUrl, ...metrics },
-      { headers: { 'Cache-Control': `s-maxage=${TTL}, stale-while-revalidate=${TTL * 7}` } }
+      { ok: true, pdfUrl: target.url, ...metrics },
+      { headers: { 'Cache-Control': cacheHeader } }
     );
 
   } catch (err) {
     console.error('[amfi-monthly-note]', err.name, err.message);
-    // Return nulls — UI handles gracefully
     return Response.json(
-      { ok: false, error: err.message, sipAum: null, sipInflow: null, sipAccounts: null, sipAumPct: null, month: null },
+      { ok: false, error: err.message, sipAum: null, sipInflow: null, sipInflowNum: null, sipAccounts: null, sipAumPct: null, month: reqMonth && reqYear ? `${reqMonth} ${reqYear}` : null },
       { status: 200, headers: { 'Cache-Control': 'no-store' } }
     );
   }
