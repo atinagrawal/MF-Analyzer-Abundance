@@ -152,7 +152,7 @@ export default function IndustryPage() {
     loadData();
     // Fetch SIP metrics from AMFI Monthly Note PDF (fires once, cached server-side 24h)
     setSipLoading(true);
-    fetch('/api/amfi-monthly-note')
+    fetch('/api/amfi-monthly-note?v=2')
       .then(r => r.json())
       .then(d => { if (d.ok && d.sipInflow) setSipData(d); })
       .catch(() => {/* silent — graceful degradation */})
@@ -186,7 +186,8 @@ export default function IndustryPage() {
       Promise.allSettled(
         monthList.map(async ({ mon, year, label }) => {
           try {
-            const r = await fetch(`/api/amfi-monthly-note?month=${mon}&year=${year}`);
+            // v=2 busts the immutable edge cache containing the wrong SIF numbers
+            const r = await fetch(`/api/amfi-monthly-note?month=${mon}&year=${year}&v=2`);
             if (!r.ok) return null;
             const d = await r.json();
             // Return numeric inflow + label even if other fields missing

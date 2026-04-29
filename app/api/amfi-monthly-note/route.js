@@ -73,11 +73,20 @@ function parseSipMetrics(text, month) {
     if (m) sipAum = m[1] + ' lakh crore';
   }
 
-  // SIP Monthly Inflow
-  m = flat.match(/(?:registering inflow of|SIP.*?inflow.*?)Rs\s+([\d,]+)\s+crore/i);
+  // ── SIP Monthly Inflow ─────────────────────────────────────────────────────
+  // First, try to match the exact table row pattern which is most reliable
+  m = flat.match(/SIP monthly contribution\s*\(crore\)\s*([\d,]+)/i);
   if (m) sipInflow = m[1] + ' crore';
+
   if (!sipInflow) {
-    m = flat.match(/SIP monthly contribution[^0-9]*([\d,]+)/i);
+    // If table isn't found, look for the specific text mentions without greedy .*?
+    m = flat.match(/registering inflow of Rs\s+([\d,]+)\s+crore/i);
+    if (m) sipInflow = m[1] + ' crore';
+  }
+  
+  if (!sipInflow) {
+    // Look for text proximity match
+    m = flat.match(/SIP monthly contribution[^0-9]*Rs\s*([\d,]+)\s*crore/i);
     if (m) sipInflow = m[1] + ' crore';
   }
 
