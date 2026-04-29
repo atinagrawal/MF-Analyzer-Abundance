@@ -207,6 +207,96 @@ export default function IndicesPage() {
     return sortDir === -1 ? 'sorted-desc' : 'sorted-asc';
   };
 
+  // ── Market Valuation Dashboard ──────────────────────────────────────────────
+  const BENCHMARK_INDICES = ['Nifty 50', 'Nifty Midcap 150', 'Nifty Smallcap 250'];
+
+  // PE thresholds per index for the valuation gauge
+  const PE_THRESHOLDS = {
+    'Nifty 50':           { low: 18, high: 24, max: 36 },
+    'Nifty Midcap 150':   { low: 25, high: 35, max: 52 },
+    'Nifty Smallcap 250': { low: 20, high: 30, max: 45 },
+  };
+
+  function getValuation(name, pe) {
+    const t = PE_THRESHOLDS[name];
+    if (!t || pe == null) return { label: 'N/A', color: 'var(--muted)', fill: '#ccc', pct: 0 };
+    const pct = Math.min((pe / t.max) * 100, 100);
+    if (pe < t.low)  return { label: 'Undervalued', color: '#1b5e20', fill: '#43a047', pct };
+    if (pe < t.high) return { label: 'Fair Value',  color: '#e65100', fill: '#fb8c00', pct };
+                     return { label: 'Overvalued',  color: '#b71c1c', fill: '#e53935', pct };
+  }
+
+  function renderValuationDashboard() {
+    const benchmarks = allData.filter(r => BENCHMARK_INDICES.includes(r.name));
+    if (!benchmarks.length || loading) return null;
+
+    return (
+      <div className="valuation-dashboard">
+        <div className="section-head" style={{ marginBottom: 16 }}>
+          <div className="section-title">🌡 Market Valuation — PE Gauge</div>
+          <div className="section-badge">BENCHMARK INDICES · LIVE</div>
+        </div>
+        <div className="val-cards">
+          {BENCHMARK_INDICES.map(name => {
+            const row = benchmarks.find(r => r.name === name);
+            if (!row) return null;
+            const pe   = row.val?.pe;
+            const pb   = row.val?.pb;
+            const dy   = row.val?.dy;
+            const v    = getValuation(name, pe);
+            const t    = PE_THRESHOLDS[name];
+            return (
+              <div key={name} className="val-card">
+                <div className="val-name">{name}</div>
+
+                {/* PE — primary metric */}
+                <div className="val-pe-row">
+                  <div className="val-pe-num" style={{ color: v.color }}>{pe ?? '—'}</div>
+                  <div className="val-badge" style={{ background: v.fill + '22', color: v.color, borderColor: v.fill + '55' }}>
+                    {v.label}
+                  </div>
+                </div>
+
+                {/* Gauge bar */}
+                <div className="val-gauge-track" title={`PE: ${pe} · Undervalued < ${t.low} · Fair ${t.low}–${t.high} · Overvalued > ${t.high}`}>
+                  {/* Zone markers */}
+                  <div className="val-gauge-zone val-zone-green"  style={{ width: `${(t.low  / t.max) * 100}%` }} />
+                  <div className="val-gauge-zone val-zone-yellow" style={{ width: `${((t.high - t.low) / t.max) * 100}%` }} />
+                  <div className="val-gauge-zone val-zone-red"    style={{ width: `${((t.max  - t.high) / t.max) * 100}%` }} />
+                  {/* Current PE needle */}
+                  {pe != null && (
+                    <div className="val-gauge-needle" style={{ left: `${Math.min(v.pct, 98)}%` }} />
+                  )}
+                </div>
+                <div className="val-gauge-labels">
+                  <span style={{ color: '#1b5e20' }}>{t.low}</span>
+                  <span style={{ color: '#e65100' }}>{t.high}</span>
+                  <span style={{ color: '#b71c1c' }}>{t.max}+</span>
+                </div>
+
+                {/* PB + DY */}
+                <div className="val-metrics">
+                  <div className="val-metric">
+                    <span className="val-metric-label">P/B</span>
+                    <span className="val-metric-val">{pb ?? '—'}</span>
+                  </div>
+                  <div className="val-metric">
+                    <span className="val-metric-label">Div. Yield</span>
+                    <span className="val-metric-val">{dy != null ? dy + '%' : '—'}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="val-disclaimer">
+          PE zones: Green = historically undervalued · Yellow = fair value range · Red = stretched valuations.
+          Thresholds based on historical averages. Not investment advice.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="container">
@@ -344,96 +434,6 @@ export default function IndicesPage() {
                     const rollUrl = `/rolling?bench=${encodedName}`;
 
                   
-  // ── Market Valuation Dashboard ──────────────────────────────────────────────
-  const BENCHMARK_INDICES = ['Nifty 50', 'Nifty Midcap 150', 'Nifty Smallcap 250'];
-
-  // PE thresholds per index for the valuation gauge
-  const PE_THRESHOLDS = {
-    'Nifty 50':           { low: 18, high: 24, max: 36 },
-    'Nifty Midcap 150':   { low: 25, high: 35, max: 52 },
-    'Nifty Smallcap 250': { low: 20, high: 30, max: 45 },
-  };
-
-  function getValuation(name, pe) {
-    const t = PE_THRESHOLDS[name];
-    if (!t || pe == null) return { label: 'N/A', color: 'var(--muted)', fill: '#ccc', pct: 0 };
-    const pct = Math.min((pe / t.max) * 100, 100);
-    if (pe < t.low)  return { label: 'Undervalued', color: '#1b5e20', fill: '#43a047', pct };
-    if (pe < t.high) return { label: 'Fair Value',  color: '#e65100', fill: '#fb8c00', pct };
-                     return { label: 'Overvalued',  color: '#b71c1c', fill: '#e53935', pct };
-  }
-
-  function renderValuationDashboard() {
-    const benchmarks = allData.filter(r => BENCHMARK_INDICES.includes(r.name));
-    if (!benchmarks.length || loading) return null;
-
-    return (
-      <div className="valuation-dashboard">
-        <div className="section-head" style={{ marginBottom: 16 }}>
-          <div className="section-title">🌡 Market Valuation — PE Gauge</div>
-          <div className="section-badge">BENCHMARK INDICES · LIVE</div>
-        </div>
-        <div className="val-cards">
-          {BENCHMARK_INDICES.map(name => {
-            const row = benchmarks.find(r => r.name === name);
-            if (!row) return null;
-            const pe   = row.val?.pe;
-            const pb   = row.val?.pb;
-            const dy   = row.val?.dy;
-            const v    = getValuation(name, pe);
-            const t    = PE_THRESHOLDS[name];
-            return (
-              <div key={name} className="val-card">
-                <div className="val-name">{name}</div>
-
-                {/* PE — primary metric */}
-                <div className="val-pe-row">
-                  <div className="val-pe-num" style={{ color: v.color }}>{pe ?? '—'}</div>
-                  <div className="val-badge" style={{ background: v.fill + '22', color: v.color, borderColor: v.fill + '55' }}>
-                    {v.label}
-                  </div>
-                </div>
-
-                {/* Gauge bar */}
-                <div className="val-gauge-track" title={`PE: ${pe} · Undervalued < ${t.low} · Fair ${t.low}–${t.high} · Overvalued > ${t.high}`}>
-                  {/* Zone markers */}
-                  <div className="val-gauge-zone val-zone-green"  style={{ width: `${(t.low  / t.max) * 100}%` }} />
-                  <div className="val-gauge-zone val-zone-yellow" style={{ width: `${((t.high - t.low) / t.max) * 100}%` }} />
-                  <div className="val-gauge-zone val-zone-red"    style={{ width: `${((t.max  - t.high) / t.max) * 100}%` }} />
-                  {/* Current PE needle */}
-                  {pe != null && (
-                    <div className="val-gauge-needle" style={{ left: `${Math.min(v.pct, 98)}%` }} />
-                  )}
-                </div>
-                <div className="val-gauge-labels">
-                  <span style={{ color: '#1b5e20' }}>{t.low}</span>
-                  <span style={{ color: '#e65100' }}>{t.high}</span>
-                  <span style={{ color: '#b71c1c' }}>{t.max}+</span>
-                </div>
-
-                {/* PB + DY */}
-                <div className="val-metrics">
-                  <div className="val-metric">
-                    <span className="val-metric-label">P/B</span>
-                    <span className="val-metric-val">{pb ?? '—'}</span>
-                  </div>
-                  <div className="val-metric">
-                    <span className="val-metric-label">Div. Yield</span>
-                    <span className="val-metric-val">{dy != null ? dy + '%' : '—'}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="val-disclaimer">
-          PE zones: Green = historically undervalued · Yellow = fair value range · Red = stretched valuations.
-          Thresholds based on historical averages. Not investment advice.
-        </div>
-      </div>
-    );
-  }
-
   return (
                       <tr key={i} data-cat={r.cat}>
                         <td>
