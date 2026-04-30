@@ -7843,3 +7843,61 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
     padding-left: 10px;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   INDICES PAGE — Mobile optimisation  (max-width 640px / 480px)
+   ════════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+
+  /* 1. Responsive container & header */
+  .container               { padding: 0 12px; }
+  .page-header             { margin-bottom: 20px; }
+  .page-title              { font-size: 1.3rem; }
+
+  /* 2. Controls bar — stack vertically */
+  .controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .search-box {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .cat-btn {
+    flex: 1;
+    text-align: center;
+    font-size: .65rem;
+    padding: 8px 10px;
+  }
+
+  /* 3. Ultra-compact table */
+  .idx-table              { font-size: .68rem; }
+  .idx-table td,
+  .idx-table th           { padding: 8px 6px; }
+  .idx-table th:first-child,
+  .idx-table td:first-child {
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+    padding-left: 10px;
+  }
+  .idx-name-cell .cat-pill {
+    font-size: .45rem;
+    padding: 1px 4px;
+  }
+
+  /* 4. Table card — full-width, flush edges */
+  .table-card {
+    border-radius: 8px;
+    margin: 0 -4px;
+    border-left: none;
+    border-right: none;
+  }
+}
+
+/* Hide data-badge on very small screens */
+@media (max-width: 480px) {
+  .data-badge { display: none; }
+}
