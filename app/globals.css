@@ -672,7 +672,7 @@ a { color: inherit; text-decoration: none; }
   width: 200px;
   min-width: 140px;
   max-width: 200px;
-  white-space: normal;      /* allow wrapping */
+  white-space: normal;
   overflow: visible;
   text-overflow: unset;
   word-break: break-word;
@@ -681,10 +681,16 @@ a { color: inherit; text-decoration: none; }
   z-index: 5;
   background: var(--surface);
   box-shadow: 2px 0 4px rgba(0,0,0,.06);
+  /* flex lives in .idx-name-cell wrapper inside this td */
+}
+
+/* Flex wrapper inside td:first-child for name + pill stacking */
+.idx-name-cell {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+  width: 100%;
 }
 .idx-table tr:last-child td {
   border-bottom: none;
@@ -768,6 +774,32 @@ a { color: inherit; text-decoration: none; }
 .risk-m { background: #fff8e1; color: #f57f17; }
 .risk-l { background: #e8f5e9; color: #1b5e20; }
 .risk-n { background: #f5f5f5; color: #757575; } /* no risk data — neutral */
+
+/* Riskometer SVG gauge — compact column layout */
+.risk-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+  width: min-content;
+  margin: 0 auto;
+  cursor: help;
+}
+.risk-gauge-svg  { display: block; flex-shrink: 0; }
+.risk-gauge-label {
+  font-size: .55rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-top: -2px;
+  white-space: nowrap;
+}
+.risk-gauge-empty {
+  font-size: .65rem;
+  font-weight: 700;
+  display: block;
+  text-align: center;
+}
 
 /* Source text */
 .src-text {
@@ -7798,4 +7830,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 }
 @media (max-width: 400px) {
   .valuation-dashboard { padding: 14px 14px; }
+}
+
+/* ── Indices table — compact mobile padding ── */
+@media (max-width: 640px) {
+  .idx-table td,
+  .idx-table th {
+    padding: 8px 6px;
+  }
+  .idx-table td:first-child,
+  .idx-table th:first-child {
+    padding-left: 10px;
+  }
 }

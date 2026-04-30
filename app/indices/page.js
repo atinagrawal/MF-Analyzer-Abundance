@@ -437,10 +437,12 @@ export default function IndicesPage() {
   return (
                       <tr key={i} data-cat={r.cat}>
                         <td>
-                          {r.name}
-                          <span className={`cat-pill cat-${r.cat}`}>
-                            {CAT_LABELS[r.cat] || r.cat}
-                          </span>
+                          <div className="idx-name-cell">
+                            {r.name}
+                            <span className={`cat-pill cat-${r.cat}`}>
+                              {CAT_LABELS[r.cat] || r.cat}
+                            </span>
+                          </div>
                         </td>
                         <td className="td-divider">{fmtRet(r.returns.r1m)}</td>
                         <td>{fmtRet(r.returns.r3m)}</td>
