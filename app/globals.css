@@ -7901,3 +7901,100 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 @media (max-width: 480px) {
   .data-badge { display: none; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   INDICES PAGE — Sticky thead + responsive val-cards + table vertical scroll
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Sticky thead — both rows ────────────────────────────────────────────── */
+/* Row 1 (group headers: TRI Returns, Risk, Valuation) sticks at top:0 */
+.idx-table thead tr:first-child th {
+  position: sticky;
+  top: 0;
+  z-index: 12;   /* above sticky first column (z:10) */
+}
+/* Row 2 (1M 3M 1Y…) sticks just below row 1 (~30px) */
+.idx-table thead tr:nth-child(2) th {
+  position: sticky;
+  top: 30px;
+  z-index: 12;
+}
+/* Corner cell spans both rows — needs both top:0 and higher z */
+.idx-table thead .idx-name-th {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 15;   /* highest — corner of sticky row + sticky column */
+  background: var(--s2);
+}
+/* Ensure th-group cells have opaque bg when scrolling underneath */
+.idx-table th.th-group {
+  background: #e8f5e9;
+}
+
+/* ── Vertical body scroll (table-card controls the viewport) ─────────────── */
+/* On all screens: table-card provides the vertical scroll container */
+#tableCard {
+  display: flex;
+  flex-direction: column;
+}
+#tableCard .table-wrap {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  max-height: 70vh; /* body scrolls, thead sticks */
+}
+
+/* ── Valuation cards — responsive layout ────────────────────────────────── */
+/* 3 columns desktop → 1 column mobile already at 768px.
+   Add intermediate: 1-column compact card at 640px with horizontal PE row */
+@media (max-width: 640px) {
+  .valuation-dashboard {
+    padding: 14px 12px;
+    margin-bottom: 20px;
+  }
+  .val-cards {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .val-card {
+    padding: 12px 14px;
+    gap: 8px;
+    /* Compact: arrange as two-column grid inside the card */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+  }
+  /* Name spans full width */
+  .val-name    { grid-column: 1 / -1; }
+  /* PE row + badge on same row */
+  .val-pe-row  { grid-column: 1 / 2; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .val-pe-num  { font-size: 1.5rem; }
+  .val-badge   { font-size: .52rem; }
+  /* Gauge + labels span full width */
+  .val-gauge-track  { grid-column: 1 / -1; }
+  .val-gauge-labels { grid-column: 1 / -1; }
+  /* Metrics on right of PE */
+  .val-metrics { grid-column: 2 / 3; grid-row: 2 / 3; flex-direction: column; gap: 6px; padding-top: 0; border-top: none; }
+  .val-disclaimer { grid-column: 1 / -1; }
+}
+
+/* At very small widths — single column card layout */
+@media (max-width: 380px) {
+  .val-card {
+    grid-template-columns: 1fr;
+  }
+  .val-pe-row  { grid-column: 1; }
+  .val-metrics { grid-column: 1; grid-row: auto; border-top: 1px solid var(--border); padding-top: 6px; }
+}
+
+/* ── Table mobile: vertical scroll + compact thead ───────────────────────── */
+@media (max-width: 640px) {
+  #tableCard .table-wrap {
+    max-height: 65vh;
+  }
+  /* thead row heights shrink on mobile — adjust sticky offsets */
+  .idx-table thead tr:nth-child(2) th {
+    top: 26px;  /* row1 is ~26px tall at .68rem */
+  }
+}
