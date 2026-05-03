@@ -8453,3 +8453,248 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 @media (max-width: 400px) {
   .mw-fii-grid { grid-template-columns: 1fr; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   MARKET WATCH — Sectoral Heatmap, 52-Week Tracker, Holidays Calendar
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Sectoral Heatmap ─────────────────────────────────────────────────────── */
+.mw-heatmap {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 6px;
+  margin-top: 14px;
+}
+.mw-heat-cell {
+  border-radius: 8px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: default;
+  transition: transform .14s, box-shadow .14s;
+}
+.mw-heat-cell:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.18); }
+.mw-heat-name {
+  font-size: .55rem;
+  font-weight: 900;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: center;
+  line-height: 1.3;
+}
+.mw-heat-pct {
+  font-size: .72rem;
+  font-weight: 900;
+  font-family: 'JetBrains Mono', monospace;
+}
+.mw-heatmap-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.mw-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .6rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.mw-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* ── 52-Week Tracker ──────────────────────────────────────────────────────── */
+.mw-yr-list { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+
+.mw-yr-row { display: flex; flex-direction: column; gap: 6px; }
+
+.mw-yr-name {
+  font-size: .68rem;
+  font-weight: 800;
+  color: var(--text2);
+  letter-spacing: -.1px;
+}
+.mw-yr-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mw-yr-bound {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .6rem;
+  font-weight: 700;
+  white-space: nowrap;
+  min-width: 56px;
+}
+.mw-yr-low  { color: var(--neg); text-align: right; }
+.mw-yr-high { color: var(--g2);  text-align: left;  }
+.mw-yr-track {
+  flex: 1;
+  height: 8px;
+  background: var(--s3);
+  border-radius: 8px;
+  position: relative;
+  overflow: visible;
+}
+.mw-yr-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: linear-gradient(90deg, rgba(198,40,40,.35), rgba(67,160,71,.45));
+  border-radius: 8px;
+}
+.mw-yr-needle {
+  position: absolute;
+  top: -3px;
+  width: 3px;
+  height: 14px;
+  background: var(--text);
+  border-radius: 2px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 0 1.5px var(--surface);
+}
+.mw-yr-near-high { background: #2e7d32; }
+.mw-yr-near-low  { background: #c62828; }
+.mw-yr-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mw-yr-last {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .72rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.mw-yr-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .6rem;
+  font-weight: 700;
+}
+.mw-yr-badge {
+  font-size: .5rem;
+  font-weight: 800;
+  letter-spacing: .4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.mw-badge-high { background: rgba(46,125,50,.15); color: #2e7d32; border: 1px solid rgba(46,125,50,.3); }
+.mw-badge-low  { background: rgba(198,40,40,.12); color: #c62828; border: 1px solid rgba(198,40,40,.25); }
+
+/* ── Market Holidays ──────────────────────────────────────────────────────── */
+.mw-holiday-next {
+  background: var(--g-xlight);
+  border: 1.5px solid var(--g-light);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin: 14px 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mw-holiday-next-label {
+  font-size: .55rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--g2);
+  font-family: 'JetBrains Mono', monospace;
+}
+.mw-holiday-next-name {
+  font-size: .9rem;
+  font-weight: 800;
+  color: var(--g1);
+  letter-spacing: -.2px;
+}
+.mw-holiday-next-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--text2);
+}
+.mw-holiday-next-days {
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--g2);
+  margin-top: 4px;
+}
+
+.mw-holiday-grid { display: flex; flex-direction: column; gap: 0; }
+
+.mw-holiday-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+.mw-holiday-row:last-child { border-bottom: none; }
+.mw-holiday-row:hover { background: var(--s2); border-radius: 6px; }
+.mw-holiday-past { opacity: .45; }
+.mw-holiday-upcoming { background: var(--g-xlight); border-radius: 6px; }
+
+.mw-holiday-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 4px 6px;
+  flex-shrink: 0;
+}
+.mw-holiday-past .mw-holiday-date { background: transparent; border-color: transparent; }
+.mw-holiday-day-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .9rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--text);
+}
+.mw-holiday-month {
+  font-size: .5rem;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.mw-holiday-info { flex: 1; }
+.mw-holiday-name    { font-size: .75rem; font-weight: 700; color: var(--text); }
+.mw-holiday-weekday { font-size: .6rem; color: var(--muted); font-weight: 600; margin-top: 2px; }
+.mw-holiday-status {
+  font-size: .55rem;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+.mw-next-tag {
+  color: var(--g1);
+  background: var(--g-xlight);
+  border: 1px solid var(--g-light);
+  border-radius: 5px;
+  padding: 2px 7px;
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .mw-heatmap { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 5px; }
+  .mw-heat-cell { padding: 8px 6px; }
+  .mw-heat-name { font-size: .5rem; }
+  .mw-heat-pct  { font-size: .65rem; }
+  .mw-yr-bound  { min-width: 44px; font-size: .56rem; }
+}

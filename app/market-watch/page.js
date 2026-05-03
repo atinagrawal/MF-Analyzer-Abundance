@@ -258,6 +258,169 @@ function VixBar({ vix }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
+// ── Sectoral Heatmap ─────────────────────────────────────────────────────────
+function SectoralHeatmap({ sectoral }) {
+  if (!sectoral?.length) return null;
+
+  // Colour based on % change: deep green → light green → grey → light red → deep red
+  function cellStyle(pct) {
+    if (pct == null) return { background: 'var(--s3)', color: 'var(--muted)' };
+    if (pct >=  2) return { background: '#1b5e20', color: '#fff' };
+    if (pct >=  0.5) return { background: '#388e3c', color: '#fff' };
+    if (pct >=  0) return { background: '#66bb6a', color: '#1b5e20' };
+    if (pct >= -0.5) return { background: '#ef9a9a', color: '#b71c1c' };
+    if (pct >= -2) return { background: '#e53935', color: '#fff' };
+    return { background: '#b71c1c', color: '#fff' };
+  }
+
+  return (
+    <div className="mw-section">
+      <div className="section-head">
+        <div className="section-title">🗂 Sectoral Heatmap</div>
+        <div className="section-badge">NSE INDIA · TODAY</div>
+      </div>
+      <div className="mw-heatmap">
+        {sectoral.map(s => {
+          const style = cellStyle(s.pct);
+          return (
+            <div key={s.id} className="mw-heat-cell" style={style}
+              title={`${s.name}: ${s.last?.toLocaleString('en-IN')} (${s.pct >= 0 ? '+' : ''}${s.pct?.toFixed(2)}%)`}>
+              <div className="mw-heat-name">{s.short}</div>
+              <div className="mw-heat-pct">{s.pct >= 0 ? '+' : ''}{s.pct?.toFixed(2)}%</div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mw-heatmap-legend">
+        {[
+          { bg: '#1b5e20', color: '#fff', label: '> +2%' },
+          { bg: '#66bb6a', color: '#1b5e20', label: '+0 to +2%' },
+          { bg: '#ef9a9a', color: '#b71c1c', label: '0 to −2%' },
+          { bg: '#b71c1c', color: '#fff', label: '< −2%' },
+        ].map(l => (
+          <div key={l.label} className="mw-legend-item">
+            <div className="mw-legend-swatch" style={{ background: l.bg }} />
+            <span>{l.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── 52-Week High/Low Tracker ──────────────────────────────────────────────────
+function YearTracker({ yearTracker }) {
+  if (!yearTracker?.length) return null;
+  return (
+    <div className="mw-section">
+      <div className="section-head">
+        <div className="section-title">📏 52-Week High / Low Range</div>
+        <div className="section-badge">NSE INDIA</div>
+      </div>
+      <div className="mw-yr-list">
+        {yearTracker.map(idx => {
+          const range = idx.yearHigh - idx.yearLow;
+          const pos   = range > 0 ? ((idx.last - idx.yearLow) / range * 100) : 50;
+          const pct   = Math.min(Math.max(pos, 0), 100);
+          const nearHigh = pct >= 90;
+          const nearLow  = pct <= 10;
+          return (
+            <div key={idx.id} className="mw-yr-row">
+              <div className="mw-yr-name">{idx.name}</div>
+              <div className="mw-yr-range">
+                <span className="mw-yr-bound mw-yr-low">{idx.yearLow?.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                <div className="mw-yr-track" title={`Last: ${idx.last?.toLocaleString('en-IN')} · 52W High: ${idx.yearHigh?.toLocaleString('en-IN')} · 52W Low: ${idx.yearLow?.toLocaleString('en-IN')}`}>
+                  <div className="mw-yr-fill" style={{ width: `${pct.toFixed(0)}%` }} />
+                  <div className={`mw-yr-needle ${nearHigh ? 'mw-yr-near-high' : nearLow ? 'mw-yr-near-low' : ''}`}
+                    style={{ left: `${pct.toFixed(0)}%` }} />
+                </div>
+                <span className="mw-yr-bound mw-yr-high">{idx.yearHigh?.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+              </div>
+              <div className="mw-yr-meta">
+                <span className="mw-yr-last">{idx.last?.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                <span className={`mw-yr-pct ${pct >= 50 ? 'ret-pos' : 'ret-neg'}`}>
+                  {pct.toFixed(0)}% of range
+                </span>
+                {nearHigh && <span className="mw-yr-badge mw-badge-high">Near 52W High</span>}
+                {nearLow  && <span className="mw-yr-badge mw-badge-low">Near 52W Low</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Market Holidays Calendar ──────────────────────────────────────────────────
+function HolidaysCalendar({ holidays }) {
+  if (!holidays?.length) return null;
+
+  const today    = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+
+  function parseDate(str) {
+    // "15-Jan-2026" → Date
+    const [d, m, y] = str.split('-');
+    return new Date(`${d} ${m} ${y}`);
+  }
+
+  const upcoming = holidays.filter(h => parseDate(h.date) >= today);
+  const past     = holidays.filter(h => parseDate(h.date) < today);
+  const next     = upcoming[0];
+
+  // Days until next holiday
+  const daysUntil = next
+    ? Math.ceil((parseDate(next.date) - today) / 86400000)
+    : null;
+
+  return (
+    <div className="mw-section">
+      <div className="section-head">
+        <div className="section-title">🗓 NSE Market Holidays 2026</div>
+        <div className="section-badge">CM SEGMENT</div>
+      </div>
+
+      {next && (
+        <div className="mw-holiday-next">
+          <div className="mw-holiday-next-label">Next Holiday</div>
+          <div className="mw-holiday-next-name">{next.desc}</div>
+          <div className="mw-holiday-next-date">{next.date} · {next.day}</div>
+          {daysUntil !== null && (
+            <div className="mw-holiday-next-days">
+              {daysUntil === 0 ? '🎉 Today is a market holiday' :
+               daysUntil === 1 ? '⚠ Tomorrow is a market holiday' :
+               `${daysUntil} days away`}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mw-holiday-grid">
+        {holidays.map(h => {
+          const isPast   = parseDate(h.date) < today;
+          const isNext   = h === next;
+          return (
+            <div key={h.date} className={`mw-holiday-row${isPast ? ' mw-holiday-past' : ''}${isNext ? ' mw-holiday-upcoming' : ''}`}>
+              <div className="mw-holiday-date">
+                <div className="mw-holiday-day-num">{h.date.split('-')[0]}</div>
+                <div className="mw-holiday-month">{h.date.split('-')[1]}</div>
+              </div>
+              <div className="mw-holiday-info">
+                <div className="mw-holiday-name">{h.desc}</div>
+                <div className="mw-holiday-weekday">{h.day}</div>
+              </div>
+              {isPast && <div className="mw-holiday-status">Passed</div>}
+              {isNext  && <div className="mw-holiday-status mw-next-tag">Next</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
 export default function MarketWatchPage() {
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(true);
@@ -358,6 +521,9 @@ export default function MarketWatchPage() {
             <FiiDiiSection fiiDii={data.fiiDii} />
             <GainersLosers gainers={data.gainers} losers={data.losers} />
             <PerfStrip indices={data.indices} />
+            <SectoralHeatmap sectoral={data.sectoral} />
+            <YearTracker yearTracker={data.yearTracker} />
+            <HolidaysCalendar holidays={data.holidays} />
           </>
         )}
 

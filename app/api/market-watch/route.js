@@ -33,17 +33,45 @@ const WATCH_LIST = [
   { id: 'NIFTY50 USD',        name: 'Nifty50 USD'        },
 ];
 
+// Core sectoral indices for heatmap
+const SECTORAL_LIST = [
+  { id: 'NIFTY BANK',               name: 'Bank',        short: 'BANK'     },
+  { id: 'NIFTY IT',                 name: 'IT',          short: 'IT'       },
+  { id: 'NIFTY PHARMA',             name: 'Pharma',      short: 'PHARMA'   },
+  { id: 'NIFTY FMCG',               name: 'FMCG',        short: 'FMCG'     },
+  { id: 'NIFTY AUTO',               name: 'Auto',        short: 'AUTO'     },
+  { id: 'NIFTY METAL',              name: 'Metal',       short: 'METAL'    },
+  { id: 'NIFTY ENERGY',             name: 'Energy',      short: 'ENERGY'   },
+  { id: 'NIFTY REALTY',             name: 'Realty',      short: 'REALTY'   },
+  { id: 'NIFTY MEDIA',              name: 'Media',       short: 'MEDIA'    },
+  { id: 'NIFTY HEALTHCARE INDEX',   name: 'Healthcare',  short: 'HEALTH'   },
+  { id: 'NIFTY OIL & GAS',          name: 'Oil & Gas',   short: 'OIL&GAS'  },
+  { id: 'NIFTY INFRASTRUCTURE',     name: 'Infra',       short: 'INFRA'    },
+  { id: 'NIFTY PSU BANK',           name: 'PSU Bank',    short: 'PSU BANK' },
+  { id: 'NIFTY COMMODITIES',        name: 'Commodities', short: 'COMM'     },
+  { id: 'NIFTY INDIA CONSUMPTION',  name: 'Consumption', short: 'CONSUMP'  },
+  { id: 'NIFTY FINANCIAL SERVICES EX-BANK', name: 'Fin Ex-Bank', short: 'FIN-XBAK' },
+];
+
+// 52-week tracker indices
+const YEAR_TRACKER = [
+  'NIFTY 50', 'NIFTY BANK', 'NIFTY MIDCAP 150',
+  'NIFTY SMALLCAP 250', 'NIFTY IT', 'NIFTY PHARMA',
+  'NIFTY FMCG', 'NIFTY AUTO', 'NIFTY METAL',
+];
+
 async function fetchFromNSE() {
   const sig = AbortSignal.timeout(14_000);
   const nse = (path) => fetch(`https://www.nseindia.com/api/${path}`, { headers: H, signal: sig });
 
-  const [allRes, n50Res, msRes, fiiRes, gainRes, lossRes] = await Promise.allSettled([
+  const [allRes, n50Res, msRes, fiiRes, gainRes, lossRes, holRes] = await Promise.allSettled([
     nse('allIndices'),
     nse('equity-stockIndices?index=NIFTY%2050'),
     nse('marketStatus'),
     nse('fiidiiTradeReact'),
     nse('live-analysis-variations?index=gainers'),
     nse('live-analysis-variations?index=loosers'),
+    nse('holiday-master?type=trading'),
   ]);
 
   // ── All indices ──────────────────────────────────────────────────────────
@@ -60,6 +88,25 @@ async function fetchFromNSE() {
         perChange30d: x.perChange30d, perChange365d: x.perChange365d };
     }).filter(Boolean);
   }
+
+  // ── Sectoral heatmap ─────────────────────────────────────────────────────
+  const sectoral = allRes.status === 'fulfilled' && allRes.value.ok
+    ? SECTORAL_LIST.map(({ id, name, short }) => {
+        const x = indexMap?.[id];
+        return x ? { id, name, short, last: x.last, pct: x.percentChange,
+                     change: x.variation, open: x.open, high: x.high, low: x.low } : null;
+      }).filter(Boolean)
+    : [];
+
+  // ── 52-week high/low tracker ──────────────────────────────────────────────
+  const yearTracker = allRes.status === 'fulfilled' && allRes.value.ok
+    ? YEAR_TRACKER.map(id => {
+        const x = indexMap?.[id];
+        return x ? { id, name: WATCH_LIST.find(w => w.id === id)?.name || id,
+                     last: x.last, yearHigh: x.yearHigh, yearLow: x.yearLow,
+                     pct: x.percentChange } : null;
+      }).filter(Boolean)
+    : [];
 
   // ── Nifty 50 detail ──────────────────────────────────────────────────────
   let nifty50 = null;
@@ -122,12 +169,24 @@ async function fetchFromNSE() {
     losers = mapStocks(ld, 'NIFTY');
   }
 
+  // ── Market holidays ──────────────────────────────────────────────────────
+  let holidays = [];
+  if (holRes.status === 'fulfilled' && holRes.value.ok) {
+    const hd = await holRes.value.json();
+    holidays = (hd.CM || []).map(h => ({
+      date: h.tradingDate,
+      day:  h.weekDay,
+      desc: h.description,
+    }));
+  }
+
   return {
     timestamp: new Date().toISOString(),
     cached_at: new Date().toISOString(),
     marketStatus, isOpen, indices, nifty50,
     currency: { usdinr },
     fiiDii, gainers, losers,
+    sectoral, yearTracker, holidays,
     stale: false,
   };
 }
