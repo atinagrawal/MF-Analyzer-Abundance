@@ -25,6 +25,7 @@ const NAV_PRIMARY = [
 
 // ── Secondary nav: analytics tools (second row on desktop) ─────────────────
 const NAV_TOOLS = [
+  { key: 'market-watch', label: '📡 Market Watch',   href: '/market-watch' },
   { key: 'industry',     label: '📈 Industry Pulse',  href: '/industry' },
   { key: 'report',       label: '📋 Report Card',     href: '/report' },
   { key: 'geography',    label: '🗺 Geography',       href: '/geography' },
