@@ -74,11 +74,12 @@ async function fetchFromNSE() {
     nse('holiday-master?type=trading'),
   ]);
 
-  // ── All indices ──────────────────────────────────────────────────────────
-  let indices = [];
+  // ── All indices — parse once, use indexMap for all three sections ────────
+  let indices = [], sectoral = [], yearTracker = [], indexMap = {};
   if (allRes.status === 'fulfilled' && allRes.value.ok) {
     const d = await allRes.value.json();
-    const indexMap = Object.fromEntries(d.data.map(x => [x.index, x]));
+    indexMap = Object.fromEntries(d.data.map(x => [x.index, x]));
+
     indices = WATCH_LIST.map(({ id, name }) => {
       const x = indexMap[id];
       if (!x) return null;
@@ -87,26 +88,20 @@ async function fetchFromNSE() {
         pe: x.pe, pb: x.pb, dy: x.dy,
         perChange30d: x.perChange30d, perChange365d: x.perChange365d };
     }).filter(Boolean);
+
+    sectoral = SECTORAL_LIST.map(({ id, name, short }) => {
+      const x = indexMap[id];
+      return x ? { id, name, short, last: x.last, pct: x.percentChange,
+                   change: x.variation, open: x.open, high: x.high, low: x.low } : null;
+    }).filter(Boolean);
+
+    yearTracker = YEAR_TRACKER.map(id => {
+      const x = indexMap[id];
+      return x ? { id, name: WATCH_LIST.find(w => w.id === id)?.name || id,
+                   last: x.last, yearHigh: x.yearHigh, yearLow: x.yearLow,
+                   pct: x.percentChange } : null;
+    }).filter(Boolean);
   }
-
-  // ── Sectoral heatmap ─────────────────────────────────────────────────────
-  const sectoral = allRes.status === 'fulfilled' && allRes.value.ok
-    ? SECTORAL_LIST.map(({ id, name, short }) => {
-        const x = indexMap?.[id];
-        return x ? { id, name, short, last: x.last, pct: x.percentChange,
-                     change: x.variation, open: x.open, high: x.high, low: x.low } : null;
-      }).filter(Boolean)
-    : [];
-
-  // ── 52-week high/low tracker ──────────────────────────────────────────────
-  const yearTracker = allRes.status === 'fulfilled' && allRes.value.ok
-    ? YEAR_TRACKER.map(id => {
-        const x = indexMap?.[id];
-        return x ? { id, name: WATCH_LIST.find(w => w.id === id)?.name || id,
-                     last: x.last, yearHigh: x.yearHigh, yearLow: x.yearLow,
-                     pct: x.percentChange } : null;
-      }).filter(Boolean)
-    : [];
 
   // ── Nifty 50 detail ──────────────────────────────────────────────────────
   let nifty50 = null;
