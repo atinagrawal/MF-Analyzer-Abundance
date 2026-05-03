@@ -210,10 +210,11 @@ async function blobPut(token, payload) {
   } catch {}
 }
 
-export async function GET() {
+export async function GET(req) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
+  const bust  = new URL(req.url).searchParams.has('bust');
 
-  if (token) {
+  if (token && !bust) {
     const cached = await blobGet(token);
     if (cached?.cached_at && (Date.now() - new Date(cached.cached_at).getTime()) < TTL_MS) {
       return Response.json(cached, { headers: { 'X-Cache': 'HIT', 'Cache-Control': 'no-store' } });
