@@ -16,22 +16,22 @@ import { useState, useRef, useEffect } from 'react';
 
 // ── Primary nav: core product (always visible on desktop) ──────────────────
 const NAV_PRIMARY = [
-  { key: 'home',       label: '🏠 Home',          href: 'https://www.getabundance.in', external: true },
-  { key: 'calculator', label: '📊 MF Calculator', href: '/' },
-  { key: 'portfolio',  label: '💼 My Portfolio',  href: '/portfolio' },
-  { key: 'sifs',       label: '🔬 SIF Screener',  href: '/sifs' },
-  { key: 'contact',    label: '📞 Contact',        href: 'https://www.getabundance.in/contact-us', external: true },
+  { key: 'home',         label: '🏠 Home',          href: 'https://www.getabundance.in', external: true },
+  { key: 'calculator',   label: '📊 MF Calculator', href: '/' },
+  { key: 'portfolio',    label: '💼 My Portfolio',  href: '/portfolio' },
+  { key: 'sifs',         label: '🔬 SIF Screener',  href: '/sifs' },
+  { key: 'market-watch', label: '📡 Market Watch',  href: '/market-watch' },
 ];
 
 // ── Secondary nav: analytics tools (second row on desktop) ─────────────────
 const NAV_TOOLS = [
-  { key: 'market-watch', label: '📡 Market Watch',   href: '/market-watch' },
   { key: 'industry',     label: '📈 Industry Pulse',  href: '/industry' },
   { key: 'report',       label: '📋 Report Card',     href: '/report' },
   { key: 'geography',    label: '🗺 Geography',       href: '/geography' },
   { key: 'rolling',      label: '📉 Rolling Returns', href: '/rolling' },
   { key: 'indices',      label: '📊 Index Dashboard', href: '/indices' },
   { key: 'pms-screener', label: '🏆 PMS Screener',   href: '/pms-screener' },
+  { key: 'contact',      label: '📞 Contact',         href: 'https://www.getabundance.in/contact-us', external: true },
 ];
 
 // Combined for mobile hamburger menu
