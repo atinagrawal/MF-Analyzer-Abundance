@@ -8020,7 +8020,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .mw-hero .nav-link-sm:hover { color: rgba(255,255,255,.9); background: rgba(255,255,255,.07); }
 
 /* ── Page wrapper ──────────────────────────────────────────────────────── */
-.mw-page { padding-top: 24px; }
+.mw-page { padding-top: 24px; width: 100%; max-width: 100%; }
+.mw-hero { max-width: 100%; overflow-x: hidden; }
 
 /* ── Ticker bar ─────────────────────────────────────────────────────────── */
 .mw-ticker-bar {
@@ -8057,12 +8058,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   animation: pulse 2s infinite;
 }
 .mw-status-label { font-size: .58rem; font-weight: 900; letter-spacing: 1.5px; }
-.mw-ticker-scroll-wrap { flex: 1; overflow: hidden; }
+.mw-ticker-scroll-wrap { flex: 1; min-width: 0; overflow: hidden; } /* min-width:0 prevents 3800px page expansion */
 .mw-ticker-scroll {
   display: flex;
   gap: 0;
   animation: ticker-scroll 40s linear infinite;
   white-space: nowrap;
+  will-change: transform;
 }
 .mw-ticker-text {
   font-family: 'JetBrains Mono', monospace;
