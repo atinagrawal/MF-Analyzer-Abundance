@@ -8,6 +8,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
@@ -426,6 +427,8 @@ export default function MarketWatchPage() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
   const [secsAgo, setSecsAgo] = useState(0);
+  const { status } = useSession();
+  const isLoggedIn = status === 'authenticated';
   const [activeTab, setActiveTab] = useState('heatmap');
   const timerRef = useRef(null);
   const countRef = useRef(null);
@@ -477,9 +480,11 @@ export default function MarketWatchPage() {
           <span className="mw-refresh-info">
             {loading ? 'Fetching…' : data?.stale ? '⚠ Stale data — NSE unavailable' : `Updated ${secsAgo}s ago · auto-refreshes every 60s`}
           </span>
-          <button className="mw-refresh-btn" onClick={load} disabled={loading}>
-            {loading ? '⏳' : '↻'} Refresh
-          </button>
+          {isLoggedIn && (
+            <button className="mw-refresh-btn" onClick={load} disabled={loading}>
+              {loading ? '⏳' : '↻'} Refresh
+            </button>
+          )}
           <span className="mw-data-src">
             Source: <a href="https://www.nseindia.com" target="_blank" rel="noopener noreferrer">NSE India</a>
           </span>
