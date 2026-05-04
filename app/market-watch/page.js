@@ -426,6 +426,7 @@ export default function MarketWatchPage() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
   const [secsAgo, setSecsAgo] = useState(0);
+  const [activeTab, setActiveTab] = useState('heatmap');
   const timerRef = useRef(null);
   const countRef = useRef(null);
 
@@ -518,12 +519,45 @@ export default function MarketWatchPage() {
             <VixBar vix={vix} />
             <ADBar advances={data.nifty50?.advances} declines={data.nifty50?.declines} unchanged={data.nifty50?.unchanged} />
             <OHLCRow ohlc={data.nifty50?.ohlc} totalVolume={data.nifty50?.totalVolume} totalValue={data.nifty50?.totalValue} />
-            <FiiDiiSection fiiDii={data.fiiDii} />
-            <GainersLosers gainers={data.gainers} losers={data.losers} />
-            <PerfStrip indices={data.indices} />
-            <SectoralHeatmap sectoral={data.sectoral} />
-            <YearTracker yearTracker={data.yearTracker} />
-            <HolidaysCalendar holidays={data.holidays} />
+
+            {/* ── Mobile tab nav — secondary sections ── */}
+            <div className="mw-tab-nav" role="tablist">
+              {[
+                { id: 'heatmap',  label: '🗂 Sectors'   },
+                { id: 'fiidii',   label: '🏦 FII/DII'   },
+                { id: 'movers',   label: '🏆 Movers'    },
+                { id: 'analytics',label: '📏 Analytics' },
+                { id: 'calendar', label: '🗓 Calendar'  },
+              ].map(t => (
+                <button
+                  key={t.id}
+                  className={`mw-tab-btn${activeTab === t.id ? ' active' : ''}`}
+                  onClick={() => setActiveTab(t.id)}
+                  role="tab"
+                  aria-selected={activeTab === t.id}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Secondary sections — all visible on desktop, tabbed on mobile */}
+            <div className={`mw-tab-panel${activeTab === 'heatmap' ? ' active' : ''}`} data-tab="heatmap">
+              <SectoralHeatmap sectoral={data.sectoral} />
+            </div>
+            <div className={`mw-tab-panel${activeTab === 'fiidii' ? ' active' : ''}`} data-tab="fiidii">
+              <FiiDiiSection fiiDii={data.fiiDii} />
+            </div>
+            <div className={`mw-tab-panel${activeTab === 'movers' ? ' active' : ''}`} data-tab="movers">
+              <GainersLosers gainers={data.gainers} losers={data.losers} />
+            </div>
+            <div className={`mw-tab-panel${activeTab === 'analytics' ? ' active' : ''}`} data-tab="analytics">
+              <YearTracker yearTracker={data.yearTracker} />
+              <PerfStrip indices={data.indices} />
+            </div>
+            <div className={`mw-tab-panel${activeTab === 'calendar' ? ' active' : ''}`} data-tab="calendar">
+              <HolidaysCalendar holidays={data.holidays} />
+            </div>
           </>
         )}
 

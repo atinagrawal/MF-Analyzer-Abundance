@@ -8448,7 +8448,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 @media (max-width: 640px) {
   .mw-fii-grid { grid-template-columns: 1fr 1fr; }
   .mw-fii-total { grid-column: 1 / -1; }
-  .mw-gl-grid { grid-template-columns: 1fr; }
+  .mw-gl-grid { grid-template-columns: 1fr 1fr; } /* keep side-by-side on mobile */
 }
 @media (max-width: 400px) {
   .mw-fii-grid { grid-template-columns: 1fr; }
@@ -8697,4 +8697,145 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .mw-heat-name { font-size: .5rem; }
   .mw-heat-pct  { font-size: .65rem; }
   .mw-yr-bound  { min-width: 44px; font-size: .56rem; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   MARKET WATCH — Comprehensive Mobile Optimisation + Tab System
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Tab navigation (hidden on desktop, shown on mobile) ─────────────────── */
+.mw-tab-nav {
+  display: none; /* desktop: tabs hidden, all panels visible */
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  margin-bottom: 4px;
+}
+.mw-tab-nav::-webkit-scrollbar { display: none; }
+
+.mw-tab-btn {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  background: var(--s2);
+  font-family: 'Raleway', sans-serif;
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.mw-tab-btn.active {
+  background: var(--g1);
+  border-color: var(--g1);
+  color: #fff;
+}
+.mw-tab-btn:hover:not(.active) {
+  border-color: var(--g2);
+  color: var(--g2);
+}
+
+/* Desktop: all tab panels always visible */
+.mw-tab-panel { display: block; }
+
+/* ── Global mobile fixes ──────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+
+  /* Prevent any horizontal overflow */
+  .mw-page { overflow-x: hidden; }
+
+  /* Show tab nav, hide inactive panels */
+  .mw-tab-nav { display: flex; }
+  .mw-tab-panel { display: none; }
+  .mw-tab-panel.active { display: block; }
+
+  /* Sections — reduce padding */
+  .mw-section { padding: 14px 14px; margin-bottom: 12px; }
+
+  /* Section head — wrap gracefully */
+  .section-head { flex-wrap: wrap; gap: 6px; align-items: flex-start; }
+  .section-title { font-size: .78rem; }
+  .section-badge { font-size: .5rem; padding: 2px 7px; }
+
+  /* Index cards — tighter */
+  .mw-idx-last { font-size: 1rem; }
+  .mw-idx-chg  { font-size: .62rem; }
+  .mw-idx-meta { font-size: .54rem; gap: 6px; }
+  .mw-idx-pe   { font-size: .5rem; }
+
+  /* OHLC — tighter bar, 2x2 stats */
+  .mw-ohlc-bar-wrap { gap: 5px; }
+  .mw-ohlc-val { font-size: .58rem; min-width: 42px; }
+  .mw-ohlc-stats { grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  /* VIX bar */
+  .mw-vix-bar { padding: 8px 12px; gap: 8px; }
+  .mw-vix-val { font-size: .88rem; }
+  .mw-vix-chg { font-size: .65rem; }
+  .mw-vix-note { margin-left: 0; width: 100%; font-size: .62rem; }
+
+  /* A/D legend — wrap */
+  .mw-ad-legend { gap: 10px; flex-wrap: wrap; }
+  .mw-ad-section { padding: 14px 14px; }
+
+  /* Refresh bar */
+  .mw-refresh-info { font-size: .6rem; }
+  .mw-refresh-bar  { row-gap: 6px; }
+
+  /* FII/DII */
+  .mw-fii-bignet { font-size: 1.1rem; letter-spacing: -.5px; }
+  .mw-fii-note   { font-size: .58rem; }
+  .mw-fii-card   { padding: 12px 12px; }
+
+  /* Gainers/Losers — stay 2-col but compact */
+  .mw-gl-symbol { font-size: .62rem; }
+  .mw-gl-ltp    { font-size: .6rem; }
+  .mw-gl-pct    { font-size: .65rem; }
+  .mw-gl-row    { padding: 7px 10px; }
+  .mw-gl-head   { padding: 6px 10px; }
+
+  /* 52-week tracker */
+  .mw-yr-row    { gap: 5px; }
+  .mw-yr-name   { font-size: .62rem; }
+  .mw-yr-meta   { flex-wrap: wrap; gap: 5px; }
+  .mw-yr-last   { font-size: .66rem; }
+  .mw-yr-pct    { font-size: .56rem; }
+  .mw-yr-badge  { font-size: .46rem; }
+
+  /* Perf strip */
+  .mw-perf-name { font-size: .54rem; }
+  .mw-perf-val  { font-size: .65rem; }
+
+  /* Heatmap legend */
+  .mw-heatmap-legend { gap: 10px; }
+  .mw-legend-item    { font-size: .55rem; }
+
+  /* Holiday rows */
+  .mw-holiday-row       { gap: 8px; padding: 8px 2px; }
+  .mw-holiday-name      { font-size: .68rem; }
+  .mw-holiday-next      { padding: 12px 14px; }
+  .mw-holiday-next-name { font-size: .82rem; }
+  .mw-holiday-status    { font-size: .5rem; }
+
+  /* Disclaimer */
+  .mw-disclaimer { font-size: .58rem; }
+
+  /* Ticker — very small screens */
+  .mw-ticker-text { font-size: .58rem; }
+}
+
+@media (max-width: 380px) {
+  /* Single column for index cards on very small phones */
+  .mw-grid { grid-template-columns: 1fr; }
+  /* Single column heatmap cells */
+  .mw-heatmap { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+  /* FII single column */
+  .mw-fii-grid { grid-template-columns: 1fr; }
+  .mw-fii-total { grid-column: 1; }
+  /* Performance — single column */
+  .mw-perf-strip { grid-template-columns: 1fr; }
 }
