@@ -35,6 +35,7 @@ const WATCH_LIST = [
 
 // Core sectoral indices for heatmap
 const SECTORAL_LIST = [
+  // ── Core sectors ──────────────────────────────────────────────────────────
   { id: 'NIFTY BANK',               name: 'Bank',        short: 'BANK'     },
   { id: 'NIFTY IT',                 name: 'IT',          short: 'IT'       },
   { id: 'NIFTY PHARMA',             name: 'Pharma',      short: 'PHARMA'   },
@@ -51,6 +52,17 @@ const SECTORAL_LIST = [
   { id: 'NIFTY COMMODITIES',        name: 'Commodities', short: 'COMM'     },
   { id: 'NIFTY INDIA CONSUMPTION',  name: 'Consumption', short: 'CONSUMP'  },
   { id: 'NIFTY FINANCIAL SERVICES EX-BANK', name: 'Fin Ex-Bank', short: 'FIN-XBAK' },
+  // ── Thematic sectors ──────────────────────────────────────────────────────
+  { id: 'NIFTY INDIA DEFENCE',           name: 'Defence',      short: 'DEFENCE'  },
+  { id: 'NIFTY CHEMICALS',               name: 'Chemicals',    short: 'CHEM'     },
+  { id: 'NIFTY CONSUMER DURABLES',       name: 'Cons. Durables', short: 'CONS-DUR'},
+  { id: 'NIFTY CAPITAL MARKETS',         name: 'Capital Mkts', short: 'CAP-MKT'  },
+  { id: 'NIFTY EV & NEW AGE AUTOMOTIVE', name: 'EV & New Auto', short: 'EV'      },
+  { id: 'NIFTY INDIA MANUFACTURING',     name: 'Manufacturing', short: 'MFGR'    },
+  { id: 'NIFTY TRANSPORTATION & LOGISTICS', name: 'Logistics',  short: 'LOGIS'   },
+  { id: 'NIFTY PRIVATE BANK',            name: 'Private Bank', short: 'PVT-BANK' },
+  { id: 'NIFTY HOUSING',                 name: 'Housing',      short: 'HOUSING'  },
+  { id: 'NIFTY INDIA RAILWAYS PSU',      name: 'Railways PSU', short: 'RAILWAYS' },
 ];
 
 // 52-week tracker indices
