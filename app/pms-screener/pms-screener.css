@@ -303,17 +303,24 @@
 .pms-table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  position: relative;
 }
 
 /* Hint to users that table scrolls on small screens */
 .pms-table-wrap::after {
-  display: none;
-  content: '← scroll →';
-  text-align: center;
-  font-size: .58rem;
+  content: 'Swipe for more →';
+  position: absolute;
+  bottom: -20px;
+  right: 0;
+  font-size: .65rem;
   color: var(--muted);
-  font-family: 'JetBrains Mono', monospace;
-  padding: 4px 0;
+  font-weight: 700;
+  display: none;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .pms-table-wrap::after { display: block; }
 }
 
 .pms-table {
@@ -1072,10 +1079,6 @@
     max-width: 180px;
   }
 
-  /* Hint to scroll table horizontally */
-  .pms-table-wrap::after {
-    display: block;
-  }
 }
 
 /* ── Large phone / landscape ── */
@@ -1172,13 +1175,13 @@
   }
 
   .top-perf-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .pms-stat-strip {
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 10px;
   }
 
   .pms-grid-view {
@@ -1273,16 +1276,16 @@
   }
 
   .pms-stat-strip {
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .pst-val {
-    font-size: .95rem;
+    font-size: 1.1rem;
   }
 
   .pst-label {
-    font-size: .5rem;
+    font-size: .6rem;
   }
 
   .top-perf-grid {

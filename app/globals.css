@@ -607,6 +607,26 @@ a { color: inherit; text-decoration: none; }
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  background: var(--surface);
+  border-radius: var(--r);
+  border: 1.5px solid var(--border);
+  position: relative;
+}
+
+/* Swipe Hint for tables on mobile */
+.table-wrap::after {
+  content: 'Swipe for more →';
+  position: absolute;
+  bottom: -20px;
+  right: 0;
+  font-size: 0.65rem;
+  color: var(--muted);
+  font-weight: 700;
+  display: none;
+  pointer-events: none;
+}
+@media (max-width: 768px) {
+  .table-wrap::after { display: block; }
 }
 
 .idx-table {
@@ -2388,7 +2408,10 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* Fund slot */
-.fund-slot { min-width: 0; }
+.fund-slot { 
+  min-width: 0; 
+  width: 100%;
+}
 .fund-label {
   font-size: .58rem;
   font-weight: 800;
@@ -2627,7 +2650,11 @@ a { color: inherit; text-decoration: none; }
   flex-wrap: wrap;
   gap: 10px;
 }
-.window-group { display: flex; gap: 4px; }
+.window-group { 
+  display: flex; 
+  gap: 4px; 
+  flex-wrap: wrap;
+}
 
 .run-btn {
   display: flex;
@@ -2799,9 +2826,22 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 900px) {
   .search-row {
     grid-template-columns: 1fr;
+    gap: 20px;
   }
-  .vs-divider { padding-top: 0; }
-  .stat-grid { grid-template-columns: repeat(3, 1fr); }
+  .vs-divider { display: none; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .sc-val { font-size: 1.1rem; }
+}
+
+@media (max-width: 420px) {
+  .stat-grid { grid-template-columns: 1fr; }
+  .search-card { padding: 16px; }
+  .bench-chips { gap: 4px; }
+  .bench-chip { padding: 3px 7px; font-size: 0.6rem; }
 }
 @media (max-width: 600px) {
   .search-card { padding: 14px 14px 12px; }
@@ -3133,13 +3173,18 @@ a { color: inherit; text-decoration: none; }
   .trend-stat-grid { grid-template-columns:repeat(2,1fr); }
 }
 @media (max-width:600px) {
-  .trend-stat-grid { grid-template-columns:1fr 1fr; }
+  .trend-stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   .hm-cat { width:82px; font-size:.56rem; }
   .hm-mlbl { width:37px; }
   .hm-cell { width:35px; font-size:.44rem; }
   .hbar-label { width:82px; font-size:.58rem; }
-  .hbar-label { width:82px; font-size:.58rem; }
   .col-hide-mobile { display:none; }
+}
+
+@media (max-width: 440px) {
+  .trend-stat-grid { grid-template-columns: 1fr; }
+  .summary-grid { grid-template-columns: 1fr; }
+  .page-title { font-size: 2rem; }
 }
 
 /* ══════════════════════════════════════════
@@ -7203,8 +7248,19 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 
 /* ── Mobile ──────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .sif-hero-stats { flex-wrap: wrap; width: 100%; }
-  .sif-hero-stat  { flex: 1; min-width: 120px; padding: 12px 16px; }
+  .sif-hero-stats {
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 0;
+  }
+  .sif-hero-stat {
+    flex: 1 1 50%;
+    min-width: 140px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sif-hero-stat:nth-child(odd) { border-right: 1px solid var(--border); }
+  .sif-hero-stat:nth-child(n+3) { border-bottom: none; }
   .sif-grid       { grid-template-columns: 1fr; }
   .sif-view-toggle { margin-left: 0; }
   .sif-filter-row { gap: 6px; }
@@ -8328,10 +8384,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .mw-idx-primary .mw-idx-last { font-size: 1.2rem; }
   .mw-ohlc-stats { grid-template-columns: 1fr 1fr; }
   .mw-perf-strip { grid-template-columns: 1fr 1fr; }
-  .mw-refresh-bar { gap: 8px; }
+  .mw-refresh-bar { gap: 8px; flex-wrap: wrap; }
   .mw-data-src { margin-left: 0; width: 100%; }
   .mw-vix-note { margin-left: 0; width: 100%; }
   .mw-ticker-bar { padding: 6px 10px; }
+  .mw-fii-grid { grid-template-columns: 1fr 1fr; }
+  .mw-gl-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 420px) {
+  .mw-grid { grid-template-columns: 1fr; }
+  .mw-fii-grid { grid-template-columns: 1fr; }
+  .mw-ohlc-stats { grid-template-columns: 1fr; }
+  .mw-perf-strip { grid-template-columns: 1fr; }
+  .mw-idx-card { padding: 12px 14px; }
 }
 
 /* ── Market Watch: new sections ─────────────────────────────────────────── */
