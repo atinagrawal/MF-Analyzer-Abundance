@@ -41,7 +41,7 @@ export default function MfcPortfolioPage() {
     try {
       const r = await fetch('/api/parse-mfc', { method: 'POST', body: fd });
       const d = await r.json();
-      if (!r.ok || d.error) throw new Error(d.error || 'Parse failed');
+      if (!r.ok || d.detail) throw new Error(d.detail || 'Parse failed');
       const byIsin = {};
       for (const h of (d.holdings || [])) {
         if (!byIsin[h.isin]) { byIsin[h.isin] = { ...h, folios: [] }; }

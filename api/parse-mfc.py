@@ -94,7 +94,7 @@ def parse_mfc_pdf(pdf_bytes: bytes) -> dict:
         folio = folio_m.group(1)
 
         # ISIN
-        isin_m = re.search(r"(INF\w+)", block)
+        isin_m = re.search(r"(INF[A-Z0-9]{9})", block)
         if not isin_m:
             continue
         isin = isin_m.group(1)
