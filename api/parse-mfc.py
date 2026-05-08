@@ -196,3 +196,7 @@ async def parse_mfc(file: UploadFile = File(...)):
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "mfc-parser"}
+
+
+# Vercel Python runtime requires this export for ASGI apps
+handler = app

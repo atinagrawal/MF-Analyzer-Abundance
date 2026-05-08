@@ -14,7 +14,15 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const PYTHON_PARSER = process.env.PYTHON_PARSER_URL || 'http://localhost:8000';
+// Resolve Python parser URL — works in Vercel serverless and local dev
+function getPythonBase(req) {
+  // Explicit override (e.g. PYTHON_PARSER_URL=https://mfcalc.getabundance.in)
+  if (process.env.PYTHON_PARSER_URL) return process.env.PYTHON_PARSER_URL;
+  // Vercel auto-injects VERCEL_URL = current deployment hostname (no https://)
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  // Local dev
+  return 'http://localhost:3000';
+}
 
 export async function POST(req) {
   try {
@@ -32,7 +40,7 @@ export async function POST(req) {
     const fwd = new FormData();
     fwd.append('file', file);
 
-    const pyRes = await fetch(`${PYTHON_PARSER}/parse-mfc`, {
+    const pyRes = await fetch(`${getPythonBase(req)}/api/parse-mfc`, {
       method: 'POST',
       body: fwd,
       signal: AbortSignal.timeout(60_000), // PDF parsing can be slow
