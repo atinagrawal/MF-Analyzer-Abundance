@@ -65,30 +65,19 @@ def _parse_mfc_text(text: str) -> dict:
     pan   = pan_m.group(1) if pan_m else ""
 
     # ── Investor name ─────────────────────────────────────────────────────────
-    # MF Central header may say "Investor Name : FOO BAR" or "Name : FOO BAR"
+    # MF Central format: investor name is on the line immediately after PAN.
+    # Only search within ~200 chars after PAN to avoid picking up scheme names
+    # or header text ("Consolidated Account Statement") further in the document.
     name = ""
-    name_label_m = re.search(
-        r"(?:Investor\s+Name|Name)\s*:\s*([A-Z][A-Za-z\s\.]{2,60}?)(?:\n|\r|PAN|Email|Mobile)",
-        text, re.IGNORECASE
-    )
-    if name_label_m:
-        name = name_label_m.group(1).strip()
-    elif pan_m:
-        # Fallback: last alpha-only line before the PAN line
-        before = text[:pan_m.start()]
-        candidates = [
-            l.strip() for l in before.split("\n")
-            if l.strip() and re.match(r"^[A-Za-z][A-Za-z\s\.]{2,60}$", l.strip())
-        ]
-        if candidates:
-            name = candidates[-1]
-        else:
-            # Last resort: first alpha-only line after PAN
-            for line in text[pan_m.end():].split("\n"):
-                line = line.strip()
-                if line and re.match(r"^[A-Za-z\s\.]+$", line) and len(line) > 2:
-                    name = line
-                    break
+    if pan_m:
+        nearby = text[pan_m.end():pan_m.end() + 200]
+        for line in nearby.split("\n"):
+            line = line.strip()
+            # Names are letters/spaces/dots, 3–50 chars — excludes address lines
+            # (B-6. INDRAPURI has digits/hyphens) and long headers (> 50 chars)
+            if line and re.match(r"^[A-Za-z][A-Za-z\s\.]{2,49}$", line):
+                name = line
+                break
 
     # ── Statement period ──────────────────────────────────────────────────────
     date_m = re.search(
