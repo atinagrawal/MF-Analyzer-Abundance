@@ -136,7 +136,7 @@ def parse_mfc_pdf(pdf_bytes: bytes) -> dict:
 
 
 # ── Endpoint ─────────────────────────────────────────────────────────────────
-@app.post("/parse-mfc")
+@app.post("/api/parse-mfc")
 async def parse_mfc(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Only PDF files are accepted")
@@ -193,7 +193,7 @@ async def parse_mfc(file: UploadFile = File(...)):
     return result
 
 
-@app.get("/health")
+@app.get("/api/parse-mfc/health")
 async def health():
     return {"status": "ok", "service": "mfc-parser"}
 

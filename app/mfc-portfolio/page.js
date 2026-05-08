@@ -14,15 +14,15 @@ import { useState, useRef } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
-const fmt     = v => v == null ? '—' : v.toLocaleString('en-IN', { maximumFractionDigits: 2 });
-const fmtRs   = v => v == null ? '—' : '₹' + v.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+const fmt = v => v == null ? '—' : v.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+const fmtRs = v => v == null ? '—' : '₹' + v.toLocaleString('en-IN', { maximumFractionDigits: 0 });
 const fmtUnits = v => v == null ? '—' : v.toLocaleString('en-IN', { maximumFractionDigits: 3 });
-const pct     = (a, b) => b ? (((a - b) / b) * 100).toFixed(2) + '%' : '—';
+const pct = (a, b) => b ? (((a - b) / b) * 100).toFixed(2) + '%' : '—';
 
 export default function MfcPortfolioPage() {
-  const [stage,    setStage]    = useState('upload');  // upload | parsing | result | error
-  const [result,   setResult]   = useState(null);
-  const [errMsg,   setErrMsg]   = useState('');
+  const [stage, setStage] = useState('upload');  // upload | parsing | result | error
+  const [result, setResult] = useState(null);
+  const [errMsg, setErrMsg] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef(null);
 
@@ -39,9 +39,22 @@ export default function MfcPortfolioPage() {
     fd.append('file', file);
 
     try {
-      const r = await fetch('/api/mfc-portfolio', { method: 'POST', body: fd });
+      const r = await fetch('/api/parse-mfc', { method: 'POST', body: fd });
       const d = await r.json();
       if (!r.ok || d.error) throw new Error(d.error || 'Parse failed');
+      const byIsin = {};
+      for (const h of (d.holdings || [])) {
+        if (!byIsin[h.isin]) { byIsin[h.isin] = { ...h, folios: [] }; }
+        else {
+          byIsin[h.isin].units = (byIsin[h.isin].units || 0) + (h.units || 0);
+          byIsin[h.isin].value_live = (byIsin[h.isin].value_live || 0) + (h.value_live || 0);
+        }
+        byIsin[h.isin].folios.push(h.folio);
+      }
+      const consolidated = Object.values(byIsin);
+      const totalValue = consolidated.reduce((s, h) => s + (h.value_live || 0), 0);
+      d.consolidated = consolidated;
+      d.summary = { total_value: Math.round(totalValue), total_holdings: consolidated.length, total_folios: (d.holdings || []).length, statement_date: d.period?.to || '' };
       setResult(d);
       setStage('result');
     } catch (e) {
@@ -235,10 +248,10 @@ export default function MfcPortfolioPage() {
     <>
       <div className="container">
         <Navbar activePage="portfolio" />
-        {stage === 'upload'  && <UploadZone />}
+        {stage === 'upload' && <UploadZone />}
         {stage === 'parsing' && <ParsingState />}
-        {stage === 'error'   && <ErrorState />}
-        {stage === 'result'  && <ResultView />}
+        {stage === 'error' && <ErrorState />}
+        {stage === 'result' && <ResultView />}
       </div>
       <Footer />
     </>

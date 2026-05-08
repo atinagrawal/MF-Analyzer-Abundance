@@ -43,6 +43,9 @@
   "functions": {
     "api/parse.py": {
       "maxDuration": 60
+    },
+    "api/parse-mfc.py": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
