@@ -150,6 +150,47 @@ function chartSVG(curve, w = 680, h = 230) {
 <path d="${line("value")}" fill="none" stroke="#2e7d32" stroke-width="2.2"/></svg>`;
 }
 
+/* ---------------- resilient fetch (mfapi can return transient empties / host errors) ---------------- */
+async function fetchJSON(url, tries = 4) {
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const r = await fetch(url);
+      const txt = await r.text();
+      const s = txt.trim();
+      if (s.startsWith("{") || s.startsWith("[")) return JSON.parse(s);
+      lastErr = new Error("non-JSON response");
+    } catch (e) { lastErr = e; }
+    await new Promise((res) => setTimeout(res, 350 * (i + 1)));
+  }
+  throw lastErr || new Error("network error");
+}
+
+/* ---------------- predecessor lineage (verified 1:1 scheme transfers) ----------------
+   Keyed by CURRENT scheme code -> same-plan predecessor code. A curated map ensures
+   we never link unrelated funds; a runtime boundary check (below) then refuses any
+   splice that isn't actually continuous, so even a wrong entry can't fabricate history.
+   JPMorgan India AMC -> Edelweiss MF, schemes transferred 28-Nov-2016.            */
+const LINEAGE = {
+  140225: { pred: 107301, from: "JPMorgan India Mid and Small Cap Fund (Regular)" }, // Edelweiss Mid Cap Reg-Growth
+  140228: { pred: 119869, from: "JPMorgan India Mid and Small Cap Fund (Direct)" },  // Edelweiss Mid Cap Dir-Growth
+};
+
+// Return-link a predecessor series onto a current one: scale the predecessor so its
+// last NAV meets the current series' first NAV (preserving predecessor RETURNS, not
+// absolute NAV). Only applied if the boundary is genuinely continuous.
+function stitchSeries(current, pred) {
+  if (!pred || pred.length < 2 || !current.length) return null;
+  const cFirst = current[0], pLast = pred[pred.length - 1];
+  const gapDays = (cFirst.t - pLast.t) / DAY;
+  const ratio = cFirst.nav / pLast.nav;
+  if (!(gapDays > 0 && gapDays <= 12 && ratio > 0.85 && ratio < 1.2)) return null; // not a clean transfer
+  const k = cFirst.nav / pLast.nav;
+  const head = pred.filter((p) => p.t < cFirst.t).map((p) => ({ t: p.t, nav: p.nav * k }));
+  if (!head.length) return null;
+  return { series: [...head, ...current], spliceDate: cFirst.t, from: pred[0].t };
+}
+
 /* ===================================================================== */
 export default function BacktestPage() {
   const [holdings, setHoldings] = useState([]);
@@ -160,6 +201,7 @@ export default function BacktestPage() {
   const [startDate, setStartDate] = useState("");
   const [benchOn, setBenchOn] = useState(false);
   const [bench, setBench] = useState(null);
+  const [stitch, setStitch] = useState(true);
 
   const [sifList, setSifList] = useState([]);
   const [picker, setPicker] = useState(false);
@@ -185,29 +227,37 @@ export default function BacktestPage() {
 
   /* data */
   async function loadSeries(item) {
-    const id = item.kind + ":" + item.id;
+    const id = item.kind + ":" + (stitch ? "S:" : "") + item.id;
     if (cache.current[id]) return cache.current[id];
-    let series = [], authName = item.name;
+    let series = [], authName = item.name, stitchInfo = null;
     if (item.kind === "mf") {
-      const d = await fetch(`/api/mf?code=${item.id}`).then((r) => r.json());
+      const d = await fetchJSON(`/api/mf?code=${item.id}`);
       if (!d?.data?.length) throw new Error(`No NAV history found for "${item.name}". This is usually a discontinued or merged scheme code — please search for the current fund.`);
       series = normSeries(d.data, "mf");
-      // Trust the NAV endpoint's own metadata as the single source of truth for the
-      // scheme name, so the label always matches the series actually being back-tested
-      // (e.g. legacy JPMorgan→Edelweiss codes whose search name and meta can diverge).
+      // Trust the NAV endpoint's own metadata as the single source of truth for the name.
       if (d.meta?.scheme_name) authName = d.meta.scheme_name;
+      // Freshness guard on the CURRENT scheme (AMFI keeps merged/closed codes frozen).
+      const lastNow = series[series.length - 1].t;
+      if ((todayUTC() - lastNow) / DAY > 30) throw new Error(`"${authName}" looks discontinued or merged — its NAV history ends ${fmtDate(lastNow)} and is no longer updated. Merged/closed scheme codes stay searchable in the AMFI list but freeze. Please pick the current scheme instead.`);
+      // Pre-merger stitch: prepend the verified predecessor series, return-linked.
+      if (stitch && LINEAGE[item.id]) {
+        try {
+          const pd = await fetchJSON(`/api/mf?code=${LINEAGE[item.id].pred}`);
+          if (pd?.data?.length) {
+            const st = stitchSeries(series, normSeries(pd.data, "mf"));
+            if (st) { series = st.series; stitchInfo = { spliceDate: st.spliceDate, from: st.from, fromName: LINEAGE[item.id].from }; }
+          }
+        } catch (e) { /* predecessor is optional enrichment — ignore failures */ }
+      }
     } else {
-      const d = await fetch(`/api/sif-history?sd_id=${encodeURIComponent(item.id)}&from=2024-01-01&to=${toYMD(todayUTC())}`).then((r) => r.json());
+      const d = await fetchJSON(`/api/sif-history?sd_id=${encodeURIComponent(item.id)}&from=2024-01-01&to=${toYMD(todayUTC())}`);
       if (!d?.records?.length) throw new Error(`No NAV history for ${item.name}`);
       series = normSeries(d.records, "sif");
+      const lastNow = series[series.length - 1].t;
+      if ((todayUTC() - lastNow) / DAY > 30) throw new Error(`"${item.name}" has no recent NAV — its history ends ${fmtDate(lastNow)}.`);
     }
     if (series.length < 2) throw new Error(`Not enough NAV history for ${item.name}`);
-    const last = series[series.length - 1].t;
-    // Staleness guard: AMFI keeps merged/closed schemes in its master with frozen NAVs
-    // (e.g. JPMorgan India funds stop at 24-Nov-2016 after the Edelweiss transfer).
-    // Back-testing a dead series is meaningless, so reject it with a clear message.
-    if ((todayUTC() - last) / DAY > 30) throw new Error(`"${authName}" looks discontinued or merged — its NAV history ends ${fmtDate(last)} and is no longer updated. Merged/closed scheme codes stay searchable in the AMFI list but freeze. Please pick the current scheme instead.`);
-    const obj = { series, inception: series[0].t, last, name: authName };
+    const obj = { series, inception: series[0].t, last: series[series.length - 1].t, name: authName, stitch: stitchInfo };
     cache.current[id] = obj; return obj;
   }
 
@@ -235,7 +285,8 @@ export default function BacktestPage() {
 
       const res = runBacktest({ holdings: port, sipDay, defaultStart, end, benchmark: bchk });
       if (res.invested <= 0) throw new Error("No investments could be placed in the selected window. Check your start dates against each fund's launch date.");
-      setResult({ ...res, end, port, bench: res.bench, years: (end - res.gridStart) / Y, generatedAt: Date.now() });
+      const stitched = port.filter((p) => p.stitch).map((p) => ({ name: p.name, ...p.stitch }));
+      setResult({ ...res, end, port, bench: res.bench, years: (end - res.gridStart) / Y, generatedAt: Date.now(), stitched, splices: [...new Set(stitched.map((s) => s.spliceDate))] });
     } catch (e) { setErr(e.message || "Something went wrong."); }
     finally { setRunning(false); }
   }
@@ -341,6 +392,7 @@ export default function BacktestPage() {
                 <div className="bt-inp"><select value={sipDay} onChange={(e) => setSipDay(+e.target.value)}>{[1, 5, 10, 15, 20, 25].map((d) => <option key={d} value={d}>{d}{d === 1 ? "st" : "th"} of month</option>)}</select></div>
               </label>
             </div>
+            <label className="bt-check bt-stitch"><input type="checkbox" checked={stitch} onChange={(e) => setStitch(e.target.checked)} /><span>Include pre-merger history where available <em>(e.g. JPMorgan → Edelweiss, return-linked)</em></span></label>
             <div className="bt-bench">
               <label className="bt-check"><input type="checkbox" checked={benchOn} onChange={(e) => setBenchOn(e.target.checked)} /><span>Compare against a benchmark fund</span></label>
               {benchOn && (
@@ -393,6 +445,10 @@ function Results({ r, sipDay }) {
         <div className="bt-note">ⓘ {clampedAny.map((h) => h.name).join(", ")} {clampedAny.length > 1 ? "were" : "was"} requested to start before {clampedAny.length > 1 ? "their" : "its"} launch — started at inception instead.</div>
       )}
 
+      {r.stitched?.length > 0 && (
+        <div className="bt-note bt-note-ok">↩ Pre-merger history linked: {r.stitched.map((s) => s.name + " ← " + s.fromName + ", back to " + fmtDate(s.from)).join(" · ")}. Older NAVs are return-linked at the transfer date (dashed marker on the chart).</div>
+      )}
+
       <div className="bt-kpis">
         <Kpi label="Invested" val={inr(r.invested)} />
         <Kpi label="Final value" val={inr(r.finalVal)} accent />
@@ -401,7 +457,7 @@ function Results({ r, sipDay }) {
         <Kpi label="XIRR (p.a.)" val={pct(r.xirr)} sign={r.xirr >= 0 ? "pos" : "neg"} hint="money-weighted annualised" />
       </div>
 
-      <Chart curve={r.curve} />
+      <Chart curve={r.curve} splices={r.splices} />
 
       {r.bench && (
         <div className="bt-compare">
@@ -437,7 +493,7 @@ function Kpi({ label, val, sign, accent, hint }) {
 }
 
 /* ===================== CHART ===================== */
-function Chart({ curve }) {
+function Chart({ curve, splices = [] }) {
   const [hover, setHover] = useState(null);
   const W = 720, H = 260, padX = 8, padT = 16, padB = 26;
   const data = curve.filter((c) => isFinite(c.value)); if (data.length < 2) return null;
@@ -447,13 +503,15 @@ function Chart({ curve }) {
   const Yc = (v) => padT + (1 - v / maxV) * (H - padT - padB);
   const line = (k) => data.map((d, i) => `${i ? "L" : "M"}${X(d.t).toFixed(1)},${Yc(d[k]).toFixed(1)}`).join(" ");
   const area = `${line("value")} L${X(maxX).toFixed(1)},${Yc(0).toFixed(1)} L${X(minX).toFixed(1)},${Yc(0).toFixed(1)} Z`;
+  const marks = (splices || []).filter((t) => t > minX && t < maxX);
   const onMove = (e) => { const rect = e.currentTarget.getBoundingClientRect(); const px = ((e.clientX - rect.left) / rect.width) * W; let best = data[0], bd = Infinity; data.forEach((d) => { const dd = Math.abs(X(d.t) - px); if (dd < bd) { bd = dd; best = d; } }); setHover(best); };
   return (
     <div className="bt-chart">
-      <div className="bt-legend"><span><i className="lg lg-v" /> Portfolio value</span><span><i className="lg lg-i" /> Amount invested</span></div>
+      <div className="bt-legend"><span><i className="lg lg-v" /> Portfolio value</span><span><i className="lg lg-i" /> Amount invested</span>{marks.length > 0 && <span><i className="lg lg-m" /> Scheme transfer</span>}</div>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
         <defs><linearGradient id="bt-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2e7d32" stopOpacity="0.22" /><stop offset="100%" stopColor="#2e7d32" stopOpacity="0" /></linearGradient></defs>
         <path d={area} fill="url(#bt-fill)" />
+        {marks.map((t, i) => (<line key={i} x1={X(t)} x2={X(t)} y1={padT - 6} y2={H - padB} stroke="#b08968" strokeWidth="1.2" strokeDasharray="3 3" />))}
         <path d={line("invested")} fill="none" stroke="#a8cfa8" strokeWidth="1.6" strokeDasharray="4 4" />
         <path d={line("value")} fill="none" stroke="#2e7d32" strokeWidth="2.4" strokeLinejoin="round" />
         {hover && (<g><line x1={X(hover.t)} x2={X(hover.t)} y1={padT} y2={H - padB} stroke="#c2dfc2" strokeWidth="1" /><circle cx={X(hover.t)} cy={Yc(hover.value)} r="4" fill="#1b5e20" /><circle cx={X(hover.t)} cy={Yc(hover.invested)} r="3" fill="#a8cfa8" /></g>)}
@@ -472,6 +530,9 @@ function doExport(r, rows, sipDay) {
   const banner = [kpi("Invested", inr(r.invested)), kpi("Final Value", inr(r.finalVal)), kpi("Gain", (r.gain >= 0 ? "+" : "−") + inr(Math.abs(r.gain)).slice(1)), kpi("Abs Return", (r.absRet * 100).toFixed(1) + "%"), kpi("XIRR p.a.", pct(r.xirr))].join("");
   const rowsHTML = rows.map((h) => `<tr><td>${esc(h.name)} <span style="font-size:.55rem;color:#5e8a5e">[${h.kind === "mf" ? "MF" : "SIF"}]</span></td><td style="text-align:left">${esc(strategyLabel(h))}</td><td style="text-align:left">${fmtMon(h.start)}</td><td>${inrShort(h.invested)}</td><td>${inrShort(h.value)}</td><td class="${h.xirr >= 0 ? "pos" : "neg"}">${pct(h.xirr)}</td></tr>`).join("");
   const benchHTML = r.bench ? `<div class="sec">Benchmark Comparison</div><table class="risk-table"><thead><tr><th style="text-align:left">Strategy</th><th>Final Value</th><th>XIRR</th></tr></thead><tbody><tr><td style="text-align:left">Your portfolio</td><td>${inr(r.finalVal)}</td><td class="${r.xirr >= 0 ? "pos" : "neg"}">${pct(r.xirr)}</td></tr><tr><td style="text-align:left">${esc(r.bench.name)} (benchmark)</td><td>${inr(r.bench.value)}</td><td class="${r.bench.xirr >= 0 ? "pos" : "neg"}">${pct(r.bench.xirr)}</td></tr></tbody></table>` : "";
+  const stitchHTML = r.stitched && r.stitched.length
+    ? `<div class="meta" style="margin-top:8px">&#8617; Pre-merger history return-linked: ${r.stitched.map((s) => esc(s.name) + " &larr; " + esc(s.fromName) + " (from " + fmtDate(s.from) + ")").join("; ")}.</div>`
+    : "";
 
   const win = window.open("", "_blank", "width=960,height=760");
   if (!win) return;
@@ -511,6 +572,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 <div class="banner-grid">${banner}</div>
 <div class="sec">Growth — Invested vs Portfolio Value</div>
 <div class="ci">${chartSVG(r.curve)}</div>
+${stitchHTML}
 <div class="sec">Holdings &amp; Per-Fund Strategy</div>
 <table class="risk-table"><thead><tr><th>Holding</th><th style="text-align:left">Strategy</th><th style="text-align:left">Start</th><th>Invested</th><th>Value</th><th>XIRR</th></tr></thead><tbody>${rowsHTML}</tbody></table>
 ${benchHTML}
@@ -647,6 +709,8 @@ const CSS = `
 .bt-bench{border-top:1px dashed var(--border);padding-top:14px;margin-bottom:16px}
 .bt-check{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text2);font-weight:600}
 .bt-check input{width:17px;height:17px;accent-color:var(--g2)}
+.bt-stitch{margin:0 0 14px;padding-top:14px;border-top:1px dashed var(--border)}
+.bt-stitch em{font-style:normal;color:var(--muted);font-weight:500}
 .bt-bench-pick{margin-top:10px}
 .bt-bench-sel{display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:8px 10px;font-size:13px}
 .bt-bench-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -663,6 +727,7 @@ const CSS = `
 .bt-res{grid-column:1 / -1;margin-top:2px;animation:bt-in .4s ease}
 @keyframes bt-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .bt-note{background:var(--warn-bg);border:1px solid #ffcc80;color:#8a4300;border-radius:9px;padding:10px 13px;font-size:13px;margin-bottom:16px}
+.bt-note-ok{background:var(--g-xlight);border-color:var(--g-light);color:var(--g1)}
 .bt-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
 @media(max-width:680px){.bt-kpis{grid-template-columns:repeat(2,1fr)}}
 .bt-kpi{background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:13px}
@@ -677,7 +742,7 @@ const CSS = `
 .bt-chart{margin-bottom:20px}
 .bt-legend{display:flex;gap:18px;font:600 11.5px JetBrains Mono,monospace;color:var(--muted);margin-bottom:8px}
 .bt-legend .lg{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
-.lg-v{background:#2e7d32}.lg-i{background:#a8cfa8}
+.lg-v{background:#2e7d32}.lg-i{background:#a8cfa8}.lg-m{background:#b08968}
 .bt-chart svg{width:100%;height:240px;display:block;background:linear-gradient(#fbfdfb,#f4faf4);border:1px solid var(--border);border-radius:11px}
 .bt-axis{display:flex;justify-content:space-between;font:600 11px JetBrains Mono,monospace;color:var(--muted);margin-top:6px;padding:0 2px}
 .bt-tip{display:inline-flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin-top:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font:600 12px JetBrains Mono,monospace;color:var(--text2)}
