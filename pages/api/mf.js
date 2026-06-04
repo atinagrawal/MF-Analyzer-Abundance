@@ -98,6 +98,20 @@ function captnemoDateToMfapi(d) {
   return `${dd}-${m}-${y}`;
 }
 
+/** Parse AMFI "24-Nov-2016" → epoch ms (authoritative latest date) */
+function parseAmfiDate(d) {
+  const months = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
+  const m = /(\d{1,2})-([A-Za-z]{3})-(\d{4})/.exec(d || '');
+  return m ? Date.UTC(+m[3], months[m[2]] ?? 0, +m[1]) : null;
+}
+
+/** Newest date (epoch ms) from an mfapi-style (newest-first) data array of DD-MM-YYYY */
+function newestMfapiDate(data) {
+  if (!data || !data.length) return null;
+  const [dd, mm, yy] = data[0].date.split('-').map(Number);
+  return Date.UTC(yy, mm - 1, dd);
+}
+
 /** Build mfapi-compatible response from AMFI single entry (latest NAV) */
 function buildLatestFromAmfi(code, fund) {
   return {
@@ -226,19 +240,27 @@ export default async function handler(req, res) {
 
   // ── FULL NAV HISTORY ──
   if (code) {
-    // Try mfapi first
-    try {
-      const r = await fetch(
-        `https://api.mfapi.in/mf/${code}`,
-        { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(4000) }
-      );
-      if (r.ok) {
-        const data = await r.json();
-        return sendOk(res, data, 's-maxage=14400, stale-while-revalidate=86400');
-      }
-    } catch (_) { /* fall through */ }
+    // Try mfapi first (the authoritative source). Retry once and use a generous
+    // timeout: history is not latency-critical, and failing over too eagerly is
+    // dangerous — the ISIN-based fallback below can return a DIFFERENT scheme's
+    // data when an ISIN survived an AMC transfer (e.g. JPMorgan→Edelweiss, where
+    // ISIN INF843K01013 still resolves to the frozen 2007–2016 JPMorgan series).
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const r = await fetch(
+          `https://api.mfapi.in/mf/${code}`,
+          { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12000) }
+        );
+        if (r.ok) {
+          const data = await r.json();
+          if (data && Array.isArray(data.data) && data.data.length) {
+            return sendOk(res, data, 's-maxage=14400, stale-while-revalidate=86400');
+          }
+        }
+      } catch (_) { /* retry, then fall through to fallback */ }
+    }
 
-    // captnemo fallback: need ISIN → fetch from AMFI map first
+    // captnemo fallback (ISIN-based). Guarded against stale/cross-mapped lineage.
     try {
       const amfi = await getAmfiMap();
       const fund = amfi.get(String(code));
@@ -256,13 +278,24 @@ export default async function handler(req, res) {
       if (!capData.historical_nav?.length) throw new Error('captnemo returned empty history');
 
       const data = buildHistoryFromCaptnemo(code, capData);
-      // Shorter cache for fallback — encourage re-checking mfapi when it recovers
+      // Use AMFI's CURRENT name — captnemo may carry the pre-transfer scheme name.
+      data.meta.scheme_name = fund.name;
+
+      // Freshness guard: AMFI knows the fund's true latest NAV date. If the
+      // fallback series ends far earlier, the ISIN is pointing at a predecessor
+      // (pre-transfer) lineage — refuse it rather than serve mislabelled data.
+      const amfiLatest = parseAmfiDate(fund.date);
+      const capLatest  = newestMfapiDate(data.data);
+      if (amfiLatest && capLatest && (amfiLatest - capLatest) > 45 * 24 * 60 * 60 * 1000) {
+        throw new Error(`fallback history for ISIN ${isin} ends ${data.data[0].date}, far behind AMFI's latest — likely a pre-transfer predecessor series; refusing to serve mismatched data`);
+      }
+
       return sendOk(res, data, 's-maxage=3600, stale-while-revalidate=7200');
 
     } catch (e) {
       return sendError(
         res, 502,
-        `NAV history unavailable — mfapi.in is down and fallback failed: ${e.message}`,
+        `NAV history unavailable — mfapi.in is slow/unreachable and the fallback was unsafe: ${e.message}`,
         'UPSTREAM_DOWN'
       );
     }
