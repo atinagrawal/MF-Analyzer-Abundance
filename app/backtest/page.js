@@ -187,18 +187,27 @@ export default function BacktestPage() {
   async function loadSeries(item) {
     const id = item.kind + ":" + item.id;
     if (cache.current[id]) return cache.current[id];
-    let series = [];
+    let series = [], authName = item.name;
     if (item.kind === "mf") {
       const d = await fetch(`/api/mf?code=${item.id}`).then((r) => r.json());
-      if (!d?.data?.length) throw new Error(`No NAV history for ${item.name}`);
+      if (!d?.data?.length) throw new Error(`No NAV history found for "${item.name}". This is usually a discontinued or merged scheme code — please search for the current fund.`);
       series = normSeries(d.data, "mf");
+      // Trust the NAV endpoint's own metadata as the single source of truth for the
+      // scheme name, so the label always matches the series actually being back-tested
+      // (e.g. legacy JPMorgan→Edelweiss codes whose search name and meta can diverge).
+      if (d.meta?.scheme_name) authName = d.meta.scheme_name;
     } else {
       const d = await fetch(`/api/sif-history?sd_id=${encodeURIComponent(item.id)}&from=2024-01-01&to=${toYMD(todayUTC())}`).then((r) => r.json());
       if (!d?.records?.length) throw new Error(`No NAV history for ${item.name}`);
       series = normSeries(d.records, "sif");
     }
     if (series.length < 2) throw new Error(`Not enough NAV history for ${item.name}`);
-    const obj = { series, inception: series[0].t, last: series[series.length - 1].t };
+    const last = series[series.length - 1].t;
+    // Staleness guard: AMFI keeps merged/closed schemes in its master with frozen NAVs
+    // (e.g. JPMorgan India funds stop at 24-Nov-2016 after the Edelweiss transfer).
+    // Back-testing a dead series is meaningless, so reject it with a clear message.
+    if ((todayUTC() - last) / DAY > 30) throw new Error(`"${authName}" looks discontinued or merged — its NAV history ends ${fmtDate(last)} and is no longer updated. Merged/closed scheme codes stay searchable in the AMFI list but freeze. Please pick the current scheme instead.`);
+    const obj = { series, inception: series[0].t, last, name: authName };
     cache.current[id] = obj; return obj;
   }
 
@@ -214,6 +223,8 @@ export default function BacktestPage() {
       const all = [...holdings]; if (benchOn && bench) all.push(bench);
       const loaded = await Promise.all(all.map((h) => loadSeries(h).then((s) => ({ ...h, ...s }))));
       const port = loaded.slice(0, holdings.length);
+      // self-correct each card's label to the authoritative scheme name tied to its NAV series
+      setHoldings((prev) => prev.map((h) => { const m = port.find((p) => p.key === h.key); return m?.name && m.name !== h.name ? { ...h, name: m.name } : h; }));
       const bchk = benchOn && bench ? loaded[loaded.length - 1] : null;
 
       const end = todayUTC();
