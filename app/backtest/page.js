@@ -217,13 +217,18 @@ export default function BacktestPage() {
   /* holdings ops */
   const addHolding = (item) => {
     if (pickFor === "bench") { setBench({ key: "bench", ...item }); setPicker(false); return; }
-    if (holdings.some((h) => h.kind === item.kind && h.id === item.id)) { setPicker(false); return; }
+    // Duplicates are allowed on purpose — the same fund may be added again as a
+    // separate tranche (different start date / extra lumpsum or SIP). We nudge
+    // subtly in the UI rather than block it.
     setHoldings((p) => [...p, { key: uid(), mode: defaults.mode, monthly: defaults.monthly, lumpsum: defaults.lumpsum, startMode: "default", customStart: "", ...item }]);
     setPicker(false);
   };
   const patch = (key, kv) => setHoldings((p) => p.map((h) => (h.key === key ? { ...h, ...kv } : h)));
   const remove = (key) => setHoldings((p) => p.filter((h) => h.key !== key));
   const applyDefaultsToAll = () => setHoldings((p) => p.map((h) => ({ ...h, mode: defaults.mode, monthly: defaults.monthly, lumpsum: defaults.lumpsum })));
+  const fundKey = (h) => h.kind + ":" + h.id;
+  const dupCounts = holdings.reduce((m, h) => { const k = fundKey(h); m[k] = (m[k] || 0) + 1; return m; }, {});
+  const hasDupes = Object.values(dupCounts).some((n) => n > 1);
 
   /* data */
   async function loadSeries(item) {
@@ -313,13 +318,16 @@ export default function BacktestPage() {
             )}
 
             <div className="bt-holdings">
-              {holdings.map((h, i) => (
+              {holdings.map((h, i) => {
+                const total = dupCounts[fundKey(h)];
+                const occ = holdings.slice(0, i).filter((x) => fundKey(x) === fundKey(h)).length + 1;
+                return (
                 <div className="bt-hold" key={h.key}>
                   <div className="bt-hold-top">
                     <span className="bt-dot" style={{ background: PALETTE[i % PALETTE.length] }} />
                     <div className="bt-hold-main">
                       <div className="bt-hold-name">{h.name}</div>
-                      <div className="bt-hold-tag"><span className={`bt-kind bt-kind-${h.kind}`}>{h.kind === "mf" ? "Mutual Fund" : "SIF"}</span>{h.cat && <span className="bt-cat">{h.cat}</span>}</div>
+                      <div className="bt-hold-tag"><span className={`bt-kind bt-kind-${h.kind}`}>{h.kind === "mf" ? "Mutual Fund" : "SIF"}</span>{total > 1 && <span className="bt-tranche">tranche {occ} of {total}</span>}{h.cat && <span className="bt-cat">{h.cat}</span>}</div>
                     </div>
                     <button className="bt-x" onClick={() => remove(h.key)} aria-label="Remove">×</button>
                   </div>
@@ -347,8 +355,10 @@ export default function BacktestPage() {
                     </label>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
+            {hasDupes && <div className="bt-duptip">ⓘ Same fund added more than once — that's fine for staggered tranches (e.g. a later lumpsum or a second SIP). Totals combine across them.</div>}
 
             {/* defaults strip + add */}
             <div className="bt-defaults">
@@ -450,11 +460,11 @@ function Results({ r, sipDay }) {
       )}
 
       <div className="bt-kpis">
-        <Kpi label="Invested" val={inr(r.invested)} />
-        <Kpi label="Final value" val={inr(r.finalVal)} accent />
-        <Kpi label="Gain" val={(gainPos ? "+" : "−") + inr(Math.abs(r.gain)).slice(1)} sign={gainPos ? "pos" : "neg"} />
-        <Kpi label="Absolute return" val={(r.absRet >= 0 ? "+" : "") + (r.absRet * 100).toFixed(1) + "%"} sign={r.absRet >= 0 ? "pos" : "neg"} />
-        <Kpi label="XIRR (p.a.)" val={pct(r.xirr)} sign={r.xirr >= 0 ? "pos" : "neg"} hint="money-weighted annualised" />
+        <Kpi label="Invested"><CountUp value={r.invested} format={inr} /></Kpi>
+        <Kpi label="Final value" accent><CountUp value={r.finalVal} format={inr} /></Kpi>
+        <Kpi label="Gain" sign={gainPos ? "pos" : "neg"}><CountUp value={r.gain} format={(n) => (n >= 0 ? "+" : "−") + inr(Math.abs(n)).slice(1)} /></Kpi>
+        <Kpi label="Absolute return" sign={r.absRet >= 0 ? "pos" : "neg"}><CountUp value={r.absRet * 100} format={(n) => (n >= 0 ? "+" : "") + n.toFixed(1) + "%"} /></Kpi>
+        <Kpi label="XIRR (p.a.)" sign={r.xirr >= 0 ? "pos" : "neg"} hint="money-weighted annualised">{r.xirr == null ? "—" : <CountUp value={r.xirr * 100} format={(n) => n.toFixed(2) + "%"} />}</Kpi>
       </div>
 
       <Chart curve={r.curve} splices={r.splices} />
@@ -488,8 +498,23 @@ function Results({ r, sipDay }) {
     </section>
   );
 }
-function Kpi({ label, val, sign, accent, hint }) {
-  return (<div className={`bt-kpi ${accent ? "accent" : ""}`}><div className="bt-kpi-l">{label}</div><div className={`bt-kpi-v ${sign || ""}`}>{val}</div>{hint && <div className="bt-kpi-h">{hint}</div>}</div>);
+function Kpi({ label, val, sign, accent, hint, children }) {
+  return (<div className={`bt-kpi ${accent ? "accent" : ""}`}><div className="bt-kpi-l">{label}</div><div className={`bt-kpi-v ${sign || ""}`}>{children ?? val}</div>{hint && <div className="bt-kpi-h">{hint}</div>}</div>);
+}
+
+// Eased count-up for headline numbers (respects reduced-motion).
+function CountUp({ value, format, duration = 950 }) {
+  const [v, setV] = useState(value);
+  const raf = useRef();
+  useEffect(() => {
+    const reduce = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || !isFinite(value)) { setV(value); return; }
+    const start = performance.now(); const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const tick = (now) => { const p = Math.min(1, (now - start) / duration); setV(value * ease(p)); if (p < 1) raf.current = requestAnimationFrame(tick); };
+    setV(0); raf.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf.current);
+  }, [value, duration]);
+  return <>{format(v)}</>;
 }
 
 /* ===================== CHART ===================== */
@@ -510,10 +535,10 @@ function Chart({ curve, splices = [] }) {
       <div className="bt-legend"><span><i className="lg lg-v" /> Portfolio value</span><span><i className="lg lg-i" /> Amount invested</span>{marks.length > 0 && <span><i className="lg lg-m" /> Scheme transfer</span>}</div>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
         <defs><linearGradient id="bt-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2e7d32" stopOpacity="0.22" /><stop offset="100%" stopColor="#2e7d32" stopOpacity="0" /></linearGradient></defs>
-        <path d={area} fill="url(#bt-fill)" />
+        <path d={area} fill="url(#bt-fill)" className="bt-area" />
         {marks.map((t, i) => (<line key={i} x1={X(t)} x2={X(t)} y1={padT - 6} y2={H - padB} stroke="#b08968" strokeWidth="1.2" strokeDasharray="3 3" />))}
         <path d={line("invested")} fill="none" stroke="#a8cfa8" strokeWidth="1.6" strokeDasharray="4 4" />
-        <path d={line("value")} fill="none" stroke="#2e7d32" strokeWidth="2.4" strokeLinejoin="round" />
+        <path d={line("value")} pathLength="1" className="bt-vline" fill="none" stroke="#2e7d32" strokeWidth="2.4" strokeLinejoin="round" />
         {hover && (<g><line x1={X(hover.t)} x2={X(hover.t)} y1={padT} y2={H - padB} stroke="#c2dfc2" strokeWidth="1" /><circle cx={X(hover.t)} cy={Yc(hover.value)} r="4" fill="#1b5e20" /><circle cx={X(hover.t)} cy={Yc(hover.invested)} r="3" fill="#a8cfa8" /></g>)}
       </svg>
       <div className="bt-axis"><span>{fmtMon(minX)}</span><span>{fmtMon(maxX)}</span></div>
@@ -786,4 +811,47 @@ const CSS = `
 .bt-add{font:600 11px JetBrains Mono,monospace;color:var(--g2);background:var(--g-xlight);padding:5px 10px;border-radius:7px;flex:none}
 .bt-hint{padding:18px 12px;text-align:center;color:var(--muted);font-size:13px}
 .bt-modal-f{padding:11px 18px;background:var(--warn-bg);color:#8a4300;font-size:11.5px;border-top:1px solid #ffe0b2}
+
+/* ---- duplicate-tranche cues ---- */
+.bt-tranche{font:600 10px JetBrains Mono,monospace;color:var(--warn);background:var(--warn-bg);border:1px solid #ffcc80;padding:2px 7px;border-radius:5px;letter-spacing:.02em}
+.bt-duptip{margin-top:-2px;margin-bottom:12px;font-size:11.5px;color:var(--muted);line-height:1.5}
+
+/* ---- motion / micro-interactions ---- */
+.bt-card{transition:box-shadow .2s ease,transform .2s ease}
+.bt-hold{animation:bt-cardin .34s cubic-bezier(.2,.7,.3,1) both;transition:box-shadow .18s ease}
+.bt-hold:hover{box-shadow:0 3px 14px #2e7d3218}
+.bt-kpi{transition:transform .18s ease,box-shadow .18s ease}
+.bt-kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.bt-kpis .bt-kpi{animation:bt-rise .5s ease backwards}
+.bt-kpis .bt-kpi:nth-child(1){animation-delay:.04s}
+.bt-kpis .bt-kpi:nth-child(2){animation-delay:.10s}
+.bt-kpis .bt-kpi:nth-child(3){animation-delay:.16s}
+.bt-kpis .bt-kpi:nth-child(4){animation-delay:.22s}
+.bt-kpis .bt-kpi:nth-child(5){animation-delay:.28s}
+.bt-table tbody tr{animation:bt-rise .42s ease backwards}
+.bt-table tbody tr:nth-child(1){animation-delay:.05s}
+.bt-table tbody tr:nth-child(2){animation-delay:.10s}
+.bt-table tbody tr:nth-child(3){animation-delay:.15s}
+.bt-table tbody tr:nth-child(4){animation-delay:.20s}
+.bt-table tbody tr:nth-child(5){animation-delay:.25s}
+.bt-table tbody tr:nth-child(n+6){animation-delay:.30s}
+.bt-kpi-v{font-variant-numeric:tabular-nums}
+.bt-vline{stroke-dasharray:1;stroke-dashoffset:1;animation:bt-draw 1.15s cubic-bezier(.4,0,.2,1) .15s forwards}
+.bt-area{opacity:0;animation:bt-fade .9s ease .5s forwards}
+.bt-run{transition:background .15s ease,transform .12s ease}
+.bt-run:active:not(:disabled){transform:scale(.985)}
+.bt-pdf{transition:background .15s ease,transform .12s ease}
+.bt-pdf:active{transform:scale(.96)}
+.bt-step.done{animation:bt-pop .4s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes bt-cardin{from{opacity:0;transform:translateY(6px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes bt-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes bt-draw{to{stroke-dashoffset:0}}
+@keyframes bt-fade{to{opacity:1}}
+@keyframes bt-pop{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion: reduce){
+  .bt-hold,.bt-kpis .bt-kpi,.bt-table tbody tr,.bt-res,.bt-step.done{animation:none!important}
+  .bt-vline{stroke-dasharray:none;stroke-dashoffset:0;animation:none}
+  .bt-area{opacity:1;animation:none}
+  .bt-kpi:hover{transform:none}
+}
 `;
