@@ -29,6 +29,7 @@ const NAV_TOOLS = [
   { key: 'report',       label: '📋 Report Card',     href: '/report' },
   { key: 'geography',    label: '🗺 Geography',       href: '/geography' },
   { key: 'rolling',      label: '📉 Rolling Returns', href: '/rolling' },
+  { key: 'backtest',     label: '🧪 Backtester',      href: '/backtest' },
   { key: 'indices',      label: '📊 Index Dashboard', href: '/indices' },
   { key: 'pms-screener', label: '🏆 PMS Screener',   href: '/pms-screener' },
   { key: 'contact',      label: '📞 Contact',         href: 'https://www.getabundance.in/contact-us', external: true },
