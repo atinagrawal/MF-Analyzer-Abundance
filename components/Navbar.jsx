@@ -47,32 +47,38 @@ const NAV_ITEMS = [...NAV_PRIMARY, ...NAV_TOOLS];
  * ──────────────────────────────────────────────────────────────────────── */
 const DESKTOP_NAV_CSS = `
 @media (min-width:1101px){
-  /* tighter, evenly-spaced two tiers, flush to the right edge */
-  .navbar .nav-two-row{ gap:6px; align-items:flex-end; }
-  .navbar .nav-row{ gap:6px; }
+  /* keep clear space between the logo and the nav block */
+  .navbar{ gap:20px; }
+
+  /* two tiers, flush right; can shrink (min-width:0) so it never pushes the logo */
+  .navbar .nav-two-row{ gap:6px; align-items:flex-end; min-width:0; flex:1 1 auto; }
+
+  /* CRITICAL: rows WRAP (right-aligned) instead of overflowing left under the logo.
+     Each tier wraps within itself, so primary items stay grouped above tools. */
+  .navbar .nav-row{ gap:5px; flex-wrap:wrap; justify-content:flex-end; }
   .navbar .nav-row-tools{ gap:5px; }
 
-  /* PRIMARY tier — one consistent pill family */
+  /* PRIMARY tier — one consistent pill family (sized to fit a single row at common widths) */
   .navbar .nav-row-primary .nav-link{
-    font-size:.74rem; font-weight:700; padding:8px 14px;
-    border-radius:10px; line-height:1.1; letter-spacing:0; white-space:nowrap;
+    font-size:.7rem; font-weight:700; padding:6px 11px;
+    border-radius:9px; line-height:1.1; letter-spacing:0; white-space:nowrap;
   }
   /* active primary item: a filled pill that matches the links —
      drops the old UPPERCASE / letter-spaced "tag" look that clashed */
   .navbar .nav-row-primary .nav-tag{
-    font-size:.74rem !important; font-weight:800; padding:8px 14px !important;
-    border-radius:10px; line-height:1.1; text-transform:none !important;
+    font-size:.7rem !important; font-weight:800; padding:6px 11px !important;
+    border-radius:9px; line-height:1.1; text-transform:none !important;
     letter-spacing:0 !important; white-space:nowrap;
   }
 
-  /* TOOLS tier — lighter, clearly secondary, but sized in the same family */
+  /* TOOLS tier — lighter, clearly secondary, same family */
   .navbar .nav-row-tools .nav-link-sm{
-    font-size:.66rem; font-weight:600; padding:5px 11px;
-    border-radius:8px; line-height:1.1; white-space:nowrap;
+    font-size:.63rem; font-weight:600; padding:4px 9px;
+    border-radius:7px; line-height:1.1; white-space:nowrap;
   }
   .navbar .nav-row-tools .nav-tag-sm{
-    font-size:.66rem; font-weight:800; padding:5px 11px;
-    border-radius:8px; line-height:1.1; white-space:nowrap;
+    font-size:.63rem; font-weight:800; padding:4px 9px;
+    border-radius:7px; line-height:1.1; white-space:nowrap;
   }
 
   /* gentle hover lift, theme-agnostic */
