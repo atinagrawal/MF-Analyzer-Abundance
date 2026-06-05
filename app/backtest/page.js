@@ -63,7 +63,7 @@ function monthlyGrid(start, end) {
 }
 
 // per-fund plan: each holding carries its own mode/amounts/start
-function planBuys(h, sipDay, defaultStart, end) {
+function planBuys(h, sipDay, defaultStart, end, stepUp = 0) {
   const incep = h.series[0].t;
   let want = (h.startMode === "custom" && h.customStart) ? pYMD(h.customStart) : defaultStart;
   let clamped = false;
@@ -72,14 +72,21 @@ function planBuys(h, sipDay, defaultStart, end) {
   if (!f0 || f0.t > end) return { effStart: f0 ? f0.t : want, incep, clamped, noInvest: true, buys: [] };
   const start = f0.t, buys = [];
   if (h.mode === "lumpsum" || h.mode === "combo") buys.push({ t: start, amt: +h.lumpsum || 0 });
-  if (h.mode === "sip" || h.mode === "combo") sipDates(start, end, sipDay).forEach((t) => buys.push({ t, amt: +h.monthly || 0 }));
+  if (h.mode === "sip" || h.mode === "combo") {
+    const base = +h.monthly || 0;
+    sipDates(start, end, sipDay).forEach((t) => {
+      // Annual step-up applies on each SIP anniversary (year 0 = base).
+      const yr = Math.floor((t - start) / Y);
+      buys.push({ t, amt: base * Math.pow(1 + stepUp, yr) });
+    });
+  }
   return { effStart: start, incep, clamped, noInvest: false, buys };
 }
 
-function runBacktest({ holdings, sipDay, defaultStart, end, benchmark }) {
+function runBacktest({ holdings, sipDay, defaultStart, end, benchmark, stepUp = 0 }) {
   const pf = {}, flows = [], agg = new Map();
   holdings.forEach((h) => {
-    const plan = planBuys(h, sipDay, defaultStart, end);
+    const plan = planBuys(h, sipDay, defaultStart, end, stepUp);
     const rec = { units: 0, invested: 0, buys: [], start: plan.effStart, clamped: plan.clamped, noInvest: plan.noInvest, mode: h.mode, monthly: +h.monthly || 0, lumpsum: +h.lumpsum || 0 };
     plan.buys.forEach((b) => {
       if (b.amt <= 0) return;
@@ -191,6 +198,71 @@ function stitchSeries(current, pred) {
   return { series: [...head, ...current], spliceDate: cFirst.t, from: pred[0].t };
 }
 
+/* ---------------- shareable portfolio state (URL ?p=) ---------------- */
+function encodeState(s) {
+  try {
+    const json = JSON.stringify(s);
+    const b64 = (typeof window !== "undefined" ? window.btoa : (x) => Buffer.from(x).toString("base64"))(unescape(encodeURIComponent(json)));
+    return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  } catch (e) { return ""; }
+}
+function decodeState(p) {
+  try {
+    const b64 = p.replace(/-/g, "+").replace(/_/g, "/");
+    const json = decodeURIComponent(escape((typeof window !== "undefined" ? window.atob : (x) => Buffer.from(x, "base64").toString())(b64)));
+    return JSON.parse(json);
+  } catch (e) { return null; }
+}
+
+/* ---------------- risk analytics on a blended (allocation-weighted) price index ---------------- */
+// Build a unit-value index (base 100) of the chosen basket, weighted by each fund's
+// share of money invested. Independent of contribution timing — the honest basis for
+// drawdown / volatility / best-worst, the way a factsheet would report them.
+function blendedIndex(funds, winStart, winEnd) {
+  const valid = funds.filter((f) => f.series && f.series.length > 1 && f.weight > 0);
+  if (!valid.length) return [];
+  const wsum = valid.reduce((s, f) => s + f.weight, 0) || 1;
+  let start = Math.max(...valid.map((f) => f.series[0].t));
+  let end = Math.min(...valid.map((f) => f.series[f.series.length - 1].t));
+  if (winStart) start = Math.max(start, winStart);
+  if (winEnd) end = Math.min(end, winEnd);
+  if (!(start < end)) return [];
+  const base = valid.map((f) => asof(f.series, start)?.nav || null);
+  return monthlyGrid(start, end).map((g) => {
+    let idx = 0, ok = false;
+    valid.forEach((f, i) => { const px = asof(f.series, g); if (px && base[i]) { idx += (f.weight / wsum) * (px.nav / base[i]); ok = true; } });
+    return { t: g, v: ok ? idx * 100 : null };
+  }).filter((p) => p.v != null);
+}
+function riskMetrics(index) {
+  if (!index || index.length < 3) return null;
+  const v = index.map((p) => p.v), t = index.map((p) => p.t);
+  const years = (t[t.length - 1] - t[0]) / Y;
+  const cagr = years > 0 ? Math.pow(v[v.length - 1] / v[0], 1 / years) - 1 : null;
+  // monthly returns -> annualised volatility
+  const rets = [];
+  for (let i = 1; i < v.length; i++) rets.push(v[i] / v[i - 1] - 1);
+  const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
+  const variance = rets.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, rets.length - 1);
+  const vol = Math.sqrt(variance) * Math.sqrt(12);
+  // drawdown + underwater series
+  let peak = v[0], peakT = t[0], maxDD = 0, ddTroughT = null, ddPeakT = null, ddPeakV = null, recoverT = null;
+  const under = [];
+  for (let i = 0; i < v.length; i++) {
+    if (v[i] > peak) { peak = v[i]; peakT = t[i]; }
+    const dd = v[i] / peak - 1;
+    under.push({ t: t[i], dd });
+    if (dd < maxDD) { maxDD = dd; ddTroughT = t[i]; ddPeakT = peakT; ddPeakV = peak; }
+  }
+  if (ddTroughT != null) { for (let i = 0; i < v.length; i++) { if (t[i] > ddTroughT && v[i] >= ddPeakV) { recoverT = t[i]; break; } } }
+  // best / worst rolling 1Y (≈12 month-steps)
+  let best1y = null, worst1y = null;
+  if (v.length > 12) {
+    for (let i = 12; i < v.length; i++) { const r = v[i] / v[i - 12] - 1; if (best1y == null || r > best1y) best1y = r; if (worst1y == null || r < worst1y) worst1y = r; }
+  }
+  return { cagr, vol, maxDD, ddPeakT, ddTroughT, recoverT, best1y, worst1y, retPerRisk: vol > 0 && cagr != null ? cagr / vol : null, under, start: t[0], end: t[t.length - 1] };
+}
+
 /* ===================================================================== */
 export default function BacktestPage() {
   const [holdings, setHoldings] = useState([]);
@@ -202,6 +274,7 @@ export default function BacktestPage() {
   const [benchOn, setBenchOn] = useState(false);
   const [bench, setBench] = useState(null);
   const [stitch, setStitch] = useState(true);
+  const [stepUpPct, setStepUpPct] = useState(0);
 
   const [sifList, setSifList] = useState([]);
   const [picker, setPicker] = useState(false);
@@ -210,9 +283,42 @@ export default function BacktestPage() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
   const [err, setErr] = useState("");
+  const [toast, setToast] = useState("");
   const cache = useRef({});
 
   useEffect(() => { fetch("/api/sif-nav").then((r) => r.json()).then((d) => setSifList(d.schemes || [])).catch(() => {}); }, []);
+
+  // Restore a shared portfolio from the URL (?p=)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const p = new URLSearchParams(window.location.search).get("p");
+    if (!p) return;
+    const s = decodeState(p);
+    if (!s || !Array.isArray(s.h)) return;
+    setHoldings(s.h.map((x) => ({ key: uid(), kind: x.k, id: x.i, name: x.n, cat: x.c, mode: x.m || "sip", monthly: x.mo ?? 10000, lumpsum: x.l ?? 100000, startMode: x.sm || "default", customStart: x.cs || "" })));
+    if (s.sd != null) setSipDay(s.sd);
+    if (s.smo) setStartMode(s.smo);
+    if (s.lb != null) setLookback(String(s.lb));
+    if (s.sdt) setStartDate(s.sdt);
+    if (s.su != null) setStepUpPct(s.su);
+    if (s.st != null) setStitch(!!s.st);
+    if (s.bo && s.b) { setBenchOn(true); setBench({ key: "bench", kind: s.b.k, id: s.b.i, name: s.b.n }); }
+  }, []);
+
+  const buildShareState = () => ({
+    v: 1,
+    h: holdings.map((h) => ({ k: h.kind, i: h.id, n: h.name, c: h.cat, m: h.mode, mo: h.monthly, l: h.lumpsum, sm: h.startMode, cs: h.customStart })),
+    sd: sipDay, smo: startMode, lb: lookback, sdt: startDate, su: stepUpPct, st: stitch ? 1 : 0,
+    bo: benchOn ? 1 : 0, b: bench ? { k: bench.kind, i: bench.id, n: bench.name } : null,
+  });
+  const shareUrl = () => (typeof window === "undefined" ? "" : `${window.location.origin}/backtest?p=${encodeState(buildShareState())}`);
+  const flashToast = (m) => { setToast(m); setTimeout(() => setToast(""), 2400); };
+  const onShare = async () => {
+    const url = shareUrl();
+    try { window.history.replaceState(null, "", `/backtest?p=${encodeState(buildShareState())}`); } catch (e) {}
+    try { await navigator.clipboard.writeText(url); flashToast("Shareable link copied to clipboard"); }
+    catch (e) { flashToast("Link ready in the address bar"); }
+  };
 
   /* holdings ops */
   const addHolding = (item) => {
@@ -288,10 +394,11 @@ export default function BacktestPage() {
       else if (lookback === "max") defaultStart = 0;
       else defaultStart = end - parseInt(lookback, 10) * Y;
 
-      const res = runBacktest({ holdings: port, sipDay, defaultStart, end, benchmark: bchk });
+      const res = runBacktest({ holdings: port, sipDay, defaultStart, end, benchmark: bchk, stepUp: (stepUpPct || 0) / 100 });
       if (res.invested <= 0) throw new Error("No investments could be placed in the selected window. Check your start dates against each fund's launch date.");
       const stitched = port.filter((p) => p.stitch).map((p) => ({ name: p.name, ...p.stitch }));
       setResult({ ...res, end, port, bench: res.bench, years: (end - res.gridStart) / Y, generatedAt: Date.now(), stitched, splices: [...new Set(stitched.map((s) => s.spliceDate))] });
+      try { window.history.replaceState(null, "", `/backtest?p=${encodeState(buildShareState())}`); } catch (e) {}
     } catch (e) { setErr(e.message || "Something went wrong."); }
     finally { setRunning(false); }
   }
@@ -401,6 +508,10 @@ export default function BacktestPage() {
                 <span>SIP date</span>
                 <div className="bt-inp"><select value={sipDay} onChange={(e) => setSipDay(+e.target.value)}>{[1, 5, 10, 15, 20, 25].map((d) => <option key={d} value={d}>{d}{d === 1 ? "st" : "th"} of month</option>)}</select></div>
               </label>
+              <label className="bt-field bt-field-sm">
+                <span>SIP step-up <em>(per year)</em></span>
+                <div className="bt-inp"><select value={stepUpPct} onChange={(e) => setStepUpPct(+e.target.value)}>{[0, 5, 10, 15, 20].map((d) => <option key={d} value={d}>{d === 0 ? "None" : d + "% a year"}</option>)}</select></div>
+              </label>
             </div>
             <label className="bt-check bt-stitch"><input type="checkbox" checked={stitch} onChange={(e) => setStitch(e.target.checked)} /><span>Include pre-merger history where available <em>(e.g. JPMorgan → Edelweiss, return-linked)</em></span></label>
             <div className="bt-bench">
@@ -421,7 +532,7 @@ export default function BacktestPage() {
           </section>
         </div>
 
-        {result && <Results r={result} sipDay={sipDay} />}
+        {result && <Results r={result} sipDay={sipDay} onShare={onShare} shareUrl={shareUrl} />}
 
         <FAQ />
 
@@ -433,16 +544,18 @@ export default function BacktestPage() {
 
       <Footer activePage="backtest" />
       {picker && <Picker sifList={sifList} onPick={addHolding} onClose={() => setPicker(false)} mode={pickFor} />}
+      {toast && <div className="bt-toast">{toast}</div>}
     </>
   );
 }
 
 /* ===================== RESULTS ===================== */
-function Results({ r, sipDay }) {
+function Results({ r, sipDay, onShare, shareUrl }) {
   const gainPos = r.gain >= 0;
   const [detail, setDetail] = useState(null);
   const rows = r.port.map((h, i) => ({ ...h, ...r.perFund[h.key], color: PALETTE[i % PALETTE.length], share: r.finalVal ? (r.perFund[h.key].value / r.finalVal) * 100 : 0 })).sort((a, b) => b.value - a.value);
   const clampedAny = rows.filter((h) => h.clamped);
+  const risk = useMemo(() => riskMetrics(blendedIndex(r.port.map((h) => ({ series: h.series, weight: r.perFund[h.key].invested })), r.gridStart, r.end)), [r]);
 
   const exportPDF = () => doExport(r, rows, sipDay);
 
@@ -451,6 +564,7 @@ function Results({ r, sipDay }) {
       <div className="bt-card-h">
         <span className="bt-step done">✓</span><h2>Results</h2>
         <span className="bt-period">{fmtDate(r.gridStart)} → {fmtDate(r.end)} · {r.years.toFixed(1)} yrs</span>
+        <button className="bt-pdf bt-share" onClick={onShare}>⤴ Share</button>
         <button className="bt-pdf" onClick={exportPDF}>⤓ Export PDF</button>
       </div>
 
@@ -471,6 +585,8 @@ function Results({ r, sipDay }) {
       </div>
 
       <Chart curve={r.curve} splices={r.splices} />
+
+      {risk && <RiskPanel m={risk} />}
 
       {r.bench && (
         <div className="bt-compare">
@@ -500,8 +616,65 @@ function Results({ r, sipDay }) {
         <div className="bt-tap-hint">Tap any holding to see its own performance →</div>
       </div>
 
+      <div className="bt-cta">
+        <div className="bt-cta-txt">
+          <div className="bt-cta-h">Turn this into a real plan</div>
+          <p>Get this portfolio reviewed by Abundance — we’ll factor in your goals, risk and taxes. No obligation.</p>
+        </div>
+        <a className="bt-cta-btn" target="_blank" rel="noopener noreferrer"
+          href={`https://wa.me/919808105923?text=${encodeURIComponent(
+            `Hi Abundance, I built a portfolio backtest on MFCalc:\n` +
+            `• ${r.port.length} holding(s), ${r.years.toFixed(1)} yrs\n` +
+            `• Invested ${inr(r.invested)} → Value ${inr(r.finalVal)} (XIRR ${pct(r.xirr)})\n` +
+            `I'd like a review. Here's the link:\n${shareUrl ? shareUrl() : ""}`
+          )}`}>
+          <span className="bt-wa">✆</span> Review on WhatsApp
+        </a>
+      </div>
+
       {detail && <FundDetail row={detail} end={r.end} onClose={() => setDetail(null)} />}
     </section>
+  );
+}
+
+/* ===================== RISK / DRAWDOWN PANEL ===================== */
+function RiskPanel({ m }) {
+  const recov = m.recoverT ? `${Math.round((m.recoverT - m.ddTroughT) / DAY / 30.4)} mo to recover` : "not yet recovered";
+  return (
+    <div className="bt-risk">
+      <div className="bt-risk-h">Risk &amp; drawdown <em>· allocation-weighted basket, month-end basis</em></div>
+      <div className="bt-risk-kpis">
+        <div className="bt-rk"><span>Max drawdown</span><b className="neg">{(m.maxDD * 100).toFixed(1)}%</b><i>{m.ddPeakT ? `${fmtMon(m.ddPeakT)} → ${fmtMon(m.ddTroughT)}` : ""}</i></div>
+        <div className="bt-rk"><span>Volatility p.a.</span><b>{(m.vol * 100).toFixed(1)}%</b><i>annualised</i></div>
+        <div className="bt-rk"><span>Best 1-yr</span><b className="pos">{m.best1y == null ? "—" : "+" + (m.best1y * 100).toFixed(1) + "%"}</b><i>rolling</i></div>
+        <div className="bt-rk"><span>Worst 1-yr</span><b className={m.worst1y < 0 ? "neg" : "pos"}>{m.worst1y == null ? "—" : (m.worst1y >= 0 ? "+" : "") + (m.worst1y * 100).toFixed(1) + "%"}</b><i>rolling</i></div>
+        <div className="bt-rk"><span>Return / risk</span><b>{m.retPerRisk == null ? "—" : m.retPerRisk.toFixed(2)}</b><i>CAGR ÷ vol</i></div>
+      </div>
+      <Underwater under={m.under} recovLabel={recov} />
+    </div>
+  );
+}
+function Underwater({ under, recovLabel }) {
+  const [hover, setHover] = useState(null);
+  const W = 720, H = 96, padX = 6, padB = 4;
+  const data = under.filter((d) => isFinite(d.dd)); if (data.length < 2) return null;
+  const xs = data.map((d) => d.t), minX = xs[0], maxX = xs[xs.length - 1];
+  const minDD = Math.min(...data.map((d) => d.dd), -0.0001);
+  const X = (t) => padX + ((t - minX) / (maxX - minX || 1)) * (W - padX * 2);
+  const Yc = (d) => (d / minDD) * (H - padB); // 0 at top, deepest at bottom
+  const path = data.map((d, i) => `${i ? "L" : "M"}${X(d.t).toFixed(1)},${Yc(d.dd).toFixed(1)}`).join(" ");
+  const area = `${path} L${X(maxX).toFixed(1)},0 L${X(minX).toFixed(1)},0 Z`;
+  const locate = (e) => { const svg = e.currentTarget; const rect = svg.getBoundingClientRect(); const px = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)) * W; let best = data[0], bd = Infinity; for (const d of data) { const dd = Math.abs(X(d.t) - px); if (dd < bd) { bd = dd; best = d; } } setHover(best); };
+  return (
+    <div className="bt-uw">
+      <div className="bt-uw-lbl"><span>Underwater (drawdown from peak)</span><span className="bt-uw-recov">{recovLabel}</span></div>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" onPointerMove={locate} onPointerDown={locate} onPointerLeave={() => setHover(null)}>
+        <path d={area} fill="#ef535022" />
+        <path d={path} fill="none" stroke="#b71c1c" strokeWidth="1.6" />
+        {hover && (<g><line x1={X(hover.t)} x2={X(hover.t)} y1={0} y2={H} stroke="#ef9a9a" strokeWidth="1" strokeDasharray="3 3" /><circle cx={X(hover.t)} cy={Yc(hover.dd)} r="3.5" fill="#b71c1c" /></g>)}
+      </svg>
+      {hover && <div className="bt-uw-tip">{fmtMon(hover.t)} · <b className="neg">{(hover.dd * 100).toFixed(1)}%</b></div>}
+    </div>
   );
 }
 function Kpi({ label, val, sign, accent, hint, children }) {
@@ -1059,4 +1232,33 @@ const CSS = `
 }
 .bt-chart svg{height:240px}
 @media(max-width:560px){.bt-chart svg{height:200px}}
+
+/* ---- share button + toast ---- */
+.bt-share{color:var(--g1)}
+.bt-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--g1);color:#fff;font:600 13px Raleway,sans-serif;padding:11px 18px;border-radius:10px;box-shadow:var(--shadow-lg);z-index:120;animation:bt-toastin .25s ease}
+@keyframes bt-toastin{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* ---- risk / drawdown ---- */
+.bt-risk{border:1px solid var(--border);border-radius:12px;padding:15px 16px;margin-bottom:20px;background:linear-gradient(180deg,#fbfdfb,#f4faf4)}
+.bt-risk-h{font:600 11px JetBrains Mono,monospace;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.bt-risk-h em{font-style:normal;text-transform:none;letter-spacing:0;color:var(--muted);font-weight:500}
+.bt-risk-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:14px}
+@media(max-width:680px){.bt-risk-kpis{grid-template-columns:repeat(2,1fr)}}
+.bt-rk{background:#fff;border:1px solid var(--border);border-radius:9px;padding:9px 11px;display:flex;flex-direction:column;gap:2px}
+.bt-rk span{font:600 9.5px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.bt-rk b{font:800 17px JetBrains Mono,monospace;color:var(--text)}
+.bt-rk i{font:500 9.5px JetBrains Mono,monospace;color:var(--muted);font-style:normal}
+.bt-uw-lbl{display:flex;justify-content:space-between;font:600 10.5px JetBrains Mono,monospace;color:var(--muted);margin-bottom:5px}
+.bt-uw-recov{color:var(--neg)}
+.bt-uw svg{width:100%;height:90px;display:block;background:#fff;border:1px solid var(--border);border-radius:8px;touch-action:none;cursor:crosshair}
+.bt-uw-tip{font:600 11px JetBrains Mono,monospace;color:var(--text2);margin-top:5px}
+
+/* ---- advisory CTA ---- */
+.bt-cta{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:20px;background:linear-gradient(120deg,var(--g1),var(--g2));border-radius:14px;padding:18px 20px}
+.bt-cta-h{font-size:16px;font-weight:800;color:#fff;margin-bottom:3px}
+.bt-cta-txt p{margin:0;font-size:12.5px;color:#d6ead7;line-height:1.5;max-width:430px}
+.bt-cta-btn{display:inline-flex;align-items:center;gap:9px;background:#fff;color:var(--g1);font:800 14px Raleway,sans-serif;padding:12px 20px;border-radius:10px;text-decoration:none;white-space:nowrap;transition:transform .12s ease,box-shadow .15s ease;box-shadow:0 2px 10px #00000025}
+.bt-cta-btn:hover{transform:translateY(-1px);box-shadow:0 5px 16px #00000033}
+.bt-wa{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#25d366;color:#fff;font-size:13px}
+@media(max-width:560px){.bt-cta{flex-direction:column;align-items:stretch}.bt-cta-btn{justify-content:center}}
 `;
