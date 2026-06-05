@@ -423,6 +423,8 @@ export default function BacktestPage() {
 
         {result && <Results r={result} sipDay={sipDay} />}
 
+        <FAQ />
+
         <div className="bt-disc">
           <strong>Important:</strong> This is a <b>hypothetical, back-tested illustration</b> built from historical NAVs for education only — it is <b>not investment advice</b> and not a recommendation of any scheme. <b>Past performance is not indicative of future results.</b> Mutual fund investments are subject to market risks; read all scheme-related documents carefully. SIFs are a newer, higher-risk category with limited live history, so their back-tests cover short periods only. Figures exclude exit loads, stamp duty, STT, expense-ratio changes and taxes, and execute each instalment at the next available trading-day NAV.
           <div className="bt-arn">Abundance Financial Services® · ARN-251838 · EUIN: E334718 · AMFI-Registered Mutual Fund &amp; SIF Distributor</div>
@@ -438,7 +440,8 @@ export default function BacktestPage() {
 /* ===================== RESULTS ===================== */
 function Results({ r, sipDay }) {
   const gainPos = r.gain >= 0;
-  const rows = r.port.map((h, i) => ({ ...h, ...r.perFund[h.key], color: PALETTE[i % PALETTE.length] })).sort((a, b) => b.value - a.value);
+  const [detail, setDetail] = useState(null);
+  const rows = r.port.map((h, i) => ({ ...h, ...r.perFund[h.key], color: PALETTE[i % PALETTE.length], share: r.finalVal ? (r.perFund[h.key].value / r.finalVal) * 100 : 0 })).sort((a, b) => b.value - a.value);
   const clampedAny = rows.filter((h) => h.clamped);
 
   const exportPDF = () => doExport(r, rows, sipDay);
@@ -483,8 +486,8 @@ function Results({ r, sipDay }) {
           <thead><tr><th>Holding</th><th>Strategy</th><th>Start</th><th>Invested</th><th>Value</th><th>XIRR</th></tr></thead>
           <tbody>
             {rows.map((h) => (
-              <tr key={h.key}>
-                <td><span className="bt-dot sm" style={{ background: h.color }} />{h.name}<span className={`bt-kind bt-kind-${h.kind} mini`}>{h.kind === "mf" ? "MF" : "SIF"}</span></td>
+              <tr key={h.key} className="bt-trow" onClick={() => setDetail(h)}>
+                <td><button className="bt-fundlink" onClick={(e) => { e.stopPropagation(); setDetail(h); }}><span className="bt-dot sm" style={{ background: h.color }} />{h.name}<span className={`bt-kind bt-kind-${h.kind} mini`}>{h.kind === "mf" ? "MF" : "SIF"}</span><span className="bt-chev">›</span></button></td>
                 <td className="bt-l">{strategyLabel(h)}</td>
                 <td className="bt-l">{fmtMon(h.start)}</td>
                 <td>{inrShort(h.invested)}</td>
@@ -494,7 +497,10 @@ function Results({ r, sipDay }) {
             ))}
           </tbody>
         </table>
+        <div className="bt-tap-hint">Tap any holding to see its own performance →</div>
       </div>
+
+      {detail && <FundDetail row={detail} end={r.end} onClose={() => setDetail(null)} />}
     </section>
   );
 }
@@ -518,9 +524,10 @@ function CountUp({ value, format, duration = 950 }) {
 }
 
 /* ===================== CHART ===================== */
-function Chart({ curve, splices = [] }) {
+function Chart({ curve, splices = [], height = 260, gid = "p", valueLabel = "Portfolio value" }) {
   const [hover, setHover] = useState(null);
-  const W = 720, H = 260, padX = 8, padT = 16, padB = 26;
+  const wrapRef = useRef(null);
+  const W = 720, H = height, padX = 8, padT = 16, padB = 26;
   const data = curve.filter((c) => isFinite(c.value)); if (data.length < 2) return null;
   const xs = data.map((d) => d.t), minX = xs[0], maxX = xs[xs.length - 1];
   const maxV = Math.max(...data.map((d) => Math.max(d.value, d.invested)), 1);
@@ -529,20 +536,110 @@ function Chart({ curve, splices = [] }) {
   const line = (k) => data.map((d, i) => `${i ? "L" : "M"}${X(d.t).toFixed(1)},${Yc(d[k]).toFixed(1)}`).join(" ");
   const area = `${line("value")} L${X(maxX).toFixed(1)},${Yc(0).toFixed(1)} L${X(minX).toFixed(1)},${Yc(0).toFixed(1)} Z`;
   const marks = (splices || []).filter((t) => t > minX && t < maxX);
-  const onMove = (e) => { const rect = e.currentTarget.getBoundingClientRect(); const px = ((e.clientX - rect.left) / rect.width) * W; let best = data[0], bd = Infinity; data.forEach((d) => { const dd = Math.abs(X(d.t) - px); if (dd < bd) { bd = dd; best = d; } }); setHover(best); };
+
+  // Scrub: works for mouse AND touch (Pointer Events). touch-action:none lets a
+  // finger trace the line instead of scrolling the page.
+  const locate = (clientX) => {
+    const svg = wrapRef.current?.querySelector("svg"); if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const px = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width)) * W;
+    let best = data[0], bd = Infinity;
+    for (const d of data) { const dd = Math.abs(X(d.t) - px); if (dd < bd) { bd = dd; best = d; } }
+    setHover(best);
+  };
+  const onMove = (e) => locate(e.clientX);
+
+  let tip = null;
+  if (hover) {
+    const leftPct = Math.min(90, Math.max(10, (X(hover.t) / W) * 100));
+    const topPct = Math.min(78, Math.max(4, (Yc(hover.value) / H) * 100));
+    tip = { leftPct, topPct, gain: hover.value - hover.invested };
+  }
+
   return (
-    <div className="bt-chart">
-      <div className="bt-legend"><span><i className="lg lg-v" /> Portfolio value</span><span><i className="lg lg-i" /> Amount invested</span>{marks.length > 0 && <span><i className="lg lg-m" /> Scheme transfer</span>}</div>
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
-        <defs><linearGradient id="bt-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2e7d32" stopOpacity="0.22" /><stop offset="100%" stopColor="#2e7d32" stopOpacity="0" /></linearGradient></defs>
-        <path d={area} fill="url(#bt-fill)" className="bt-area" />
-        {marks.map((t, i) => (<line key={i} x1={X(t)} x2={X(t)} y1={padT - 6} y2={H - padB} stroke="#b08968" strokeWidth="1.2" strokeDasharray="3 3" />))}
-        <path d={line("invested")} fill="none" stroke="#a8cfa8" strokeWidth="1.6" strokeDasharray="4 4" />
-        <path d={line("value")} pathLength="1" className="bt-vline" fill="none" stroke="#2e7d32" strokeWidth="2.4" strokeLinejoin="round" />
-        {hover && (<g><line x1={X(hover.t)} x2={X(hover.t)} y1={padT} y2={H - padB} stroke="#c2dfc2" strokeWidth="1" /><circle cx={X(hover.t)} cy={Yc(hover.value)} r="4" fill="#1b5e20" /><circle cx={X(hover.t)} cy={Yc(hover.invested)} r="3" fill="#a8cfa8" /></g>)}
-      </svg>
-      <div className="bt-axis"><span>{fmtMon(minX)}</span><span>{fmtMon(maxX)}</span></div>
-      {hover && (<div className="bt-tip"><b>{fmtMon(hover.t)}</b><span>Value <b>{inrShort(hover.value)}</b></span><span>Invested {inrShort(hover.invested)}</span></div>)}
+    <div className="bt-chart" ref={wrapRef}>
+      <div className="bt-legend"><span><i className="lg lg-v" /> {valueLabel}</span><span><i className="lg lg-i" /> Amount invested</span>{marks.length > 0 && <span><i className="lg lg-m" /> Scheme transfer</span>}</div>
+      <div className="bt-plot">
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"
+          onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setHover(null)} onPointerCancel={() => setHover(null)}>
+          <defs><linearGradient id={`bt-fill-${gid}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2e7d32" stopOpacity="0.22" /><stop offset="100%" stopColor="#2e7d32" stopOpacity="0" /></linearGradient></defs>
+          <path d={area} fill={`url(#bt-fill-${gid})`} className="bt-area" />
+          {marks.map((t, i) => (<line key={i} x1={X(t)} x2={X(t)} y1={padT - 6} y2={H - padB} stroke="#b08968" strokeWidth="1.2" strokeDasharray="3 3" />))}
+          <path d={line("invested")} fill="none" stroke="#a8cfa8" strokeWidth="1.6" strokeDasharray="4 4" />
+          <path d={line("value")} pathLength="1" className="bt-vline" fill="none" stroke="#2e7d32" strokeWidth="2.4" strokeLinejoin="round" />
+          {hover && (<g><line x1={X(hover.t)} x2={X(hover.t)} y1={padT} y2={H - padB} stroke="#7cb342" strokeWidth="1" strokeDasharray="3 3" /><circle cx={X(hover.t)} cy={Yc(hover.invested)} r="3.5" fill="#a8cfa8" /><circle cx={X(hover.t)} cy={Yc(hover.value)} r="5" fill="#1b5e20" stroke="#fff" strokeWidth="1.5" /></g>)}
+        </svg>
+        {hover && (
+          <div className="bt-flytip" style={{ left: tip.leftPct + "%", top: tip.topPct + "%" }}>
+            <b className="bt-flytip-d">{fmtDate(hover.t)}</b>
+            <span><i className="lg lg-v" />{valueLabel.split(" ")[0]} <b>{inrShort(hover.value)}</b></span>
+            <span><i className="lg lg-i" />Invested {inrShort(hover.invested)}</span>
+            <span className={tip.gain >= 0 ? "pos" : "neg"}>{(tip.gain >= 0 ? "▲ +" : "▼ −") + inrShort(Math.abs(tip.gain)).slice(1)}</span>
+          </div>
+        )}
+      </div>
+      <div className="bt-axis"><span>{fmtMon(minX)}</span><span className="bt-axis-hint">drag / hover to trace</span><span>{fmtMon(maxX)}</span></div>
+    </div>
+  );
+}
+
+// Per-fund invested-vs-value curve (for the fund detail view), from its own buys + NAV series
+function buildFundCurve(buys, series, start, end) {
+  if (!series || !series.length) return [];
+  return monthlyGrid(start, end).map((g) => {
+    const units = buys.reduce((s, b) => (b.t <= g ? s + b.units : s), 0);
+    const inv = buys.reduce((s, b) => (b.t <= g ? s + b.amt : s), 0);
+    const px = asof(series, g);
+    return { t: g, value: px ? units * px.nav : 0, invested: inv };
+  });
+}
+
+// Responsive fund detail: right-side drawer on desktop, bottom sheet on mobile.
+function FundDetail({ row, end, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const curve = useMemo(() => buildFundCurve(row.buys || [], row.series, row.start, end), [row, end]);
+  const gain = row.value - row.invested;
+  const gp = gain >= 0;
+  const splices = row.stitch ? [row.stitch.spliceDate] : [];
+  return (
+    <div className="bt-drawer-wrap" onMouseDown={onClose}>
+      <div className="bt-drawer" onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-label={`${row.name} detail`}>
+        <div className="bt-drawer-h">
+          <div className="bt-drawer-title">
+            <span className="bt-dot" style={{ background: row.color }} />
+            <div>
+              <div className="bt-drawer-name">{row.name}</div>
+              <div className="bt-hold-tag"><span className={`bt-kind bt-kind-${row.kind}`}>{row.kind === "mf" ? "Mutual Fund" : "SIF"}</span>{row.cat && <span className="bt-cat">{row.cat}</span>}</div>
+            </div>
+          </div>
+          <button className="bt-x" onClick={onClose} aria-label="Close">×</button>
+        </div>
+
+        <div className="bt-drawer-kpis">
+          <div className="bt-dk"><span>Invested</span><b><CountUp value={row.invested} format={inr} /></b></div>
+          <div className="bt-dk"><span>Value</span><b className="pos"><CountUp value={row.value} format={inr} /></b></div>
+          <div className="bt-dk"><span>Gain</span><b className={gp ? "pos" : "neg"}>{(gp ? "+" : "−") + inr(Math.abs(gain)).slice(1)}</b></div>
+          <div className="bt-dk"><span>XIRR p.a.</span><b className={row.xirr >= 0 ? "pos" : "neg"}>{pct(row.xirr)}</b></div>
+        </div>
+
+        {curve.length >= 2
+          ? <Chart curve={curve} splices={splices} height={230} gid={"f" + (row.key || "")} valueLabel="Holding value" />
+          : <div className="bt-hint">Not enough history to chart this holding over the selected window.</div>}
+
+        <div className="bt-drawer-meta">
+          <div><span>Strategy</span><b>{strategyLabel(row)}</b></div>
+          <div><span>Started</span><b>{fmtDate(row.start)}</b></div>
+          {row.inception != null && <div><span>Fund since</span><b>{fmtDate(row.inception)}{row.stitch ? " (linked)" : ""}</b></div>}
+          <div><span>Units held</span><b>{(row.units || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}</b></div>
+          {row.finalNav != null && <div><span>Latest NAV</span><b>₹{row.finalNav.toFixed(2)}</b></div>}
+          <div><span>Share of portfolio</span><b>{row.share != null ? row.share.toFixed(0) + "%" : "—"}</b></div>
+        </div>
+        {row.stitch && <div className="bt-drawer-note">↩ History before {fmtDate(row.stitch.spliceDate)} is return-linked from {row.stitch.fromName}.</div>}
+      </div>
     </div>
   );
 }
@@ -656,6 +753,37 @@ function Picker({ sifList, onPick, onClose, mode }) {
   );
 }
 const shortCat = (c) => (c || "").replace(/Equity Oriented Investment Strategies\s*-\s*/i, "").replace(/Debt Oriented Investment Strategies\s*-\s*/i, "").trim() || "SIF";
+
+/* ===================== FAQ (content also mirrored as FAQPage JSON-LD in layout.js) ===================== */
+const FAQ_ITEMS = [
+  { q: "What does this portfolio backtester do?", a: "It lets you build a hypothetical basket of mutual funds and SIFs, then replays it through real historical NAVs to show how a SIP, a lumpsum, or a combination would have performed. Each holding can have its own strategy, amount and start date." },
+  { q: "How is the return calculated — what is XIRR?", a: "Because SIPs and combinations involve many cash-flows on different dates, the headline annualised figure is XIRR (the money-weighted internal rate of return). For a single lumpsum, XIRR equals the simple point-to-point CAGR. Absolute return is the total gain over the total amount invested." },
+  { q: "Where does the NAV data come from?", a: "Daily NAV history is sourced from AMFI via mfapi.in for mutual funds, and from the AMFI SIF feed for Specialised Investment Funds. Each instalment is executed at the next available trading-day NAV." },
+  { q: "Can I backtest SIFs (Specialised Investment Funds)?", a: "Yes. SIFs are a newer SEBI category, so most have only a few months of live NAV history — backtests will automatically cover only the period since each SIF launched." },
+  { q: "Why does some history start later than I chose?", a: "A backtest can only use the data that exists. If a fund launched after your chosen start date, that holding begins at its inception. For funds that changed hands (e.g. JPMorgan schemes that became Edelweiss in 2016), pre-merger NAVs can be return-linked so the track record extends back to the original launch." },
+  { q: "What costs are included?", a: "The illustration uses scheme NAVs, which are already net of the expense ratio. It does not deduct exit loads, STT, stamp duty, or capital-gains tax, and it does not model expense-ratio changes over time. Treat the figures as indicative." },
+  { q: "Why are only Regular plans shown, not Direct?", a: "Abundance Financial Services is an AMFI-registered mutual fund distributor (ARN-251838), so the tool surfaces Regular plans, which is what its clients invest in. Direct plans are intentionally hidden." },
+  { q: "Is this investment advice?", a: "No. This is an educational, hypothetical illustration only. Past performance is not indicative of future results, and nothing here is a recommendation to buy or sell any scheme. Please consult your financial advisor before investing." },
+];
+
+function FAQ() {
+  const [open, setOpen] = useState(0);
+  return (
+    <section className="bt-faq" aria-label="Frequently asked questions">
+      <div className="bt-card-h"><span className="bt-step">?</span><h2>Frequently asked questions</h2></div>
+      <div className="bt-faq-list">
+        {FAQ_ITEMS.map((f, i) => (
+          <div className={`bt-faq-item ${open === i ? "open" : ""}`} key={i}>
+            <button className="bt-faq-q" onClick={() => setOpen(open === i ? -1 : i)} aria-expanded={open === i}>
+              <span>{f.q}</span><span className="bt-faq-ic">{open === i ? "−" : "+"}</span>
+            </button>
+            <div className="bt-faq-a" style={{ maxHeight: open === i ? 360 : 0 }}><p>{f.a}</p></div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 /* ===================== CSS ===================== */
 const CSS = `
@@ -853,5 +981,82 @@ const CSS = `
   .bt-vline{stroke-dasharray:none;stroke-dashoffset:0;animation:none}
   .bt-area{opacity:1;animation:none}
   .bt-kpi:hover{transform:none}
+  .bt-drawer{animation:none!important}
 }
+
+/* ---- interactive chart trace ---- */
+.bt-plot{position:relative}
+.bt-chart svg{touch-action:none;cursor:crosshair}
+.bt-flytip{position:absolute;transform:translate(-50%,-118%);background:#fff;border:1px solid var(--border2);border-radius:9px;box-shadow:var(--shadow-lg);padding:8px 11px;pointer-events:none;z-index:5;white-space:nowrap;display:flex;flex-direction:column;gap:2px;animation:bt-fade .12s ease}
+.bt-flytip .bt-flytip-d{font:700 11px JetBrains Mono,monospace;color:var(--g1);margin-bottom:2px}
+.bt-flytip span{font:600 11.5px JetBrains Mono,monospace;color:var(--text2);display:flex;align-items:center}
+.bt-flytip span .lg{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:6px}
+.bt-flytip b{color:var(--g1);margin-left:4px}
+.bt-axis-hint{font-weight:600;color:var(--g-light);letter-spacing:.02em}
+@media(max-width:560px){.bt-axis-hint{display:none}}
+
+/* ---- clickable holdings ---- */
+.bt-trow{cursor:pointer;transition:background .12s ease}
+.bt-trow:hover{background:var(--s2)}
+.bt-fundlink{display:inline-flex;align-items:center;gap:0;background:none;border:0;padding:0;font:inherit;color:var(--g1);font-weight:700;cursor:pointer;text-align:left;max-width:230px}
+.bt-fundlink:hover{text-decoration:underline}
+.bt-chev{color:var(--g3);font-size:17px;margin-left:6px;font-weight:700}
+.bt-tap-hint{font:600 11px JetBrains Mono,monospace;color:var(--muted);text-align:right;margin-top:8px}
+
+/* ---- fund detail: drawer (desktop) / bottom-sheet (mobile) ---- */
+.bt-drawer-wrap{position:fixed;inset:0;background:#0d260d55;backdrop-filter:blur(3px);z-index:95;display:flex;justify-content:flex-end;animation:bt-fade .2s ease}
+.bt-drawer{background:var(--surface);width:440px;max-width:100%;height:100%;overflow-y:auto;box-shadow:var(--shadow-lg);padding:20px;animation:bt-slidein .28s cubic-bezier(.2,.7,.3,1)}
+@keyframes bt-slidein{from{transform:translateX(40px);opacity:.4}to{transform:none;opacity:1}}
+.bt-drawer-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:16px}
+.bt-drawer-title{display:flex;gap:10px;align-items:flex-start}
+.bt-drawer-title .bt-dot{margin-top:5px}
+.bt-drawer-name{font-size:16px;font-weight:800;color:var(--text);line-height:1.25}
+.bt-drawer-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.bt-dk{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:9px 10px;display:flex;flex-direction:column;gap:3px}
+.bt-dk span{font:600 9.5px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.bt-dk b{font:800 15px JetBrains Mono,monospace;color:var(--text)}
+.bt-drawer-meta{margin-top:16px;border-top:1px solid var(--border);padding-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:11px 16px}
+.bt-drawer-meta div{display:flex;flex-direction:column;gap:2px}
+.bt-drawer-meta span{font:600 10px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.bt-drawer-meta b{font-size:13px;font-weight:700;color:var(--text2)}
+.bt-drawer-note{margin-top:14px;background:var(--g-xlight);border:1px solid var(--g-light);border-radius:8px;padding:9px 12px;font-size:11.5px;color:var(--g1)}
+@media(max-width:560px){
+  .bt-drawer-wrap{justify-content:center;align-items:flex-end}
+  .bt-drawer{width:100%;height:auto;max-height:90vh;border-radius:18px 18px 0 0;animation:bt-sheetup .3s cubic-bezier(.2,.7,.3,1)}
+  .bt-drawer-kpis{grid-template-columns:repeat(2,1fr)}
+}
+@keyframes bt-sheetup{from{transform:translateY(60px);opacity:.5}to{transform:none;opacity:1}}
+
+/* ---- FAQ ---- */
+.bt-faq{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--shadow);margin-top:18px}
+.bt-faq-list{display:flex;flex-direction:column;gap:8px}
+.bt-faq-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--s2);transition:border-color .15s ease}
+.bt-faq-item.open{border-color:var(--g-light)}
+.bt-faq-q{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;background:none;border:0;padding:14px 15px;text-align:left;font:700 14px Raleway,sans-serif;color:var(--text);cursor:pointer}
+.bt-faq-q:hover{color:var(--g1)}
+.bt-faq-ic{font:700 18px JetBrains Mono,monospace;color:var(--g3);flex:none;line-height:1}
+.bt-faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.bt-faq-a p{margin:0;padding:0 15px 15px;font-size:13px;line-height:1.65;color:var(--text2)}
+
+/* ---- responsiveness polish ---- */
+@media(max-width:560px){
+  .bt-wrap,.container{padding-left:12px;padding-right:12px}
+  .bt-card,.bt-faq{padding:15px}
+  .bt-strat{gap:8px}
+  .bt-sfield{flex:1;min-width:120px}
+  .bt-startf{min-width:100%}
+  .bt-fields{flex-direction:column}
+  .bt-field-sm{flex:1 1 auto}
+  .bt-kpi-v{font-size:17px}
+  .bt-table{font-size:12px}
+  .bt-table th,.bt-table td{padding:9px 7px}
+  .bt-fundlink{max-width:150px}
+  .bt-defaults{gap:7px}
+}
+@media(max-width:380px){
+  .bt-kpis{grid-template-columns:1fr 1fr}
+  .bt-mseg button{padding:6px 8px;font-size:11px}
+}
+.bt-chart svg{height:240px}
+@media(max-width:560px){.bt-chart svg{height:200px}}
 `;
