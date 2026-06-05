@@ -38,6 +38,51 @@ const NAV_TOOLS = [
 // Combined for mobile hamburger menu
 const NAV_ITEMS = [...NAV_PRIMARY, ...NAV_TOOLS];
 
+/* ──────────────────────────────────────────────────────────────────────────
+ * Desktop-only (≥1101px) design polish for the two-tier nav.
+ * Scope is deliberately limited to LAYOUT / SHAPE / SIZING — no color,
+ * background, or border properties — so the dark-hero variants
+ * (.pf-hero / .sif-hero / .mw-hero / home) keep full control of theming.
+ * Mobile (≤1100px, the hamburger) is untouched.
+ * ──────────────────────────────────────────────────────────────────────── */
+const DESKTOP_NAV_CSS = `
+@media (min-width:1101px){
+  /* tighter, evenly-spaced two tiers, flush to the right edge */
+  .navbar .nav-two-row{ gap:6px; align-items:flex-end; }
+  .navbar .nav-row{ gap:6px; }
+  .navbar .nav-row-tools{ gap:5px; }
+
+  /* PRIMARY tier — one consistent pill family */
+  .navbar .nav-row-primary .nav-link{
+    font-size:.74rem; font-weight:700; padding:8px 14px;
+    border-radius:10px; line-height:1.1; letter-spacing:0; white-space:nowrap;
+  }
+  /* active primary item: a filled pill that matches the links —
+     drops the old UPPERCASE / letter-spaced "tag" look that clashed */
+  .navbar .nav-row-primary .nav-tag{
+    font-size:.74rem !important; font-weight:800; padding:8px 14px !important;
+    border-radius:10px; line-height:1.1; text-transform:none !important;
+    letter-spacing:0 !important; white-space:nowrap;
+  }
+
+  /* TOOLS tier — lighter, clearly secondary, but sized in the same family */
+  .navbar .nav-row-tools .nav-link-sm{
+    font-size:.66rem; font-weight:600; padding:5px 11px;
+    border-radius:8px; line-height:1.1; white-space:nowrap;
+  }
+  .navbar .nav-row-tools .nav-tag-sm{
+    font-size:.66rem; font-weight:800; padding:5px 11px;
+    border-radius:8px; line-height:1.1; white-space:nowrap;
+  }
+
+  /* gentle hover lift, theme-agnostic */
+  .navbar .nav-row .nav-link,
+  .navbar .nav-row .nav-link-sm{ transition:transform .14s ease, color .14s ease, background .14s ease, border-color .14s ease; }
+  .navbar .nav-row .nav-link:hover,
+  .navbar .nav-row .nav-link-sm:hover{ transform:translateY(-1px); }
+}
+`;
+
 // ── Avatar dropdown ──────────────────────────────────────────────────────────
 function UserAvatar({ session, onNavClose }) {
   const [open, setOpen] = useState(false);
@@ -209,6 +254,7 @@ export default function Navbar({ activePage, variant = 'default' }) {
 
   return (
     <>
+      <style dangerouslySetInnerHTML={{ __html: DESKTOP_NAV_CSS }} />
       <nav className="navbar" style={navbarStyle}>
         {/* ── Logo ── */}
         <a className="logo-wrap" href="https://www.getabundance.in" target="_blank" rel="noopener noreferrer">
