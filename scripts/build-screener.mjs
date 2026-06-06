@@ -157,6 +157,17 @@ async function main() {
     const { default: pg } = await import("pg");
     const c = new pg.Client({ connectionString: process.env.POSTGRES_URL, ssl: { rejectUnauthorized: false } });
     await c.connect();
+    // Self-provisioning: create table + indexes if absent (run as separate
+    // statements — the pg driver has no "one statement at a time" limit that
+    // the Vercel web query console has).
+    await c.query(`CREATE TABLE IF NOT EXISTS mf_screener (
+      code TEXT PRIMARY KEY, name TEXT NOT NULL, amc TEXT, category TEXT, structure TEXT,
+      nav NUMERIC, nav_date TEXT, ret_1y NUMERIC, ret_3y NUMERIC, ret_5y NUMERIC,
+      vol NUMERIC, max_dd NUMERIC, ret_per_risk NUMERIC, age_years NUMERIC, flag TEXT, asof TEXT
+    )`);
+    await c.query(`CREATE INDEX IF NOT EXISTS idx_mf_screener_category ON mf_screener (category)`);
+    await c.query(`CREATE INDEX IF NOT EXISTS idx_mf_screener_structure ON mf_screener (structure)`);
+    await c.query(`CREATE INDEX IF NOT EXISTS idx_mf_screener_ret3y ON mf_screener (ret_3y)`);
     const COLS = ["code","name","amc","category","structure","nav","nav_date","ret_1y","ret_3y","ret_5y","vol","max_dd","ret_per_risk","age_years","flag","asof"];
     const N = COLS.length;
     await c.query("BEGIN");
