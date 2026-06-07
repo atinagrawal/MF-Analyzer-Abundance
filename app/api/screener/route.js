@@ -13,8 +13,18 @@ export async function GET() {
     const { rows } = await pool.query(
       `SELECT ${COLS} FROM mf_screener ORDER BY ret_3y DESC NULLS LAST`
     );
-    const asof = rows.length ? rows[0].asof : null;
-    return new Response(JSON.stringify({ asof, count: rows.length, funds: rows }), {
+    // node-postgres returns NUMERIC columns as STRINGS (to preserve precision).
+    // The UI does math/.toFixed() on these, so coerce them to numbers here.
+    const num = (x) => (x === null || x === undefined || x === '' ? null : Number(x));
+    const funds = rows.map((r) => ({
+      code: r.code, name: r.name, amc: r.amc, category: r.category, structure: r.structure,
+      nav: num(r.nav), nav_date: r.nav_date,
+      ret_1y: num(r.ret_1y), ret_3y: num(r.ret_3y), ret_5y: num(r.ret_5y),
+      vol: num(r.vol), max_dd: num(r.max_dd), ret_per_risk: num(r.ret_per_risk),
+      age_years: num(r.age_years), flag: r.flag, asof: r.asof,
+    }));
+    const asof = funds.length ? funds[0].asof : null;
+    return new Response(JSON.stringify({ asof, count: funds.length, funds }), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',

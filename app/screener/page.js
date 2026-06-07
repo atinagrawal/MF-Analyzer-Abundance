@@ -36,6 +36,16 @@ const SORTS = [
   { key: 'ret_per_risk', label: 'Return / risk' },
 ];
 
+// Featured categories for the "category leaders" band (top 3 by 3Y CAGR each).
+const FEATURED = [
+  { label: 'Large Cap', m: (c) => /equity/i.test(c) && /large cap/i.test(c) && !/mid/i.test(c) },
+  { label: 'Mid Cap', m: (c) => /mid cap/i.test(c) && !/large/i.test(c) },
+  { label: 'Small Cap', m: (c) => /small cap/i.test(c) },
+  { label: 'Flexi Cap', m: (c) => /flexi cap/i.test(c) },
+  { label: 'ELSS (Tax Saver)', m: (c) => /elss/i.test(c) },
+  { label: 'Aggressive Hybrid', m: (c) => /aggressive hybrid/i.test(c) },
+];
+
 const FAQ_ITEMS = [
   { q: 'How are the returns calculated?', a: 'Point-to-point CAGR from real AMFI NAVs — the latest NAV versus the NAV one, three and five years earlier. For periods shorter than a fund’s age, the figure is left blank rather than estimated.' },
   { q: 'How current is the data?', a: 'The dataset is rebuilt every day from AMFI’s official NAV files, so the figures reflect the most recent published NAVs.' },
@@ -88,6 +98,16 @@ export default function ScreenerPage() {
 
   const setSortKey = (key) => setSort((s) => (s.key === key ? { key, dir: -s.dir } : { key, dir: key === 'vol' || key === 'max_dd' ? 1 : -1 }));
 
+  const leaders = useMemo(() => {
+    const pool = funds.filter((f) => /open/i.test(f.structure || '') && f.flag !== 'check' && f.ret_3y != null);
+    return FEATURED.map((cat) => ({
+      label: cat.label,
+      top: pool.filter((f) => cat.m(f.category || '')).sort((a, b) => b.ret_3y - a.ret_3y).slice(0, 3),
+    })).filter((c) => c.top.length > 0);
+  }, [funds]);
+
+  const jumpTo = (f) => { setGroup('All'); setCat(f.category); setSort({ key: 'ret_3y', dir: -1 }); };
+
   return (
     <div className="scr-body">
       <Navbar activePage="screener" />
@@ -116,6 +136,26 @@ export default function ScreenerPage() {
         <div className="scr-meta">
           {err ? <span className="scr-neg">{err}</span> : <>Showing <b>{rows.length.toLocaleString('en-IN')}</b> funds{data ? <> · as of {data.asof}</> : ''}. Tap a fund for detail.</>}
         </div>
+
+        {leaders.length > 0 && !q && group === 'All' && cat === 'All' && (
+          <section className="scr-leaders" aria-label="Category leaders">
+            <div className="scr-leaders-h">Category leaders <em>· top 3 by 3-year return (open-ended)</em></div>
+            <div className="scr-leaders-grid">
+              {leaders.map((c) => (
+                <div className="scr-lead-card" key={c.label}>
+                  <button className="scr-lead-cat" onClick={() => jumpTo(c.top[0])}>{c.label} <span className="scr-lead-all">view all →</span></button>
+                  {c.top.map((f, i) => (
+                    <button className="scr-lead-row" key={f.code} onClick={() => setSel(f)}>
+                      <span className="scr-lead-rank">{i + 1}</span>
+                      <span className="scr-lead-name">{f.name.replace(/\s*-\s*(Regular Plan|Regular|Growth( Option)?| Plan).*/i, '').trim()}</span>
+                      <span className="scr-lead-ret scr-pos">{f.ret_3y > 0 ? '+' : ''}{f.ret_3y.toFixed(1)}%</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* table */}
         <div className="scr-table-wrap">
@@ -257,6 +297,23 @@ const CSS = `
 .scr-toggle input{width:16px;height:16px;accent-color:var(--g2)}
 .scr-meta{font-size:13px;color:var(--muted);margin-bottom:10px}
 .scr-meta b{color:var(--g1)}
+
+/* category leaders */
+.scr-leaders{margin-bottom:18px}
+.scr-leaders-h{font:600 11px JetBrains Mono,monospace;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.scr-leaders-h em{font-style:normal;text-transform:none;letter-spacing:0;color:var(--muted);font-weight:500}
+.scr-leaders-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:860px){.scr-leaders-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.scr-leaders-grid{grid-template-columns:1fr}}
+.scr-lead-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 13px;box-shadow:var(--shadow)}
+.scr-lead-cat{width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:0;padding:0 0 8px;margin-bottom:6px;border-bottom:1px solid var(--border);font:800 13.5px Raleway,sans-serif;color:var(--g1);cursor:pointer}
+.scr-lead-all{font:600 10px JetBrains Mono,monospace;color:var(--muted)}
+.scr-lead-cat:hover .scr-lead-all{color:var(--g2)}
+.scr-lead-row{width:100%;display:flex;align-items:center;gap:8px;background:none;border:0;padding:6px 0;text-align:left;cursor:pointer;border-radius:6px}
+.scr-lead-row:hover{background:var(--g-xlight)}
+.scr-lead-rank{flex:none;width:18px;height:18px;border-radius:50%;background:var(--g-xlight);color:var(--g1);font:800 10px JetBrains Mono,monospace;display:grid;place-items:center}
+.scr-lead-name{flex:1;font:600 12px Raleway,sans-serif;color:var(--text);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scr-lead-ret{flex:none;font:800 12.5px JetBrains Mono,monospace}
 
 .scr-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
 .scr-table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
