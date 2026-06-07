@@ -58,12 +58,14 @@ export default function ScreenerPage() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
   const [q, setQ] = useState('');
-  const [group, setGroup] = useState('All');
-  const [cat, setCat] = useState('All');
+  const [group, setGroup] = useState('Equity');
+  const [cat, setCat] = useState('Equity Scheme - Flexi Cap Fund');
   const [openOnly, setOpenOnly] = useState(true);
   const [sort, setSort] = useState({ key: 'ret_3y', dir: -1 });
   const [sel, setSel] = useState(null);
   const [faq, setFaq] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     fetch('/api/screener')
@@ -107,6 +109,14 @@ export default function ScreenerPage() {
   }, [funds]);
 
   const jumpTo = (f) => { setGroup('All'); setCat(f.category); setSort({ key: 'ret_3y', dir: -1 }); };
+
+  // pagination
+  useEffect(() => { setPage(0); }, [group, cat, q, openOnly, sort, pageSize]);
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const cur = Math.min(page, pageCount - 1);
+  const visible = rows.slice(cur * pageSize, cur * pageSize + pageSize);
+  const from = rows.length ? cur * pageSize + 1 : 0;
+  const to = Math.min(rows.length, (cur + 1) * pageSize);
 
   return (
     <div className="scr-body">
@@ -171,7 +181,7 @@ export default function ScreenerPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.slice(0, 300).map((f) => (
+              {visible.map((f) => (
                 <tr key={f.code} className="scr-row" onClick={() => setSel(f)}>
                   <td className="scr-name">
                     <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSel(f); }}>
@@ -189,8 +199,28 @@ export default function ScreenerPage() {
               ))}
             </tbody>
           </table>
-          {rows.length > 300 && <div className="scr-more">Showing top 300 — refine filters or search to narrow down.</div>}
           {!data && !err && <div className="scr-loading">Loading funds…</div>}
+          {data && rows.length === 0 && <div className="scr-loading">No funds match these filters.</div>}
+          {rows.length > 0 && (
+            <div className="scr-pager">
+              <div className="scr-pager-info">Showing <b>{from.toLocaleString('en-IN')}–{to.toLocaleString('en-IN')}</b> of {rows.length.toLocaleString('en-IN')}</div>
+              <div className="scr-pager-ctrls">
+                <button className="scr-pg-btn" disabled={cur === 0} onClick={() => setPage(cur - 1)}>‹ Prev</button>
+                <span className="scr-pg-now">Page {cur + 1} / {pageCount}</span>
+                <button className="scr-pg-btn" disabled={cur >= pageCount - 1} onClick={() => setPage(cur + 1)}>Next ›</button>
+              </div>
+              <label className="scr-pager-size">Show
+                <select value={pageSize} onChange={(e) => setPageSize(+e.target.value)}>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={100000}>All</option>
+                </select>
+                per page
+              </label>
+            </div>
+          )}
         </div>
 
         {/* FAQ */}
@@ -337,6 +367,17 @@ const CSS = `
 .scr-neg{color:var(--neg)}
 .scr-muted{color:var(--muted)}
 .scr-more,.scr-loading{padding:14px;text-align:center;color:var(--muted);font-size:13px}
+.scr-pager{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:13px 14px;border-top:1px solid var(--border);background:var(--s2)}
+.scr-pager-info{font-size:12.5px;color:var(--muted)}
+.scr-pager-info b{color:var(--text)}
+.scr-pager-ctrls{display:flex;align-items:center;gap:10px}
+.scr-pg-btn{padding:7px 13px;border:1px solid var(--border);background:var(--surface);border-radius:8px;font:700 12.5px Raleway,sans-serif;color:var(--g1);cursor:pointer}
+.scr-pg-btn:hover:not(:disabled){border-color:var(--g3);background:var(--g-xlight)}
+.scr-pg-btn:disabled{opacity:.4;cursor:not-allowed;color:var(--muted)}
+.scr-pg-now{font:700 12.5px JetBrains Mono,monospace;color:var(--text2);min-width:96px;text-align:center}
+.scr-pager-size{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
+.scr-pager-size select{padding:6px 9px;border:1px solid var(--border);border-radius:8px;font:700 12.5px Raleway,sans-serif;background:var(--surface);color:var(--text)}
+@media(max-width:560px){.scr-pager{justify-content:center}.scr-pager-info{order:3;width:100%;text-align:center}}
 
 .scr-faq{margin-top:24px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
 .scr-faq h2{font-size:17px;margin:0 0 14px;color:var(--text)}

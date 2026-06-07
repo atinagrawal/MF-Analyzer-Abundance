@@ -4,7 +4,11 @@
 
 import pool from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
+// Cache the response for 6h (data is rebuilt once daily). This avoids hitting
+// Postgres — and the ~5s Neon cold-start — on every request. force-dynamic was
+// doing the opposite: it clobbered the Cache-Control header to max-age=0, so
+// most requests were slow cold MISSes.
+export const revalidate = 21600;
 
 const COLS = 'code,name,amc,category,structure,nav,nav_date,ret_1y,ret_3y,ret_5y,vol,max_dd,ret_per_risk,age_years,flag,asof';
 
