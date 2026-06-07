@@ -133,13 +133,23 @@ export default function ScreenerPage() {
 
   const leaders = useMemo(() => {
     const pool = funds.filter((f) => /open/i.test(f.structure || '') && f.flag !== 'check' && f.ret_3y != null);
-    return FEATURED.map((cat) => ({
+    let featured; // [{ label, m }]
+    if (group === 'All') {
+      featured = FEATURED; // curated cross-asset set
+    } else {
+      // top categories WITHIN the selected type, ranked by number of funds
+      const counts = {};
+      pool.forEach((f) => { if (assetClass(f.category) === group) counts[f.category] = (counts[f.category] || 0) + 1; });
+      featured = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6)
+        .map(([c]) => ({ label: shortCat(c), m: (x) => x === c }));
+    }
+    return featured.map((cat) => ({
       label: cat.label,
       top: pool.filter((f) => cat.m(f.category || '')).sort((a, b) => b.ret_3y - a.ret_3y).slice(0, 3),
     })).filter((c) => c.top.length > 0);
-  }, [funds]);
+  }, [funds, group]);
 
-  const jumpTo = (f) => { setGroup('All'); setCat(f.category); setSort({ key: 'ret_3y', dir: -1 }); };
+  const jumpTo = (f) => { setCat(f.category); setSort({ key: 'ret_3y', dir: -1 }); };
 
   // pick a sensible default category when a type is chosen
   const defaultCatFor = (g) => {
@@ -198,7 +208,7 @@ export default function ScreenerPage() {
 
         {leaders.length > 0 && (
           <section className="scr-leaders" aria-label="Category leaders">
-            <div className="scr-leaders-h">Category leaders <em>· top 3 by 3-year return (open-ended)</em></div>
+            <div className="scr-leaders-h">Category leaders {group !== 'All' && <b className="scr-leaders-g">{group}</b>} <em>· top 3 by 3-year return</em></div>
             <div className="scr-leaders-grid">
               {leaders.map((c) => (
                 <div className="scr-lead-card" key={c.label}>
@@ -235,7 +245,7 @@ export default function ScreenerPage() {
                   <td className="scr-name">
                     <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSel(f); }}>
                       <span className="scr-fund-n">{f.name.replace(/\s*-\s*(Regular Plan|Regular|Growth( Option)?| Plan).*/i, '').trim()}{f.flag === 'check' && <span className="scr-flag" title="Unusual value — under review">⚠</span>}</span>
-                      <span className="scr-fund-sub">{f.amc} · {shortCat(f.category)}</span>
+                      <span className="scr-fund-sub">{shortCat(f.category)}</span>
                     </button>
                   </td>
                   {visibleCols.map((m) => (
@@ -385,6 +395,7 @@ const CSS = `
 .scr-leaders{margin-bottom:18px}
 .scr-leaders-h{font:600 11px JetBrains Mono,monospace;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
 .scr-leaders-h em{font-style:normal;text-transform:none;letter-spacing:0;color:var(--muted);font-weight:500}
+.scr-leaders-g{color:var(--g1);font-weight:800}
 .scr-leaders-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 @media(max-width:860px){.scr-leaders-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.scr-leaders-grid{grid-template-columns:1fr}}
@@ -411,7 +422,7 @@ const CSS = `
 .scr-row:hover{background:var(--g-xlight)}
 .scr-name,.scr-name-h{text-align:left!important;position:sticky;left:0;background:var(--surface)}
 .scr-row:hover .scr-name{background:var(--g-xlight)}
-.scr-fundlink{display:flex;flex-direction:column;gap:2px;background:none;border:0;padding:0;text-align:left;cursor:pointer;max-width:260px}
+.scr-fundlink{display:flex;flex-direction:column;gap:2px;background:none;border:0;padding:0;text-align:left;cursor:pointer;max-width:230px}
 .scr-fund-n{font:700 13px Raleway,sans-serif;color:var(--g1);line-height:1.25;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .scr-fundlink:hover .scr-fund-n{text-decoration:underline}
 .scr-fund-sub{font:500 11px JetBrains Mono,monospace;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
