@@ -10,9 +10,14 @@ CREATE TABLE IF NOT EXISTS mf_screener (
   structure     TEXT,                       -- 'Open Ended' / 'Close Ended' / 'Interval'
   nav           NUMERIC,
   nav_date      TEXT,
+  ret_1m        NUMERIC,                    -- % absolute (sub-year, not annualised)
+  ret_3m        NUMERIC,                    -- % absolute
+  ret_6m        NUMERIC,                    -- % absolute
   ret_1y        NUMERIC,                    -- % CAGR (1y point-to-point)
   ret_3y        NUMERIC,                    -- % CAGR
   ret_5y        NUMERIC,                    -- % CAGR
+  ret_7y        NUMERIC,                    -- % CAGR
+  ret_10y       NUMERIC,                    -- % CAGR (uses a narrow window ~10y back; AMFI caps span at 5y, not reach)
   vol           NUMERIC,                    -- annualised volatility %, month-end basis
   max_dd        NUMERIC,                    -- max drawdown %, month-end basis
   ret_per_risk  NUMERIC,                    -- ret_3y / vol

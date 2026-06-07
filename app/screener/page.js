@@ -27,14 +27,44 @@ function backtestLink(f) {
   } catch (e) { return '/backtest'; }
 }
 
-const SORTS = [
-  { key: 'ret_1y', label: '1Y' },
-  { key: 'ret_3y', label: '3Y' },
-  { key: 'ret_5y', label: '5Y' },
-  { key: 'vol', label: 'Volatility' },
-  { key: 'max_dd', label: 'Max DD' },
-  { key: 'ret_per_risk', label: 'Return / risk' },
+// All metric columns. kind controls formatting: ret/abs = % return, risk = vol%,
+// dd = drawdown%, ratio = number. Sub-year periods (1M/3M/6M) are absolute, not annualised.
+const METRICS = [
+  { key: 'ret_1m', label: '1M', kind: 'abs' },
+  { key: 'ret_3m', label: '3M', kind: 'abs' },
+  { key: 'ret_6m', label: '6M', kind: 'abs' },
+  { key: 'ret_1y', label: '1Y', kind: 'ret' },
+  { key: 'ret_3y', label: '3Y', kind: 'ret' },
+  { key: 'ret_5y', label: '5Y', kind: 'ret' },
+  { key: 'ret_7y', label: '7Y', kind: 'ret' },
+  { key: 'ret_10y', label: '10Y', kind: 'ret' },
+  { key: 'vol', label: 'Vol', kind: 'risk' },
+  { key: 'max_dd', label: 'Max DD', kind: 'dd' },
+  { key: 'ret_per_risk', label: 'Ret/Risk', kind: 'ratio' },
 ];
+const DEFAULT_COLS = ['ret_1y', 'ret_3y', 'ret_5y', 'max_dd', 'ret_per_risk'];
+const fmtCell = (m, v) => {
+  if (v == null) return '—';
+  if (m.kind === 'ratio') return v.toFixed(2);
+  if (m.kind === 'risk') return v.toFixed(1) + '%';
+  if (m.kind === 'dd') return v.toFixed(1) + '%';
+  return (v > 0 ? '+' : '') + v.toFixed(1) + '%';
+};
+const cellCls = (m, v) => {
+  if (m.kind === 'risk') return '';
+  if (m.kind === 'dd') return 'scr-neg';
+  if (m.kind === 'ratio') return '';
+  return cls(v);
+};
+
+// Default category per asset class (so picking a type lands on a useful view).
+const GROUP_DEFAULT_CAT = {
+  Equity: /flexi cap/i,
+  Hybrid: /multi asset/i,
+  'Index / FoF': /index fund/i,
+  Debt: /liquid fund/i,
+  Other: /children/i,
+};
 
 // Featured categories for the "category leaders" band (top 3 by 3Y CAGR each).
 const FEATURED = [
@@ -66,6 +96,7 @@ export default function ScreenerPage() {
   const [faq, setFaq] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(0);
+  const [cols, setCols] = useState(DEFAULT_COLS);
 
   useEffect(() => {
     fetch('/api/screener')
@@ -110,6 +141,17 @@ export default function ScreenerPage() {
 
   const jumpTo = (f) => { setGroup('All'); setCat(f.category); setSort({ key: 'ret_3y', dir: -1 }); };
 
+  // pick a sensible default category when a type is chosen
+  const defaultCatFor = (g) => {
+    if (g === 'All') return 'All';
+    const re = GROUP_DEFAULT_CAT[g];
+    const hit = re && funds.find((f) => assetClass(f.category) === g && re.test(f.category || ''));
+    return hit ? hit.category : 'All';
+  };
+  const pickGroup = (g) => { setGroup(g); setCat(defaultCatFor(g)); };
+  const visibleCols = METRICS.filter((m) => cols.includes(m.key));
+  const toggleCol = (key) => setCols((c) => (c.includes(key) ? (c.length > 1 ? c.filter((k) => k !== key) : c) : [...c, key]));
+
   // pagination
   useEffect(() => { setPage(0); }, [group, cat, q, openOnly, sort, pageSize]);
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
@@ -133,7 +175,7 @@ export default function ScreenerPage() {
           <input className="scr-search" placeholder="Search fund or AMC…" value={q} onChange={(e) => setQ(e.target.value)} />
           <div className="scr-groups">
             {groups.map((g) => (
-              <button key={g} className={`scr-chip ${group === g ? 'on' : ''}`} onClick={() => { setGroup(g); setCat('All'); }}>{g}</button>
+              <button key={g} className={`scr-chip ${group === g ? 'on' : ''}`} onClick={() => pickGroup(g)}>{g}</button>
             ))}
           </div>
           <select className="scr-select" value={cat} onChange={(e) => setCat(e.target.value)}>
@@ -143,11 +185,18 @@ export default function ScreenerPage() {
           <label className="scr-toggle"><input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} /><span>Open-ended only</span></label>
         </div>
 
+        <div className="scr-colbar">
+          <span className="scr-colbar-l">Columns:</span>
+          {METRICS.map((m) => (
+            <button key={m.key} className={`scr-colchip ${cols.includes(m.key) ? 'on' : ''}`} onClick={() => toggleCol(m.key)}>{m.label}</button>
+          ))}
+        </div>
+
         <div className="scr-meta">
           {err ? <span className="scr-neg">{err}</span> : <>Showing <b>{rows.length.toLocaleString('en-IN')}</b> funds{data ? <> · as of {data.asof}</> : ''}. Tap a fund for detail.</>}
         </div>
 
-        {leaders.length > 0 && !q && group === 'All' && cat === 'All' && (
+        {leaders.length > 0 && (
           <section className="scr-leaders" aria-label="Category leaders">
             <div className="scr-leaders-h">Category leaders <em>· top 3 by 3-year return (open-ended)</em></div>
             <div className="scr-leaders-grid">
@@ -167,15 +216,15 @@ export default function ScreenerPage() {
           </section>
         )}
 
-        {/* table */}
+        {/* table (only this scrolls horizontally) */}
         <div className="scr-table-wrap">
           <table className="scr-table">
             <thead>
               <tr>
                 <th className="scr-name-h">Fund</th>
-                {SORTS.map((s) => (
-                  <th key={s.key} className={`scr-sortable ${sort.key === s.key ? 'active' : ''}`} onClick={() => setSortKey(s.key)}>
-                    {s.label}{sort.key === s.key ? <span className="scr-arrow">{sort.dir < 0 ? '▾' : '▴'}</span> : ''}
+                {visibleCols.map((m) => (
+                  <th key={m.key} className={`scr-sortable ${sort.key === m.key ? 'active' : ''}`} onClick={() => setSortKey(m.key)}>
+                    {m.label}{sort.key === m.key ? <span className="scr-arrow">{sort.dir < 0 ? '▾' : '▴'}</span> : ''}
                   </th>
                 ))}
               </tr>
@@ -189,39 +238,36 @@ export default function ScreenerPage() {
                       <span className="scr-fund-sub">{f.amc} · {shortCat(f.category)}</span>
                     </button>
                   </td>
-                  <td className={cls(f.ret_1y)}>{pctTxt(f.ret_1y)}</td>
-                  <td className={cls(f.ret_3y)}>{pctTxt(f.ret_3y)}</td>
-                  <td className={cls(f.ret_5y)}>{pctTxt(f.ret_5y)}</td>
-                  <td>{numTxt(f.vol)}{f.vol != null ? '%' : ''}</td>
-                  <td className="scr-neg">{f.max_dd != null ? f.max_dd.toFixed(1) + '%' : '—'}</td>
-                  <td><b>{numTxt(f.ret_per_risk, 2)}</b></td>
+                  {visibleCols.map((m) => (
+                    <td key={m.key} className={cellCls(m, f[m.key])}>{m.kind === 'ratio' ? <b>{fmtCell(m, f[m.key])}</b> : fmtCell(m, f[m.key])}</td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </table>
-          {!data && !err && <div className="scr-loading">Loading funds…</div>}
-          {data && rows.length === 0 && <div className="scr-loading">No funds match these filters.</div>}
-          {rows.length > 0 && (
-            <div className="scr-pager">
-              <div className="scr-pager-info">Showing <b>{from.toLocaleString('en-IN')}–{to.toLocaleString('en-IN')}</b> of {rows.length.toLocaleString('en-IN')}</div>
-              <div className="scr-pager-ctrls">
-                <button className="scr-pg-btn" disabled={cur === 0} onClick={() => setPage(cur - 1)}>‹ Prev</button>
-                <span className="scr-pg-now">Page {cur + 1} / {pageCount}</span>
-                <button className="scr-pg-btn" disabled={cur >= pageCount - 1} onClick={() => setPage(cur + 1)}>Next ›</button>
-              </div>
-              <label className="scr-pager-size">Show
-                <select value={pageSize} onChange={(e) => setPageSize(+e.target.value)}>
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                  <option value={100000}>All</option>
-                </select>
-                per page
-              </label>
-            </div>
-          )}
         </div>
+        {!data && !err && <div className="scr-loading">Loading funds…</div>}
+        {data && rows.length === 0 && <div className="scr-loading">No funds match these filters.</div>}
+        {rows.length > 0 && (
+          <div className="scr-pager">
+            <div className="scr-pager-info">Showing <b>{from.toLocaleString('en-IN')}–{to.toLocaleString('en-IN')}</b> of {rows.length.toLocaleString('en-IN')}</div>
+            <div className="scr-pager-ctrls">
+              <button className="scr-pg-btn" disabled={cur === 0} onClick={() => setPage(cur - 1)}>‹ Prev</button>
+              <span className="scr-pg-now">Page {cur + 1} / {pageCount}</span>
+              <button className="scr-pg-btn" disabled={cur >= pageCount - 1} onClick={() => setPage(cur + 1)}>Next ›</button>
+            </div>
+            <label className="scr-pager-size">Show
+              <select value={pageSize} onChange={(e) => setPageSize(+e.target.value)}>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={100000}>All</option>
+              </select>
+              per page
+            </label>
+          </div>
+        )}
 
         {/* FAQ */}
         <section className="scr-faq" aria-label="FAQ">
@@ -328,6 +374,13 @@ const CSS = `
 .scr-meta{font-size:13px;color:var(--muted);margin-bottom:10px}
 .scr-meta b{color:var(--g1)}
 
+/* column chooser */
+.scr-colbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;padding:9px 11px;background:var(--s2);border:1px solid var(--border);border-radius:10px}
+.scr-colbar-l{font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-right:2px}
+.scr-colchip{padding:5px 10px;border:1px solid var(--border);background:var(--surface);border-radius:7px;font:700 11.5px JetBrains Mono,monospace;color:var(--muted);cursor:pointer;transition:all .12s ease}
+.scr-colchip:hover{border-color:var(--g3);color:var(--text2)}
+.scr-colchip.on{background:var(--g-xlight);color:var(--g1);border-color:var(--g-light)}
+
 /* category leaders */
 .scr-leaders{margin-bottom:18px}
 .scr-leaders-h{font:600 11px JetBrains Mono,monospace;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
@@ -346,7 +399,7 @@ const CSS = `
 .scr-lead-ret{flex:none;font:800 12.5px JetBrains Mono,monospace}
 
 .scr-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
-.scr-table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+.scr-table{width:100%;border-collapse:collapse;font-size:13px;min-width:520px}
 .scr-table th{position:sticky;top:0;background:var(--s2);text-align:right;padding:11px 12px;font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);white-space:nowrap;z-index:2}
 .scr-table th.scr-name-h{text-align:left;left:0;z-index:3}
 .scr-sortable{cursor:pointer;user-select:none}
@@ -358,16 +411,17 @@ const CSS = `
 .scr-row:hover{background:var(--g-xlight)}
 .scr-name,.scr-name-h{text-align:left!important;position:sticky;left:0;background:var(--surface)}
 .scr-row:hover .scr-name{background:var(--g-xlight)}
-.scr-fundlink{display:flex;flex-direction:column;gap:2px;background:none;border:0;padding:0;text-align:left;cursor:pointer;max-width:280px}
-.scr-fund-n{font:700 13.5px Raleway,sans-serif;color:var(--g1);line-height:1.25;white-space:normal}
+.scr-fundlink{display:flex;flex-direction:column;gap:2px;background:none;border:0;padding:0;text-align:left;cursor:pointer;max-width:260px}
+.scr-fund-n{font:700 13px Raleway,sans-serif;color:var(--g1);line-height:1.25;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .scr-fundlink:hover .scr-fund-n{text-decoration:underline}
-.scr-fund-sub{font:500 11px JetBrains Mono,monospace;color:var(--muted)}
+.scr-fund-sub{font:500 11px JetBrains Mono,monospace;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scr-flag{color:var(--warn);margin-left:5px;font-size:12px}
 .scr-pos{color:var(--g2)}
 .scr-neg{color:var(--neg)}
 .scr-muted{color:var(--muted)}
 .scr-more,.scr-loading{padding:14px;text-align:center;color:var(--muted);font-size:13px}
-.scr-pager{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:13px 14px;border-top:1px solid var(--border);background:var(--s2)}
+/* pager is OUTSIDE the horizontal-scroll wrap, so it never scrolls sideways */
+.scr-pager{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;margin-top:10px;background:var(--s2)}
 .scr-pager-info{font-size:12.5px;color:var(--muted)}
 .scr-pager-info b{color:var(--text)}
 .scr-pager-ctrls{display:flex;align-items:center;gap:10px}
@@ -377,7 +431,16 @@ const CSS = `
 .scr-pg-now{font:700 12.5px JetBrains Mono,monospace;color:var(--text2);min-width:96px;text-align:center}
 .scr-pager-size{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
 .scr-pager-size select{padding:6px 9px;border:1px solid var(--border);border-radius:8px;font:700 12.5px Raleway,sans-serif;background:var(--surface);color:var(--text)}
-@media(max-width:560px){.scr-pager{justify-content:center}.scr-pager-info{order:3;width:100%;text-align:center}}
+@media(max-width:560px){
+  .scr-pager{justify-content:center}.scr-pager-info{order:3;width:100%;text-align:center}
+  /* shrink the sticky fund column so the data columns get room */
+  .scr-table{min-width:420px}
+  .scr-fundlink{max-width:132px}
+  .scr-fund-n{font-size:12px}
+  .scr-fund-sub{font-size:9.5px}
+  .scr-table th,.scr-table td{padding:9px 8px}
+  .scr-name,.scr-name-h{max-width:140px}
+}
 
 .scr-faq{margin-top:24px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
 .scr-faq h2{font-size:17px;margin:0 0 14px;color:var(--text)}
