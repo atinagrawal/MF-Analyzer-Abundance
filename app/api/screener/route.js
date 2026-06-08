@@ -8,7 +8,7 @@ import pool from '@/lib/db';
 // Postgres — and the ~5s Neon cold-start — on every request. force-dynamic was
 // doing the opposite: it clobbered the Cache-Control header to max-age=0, so
 // most requests were slow cold MISSes.
-export const revalidate = 21600;
+export const revalidate = 0;
 
 const COLS = 'code,name,amc,category,structure,nav,nav_date,ret_1m,ret_3m,ret_6m,ret_1y,ret_3y,ret_5y,ret_7y,ret_10y,vol,max_dd,ret_per_risk,age_years,flag,asof';
 
