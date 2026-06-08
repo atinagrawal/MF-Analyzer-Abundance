@@ -59,7 +59,11 @@ function parseUniverse(txt) {
     // Regular + Growth only — hide Direct and income/dividend variants
     if (!/growth/i.test(name)) continue;
     if (/direct/i.test(name)) continue;
-    if (/(idcw|dividend|payout|re-?invest|bonus|segregated)/i.test(name)) continue;
+    
+    const isDivYield = /dividend yield/i.test(cat);
+    if (/(idcw|payout|re-?invest|bonus|segregated)\b/i.test(name)) continue;
+    if (!isDivYield && /\bdividend\b/i.test(name)) continue;
+
     const nav = +p[4]; if (!isFinite(nav) || nav <= 0) continue;
     out.set(p[0], { code: p[0], name, amc, cat, structure, nav, navDate: pd(p[5]), isin: p[1] });
   }
@@ -107,7 +111,16 @@ async function main() {
   console.log("[screener] fetching universe…");
   const uni = parseUniverse(await fetchText("https://portal.amfiindia.com/spages/NAVAll.txt"));
   const now = Math.max(...[...uni.values()].map((f) => f.navDate || 0));
-  console.log(`[screener] universe = ${uni.size} regular-growth funds, asof ${fmt(now)}`);
+
+  let removed = 0;
+  for (const [code, f] of uni.entries()) {
+    if (!f.navDate || (now - f.navDate) > 14 * 864e5) {
+      uni.delete(code);
+      removed++;
+    }
+  }
+
+  console.log(`[screener] universe = ${uni.size} regular-growth funds (removed ${removed} inactive), asof ${fmt(now)}`);
 
   console.log("[screener] fetching return anchors (1M…10Y)…");
   const D = 864e5;
