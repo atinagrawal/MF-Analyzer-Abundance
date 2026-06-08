@@ -1,8 +1,26 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+
+/* ---------- SIF helpers ---------- */
+const SIF_STRATEGY_LABELS = {
+  'Equity Oriented Investment Strategies - Equity Ex-Top 100 Long-Short Fund': 'Equity Ex-Top 100 L/S',
+  'Equity Oriented Investment Strategies - Equity Long-Short Fund': 'Equity Long-Short',
+  'Hybrid Investment Strategies - Active Asset Allocator Long-Short Fund': 'Active Asset Allocator',
+  'Hybrid Investment Strategies - Hybrid Long-Short Fund': 'Hybrid Long-Short',
+};
+const sifStratShort = (cat) => SIF_STRATEGY_LABELS[cat] || cat?.split(' - ')[1] || cat || '—';
+const sifFamily = (cat) => cat?.startsWith('Equity') ? 'Equity' : 'Hybrid';
+
+function backtestSifLink(s) {
+  try {
+    const state = { v: 1, h: [{ k: 'sif', i: s.scheme_id, n: s.nav_name, c: sifStratShort(s.category), m: 'sip', mo: 10000, l: 100000, sm: 'default', cs: '' }], sd: 1, smo: 'lookback', lb: '3', sdt: '', su: 0, st: 0, bo: 0, b: null };
+    const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(state)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return `/backtest?p=${b64}`;
+  } catch (e) { return '/backtest'; }
+}
 
 /* ---------- helpers ---------- */
 const pctTxt = (v) => (v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%');
@@ -98,6 +116,19 @@ export default function ScreenerPage() {
   const [page, setPage] = useState(0);
   const [cols, setCols] = useState(DEFAULT_COLS);
 
+  // SIF state
+  const [sifData, setSifData] = useState(null);
+  const [sifLoading, setSifLoading] = useState(false);
+  const [sifQ, setSifQ] = useState('');
+  const [sifFamily, setSifFamily] = useState('all');
+  const [sifCat, setSifCat] = useState('all');
+  const [sifHouse, setSifHouse] = useState('all');
+  const [sifSel, setSifSel] = useState(null);
+  const [sifSort, setSifSort] = useState({ key: 'nav', dir: -1 });
+  const [sifPage, setSifPage] = useState(0);
+
+  const isSIF = group === 'SIF';
+
   useEffect(() => {
     fetch('/api/screener')
       .then((r) => r.json())
@@ -105,8 +136,51 @@ export default function ScreenerPage() {
       .catch(() => setErr('Could not load screener data.'));
   }, []);
 
+  useEffect(() => {
+    if (isSIF && !sifData && !sifLoading) {
+      setSifLoading(true);
+      fetch('/api/sif-nav')
+        .then((r) => r.json())
+        .then((d) => { if (d.error) setErr(d.error); else setSifData(d); })
+        .catch(() => setErr('Could not load SIF data.'))
+        .finally(() => setSifLoading(false));
+    }
+  }, [isSIF, sifData, sifLoading]);
+
   const funds = data?.funds || [];
-  const groups = ['All', 'Equity', 'Hybrid', 'Debt', 'Index / FoF', 'Other'];
+  const groups = ['All', 'Equity', 'Hybrid', 'Debt', 'Index / FoF', 'Other', 'SIF'];
+
+  /* ---- SIF derived state ---- */
+  const sifSchemes = sifData?.schemes || [];
+  const sifHouses = useMemo(() => [...new Set(sifSchemes.map((s) => s.sif_name))].sort(), [sifSchemes]);
+  const sifCats = useMemo(() => [...new Set(sifSchemes.map((s) => s.category))].sort(), [sifSchemes]);
+  const sifRows = useMemo(() => {
+    let r = sifSchemes;
+    if (sifFamily !== 'all') r = r.filter((s) => (s.category?.startsWith('Equity') ? 'Equity' : 'Hybrid') === sifFamily);
+    if (sifCat !== 'all') r = r.filter((s) => s.category === sifCat);
+    if (sifHouse !== 'all') r = r.filter((s) => s.sif_name === sifHouse);
+    if (sifQ.trim()) { const t = sifQ.toLowerCase().split(/\s+/); r = r.filter((s) => { const str = (s.nav_name + ' ' + s.sif_name).toLowerCase(); return t.every((w) => str.includes(w)); }); }
+    const { key, dir } = sifSort;
+    return [...r].sort((a, b) => {
+      const av = a[key], bv = b[key];
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1; if (bv == null) return -1;
+      return typeof av === 'string' ? av.localeCompare(bv) * dir : (av - bv) * dir;
+    });
+  }, [sifSchemes, sifFamily, sifCat, sifHouse, sifQ, sifSort]);
+  const sifPageCount = Math.max(1, Math.ceil(sifRows.length / pageSize));
+  const sifCur = Math.min(sifPage, sifPageCount - 1);
+  const sifVisible = sifRows.slice(sifCur * pageSize, sifCur * pageSize + pageSize);
+  const setSifSortKey = (key) => setSifSort((s) => (s.key === key ? { key, dir: -s.dir } : { key, dir: key === 'nav' ? -1 : 1 }));
+  useEffect(() => { setSifPage(0); }, [sifFamily, sifCat, sifHouse, sifQ, sifSort, pageSize]);
+  const sifLeaders = useMemo(() => {
+    const uniq = [...new Set(sifSchemes.map((s) => s.category))];
+    return uniq.map((c) => ({
+      label: sifStratShort(c),
+      cat: c,
+      top: sifSchemes.filter((s) => s.category === c).sort((a, b) => b.nav - a.nav).slice(0, 3),
+    })).filter((c) => c.top.length > 0);
+  }, [sifSchemes]);
   const cats = useMemo(() => {
     const set = new Map();
     funds.forEach((f) => { if (group === 'All' || assetClass(f.category) === group) set.set(f.category, (set.get(f.category) || 0) + 1); });
@@ -158,7 +232,7 @@ export default function ScreenerPage() {
     const hit = re && funds.find((f) => assetClass(f.category) === g && re.test(f.category || ''));
     return hit ? hit.category : 'All';
   };
-  const pickGroup = (g) => { setGroup(g); setCat(defaultCatFor(g)); };
+  const pickGroup = (g) => { setGroup(g); if (g !== 'SIF') setCat(defaultCatFor(g)); setQ(''); setSifQ(''); };
   const visibleCols = METRICS.filter((m) => cols.includes(m.key));
   const toggleCol = (key) => setCols((c) => (c.includes(key) ? (c.length > 1 ? c.filter((k) => k !== key) : c) : [...c, key]));
 
@@ -175,38 +249,92 @@ export default function ScreenerPage() {
       <Navbar activePage="screener" />
       <div className="container">
         <div className="page-header">
-          <div className="page-eyebrow"><span className="live-dot" /><span className="page-eyebrow-text">Live · rebuilt daily from AMFI NAVs</span></div>
-          <h1 className="page-title">Mutual Fund Screener</h1>
-          <p className="page-subtitle">Filter and rank {data ? data.count.toLocaleString('en-IN') : '2,500+'} regular mutual funds by category, returns and risk — on real historical NAVs.</p>
+          <div className="page-eyebrow"><span className="live-dot" /><span className="page-eyebrow-text">{isSIF ? 'Live · from AMFI SIF NAV API' : 'Live · rebuilt daily from AMFI NAVs'}</span></div>
+          <h1 className="page-title">{isSIF ? <><span>SIF</span> Screener</> : 'Mutual Fund Screener'}</h1>
+          <p className="page-subtitle">
+            {isSIF
+              ? <>Discover all SEBI-regulated <b>Specialised Investment Funds</b> — {sifData ? sifSchemes.length : '…'} schemes across Equity Long-Short, Hybrid Long-Short and Active Asset Allocator strategies.</>
+              : <>Filter and rank {data ? data.count.toLocaleString('en-IN') : '1,800+'} regular mutual funds by category, returns and risk — on real historical NAVs.</>
+            }
+          </p>
         </div>
 
         {/* controls */}
         <div className="scr-controls">
-          <input className="scr-search" placeholder="Search fund or AMC…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="scr-search" placeholder={isSIF ? 'Search SIF or fund house…' : 'Search fund or AMC…'}
+            value={isSIF ? sifQ : q} onChange={(e) => isSIF ? setSifQ(e.target.value) : setQ(e.target.value)} />
           <div className="scr-groups">
             {groups.map((g) => (
-              <button key={g} className={`scr-chip ${group === g ? 'on' : ''}`} onClick={() => pickGroup(g)}>{g}</button>
+              <button key={g} className={`scr-chip ${group === g ? 'on' : ''} ${g === 'SIF' ? 'scr-chip-sif' : ''}`} onClick={() => pickGroup(g)}>{g}</button>
             ))}
           </div>
-          <select className="scr-select" value={cat} onChange={(e) => setCat(e.target.value)}>
-            <option value="All">All categories</option>
-            {cats.map(([c, n]) => <option key={c} value={c}>{shortCat(c)} ({n})</option>)}
-          </select>
-          <label className="scr-toggle"><input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} /><span>Open-ended only</span></label>
+          {!isSIF && (
+            <select className="scr-select" value={cat} onChange={(e) => setCat(e.target.value)}>
+              <option value="All">All categories</option>
+              {cats.map(([c, n]) => <option key={c} value={c}>{shortCat(c)} ({n})</option>)}
+            </select>
+          )}
+          {isSIF && (
+            <>
+              <select className="scr-select" value={sifFamily} onChange={(e) => setSifFamily(e.target.value)}>
+                <option value="all">All strategies</option>
+                <option value="Equity">Equity strategies</option>
+                <option value="Hybrid">Hybrid strategies</option>
+              </select>
+              <select className="scr-select" value={sifCat} onChange={(e) => setSifCat(e.target.value)}>
+                <option value="all">All categories</option>
+                {sifCats.map((c) => <option key={c} value={c}>{sifStratShort(c)}</option>)}
+              </select>
+              <select className="scr-select" value={sifHouse} onChange={(e) => setSifHouse(e.target.value)}>
+                <option value="all">All fund houses</option>
+                {sifHouses.map((h) => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </>
+          )}
+          {!isSIF && <label className="scr-toggle"><input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} /><span>Open-ended only</span></label>}
         </div>
 
-        <div className="scr-colbar">
-          <span className="scr-colbar-l">Columns:</span>
-          {METRICS.map((m) => (
-            <button key={m.key} className={`scr-colchip ${cols.includes(m.key) ? 'on' : ''}`} onClick={() => toggleCol(m.key)}>{m.label}</button>
-          ))}
-        </div>
+        {!isSIF && (
+          <div className="scr-colbar">
+            <span className="scr-colbar-l">Columns:</span>
+            {METRICS.map((m) => (
+              <button key={m.key} className={`scr-colchip ${cols.includes(m.key) ? 'on' : ''}`} onClick={() => toggleCol(m.key)}>{m.label}</button>
+            ))}
+          </div>
+        )}
 
         <div className="scr-meta">
-          {err ? <span className="scr-neg">{err}</span> : <>Showing <b>{rows.length.toLocaleString('en-IN')}</b> funds{data ? <> · as of {data.asof}</> : ''}. Tap a fund for detail.</>}
+          {err ? <span className="scr-neg">{err}</span> : isSIF
+            ? <>Showing <b>{sifRows.length}</b> SIF scheme{sifRows.length !== 1 ? 's' : ''}{sifData ? <> · NAV as of {sifData.nav_date}</> : ''}. Tap a fund for detail.</>
+            : <>Showing <b>{rows.length.toLocaleString('en-IN')}</b> funds{data ? <> · as of {data.asof}</> : ''}. Tap a fund for detail.</>
+          }
         </div>
 
-        {leaders.length > 0 && (
+        {/* SIF leaders */}
+        {isSIF && sifLeaders.length > 0 && (
+          <section className="scr-leaders" aria-label="SIF strategy overview">
+            <div className="scr-leaders-h">SIF strategies <em>· top 3 by latest NAV per category</em></div>
+            <div className="scr-leaders-grid">
+              {sifLeaders.map((c) => (
+                <div className="scr-lead-card" key={c.label}>
+                  <button className="scr-lead-cat" onClick={() => { setSifCat(c.cat); setSifFamily('all'); }}>
+                    {c.label} <span className="scr-lead-all">view all →</span>
+                  </button>
+                  {c.top.map((s, i) => (
+                    <button className="scr-lead-row" key={s.scheme_id} onClick={() => setSifSel(s)}>
+                      <span className="scr-lead-rank">{i + 1}</span>
+                      <span className="scr-lead-name">{s.sif_name}</span>
+                      <span className="scr-lead-ret scr-muted">₹{s.nav.toFixed(2)}</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* MF leaders */}
+        {!isSIF && leaders.length > 0 && (
           <section className="scr-leaders" aria-label="Category leaders">
             <div className="scr-leaders-h">Category leaders {group !== 'All' && <b className="scr-leaders-g">{group}</b>} <em>· top 3 by 3-year return</em></div>
             <div className="scr-leaders-grid">
@@ -226,57 +354,119 @@ export default function ScreenerPage() {
           </section>
         )}
 
-        {/* table (only this scrolls horizontally) */}
-        <div className="scr-table-wrap">
-          <table className="scr-table">
-            <thead>
-              <tr>
-                <th className="scr-name-h">Fund</th>
-                {visibleCols.map((m) => (
-                  <th key={m.key} className={`scr-sortable ${sort.key === m.key ? 'active' : ''}`} onClick={() => setSortKey(m.key)}>
-                    {m.label}{sort.key === m.key ? <span className="scr-arrow">{sort.dir < 0 ? '▾' : '▴'}</span> : ''}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((f) => (
-                <tr key={f.code} className="scr-row" onClick={() => setSel(f)}>
-                  <td className="scr-name">
-                    <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSel(f); }}>
-                      <span className="scr-fund-n">{f.name.replace(/\s*-\s*(Regular Plan|Regular|Growth( Option)?| Plan).*/i, '').trim()}{f.flag === 'check' && <span className="scr-flag" title="Unusual value — under review">⚠</span>}</span>
-                      <span className="scr-fund-sub">{shortCat(f.category)}</span>
-                    </button>
-                  </td>
-                  {visibleCols.map((m) => (
-                    <td key={m.key} className={cellCls(m, f[m.key])}>{m.kind === 'ratio' ? <b>{fmtCell(m, f[m.key])}</b> : fmtCell(m, f[m.key])}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {!data && !err && <div className="scr-loading">Loading funds…</div>}
-        {data && rows.length === 0 && <div className="scr-loading">No funds match these filters.</div>}
-        {rows.length > 0 && (
-          <div className="scr-pager">
-            <div className="scr-pager-info">Showing <b>{from.toLocaleString('en-IN')}–{to.toLocaleString('en-IN')}</b> of {rows.length.toLocaleString('en-IN')}</div>
-            <div className="scr-pager-ctrls">
-              <button className="scr-pg-btn" disabled={cur === 0} onClick={() => setPage(cur - 1)}>‹ Prev</button>
-              <span className="scr-pg-now">Page {cur + 1} / {pageCount}</span>
-              <button className="scr-pg-btn" disabled={cur >= pageCount - 1} onClick={() => setPage(cur + 1)}>Next ›</button>
+        {/* SIF table */}
+        {isSIF && (
+          <>
+            <div className="scr-table-wrap">
+              <table className="scr-table">
+                <thead>
+                  <tr>
+                    <th className="scr-name-h">Fund</th>
+                    <th className={`scr-sortable ${sifSort.key === 'category' ? 'active' : ''}`} style={{textAlign:'left'}} onClick={() => setSifSortKey('category')}>Strategy{sifSort.key === 'category' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
+                    <th className={`scr-sortable ${sifSort.key === 'sif_name' ? 'active' : ''}`} style={{textAlign:'left'}} onClick={() => setSifSortKey('sif_name')}>Fund House{sifSort.key === 'sif_name' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
+                    <th className={`scr-sortable ${sifSort.key === 'nav' ? 'active' : ''}`} onClick={() => setSifSortKey('nav')}>NAV{sifSort.key === 'nav' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
+                    <th>NAV Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sifVisible.map((s) => {
+                    const fam = s.category?.startsWith('Equity') ? 'Equity' : 'Hybrid';
+                    return (
+                      <tr key={s.scheme_id} className="scr-row" onClick={() => setSifSel(s)}>
+                        <td className="scr-name">
+                          <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSifSel(s); }}>
+                            <span className="scr-fund-n">{s.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim()}</span>
+                            <span className="scr-fund-sub">{s.scheme_id}</span>
+                          </button>
+                        </td>
+                        <td style={{textAlign:'left'}}>
+                          <span className={`scr-sif-badge scr-sif-badge-${fam.toLowerCase()}`}>{sifStratShort(s.category)}</span>
+                        </td>
+                        <td style={{textAlign:'left',color:'var(--text2)',fontSize:'12px',fontWeight:600}}>{s.sif_name}</td>
+                        <td><b>₹{s.nav.toFixed(4)}</b></td>
+                        <td className="scr-muted" style={{fontSize:'11px'}}>{s.nav_date}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-            <label className="scr-pager-size">Show
-              <select value={pageSize} onChange={(e) => setPageSize(+e.target.value)}>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-                <option value={100000}>All</option>
-              </select>
-              per page
-            </label>
-          </div>
+            {sifLoading && <div className="scr-loading">Loading SIF data…</div>}
+            {!sifLoading && sifData && sifRows.length === 0 && <div className="scr-loading">No SIFs match these filters.</div>}
+            {sifRows.length > 0 && (
+              <div className="scr-pager">
+                <div className="scr-pager-info">Showing <b>{sifCur * pageSize + 1}–{Math.min(sifRows.length, (sifCur + 1) * pageSize)}</b> of {sifRows.length}</div>
+                <div className="scr-pager-ctrls">
+                  <button className="scr-pg-btn" disabled={sifCur === 0} onClick={() => setSifPage(sifCur - 1)}>‹ Prev</button>
+                  <span className="scr-pg-now">Page {sifCur + 1} / {sifPageCount}</span>
+                  <button className="scr-pg-btn" disabled={sifCur >= sifPageCount - 1} onClick={() => setSifPage(sifCur + 1)}>Next ›</button>
+                </div>
+                <label className="scr-pager-size">Show
+                  <select value={pageSize} onChange={(e) => setPageSize(+e.target.value)}>
+                    <option value={10}>10</option><option value={25}>25</option><option value={50}>50</option><option value={100000}>All</option>
+                  </select>
+                  per page
+                </label>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* MF table */}
+        {!isSIF && (
+          <>
+            <div className="scr-table-wrap">
+              <table className="scr-table">
+                <thead>
+                  <tr>
+                    <th className="scr-name-h">Fund</th>
+                    {visibleCols.map((m) => (
+                      <th key={m.key} className={`scr-sortable ${sort.key === m.key ? 'active' : ''}`} onClick={() => setSortKey(m.key)}>
+                        {m.label}{sort.key === m.key ? <span className="scr-arrow">{sort.dir < 0 ? '▾' : '▴'}</span> : ''}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map((f) => (
+                    <tr key={f.code} className="scr-row" onClick={() => setSel(f)}>
+                      <td className="scr-name">
+                        <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSel(f); }}>
+                          <span className="scr-fund-n">{f.name.replace(/\s*-\s*(Regular Plan|Regular|Growth( Option)?| Plan).*/i, '').trim()}{f.flag === 'check' && <span className="scr-flag" title="Unusual value — under review">⚠</span>}</span>
+                          <span className="scr-fund-sub">{shortCat(f.category)}</span>
+                        </button>
+                      </td>
+                      {visibleCols.map((m) => (
+                        <td key={m.key} className={cellCls(m, f[m.key])}>{m.kind === 'ratio' ? <b>{fmtCell(m, f[m.key])}</b> : fmtCell(m, f[m.key])}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!data && !err && <div className="scr-loading">Loading funds…</div>}
+            {data && rows.length === 0 && <div className="scr-loading">No funds match these filters.</div>}
+            {rows.length > 0 && (
+              <div className="scr-pager">
+                <div className="scr-pager-info">Showing <b>{from.toLocaleString('en-IN')}–{to.toLocaleString('en-IN')}</b> of {rows.length.toLocaleString('en-IN')}</div>
+                <div className="scr-pager-ctrls">
+                  <button className="scr-pg-btn" disabled={cur === 0} onClick={() => setPage(cur - 1)}>‹ Prev</button>
+                  <span className="scr-pg-now">Page {cur + 1} / {pageCount}</span>
+                  <button className="scr-pg-btn" disabled={cur >= pageCount - 1} onClick={() => setPage(cur + 1)}>Next ›</button>
+                </div>
+                <label className="scr-pager-size">Show
+                  <select value={pageSize} onChange={(e) => setPageSize(+e.target.value)}>
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={100000}>All</option>
+                  </select>
+                  per page
+                </label>
+              </div>
+            )}
+          </>
         )}
 
         {/* FAQ */}
@@ -297,6 +487,7 @@ export default function ScreenerPage() {
       <Footer activePage="screener" />
 
       {sel && <Detail f={sel} onClose={() => setSel(null)} />}
+      {sifSel && <SifDetail s={sifSel} onClose={() => setSifSel(null)} />}
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
     </div>
   );
@@ -347,10 +538,67 @@ function Detail({ f, onClose }) {
     </div>
   );
 }
+/* ---------- SIF detail drawer ---------- */
+function SifDetail({ s, onClose }) {
+  const [pts, setPts] = useState(null);
+  const [histLoading, setHistLoading] = useState(true);
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    let alive = true;
+    const today = new Date().toISOString().slice(0, 10);
+    const from = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
+    fetch(`/api/sif-history?sd_id=${encodeURIComponent(s.scheme_id)}&from=${from}&to=${today}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!alive || !d?.records?.length) { setHistLoading(false); return; }
+        setPts(d.records.map((r) => ({ t: new Date(r.date).getTime(), v: +r.nav })).filter((p) => isFinite(p.v)).sort((a, b) => a.t - b.t));
+        setHistLoading(false);
+      })
+      .catch(() => setHistLoading(false));
+    return () => { alive = false; window.removeEventListener('keydown', onKey); };
+  }, [s, onClose]);
 
-function Spark({ nav }) {
-  if (!nav) return <div className="scr-spark-load">Loading NAV history…</div>;
-  if (nav.length < 2) return null;
+  const fam = s.category?.startsWith('Equity') ? 'Equity' : 'Hybrid';
+  return (
+    <div className="scr-drawer-wrap" onMouseDown={onClose}>
+      <div className="scr-drawer" onMouseDown={(e) => e.stopPropagation()} role="dialog">
+        <div className="scr-drawer-h">
+          <div>
+            <div className="scr-drawer-name">{s.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim()}</div>
+            <div className="scr-drawer-tags">
+              <span className="scr-tag">{s.sif_name}</span>
+              <span className={`scr-sif-badge scr-sif-badge-${fam.toLowerCase()}`} style={{fontSize:'10px',padding:'3px 8px'}}>{SIF_STRATEGY_LABELS[s.category] || sifStratShort(s.category)}</span>
+              <span className="scr-tag alt">{s.type}</span>
+              <span className="scr-tag alt">{s.scheme_id}</span>
+            </div>
+          </div>
+          <button className="scr-x" onClick={onClose} aria-label="Close">×</button>
+        </div>
+
+        <div className="scr-sif-notice">ⓘ SIFs are a new asset class (launched 2024–25) with limited NAV history. Performance metrics are not yet available.</div>
+
+        <Spark nav={pts} loadingMsg={histLoading ? 'Loading NAV history…' : null} emptyMsg="No NAV history available yet" />
+
+        <div className="scr-drawer-kpis">
+          <div className="scr-dk"><span>Latest NAV</span><b>₹{s.nav.toFixed(4)}</b></div>
+          <div className="scr-dk"><span>NAV Date</span><b style={{fontSize:'13px'}}>{s.nav_date}</b></div>
+          <div className="scr-dk"><span>Data points</span><b>{pts ? pts.length : '—'}</b></div>
+        </div>
+
+        <div className="scr-drawer-cta">
+          <a className="scr-btn primary" href={backtestSifLink(s)}>⚗ Backtest this SIF</a>
+          <a className="scr-btn" href="/sifs">📋 Full SIF screener</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Spark({ nav, loadingMsg, emptyMsg }) {
+
+  if (loadingMsg || (!nav && loadingMsg !== null)) return <div className="scr-spark-load">{loadingMsg || 'Loading NAV history…'}</div>;
+  if (!nav || nav.length < 2) return emptyMsg ? <div className="scr-spark-load">{emptyMsg}</div> : null;
   const W = 480, H = 110, pad = 4;
   const xs = nav.map((p) => p.t), minX = xs[0], maxX = xs[xs.length - 1];
   const vs = nav.map((p) => p.v), minV = Math.min(...vs), maxV = Math.max(...vs);
@@ -371,6 +619,16 @@ function Spark({ nav }) {
 
 const CSS = `
 .scr-body{font-family:Raleway,sans-serif;color:var(--text);padding-bottom:48px}
+/* SIF chip styling */
+.scr-chip-sif{border-color:#5e35b133;color:#7c4dff!important}
+.scr-chip-sif:hover{border-color:#7c4dff!important}
+.scr-chip-sif.on{background:linear-gradient(135deg,#5e35b1,#7c4dff)!important;color:#fff!important;border-color:#5e35b1!important}
+/* SIF strategy badges */
+.scr-sif-badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font:700 11px JetBrains Mono,monospace;white-space:nowrap}
+.scr-sif-badge-equity{background:rgba(27,94,32,.12);color:var(--g1)}
+.scr-sif-badge-hybrid{background:rgba(94,53,177,.10);color:#5e35b1}
+/* SIF notice */
+.scr-sif-notice{background:rgba(94,53,177,.08);border:1px solid rgba(94,53,177,.2);border-radius:8px;padding:9px 12px;font-size:12px;color:#7c4dff;margin-bottom:14px}
 .scr-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
 .scr-search{flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font:500 14px Raleway,sans-serif;background:var(--surface);color:var(--text)}
 .scr-search:focus{outline:none;border-color:var(--g3);box-shadow:0 0 0 3px var(--g-xlight)}
