@@ -98,7 +98,7 @@ const FAQ_ITEMS = [
   { q: 'How are the returns calculated?', a: 'Point-to-point CAGR from real AMFI NAVs — the latest NAV versus the NAV one, three and five years earlier. For periods shorter than a fund’s age, the figure is left blank rather than estimated.' },
   { q: 'How current is the data?', a: 'The dataset is rebuilt every day from AMFI’s official NAV files, so the figures reflect the most recent published NAVs.' },
   { q: 'What do volatility and max drawdown mean?', a: 'Volatility is the annualised standard deviation of monthly returns — how bumpy the ride was. Max drawdown is the largest peak-to-trough fall. Both are on a month-end basis over the available history.' },
-  { q: 'Why only Regular plans, not Direct?', a: 'Abundance Financial Services is an AMFI-registered mutual fund distributor (ARN-251838), so the screener shows Regular plans. Direct plans are intentionally hidden.' },
+
   { q: 'Is this investment advice?', a: 'No. This is an educational data tool. Past performance is not indicative of future results, and nothing here is a recommendation. Please consult your financial advisor before investing.' },
 ];
 
@@ -254,7 +254,7 @@ export default function ScreenerPage() {
           <p className="page-subtitle">
             {isSIF
               ? <>Discover all SEBI-regulated <b>Specialised Investment Funds</b> — {sifData ? sifSchemes.length : '…'} schemes across Equity Long-Short, Hybrid Long-Short and Active Asset Allocator strategies.</>
-              : <>Filter and rank {data ? data.count.toLocaleString('en-IN') : '1,800+'} regular mutual funds by category, returns and risk — on real historical NAVs.</>
+              : <>Filter and rank {data ? data.count.toLocaleString('en-IN') : '1,800+'} mutual funds by category, returns and risk — on real historical NAVs.</>
             }
           </p>
         </div>
