@@ -24,6 +24,7 @@ export default function BreadthPage() {
   const [err, setErr] = useState('');
   const [date, setDate] = useState(null);
   const [mode, setMode] = useState('day'); // day | week | month
+  const [sectorData, setSectorData] = useState(null);
 
   useEffect(() => {
     fetch('/api/breadth').then((r) => r.json()).then((d) => {
@@ -32,6 +33,14 @@ export default function BreadthPage() {
     }).catch(() => setErr('Could not load breadth data.'));
     fetch('/api/breadth-indices').then((r) => r.json()).then(setIdx).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!date) return;
+    fetch(`/api/sector-breadth?date=${date}`)
+      .then((r) => r.json())
+      .then((d) => { if (!d.error && d.snaps?.length) setSectorData(d); })
+      .catch(() => {});
+  }, [date]);
 
   const snaps = data?.snaps || [];
   const dates = useMemo(() => snaps.map((s) => s.date), [snaps]);
@@ -184,6 +193,13 @@ export default function BreadthPage() {
           </>
         )}
 
+        {sectorData?.snaps?.length > 0 && (
+          <>
+            <div className="brd-section-h">Sector breadth · {date}</div>
+            <SectorGrid snap={sectorData.snaps[sectorData.snaps.length - 1]} sectors={sectorData.sectors} />
+          </>
+        )}
+
         <div className="brd-disc">
           <b>Disclaimer.</b> Educational market-breadth analytics by <b>Atin Kumar Agrawal | Abundance Financial Services</b> · AMFI Registered Mutual Funds &amp; SIF Distributor (ARN-251838). Breadth is computed on end-of-day prices for the BSE main-board equity universe (groups A/B); index levels and weekly RSI are sourced separately and may differ slightly from NSE. Moving-average and 52-week figures use unadjusted prices. This is technical market context for education only — not a recommendation to buy or sell any security, index or fund. Past behaviour does not predict future results.
         </div>
@@ -287,6 +303,52 @@ function Spark({ series }) {
   );
 }
 
+const SECTOR_COLORS = {
+  'Bank': '#1565c0', 'PSU Bank': '#0277bd', 'Financial Services': '#283593',
+  'IT': '#00695c', 'Auto': '#558b2f', 'FMCG': '#2e7d32',
+  'Pharma': '#6a1b9a', 'Healthcare': '#7b1fa2',
+  'Metal': '#4e342e', 'Energy': '#e65100', 'Oil & Gas': '#bf360c',
+  'Realty': '#37474f', 'Infrastructure': '#546e7a',
+  'Media': '#ad1457', 'Consumer Durables': '#00838f',
+};
+const sColor = (s) => SECTOR_COLORS[s] || 'var(--g2)';
+
+function SectorGrid({ snap, sectors }) {
+  if (!snap || !sectors) return null;
+  return (
+    <div className="sec-grid">
+      {sectors.map((s) => {
+        const d = snap[s];
+        if (!d) return null;
+        const rp = d.regime_pct;
+        const color = sColor(s);
+        const cls = rp == null ? '' : rp >= 60 ? 'sec-up' : rp >= 40 ? 'sec-mix' : rp >= 20 ? 'sec-warn' : 'sec-dn';
+        return (
+          <div className={`sec-card ${cls}`} key={s} style={{ '--sc': color }}>
+            <div className="sec-name">{s}</div>
+            <div className="sec-pct">{rp != null ? Math.round(rp) + '%' : '—'}</div>
+            <div className="sec-label">above 200DMA</div>
+            <div className="sec-bar"><div className="sec-bar-fill" style={{ width: `${rp ?? 0}%` }} /></div>
+            <div className="sec-row">
+              <span className="brd-up">▲{d.advancing ?? '—'}</span>
+              <span className="brd-down">▼{d.declining ?? '—'}</span>
+              <span className="sec-uni">∑{d.universe ?? '—'}</span>
+            </div>
+            {(d.bull_stacked > 0 || d.bear_stacked > 0 || d.golden_cross > 0 || d.death_cross > 0) && (
+              <div className="sec-sigs">
+                {d.golden_cross > 0 && <span className="sec-sig-gc">GC{d.golden_cross}</span>}
+                {d.death_cross > 0 && <span className="sec-sig-dc">DC{d.death_cross}</span>}
+                {d.bull_stacked > 0 && <span className="sec-sig-bs">B↑{d.bull_stacked}</span>}
+                {d.bear_stacked > 0 && <span className="sec-sig-bs sec-sig-bear">B↓{d.bear_stacked}</span>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const CSS = `
 .brd-body{font-family:Raleway,sans-serif;color:var(--text);padding-bottom:48px}
 .brd-prem{font:800 10px JetBrains Mono,monospace;background:linear-gradient(90deg,var(--g1),var(--g3));color:#fff;padding:3px 8px;border-radius:6px;vertical-align:middle;letter-spacing:.08em;margin-left:8px}
@@ -366,4 +428,21 @@ const CSS = `
 
 @media(max-width:900px){.brd-indices{grid-template-columns:repeat(2,1fr)}.brd-grid{grid-template-columns:repeat(2,1fr)}.brd-internals{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.brd-regime{flex-direction:row;gap:14px}.brd-regime-pct{font-size:38px}.brd-controls{justify-content:flex-start}.brd-datesel{width:100%}}
+
+.sec-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
+.sec-card{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--sc,var(--g2));border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.sec-name{font:700 11px JetBrains Mono,monospace;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.sec-pct{font:800 26px JetBrains Mono,monospace;color:var(--sc,var(--g2));line-height:1.1}
+.sec-card.sec-dn .sec-pct{color:var(--neg)}.sec-card.sec-warn .sec-pct{color:var(--warn)}
+.sec-label{font-size:10.5px;color:var(--muted);margin-bottom:7px}
+.sec-bar{height:4px;background:var(--s3,#eef5ee);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.sec-bar-fill{height:100%;background:var(--sc,var(--g2));border-radius:2px;transition:width .3s}
+.sec-card.sec-dn .sec-bar-fill{background:var(--neg)}.sec-card.sec-warn .sec-bar-fill{background:var(--warn)}
+.sec-row{display:flex;gap:9px;font:700 11px JetBrains Mono,monospace;align-items:center}
+.sec-uni{color:var(--muted);margin-left:auto}
+.sec-sigs{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
+.sec-sig-gc,.sec-sig-dc,.sec-sig-bs{font:700 9px JetBrains Mono,monospace;padding:2px 5px;border-radius:4px}
+.sec-sig-gc{background:var(--g-xlight);color:var(--g1)}.sec-sig-dc{background:#fdeaea;color:var(--neg)}.sec-sig-bs{background:var(--g-xlight);color:var(--g1)}.sec-sig-bear{background:#fdeaea;color:var(--neg)}
+@media(max-width:900px){.sec-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.sec-grid{grid-template-columns:repeat(2,1fr)}}
 `;

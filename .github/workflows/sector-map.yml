@@ -1,0 +1,32 @@
+name: sector-map
+
+# Weekly refresh of the ISIN→sector mapping from NSE sectoral-index constituent CSVs.
+# Sector compositions change only on quarterly rebalancing days, so weekly is sufficient.
+# Run on Sunday at 06:00 UTC so it's ready before Monday's breadth run.
+on:
+  schedule:
+    - cron: '0 6 * * 0'
+  workflow_dispatch:
+
+concurrency:
+  group: sector-map
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install pg@8 --no-save
+      - name: Refresh sector ISIN map
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: node scripts/ingest-sector-map.mjs
+      - name: Backfill sector breadth for any new sectors
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: node scripts/build-sector-breadth.mjs --all

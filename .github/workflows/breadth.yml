@@ -1,7 +1,7 @@
 name: market-breadth
 
-# Nightly: pull the day's BSE bhavcopy into stock_eod, then compute the breadth snapshot.
-# Manual backfill: provide `from`/`to` to ingest a date range and recompute all snapshots.
+# Nightly: pull the day's BSE bhavcopy into stock_eod, then compute the breadth snapshot,
+# per-stock signals, and sector breadth. Manual backfill via from/to inputs.
 on:
   schedule:
     - cron: '30 13 * * 1-5'   # 13:30 UTC ≈ 19:00 IST, weekdays (after BSE bhavcopy is published)
@@ -45,4 +45,22 @@ jobs:
             node scripts/build-breadth.mjs --all
           else
             node scripts/build-breadth.mjs
+          fi
+      - name: Compute per-stock signals
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: |
+          if [ -n "${{ github.event.inputs.from }}" ]; then
+            node scripts/build-signals.mjs --all
+          else
+            node scripts/build-signals.mjs
+          fi
+      - name: Compute sector breadth
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: |
+          if [ -n "${{ github.event.inputs.from }}" ]; then
+            node scripts/build-sector-breadth.mjs --all
+          else
+            node scripts/build-sector-breadth.mjs
           fi
