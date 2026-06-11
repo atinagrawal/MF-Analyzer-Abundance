@@ -1,0 +1,48 @@
+name: market-breadth
+
+# Nightly: pull the day's BSE bhavcopy into stock_eod, then compute the breadth snapshot.
+# Manual backfill: provide `from`/`to` to ingest a date range and recompute all snapshots.
+on:
+  schedule:
+    - cron: '30 13 * * 1-5'   # 13:30 UTC ≈ 19:00 IST, weekdays (after BSE bhavcopy is published)
+  workflow_dispatch:
+    inputs:
+      from:
+        description: 'Backfill start date (YYYY-MM-DD) — leave blank for latest day only'
+        required: false
+      to:
+        description: 'Backfill end date (YYYY-MM-DD)'
+        required: false
+
+concurrency:
+  group: market-breadth
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install pg@8 --no-save
+      - name: Ingest EOD prices
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: |
+          if [ -n "${{ github.event.inputs.from }}" ]; then
+            node scripts/ingest-eod.mjs --from=${{ github.event.inputs.from }} --to=${{ github.event.inputs.to }}
+          else
+            node scripts/ingest-eod.mjs
+          fi
+      - name: Compute breadth snapshot
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: |
+          if [ -n "${{ github.event.inputs.from }}" ]; then
+            node scripts/build-breadth.mjs --all
+          else
+            node scripts/build-breadth.mjs
+          fi
