@@ -54,6 +54,7 @@ async function one(idx) {
       rsi_w: rsi(weeklyCloses(daily)),
       tag: tag(idx.kind, last, sma50),
       kind: idx.kind,
+      spark: closes.slice(-24).map((x) => +x.toFixed(2)), // ~1-month trend
     };
   } catch (e) { return { ...stub(idx), error: true }; }
 }

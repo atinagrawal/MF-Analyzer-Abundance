@@ -94,6 +94,7 @@ export default function BreadthPage() {
                 <span className="brd-ix-rsi">RSI(14)W {ix.rsi_w ?? '—'}</span>
                 {ix.change_pct != null && <span className={ix.change_pct >= 0 ? 'brd-up' : 'brd-down'}>{ix.change_pct >= 0 ? '▲' : '▼'} {Math.abs(ix.change_pct).toFixed(2)}%</span>}
               </div>
+              {ix.spark && ix.spark.length > 1 && <Spark series={ix.spark} />}
             </div>
           ))}
         </div>
@@ -110,6 +111,9 @@ export default function BreadthPage() {
             </div>
           </div>
         )}
+
+        {/* breadth trend over time */}
+        {snaps.length > 2 && <TrendChart snaps={snaps} />}
 
         {/* time controls */}
         {cur && (
@@ -184,6 +188,57 @@ function tagCls(t) {
   return 'tg-neutral';
 }
 
+function TrendChart({ snaps }) {
+  const [range, setRange] = useState('6M');
+  const [hi, setHi] = useState(null);
+  const N = { '1M': 22, '3M': 66, '6M': 126, '1Y': 252, 'All': snaps.length }[range];
+  const data = snaps.slice(Math.max(0, snaps.length - N));
+  if (data.length < 2) return null;
+  const W = 760, H = 230, padL = 30, padR = 12, padT = 12, padB = 22;
+  const iw = W - padL - padR, ih = H - padT - padB;
+  const X = (i) => padL + (i / (data.length - 1)) * iw;
+  const Y = (v) => padT + (1 - v / 100) * ih;
+  const pathOf = (n) => {
+    let d = '', started = false;
+    data.forEach((s, i) => { const v = pctOf(s['a' + n], s['t' + n]); if (v == null) return; d += `${started ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)} `; started = true; });
+    return d.trim();
+  };
+  const onMove = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    let i = Math.round(((cx / r.width) * W - padL) / iw * (data.length - 1));
+    i = Math.max(0, Math.min(data.length - 1, i));
+    setHi(i);
+  };
+  const cur = hi != null ? data[hi] : data[data.length - 1];
+  const c200 = pctOf(cur.a200, cur.t200), c50 = pctOf(cur.a50, cur.t50);
+  return (
+    <div className="brd-trend">
+      <div className="brd-trend-head">
+        <div className="brd-trend-title">Breadth trend
+          <span className="brd-leg"><i className="brd-leg-200" /> % &gt; 200-DMA</span>
+          <span className="brd-leg"><i className="brd-leg-50" /> % &gt; 50-DMA</span>
+        </div>
+        <div className="brd-trend-ranges">
+          {['1M', '3M', '6M', '1Y', 'All'].map((r) => <button key={r} className={`brd-rg ${range === r ? 'on' : ''}`} onClick={() => setRange(r)}>{r}</button>)}
+        </div>
+      </div>
+      <div className="brd-trend-read">{cur.date} · <b className="brd-c200">{c200 == null ? '—' : c200.toFixed(0) + '%'}</b> above 200-DMA · <b className="brd-c50">{c50 == null ? '—' : c50.toFixed(0) + '%'}</b> above 50-DMA</div>
+      <svg className="brd-trend-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" onMouseMove={onMove} onMouseLeave={() => setHi(null)} onTouchStart={onMove} onTouchMove={onMove}>
+        <rect x={padL} y={Y(60)} width={iw} height={Y(40) - Y(60)} fill="var(--warn-bg,#fff3e0)" opacity="0.5" />
+        {[20, 40, 60, 80].map((g) => (<g key={g}><line x1={padL} y1={Y(g)} x2={W - padR} y2={Y(g)} stroke="var(--border)" strokeWidth="0.5" /><text x={2} y={Y(g) + 3} fontSize="9" fill="var(--muted)" fontFamily="monospace">{g}</text></g>))}
+        <path d={pathOf(50)} fill="none" stroke="var(--g3)" strokeWidth="1.5" opacity="0.85" />
+        <path d={pathOf(200)} fill="none" stroke="var(--g1)" strokeWidth="2" />
+        {hi != null && (<g>
+          <line x1={X(hi)} y1={padT} x2={X(hi)} y2={H - padB} stroke="var(--muted)" strokeWidth="0.7" strokeDasharray="3 3" />
+          {c200 != null && <circle cx={X(hi)} cy={Y(c200)} r="3.5" fill="var(--g1)" />}
+          {c50 != null && <circle cx={X(hi)} cy={Y(c50)} r="3.5" fill="var(--g3)" />}
+        </g>)}
+      </svg>
+    </div>
+  );
+}
+
 function Spark({ series }) {
   const pts = (series || []).filter((v) => v != null);
   if (pts.length < 2) return <div className="brd-spark-empty" />;
@@ -223,6 +278,21 @@ const CSS = `
 .brd-regime.brd-down .brd-regime-pct{color:var(--neg)}.brd-regime.brd-neutral .brd-regime-pct,.brd-regime.brd-warn .brd-regime-pct{color:var(--warn)}
 .brd-regime-label{font:800 18px Raleway,sans-serif;color:var(--text)}
 .brd-regime-sub{font-size:13px;color:var(--muted);margin-top:3px}
+
+.brd-ix .brd-spark{margin-top:8px;height:30px}
+
+.brd-trend{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);margin-bottom:16px}
+.brd-trend-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center}
+.brd-trend-title{font:800 14px Raleway,sans-serif;color:var(--text);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brd-leg{font:600 11px JetBrains Mono,monospace;color:var(--muted);display:flex;align-items:center;gap:5px}
+.brd-leg i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.brd-leg-200{background:var(--g1)}.brd-leg-50{background:var(--g3)}
+.brd-trend-ranges{display:flex;gap:5px}
+.brd-rg{padding:5px 10px;border:1px solid var(--border);background:var(--surface);border-radius:7px;font:700 11.5px JetBrains Mono,monospace;color:var(--muted);cursor:pointer}
+.brd-rg.on{background:var(--g1);color:#fff;border-color:var(--g1)}
+.brd-trend-read{font:600 12.5px JetBrains Mono,monospace;color:var(--muted);margin:6px 0 8px}
+.brd-c200{color:var(--g1)}.brd-c50{color:var(--g2)}
+.brd-trend-svg{width:100%;height:230px;display:block;touch-action:none;cursor:crosshair}
 
 .brd-controls{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:14px}
 .brd-modes{display:flex;gap:6px}
