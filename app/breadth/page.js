@@ -1,0 +1,259 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+
+const DMAS = [20, 50, 100, 150, 200];
+const pctOf = (a, t) => (t ? (100 * a) / t : null);
+const fmtPct = (v, d = 0) => (v == null ? '—' : v.toFixed(d) + '%');
+const fmtNum = (v) => (v == null ? '—' : v.toLocaleString('en-IN'));
+const sign = (v) => (v == null ? '' : v > 0 ? '+' : '');
+
+function regimeLabel(p) {
+  if (p == null) return ['Unknown', 'brd-neutral'];
+  if (p >= 60) return ['Risk-on', 'brd-up'];
+  if (p >= 40) return ['Mixed / neutral', 'brd-neutral'];
+  if (p >= 20) return ['Risk-off', 'brd-warn'];
+  return ['Deep risk-off', 'brd-down'];
+}
+
+export default function BreadthPage() {
+  const [data, setData] = useState(null);
+  const [idx, setIdx] = useState(null);
+  const [err, setErr] = useState('');
+  const [date, setDate] = useState(null);
+  const [mode, setMode] = useState('day'); // day | week | month
+
+  useEffect(() => {
+    fetch('/api/breadth').then((r) => r.json()).then((d) => {
+      if (d.error) { setErr(d.error); return; }
+      setData(d); setDate(d.asof);
+    }).catch(() => setErr('Could not load breadth data.'));
+    fetch('/api/breadth-indices').then((r) => r.json()).then(setIdx).catch(() => {});
+  }, []);
+
+  const snaps = data?.snaps || [];
+  const dates = useMemo(() => snaps.map((s) => s.date), [snaps]);
+  const curIdx = date ? dates.indexOf(date) : -1;
+  const cur = curIdx >= 0 ? snaps[curIdx] : null;
+  const offset = mode === 'day' ? 1 : mode === 'week' ? 5 : 21;
+  const prev = curIdx > 0 ? snaps[Math.max(0, curIdx - offset)] : null;
+
+  const dmaRows = useMemo(() => {
+    if (!cur) return [];
+    return DMAS.map((n) => {
+      const a = cur['a' + n], t = cur['t' + n];
+      const p = pctOf(a, t);
+      const pp = prev ? pctOf(prev['a' + n], prev['t' + n]) : null;
+      const series = snaps.slice(Math.max(0, curIdx - 29), curIdx + 1).map((s) => pctOf(s['a' + n], s['t' + n]));
+      return { n, a, t, below: t != null && a != null ? t - a : null, pct: p, delta: p != null && pp != null ? p - pp : null, series };
+    });
+  }, [cur, prev, snaps, curIdx]);
+
+  const [rLabel, rCls] = regimeLabel(cur?.regime_pct);
+  const pct50 = cur ? pctOf(cur.a50, cur.t50) : null;
+
+  const signals = useMemo(() => {
+    if (!cur) return [];
+    const out = [];
+    const p200 = cur.regime_pct, p20 = pctOf(cur.a20, cur.t20);
+    if (p200 != null) out.push(p200 >= 60 ? ['up', 'Broad uptrend — majority of stocks above their 200-DMA.'] : p200 < 40 ? ['down', 'Defensive tape — most stocks are below their 200-DMA.'] : ['neutral', 'Two-sided market — selectivity matters.']);
+    if (p20 != null && p200 != null && p20 - p200 > 20) out.push(['up', 'Short-term rebound building inside a weaker long-term trend.']);
+    if (p20 != null && p200 != null && p200 - p20 > 20) out.push(['down', 'Short-term weakness against a firmer long-term trend.']);
+    if (cur.advancing != null && cur.declining) {
+      if (cur.advancing > 2 * cur.declining) out.push(['up', 'Strong advance-decline — broad buying across the tape.']);
+      else if (cur.declining > 2 * cur.advancing) out.push(['down', 'Heavy advance-decline skew — broad selling pressure.']);
+    }
+    if (cur.new_high != null && cur.new_low != null) {
+      if (cur.new_high > Math.max(5, cur.new_low * 3)) out.push(['up', `Expanding new highs (${cur.new_high} vs ${cur.new_low} new lows).`]);
+      else if (cur.new_low > Math.max(5, cur.new_high * 3)) out.push(['down', `Expanding new lows (${cur.new_low} vs ${cur.new_high} new highs) — distribution.`]);
+    }
+    const back = snaps[Math.max(0, curIdx - 5)];
+    if (back && pct50 != null) { const d = pct50 - pctOf(back.a50, back.t50); if (d > 12) out.push(['up', 'Breadth thrust — share above the 50-DMA jumped sharply this week.']); if (d < -12) out.push(['down', 'Breadth breakdown — share above the 50-DMA fell sharply this week.']); }
+    return out;
+  }, [cur, snaps, curIdx, pct50]);
+
+  return (
+    <div className="brd-body">
+      <Navbar activePage="breadth" />
+      <div className="container">
+        <div className="page-header">
+          <div className="page-eyebrow"><span className="live-dot" /><span className="page-eyebrow-text">Live · market breadth · BSE equity universe</span></div>
+          <h1 className="page-title">Market Breadth <span className="brd-prem">PREMIUM</span></h1>
+          <p className="page-subtitle">How broad is the move? Participation across ~{cur ? fmtNum(cur.universe) : '2,200'} stocks — moving-average breadth, advance-decline and new highs/lows, updated every trading day.</p>
+        </div>
+
+        {/* index strip */}
+        <div className="brd-indices">
+          {(idx?.indices || [{ key: 'a' }, { key: 'b' }, { key: 'c' }, { key: 'd' }]).map((ix) => (
+            <div className="brd-ix" key={ix.key}>
+              <div className="brd-ix-top"><span className="brd-ix-name">{ix.label || '—'}</span>{ix.tag && <span className={`brd-ix-tag ${tagCls(ix.tag)}`}>{ix.tag}</span>}</div>
+              <div className="brd-ix-lvl">{ix.last != null ? ix.last.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}</div>
+              <div className="brd-ix-sub">
+                <span className="brd-ix-rsi">RSI(14)W {ix.rsi_w ?? '—'}</span>
+                {ix.change_pct != null && <span className={ix.change_pct >= 0 ? 'brd-up' : 'brd-down'}>{ix.change_pct >= 0 ? '▲' : '▼'} {Math.abs(ix.change_pct).toFixed(2)}%</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {err && <div className="brd-err">{err} The dashboard populates once the nightly breadth job has written snapshots.</div>}
+
+        {/* regime */}
+        {cur && (
+          <div className={`brd-regime ${rCls}`}>
+            <div className="brd-regime-pct">{cur.regime_pct != null ? Math.round(cur.regime_pct) : '—'}%</div>
+            <div className="brd-regime-body">
+              <div className="brd-regime-label">{rLabel}</div>
+              <div className="brd-regime-sub">{cur.regime_pct >= 40 && cur.regime_pct < 60 ? 'Two-sided market — selectivity matters.' : 'Regime read from breadth.'} · {fmtPct(cur.regime_pct, 0)} above 200-DMA, {fmtPct(pct50, 0)} above 50-DMA.</div>
+            </div>
+          </div>
+        )}
+
+        {/* time controls */}
+        {cur && (
+          <div className="brd-controls">
+            <div className="brd-modes">
+              {[['day', 'Day-on-day'], ['week', 'Week-on-week'], ['month', 'Month-on-month']].map(([k, l]) => (
+                <button key={k} className={`brd-mode ${mode === k ? 'on' : ''}`} onClick={() => setMode(k)}>{l}</button>
+              ))}
+            </div>
+            <label className="brd-datesel">State at close on
+              <select value={date || ''} onChange={(e) => setDate(e.target.value)}>
+                {[...dates].reverse().map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </label>
+          </div>
+        )}
+
+        {/* DMA cards */}
+        {cur && (
+          <div className="brd-grid">
+            {dmaRows.map((r) => (
+              <div className="brd-card" key={r.n}>
+                <div className="brd-card-h">Above {r.n} DMA</div>
+                <div className="brd-card-big">{fmtNum(r.a)}</div>
+                <div className="brd-card-meta">{fmtPct(r.pct, 0)} · {fmtNum(r.below)} below</div>
+                <Spark series={r.series} />
+                <div className={`brd-card-delta ${r.delta == null ? '' : r.delta >= 0 ? 'brd-up' : 'brd-down'}`}>{r.delta == null ? '—' : `${r.delta >= 0 ? '▲' : '▼'} ${Math.abs(r.delta).toFixed(1)} pts vs ${mode === 'day' ? 'prev day' : mode === 'week' ? 'prev wk' : 'prev mo'}`}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* daily internals */}
+        {cur && (
+          <>
+            <div className="brd-section-h">Daily internals · {date}</div>
+            <div className="brd-internals">
+              <div className="brd-int"><span className="brd-int-l">Advancing</span><b className="brd-up">{fmtNum(cur.advancing)}</b></div>
+              <div className="brd-int"><span className="brd-int-l">Declining</span><b className="brd-down">{fmtNum(cur.declining)}</b></div>
+              <div className="brd-int"><span className="brd-int-l">New 52W highs</span><b className="brd-up">{fmtNum(cur.new_high)}</b></div>
+              <div className="brd-int"><span className="brd-int-l">New 52W lows</span><b className="brd-down">{fmtNum(cur.new_low)}</b></div>
+            </div>
+          </>
+        )}
+
+        {/* signals */}
+        {signals.length > 0 && (
+          <>
+            <div className="brd-section-h">Signals</div>
+            <div className="brd-signals">
+              {signals.map((s, i) => (
+                <div className={`brd-signal ${s[0]}`} key={i}><span className="brd-sig-dot" />{s[1]}</div>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="brd-disc">
+          <b>Disclaimer.</b> Educational market-breadth analytics by <b>Atin Kumar Agrawal | Abundance Financial Services</b> · AMFI Registered Mutual Funds &amp; SIF Distributor (ARN-251838). Breadth is computed on end-of-day prices for the BSE main-board equity universe (groups A/B); index levels and weekly RSI are sourced separately and may differ slightly from NSE. Moving-average and 52-week figures use unadjusted prices. This is technical market context for education only — not a recommendation to buy or sell any security, index or fund. Past behaviour does not predict future results.
+        </div>
+      </div>
+      <Footer activePage="breadth" />
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+    </div>
+  );
+}
+
+function tagCls(t) {
+  if (/bull|low/i.test(t)) return 'tg-up';
+  if (/bear|high/i.test(t)) return 'tg-down';
+  if (/elevat/i.test(t)) return 'tg-warn';
+  return 'tg-neutral';
+}
+
+function Spark({ series }) {
+  const pts = (series || []).filter((v) => v != null);
+  if (pts.length < 2) return <div className="brd-spark-empty" />;
+  const W = 150, H = 34, min = Math.min(...pts), max = Math.max(...pts);
+  const X = (i) => (i / (pts.length - 1)) * W;
+  const Y = (v) => H - 3 - ((v - min) / (max - min || 1)) * (H - 6);
+  const d = pts.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  const up = pts[pts.length - 1] >= pts[0];
+  return (
+    <svg className="brd-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      <path d={`${d} L${W},${H} L0,${H} Z`} fill={up ? 'var(--g-xlight)' : '#fdeaea'} />
+      <path d={d} fill="none" stroke={up ? 'var(--g2)' : 'var(--neg)'} strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+const CSS = `
+.brd-body{font-family:Raleway,sans-serif;color:var(--text);padding-bottom:48px}
+.brd-prem{font:800 10px JetBrains Mono,monospace;background:linear-gradient(90deg,var(--g1),var(--g3));color:#fff;padding:3px 8px;border-radius:6px;vertical-align:middle;letter-spacing:.08em;margin-left:8px}
+.brd-up{color:var(--g2)}.brd-down{color:var(--neg)}.brd-neutral{color:var(--muted)}.brd-warn{color:var(--warn)}
+
+.brd-indices{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.brd-ix{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px;box-shadow:var(--shadow)}
+.brd-ix-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.brd-ix-name{font:700 12px Raleway,sans-serif;color:var(--text2)}
+.brd-ix-tag{font:700 9.5px JetBrains Mono,monospace;padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:.03em}
+.tg-up{background:var(--g-xlight);color:var(--g1)}.tg-down{background:#fdeaea;color:var(--neg)}.tg-warn{background:var(--warn-bg,#fff3e0);color:var(--warn)}.tg-neutral{background:var(--s3,#eef5ee);color:var(--muted)}
+.brd-ix-lvl{font:800 22px JetBrains Mono,monospace;color:var(--text);line-height:1.1}
+.brd-ix-sub{display:flex;justify-content:space-between;gap:8px;margin-top:5px;font:600 11px JetBrains Mono,monospace}
+.brd-ix-rsi{color:var(--muted)}
+
+.brd-err{background:var(--warn-bg,#fff3e0);border:1px solid #ffcc80;color:#8a4300;padding:11px 14px;border-radius:10px;font-size:13px;margin-bottom:16px}
+
+.brd-regime{display:flex;align-items:center;gap:18px;background:var(--surface);border:1px solid var(--border);border-left:5px solid var(--g2);border-radius:14px;padding:18px 22px;box-shadow:var(--shadow);margin-bottom:16px}
+.brd-regime.brd-up{border-left-color:var(--g2)}.brd-regime.brd-neutral{border-left-color:var(--warn)}.brd-regime.brd-warn{border-left-color:var(--warn)}.brd-regime.brd-down{border-left-color:var(--neg)}
+.brd-regime-pct{font:800 46px JetBrains Mono,monospace;color:var(--g1);line-height:1}
+.brd-regime.brd-down .brd-regime-pct{color:var(--neg)}.brd-regime.brd-neutral .brd-regime-pct,.brd-regime.brd-warn .brd-regime-pct{color:var(--warn)}
+.brd-regime-label{font:800 18px Raleway,sans-serif;color:var(--text)}
+.brd-regime-sub{font-size:13px;color:var(--muted);margin-top:3px}
+
+.brd-controls{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:14px}
+.brd-modes{display:flex;gap:6px}
+.brd-mode{padding:8px 13px;border:1px solid var(--border);background:var(--surface);border-radius:9px;font:700 12.5px Raleway,sans-serif;color:var(--text2);cursor:pointer}
+.brd-mode.on{background:var(--g1);color:#fff;border-color:var(--g1)}
+.brd-datesel{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.brd-datesel select{padding:7px 10px;border:1px solid var(--border);border-radius:8px;font:700 12.5px JetBrains Mono,monospace;background:var(--surface);color:var(--text)}
+
+.brd-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
+.brd-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.brd-card-h{font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.brd-card-big{font:800 30px JetBrains Mono,monospace;color:var(--text);line-height:1.15;margin:4px 0 2px}
+.brd-card-meta{font-size:12px;color:var(--text2);margin-bottom:8px}
+.brd-spark{width:100%;height:34px;display:block}
+.brd-spark-empty{height:34px}
+.brd-card-delta{font:700 11px JetBrains Mono,monospace;margin-top:7px}
+
+.brd-section-h{font:700 12px JetBrains Mono,monospace;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 10px}
+.brd-internals{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.brd-int{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:5px}
+.brd-int-l{font:600 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase}
+.brd-int b{font:800 26px JetBrains Mono,monospace}
+
+.brd-signals{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.brd-signal{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:13.5px;color:var(--text2)}
+.brd-sig-dot{width:9px;height:9px;border-radius:50%;flex:none}
+.brd-signal.up .brd-sig-dot{background:var(--g3)}.brd-signal.down .brd-sig-dot{background:var(--neg)}.brd-signal.neutral .brd-sig-dot{background:var(--warn)}
+
+.brd-disc{margin-top:8px;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:15px 17px;font-size:11.5px;line-height:1.65;color:var(--muted)}
+.brd-disc b{color:var(--text2)}
+
+@media(max-width:900px){.brd-indices{grid-template-columns:repeat(2,1fr)}.brd-grid{grid-template-columns:repeat(2,1fr)}.brd-internals{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.brd-regime{flex-direction:row;gap:14px}.brd-regime-pct{font-size:38px}.brd-controls{justify-content:flex-start}.brd-datesel{width:100%}}
+`;

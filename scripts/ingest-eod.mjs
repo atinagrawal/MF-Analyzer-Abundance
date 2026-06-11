@@ -148,10 +148,18 @@ async function main() {
     const txt = await fetchBhav(d);
     if (!txt) { if (!from) console.log(`[eod] ${iso(d)}: no file (holiday/weekend)`); continue; }
     const rows = parseBhav(txt).filter((r) => EQUITY_GROUPS.has(r.series));
-    if (!rows.length) { console.log(`[eod] ${iso(d)}: 0 equity rows?!`); continue; }
-    if (c) await upsertDay(c, iso(d), rows);
-    okDays++; totalRows += rows.length;
-    console.log(`[eod] ${iso(d)}: ${rows.length} equities${c ? " upserted" : " (dry-run)"}`);
+    const uniqueRows = [];
+    const seen = new Set();
+    for (const r of rows) {
+      if (!seen.has(r.isin)) {
+        seen.add(r.isin);
+        uniqueRows.push(r);
+      }
+    }
+    if (!uniqueRows.length) { console.log(`[eod] ${iso(d)}: 0 equity rows?!`); continue; }
+    if (c) await upsertDay(c, iso(d), uniqueRows);
+    okDays++; totalRows += uniqueRows.length;
+    console.log(`[eod] ${iso(d)}: ${uniqueRows.length} equities${c ? " upserted" : " (dry-run)"}`);
   }
   if (c && okDays) {
     const { rowCount } = await c.query(`DELETE FROM stock_eod WHERE trade_date < (CURRENT_DATE - $1::int)`, [RETENTION_DAYS]);
