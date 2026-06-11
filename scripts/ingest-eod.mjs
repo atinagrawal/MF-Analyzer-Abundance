@@ -133,9 +133,10 @@ async function main() {
   } else if (one) {
     dates = [new Date(Date.parse(one))];
   } else {
-    // latest: walk back from today to the most recent weekday with a file
+    // default: last 5 weekdays. Idempotent upserts, so this fills any gap and always
+    // picks up the most recently published bhavcopy (today's may not be out yet).
     let d = new Date(); d.setUTCHours(0, 0, 0, 0);
-    for (let k = 0; k < 6; k++) { const wd = d.getUTCDay(); if (wd !== 0 && wd !== 6) { dates.push(new Date(d)); break; } d = new Date(d - DAY); }
+    while (dates.length < 5) { const wd = d.getUTCDay(); if (wd !== 0 && wd !== 6) dates.push(new Date(d)); d = new Date(d - DAY); }
   }
 
   const url = process.env.POSTGRES_URL;
@@ -148,18 +149,10 @@ async function main() {
     const txt = await fetchBhav(d);
     if (!txt) { if (!from) console.log(`[eod] ${iso(d)}: no file (holiday/weekend)`); continue; }
     const rows = parseBhav(txt).filter((r) => EQUITY_GROUPS.has(r.series));
-    const uniqueRows = [];
-    const seen = new Set();
-    for (const r of rows) {
-      if (!seen.has(r.isin)) {
-        seen.add(r.isin);
-        uniqueRows.push(r);
-      }
-    }
-    if (!uniqueRows.length) { console.log(`[eod] ${iso(d)}: 0 equity rows?!`); continue; }
-    if (c) await upsertDay(c, iso(d), uniqueRows);
-    okDays++; totalRows += uniqueRows.length;
-    console.log(`[eod] ${iso(d)}: ${uniqueRows.length} equities${c ? " upserted" : " (dry-run)"}`);
+    if (!rows.length) { console.log(`[eod] ${iso(d)}: 0 equity rows?!`); continue; }
+    if (c) await upsertDay(c, iso(d), rows);
+    okDays++; totalRows += rows.length;
+    console.log(`[eod] ${iso(d)}: ${rows.length} equities${c ? " upserted" : " (dry-run)"}`);
   }
   if (c && okDays) {
     const { rowCount } = await c.query(`DELETE FROM stock_eod WHERE trade_date < (CURRENT_DATE - $1::int)`, [RETENTION_DAYS]);

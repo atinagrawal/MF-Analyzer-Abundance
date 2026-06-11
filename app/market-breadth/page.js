@@ -159,6 +159,19 @@ export default function BreadthPage() {
           </>
         )}
 
+        {/* signal counts (golden/death cross, stacked alignment) */}
+        {cur && (cur.golden_cross != null || cur.bull_stacked != null) && (
+          <>
+            <div className="brd-section-h">Signals · {date}</div>
+            <div className="brd-internals">
+              <div className="brd-int"><span className="brd-int-l">Golden cross 50×200</span><b className="brd-up">{fmtNum(cur.golden_cross)}</b></div>
+              <div className="brd-int"><span className="brd-int-l">Death cross 50×200</span><b className="brd-down">{fmtNum(cur.death_cross)}</b></div>
+              <div className="brd-int"><span className="brd-int-l">Bullish stacked</span><b className="brd-up">{fmtNum(cur.bull_stacked)}</b></div>
+              <div className="brd-int"><span className="brd-int-l">Bearish stacked</span><b className="brd-down">{fmtNum(cur.bear_stacked)}</b></div>
+            </div>
+          </>
+        )}
+
         {/* signals */}
         {signals.length > 0 && (
           <>
@@ -188,13 +201,18 @@ function tagCls(t) {
   return 'tg-neutral';
 }
 
+const DMA_LINES = [
+  { n: 20, c: '#66bb6a' }, { n: 50, c: '#2e7d32' }, { n: 100, c: '#f9a825' }, { n: 150, c: '#5b8def' }, { n: 200, c: '#e53935' },
+];
+
 function TrendChart({ snaps }) {
   const [range, setRange] = useState('6M');
   const [hi, setHi] = useState(null);
+  const [hidden, setHidden] = useState(() => new Set());
   const N = { '1M': 22, '3M': 66, '6M': 126, '1Y': 252, 'All': snaps.length }[range];
   const data = snaps.slice(Math.max(0, snaps.length - N));
   if (data.length < 2) return null;
-  const W = 760, H = 230, padL = 30, padR = 12, padT = 12, padB = 22;
+  const W = 760, H = 240, padL = 30, padR = 12, padT = 10, padB = 22;
   const iw = W - padL - padR, ih = H - padT - padB;
   const X = (i) => padL + (i / (data.length - 1)) * iw;
   const Y = (v) => padT + (1 - v / 100) * ih;
@@ -203,38 +221,52 @@ function TrendChart({ snaps }) {
     data.forEach((s, i) => { const v = pctOf(s['a' + n], s['t' + n]); if (v == null) return; d += `${started ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)} `; started = true; });
     return d.trim();
   };
+  const toggle = (n) => setHidden((h) => { const s = new Set(h); s.has(n) ? s.delete(n) : s.add(n); return s; });
   const onMove = (e) => {
     const r = e.currentTarget.getBoundingClientRect();
     const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
     let i = Math.round(((cx / r.width) * W - padL) / iw * (data.length - 1));
-    i = Math.max(0, Math.min(data.length - 1, i));
-    setHi(i);
+    setHi(Math.max(0, Math.min(data.length - 1, i)));
   };
-  const cur = hi != null ? data[hi] : data[data.length - 1];
-  const c200 = pctOf(cur.a200, cur.t200), c50 = pctOf(cur.a50, cur.t50);
+  const hv = hi != null ? data[hi] : null;
+  const tipLeft = hi != null ? `${(X(hi) / W) * 100}%` : '0';
+  const tipFlip = hi != null && X(hi) / W > 0.6;
+
   return (
     <div className="brd-trend">
       <div className="brd-trend-head">
-        <div className="brd-trend-title">Breadth trend
-          <span className="brd-leg"><i className="brd-leg-200" /> % &gt; 200-DMA</span>
-          <span className="brd-leg"><i className="brd-leg-50" /> % &gt; 50-DMA</span>
-        </div>
+        <div className="brd-trend-title">Breadth over time <span className="brd-trend-sub2">% of stocks above each DMA</span></div>
         <div className="brd-trend-ranges">
           {['1M', '3M', '6M', '1Y', 'All'].map((r) => <button key={r} className={`brd-rg ${range === r ? 'on' : ''}`} onClick={() => setRange(r)}>{r}</button>)}
         </div>
       </div>
-      <div className="brd-trend-read">{cur.date} · <b className="brd-c200">{c200 == null ? '—' : c200.toFixed(0) + '%'}</b> above 200-DMA · <b className="brd-c50">{c50 == null ? '—' : c50.toFixed(0) + '%'}</b> above 50-DMA</div>
-      <svg className="brd-trend-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" onMouseMove={onMove} onMouseLeave={() => setHi(null)} onTouchStart={onMove} onTouchMove={onMove}>
-        <rect x={padL} y={Y(60)} width={iw} height={Y(40) - Y(60)} fill="var(--warn-bg,#fff3e0)" opacity="0.5" />
-        {[20, 40, 60, 80].map((g) => (<g key={g}><line x1={padL} y1={Y(g)} x2={W - padR} y2={Y(g)} stroke="var(--border)" strokeWidth="0.5" /><text x={2} y={Y(g) + 3} fontSize="9" fill="var(--muted)" fontFamily="monospace">{g}</text></g>))}
-        <path d={pathOf(50)} fill="none" stroke="var(--g3)" strokeWidth="1.5" opacity="0.85" />
-        <path d={pathOf(200)} fill="none" stroke="var(--g1)" strokeWidth="2" />
-        {hi != null && (<g>
-          <line x1={X(hi)} y1={padT} x2={X(hi)} y2={H - padB} stroke="var(--muted)" strokeWidth="0.7" strokeDasharray="3 3" />
-          {c200 != null && <circle cx={X(hi)} cy={Y(c200)} r="3.5" fill="var(--g1)" />}
-          {c50 != null && <circle cx={X(hi)} cy={Y(c50)} r="3.5" fill="var(--g3)" />}
-        </g>)}
-      </svg>
+      <div className="brd-legend">
+        {DMA_LINES.map((l) => (
+          <button key={l.n} className={`brd-legchip ${hidden.has(l.n) ? 'off' : ''}`} onClick={() => toggle(l.n)}>
+            <i style={{ background: l.c }} />{l.n} DMA
+            <b>{hv ? fmtPct(pctOf(hv['a' + l.n], hv['t' + l.n]), 0) : fmtPct(pctOf(data[data.length - 1]['a' + l.n], data[data.length - 1]['t' + l.n]), 0)}</b>
+          </button>
+        ))}
+      </div>
+      <div className="brd-trend-wrap">
+        <svg className="brd-trend-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" onMouseMove={onMove} onMouseLeave={() => setHi(null)} onTouchStart={onMove} onTouchMove={onMove}>
+          <rect x={padL} y={Y(60)} width={iw} height={Y(40) - Y(60)} fill="var(--warn-bg,#fff3e0)" opacity="0.45" />
+          {[0, 20, 40, 60, 80, 100].map((g) => (<g key={g}><line x1={padL} y1={Y(g)} x2={W - padR} y2={Y(g)} stroke="var(--border)" strokeWidth="0.5" /><text x={2} y={Y(g) + 3} fontSize="9" fill="var(--muted)" fontFamily="monospace">{g}</text></g>))}
+          {DMA_LINES.filter((l) => !hidden.has(l.n)).map((l) => <path key={l.n} d={pathOf(l.n)} fill="none" stroke={l.c} strokeWidth={l.n === 200 ? 2 : 1.4} opacity={l.n === 200 || l.n === 20 ? 1 : 0.9} />)}
+          {hi != null && (<g>
+            <line x1={X(hi)} y1={padT} x2={X(hi)} y2={H - padB} stroke="var(--muted)" strokeWidth="0.7" strokeDasharray="3 3" />
+            {DMA_LINES.filter((l) => !hidden.has(l.n)).map((l) => { const v = pctOf(hv['a' + l.n], hv['t' + l.n]); return v == null ? null : <circle key={l.n} cx={X(hi)} cy={Y(v)} r="3" fill={l.c} />; })}
+          </g>)}
+        </svg>
+        {hi != null && (
+          <div className="brd-tip" style={{ left: tipLeft, transform: `translateX(${tipFlip ? 'calc(-100% - 12px)' : '12px'})` }}>
+            <div className="brd-tip-date">{hv.date}</div>
+            {DMA_LINES.filter((l) => !hidden.has(l.n)).map((l) => (
+              <div className="brd-tip-row" key={l.n}><span><i style={{ background: l.c }} />{l.n} DMA</span><b>{fmtPct(pctOf(hv['a' + l.n], hv['t' + l.n]), 0)}</b></div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -282,17 +314,25 @@ const CSS = `
 .brd-ix .brd-spark{margin-top:8px;height:30px}
 
 .brd-trend{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);margin-bottom:16px}
-.brd-trend-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center}
-.brd-trend-title{font:800 14px Raleway,sans-serif;color:var(--text);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.brd-leg{font:600 11px JetBrains Mono,monospace;color:var(--muted);display:flex;align-items:center;gap:5px}
-.brd-leg i{width:14px;height:3px;border-radius:2px;display:inline-block}
-.brd-leg-200{background:var(--g1)}.brd-leg-50{background:var(--g3)}
+.brd-trend-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+.brd-trend-title{font:800 14px Raleway,sans-serif;color:var(--text)}
+.brd-trend-sub2{font:500 12px Raleway,sans-serif;color:var(--muted);margin-left:8px}
 .brd-trend-ranges{display:flex;gap:5px}
 .brd-rg{padding:5px 10px;border:1px solid var(--border);background:var(--surface);border-radius:7px;font:700 11.5px JetBrains Mono,monospace;color:var(--muted);cursor:pointer}
 .brd-rg.on{background:var(--g1);color:#fff;border-color:var(--g1)}
-.brd-trend-read{font:600 12.5px JetBrains Mono,monospace;color:var(--muted);margin:6px 0 8px}
-.brd-c200{color:var(--g1)}.brd-c50{color:var(--g2)}
-.brd-trend-svg{width:100%;height:230px;display:block;touch-action:none;cursor:crosshair}
+.brd-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.brd-legchip{display:flex;align-items:center;gap:6px;padding:4px 9px;border:1px solid var(--border);background:var(--surface);border-radius:999px;font:600 11px JetBrains Mono,monospace;color:var(--text2);cursor:pointer}
+.brd-legchip i{width:11px;height:3px;border-radius:2px;display:inline-block}
+.brd-legchip b{color:var(--text);font-weight:800}
+.brd-legchip.off{opacity:.4}.brd-legchip.off b{color:var(--muted)}
+.brd-trend-wrap{position:relative}
+.brd-trend-svg{width:100%;height:240px;display:block;touch-action:none;cursor:crosshair}
+.brd-tip{position:absolute;top:6px;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:var(--shadow-lg);padding:8px 10px;pointer-events:none;min-width:120px;z-index:5}
+.brd-tip-date{font:700 11px JetBrains Mono,monospace;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:5px;margin-bottom:5px}
+.brd-tip-row{display:flex;justify-content:space-between;gap:14px;font:600 11px JetBrains Mono,monospace;color:var(--muted);padding:2px 0}
+.brd-tip-row span{display:flex;align-items:center;gap:5px}
+.brd-tip-row i{width:10px;height:3px;border-radius:2px;display:inline-block}
+.brd-tip-row b{color:var(--text)}
 
 .brd-controls{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:14px}
 .brd-modes{display:flex;gap:6px}

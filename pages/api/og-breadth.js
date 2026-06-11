@@ -46,7 +46,7 @@ export default async function handler(req) {
                 { type: 'div', props: { style: { display: 'flex', gap: 10, alignItems: 'center' },
                   children: [
                     { type: 'div', props: { style: { background: 'rgba(255,183,77,0.16)', border: '1px solid rgba(255,183,77,0.5)', borderRadius: 999, padding: '7px 18px', display: 'flex' }, children: { type: 'div', props: { style: { color: '#ffb74d', fontSize: 17, fontWeight: 800 }, children: 'Regime: Mixed / neutral' } } } },
-                    { type: 'div', props: { style: { color: 'rgba(255,255,255,0.45)', fontSize: 13, display: 'flex' }, children: 'mfcalc.getabundance.in/breadth' } },
+                    { type: 'div', props: { style: { color: 'rgba(255,255,255,0.45)', fontSize: 13, display: 'flex' }, children: 'mfcalc.getabundance.in/market-breadth' } },
                   ] } },
               ],
             } },

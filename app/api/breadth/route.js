@@ -4,7 +4,7 @@ import pool from '@/lib/db';
 
 export const revalidate = 3600;
 
-const COLS = 'snap_date,universe,a20,t20,a50,t50,a100,t100,a150,t150,a200,t200,advancing,declining,unchanged,new_high,new_low,regime_pct';
+const COLS = 'snap_date,universe,a20,t20,a50,t50,a100,t100,a150,t150,a200,t200,advancing,declining,unchanged,new_high,new_low,regime_pct,golden_cross,death_cross,bull_stacked,bear_stacked';
 const I = (x) => (x == null ? null : parseInt(x, 10));
 const N = (x) => (x == null ? null : Number(x));
 
@@ -18,6 +18,7 @@ export async function GET() {
       a150: I(r.a150), t150: I(r.t150), a200: I(r.a200), t200: I(r.t200),
       advancing: I(r.advancing), declining: I(r.declining), unchanged: I(r.unchanged),
       new_high: I(r.new_high), new_low: I(r.new_low), regime_pct: N(r.regime_pct),
+      golden_cross: I(r.golden_cross), death_cross: I(r.death_cross), bull_stacked: I(r.bull_stacked), bear_stacked: I(r.bear_stacked),
     }));
     return new Response(JSON.stringify({ asof: snaps.length ? snaps[snaps.length - 1].date : null, count: snaps.length, snaps }), {
       status: 200,

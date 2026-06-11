@@ -45,6 +45,13 @@
       "maxDuration": 60
     }
   },
+  "redirects": [
+    {
+      "source": "/breadth",
+      "destination": "/market-breadth",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/og-cas.png",

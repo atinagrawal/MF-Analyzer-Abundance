@@ -7,7 +7,7 @@ export default function BreadthLayout({ children }) {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "Market Breadth Dashboard",
-    "url": "https://mfcalc.getabundance.in/breadth",
+    "url": "https://mfcalc.getabundance.in/market-breadth",
     "description": "Market-breadth analytics for Indian equities — % of stocks above 20/50/100/150/200-day moving averages, advance-decline, new 52-week highs/lows and market regime. Computed daily on the BSE main-board equity universe.",
     "applicationCategory": "FinanceApplication",
     "operatingSystem": "Any",
@@ -33,7 +33,7 @@ export default function BreadthLayout({ children }) {
     "itemListElement": [
       { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.getabundance.in" },
       { "@type": "ListItem", "position": 2, "name": "MFCalc", "item": "https://mfcalc.getabundance.in" },
-      { "@type": "ListItem", "position": 3, "name": "Market Breadth", "item": "https://mfcalc.getabundance.in/breadth" }
+      { "@type": "ListItem", "position": 3, "name": "Market Breadth", "item": "https://mfcalc.getabundance.in/market-breadth" }
     ]
   };
   return (
