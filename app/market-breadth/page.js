@@ -223,7 +223,7 @@ export default function BreadthPage() {
 
         {curSectorSnap && sectorData?.sectors && (
           <>
-            <div className="brd-section-h">Sector breadth · {date}</div>
+            <div className="brd-section-h sec-section-h">Sector breadth · {date}<SectorGlossary /></div>
             <SectorGrid snap={curSectorSnap} sectors={sectorData.sectors} />
           </>
         )}
@@ -456,6 +456,20 @@ const SECTOR_COLORS = {
 };
 const sColor = (s) => SECTOR_COLORS[s] || 'var(--g2)';
 
+function sectorReading(d) {
+  const rp = d?.regime_pct;
+  if (rp == null) return null;
+  const gc = d.golden_cross ?? 0, dc = d.death_cross ?? 0;
+  const bs = d.bull_stacked ?? 0, br = d.bear_stacked ?? 0;
+  if (rp >= 70) return bs > 0 ? 'Broad rally — strong multi-timeframe alignment' : 'Strong breadth, wide participation';
+  if (rp >= 60) return gc > dc ? 'Strong — fresh momentum building' : 'Above-average breadth, bulls in control';
+  if (rp >= 50) return 'Slight bullish edge — more stocks in long-term uptrend';
+  if (rp >= 40) return 'Mixed — no clear directional edge';
+  if (rp >= 30) return dc > gc ? 'Weakening — trend structure deteriorating' : 'Below midpoint, bears have slight edge';
+  if (rp >= 20) return 'Weak — majority below long-term trend';
+  return br > 0 ? 'Wide selling — downtrend dominant across timeframes' : 'Very weak — defensive conditions';
+}
+
 function SectorGrid({ snap, sectors }) {
   if (!snap || !sectors) return null;
   return (
@@ -466,23 +480,29 @@ function SectorGrid({ snap, sectors }) {
         const rp = d.regime_pct;
         const color = sColor(s);
         const cls = rp == null ? '' : rp >= 60 ? 'sec-up' : rp >= 40 ? 'sec-mix' : rp >= 20 ? 'sec-warn' : 'sec-dn';
+        const reading = sectorReading(d);
         return (
           <div className={`sec-card ${cls}`} key={s} style={{ '--sc': color }}>
             <div className="sec-name">{s}</div>
             <div className="sec-pct">{rp != null ? Math.round(rp) + '%' : '—'}</div>
-            <div className="sec-label">above 200DMA</div>
-            <div className="sec-bar"><div className="sec-bar-fill" style={{ width: `${rp ?? 0}%` }} /></div>
-            <div className="sec-row">
-              <span className="brd-up">▲{d.advancing ?? '—'}</span>
-              <span className="brd-down">▼{d.declining ?? '—'}</span>
-              <span className="sec-uni">∑{d.universe ?? '—'}</span>
+            <div className="sec-label" title="Percentage of this sector's stocks currently trading above their 200-day moving average — measures how many are in a long-term uptrend">
+              {d.a200 != null && d.t200 != null ? `${d.a200} / ${d.t200} above 200-day MA` : 'above 200-day MA'}
             </div>
+            <div className="sec-bar" title={`Breadth bar: empty = 0% (all stocks below 200-day MA), full = 100% (all above). Current: ${rp != null ? Math.round(rp) : '—'}%`}>
+              <div className="sec-bar-fill" style={{ width: `${rp ?? 0}%` }} />
+            </div>
+            <div className="sec-row">
+              <span className="brd-up sec-tt" title={`${d.advancing ?? 0} stocks in this sector closed higher than the previous session today`}>▲{d.advancing ?? '—'}</span>
+              <span className="brd-down sec-tt" title={`${d.declining ?? 0} stocks in this sector closed lower than the previous session today`}>▼{d.declining ?? '—'}</span>
+              <span className="sec-uni sec-tt" title={`${d.universe ?? 0} total stocks tracked in the Nifty ${s} index universe`}>∑{d.universe ?? '—'}</span>
+            </div>
+            {reading && <div className="sec-reading">{reading}</div>}
             {(d.bull_stacked > 0 || d.bear_stacked > 0 || d.golden_cross > 0 || d.death_cross > 0) && (
               <div className="sec-sigs">
-                {d.golden_cross > 0 && <span className="sec-sig-gc">GC{d.golden_cross}</span>}
-                {d.death_cross > 0 && <span className="sec-sig-dc">DC{d.death_cross}</span>}
-                {d.bull_stacked > 0 && <span className="sec-sig-bs">B↑{d.bull_stacked}</span>}
-                {d.bear_stacked > 0 && <span className="sec-sig-bs sec-sig-bear">B↓{d.bear_stacked}</span>}
+                {d.golden_cross > 0 && <span className="sec-sig-gc sec-tt" title={`Golden Cross ×${d.golden_cross}: the 50-day MA recently crossed above the 200-day MA — a traditionally bullish trend signal`}>GC {d.golden_cross}</span>}
+                {d.death_cross > 0 && <span className="sec-sig-dc sec-tt" title={`Death Cross ×${d.death_cross}: the 50-day MA recently crossed below the 200-day MA — a bearish trend signal indicating weakening momentum`}>DC {d.death_cross}</span>}
+                {d.bull_stacked > 0 && <span className="sec-sig-bs sec-tt" title={`Bull Stacked ×${d.bull_stacked}: Price > 20-day MA > 50-day MA > 100-day MA > 150-day MA > 200-day MA — all moving averages in perfect bullish sequence, strong multi-timeframe uptrend`}>B↑ {d.bull_stacked}</span>}
+                {d.bear_stacked > 0 && <span className="sec-sig-bs sec-sig-bear sec-tt" title={`Bear Stacked ×${d.bear_stacked}: Price < 20-day MA < 50-day MA < 100-day MA < 150-day MA < 200-day MA — all moving averages in bearish sequence, multi-timeframe downtrend`}>B↓ {d.bear_stacked}</span>}
               </div>
             )}
           </div>
@@ -545,6 +565,42 @@ function RotSpark({ series, color }) {
     <svg viewBox={`0 0 ${W} ${H}`} className="rot-spark" preserveAspectRatio="none">
       <path d={d} fill="none" stroke={color} strokeWidth="1.5" opacity="0.85" />
     </svg>
+  );
+}
+
+const GLOSSARY_ITEMS = [
+  { sym: '42%', desc: 'Breadth — what fraction of the sector\'s stocks are trading above their 200-day moving average. Higher = broader participation in the long-term uptrend. Below 40% signals weak conditions; above 60% signals broad strength.' },
+  { sym: '▲ / ▼', desc: 'Advancing and declining stock counts — the number of individual stocks in this sector that closed higher (▲) or lower (▼) than the previous session today. This is not the sector index direction.' },
+  { sym: '∑', desc: 'Universe size — total number of stocks tracked in this sector, sourced from the NSE sectoral index constituent list. All breadth percentages are calculated against this count.' },
+  { sym: 'GC', desc: 'Golden Cross — stocks where the 50-day moving average recently crossed above the 200-day moving average (within last 25 sessions). Historically associated with a transition from a bearish to a bullish long-term trend.' },
+  { sym: 'DC', desc: 'Death Cross — stocks where the 50-day MA recently crossed below the 200-day MA. The mirror of the golden cross; signals deteriorating trend structure.' },
+  { sym: 'B↑', desc: 'Bull Stacked — stocks where: Price > 20-day MA > 50-day MA > 100-day MA > 150-day MA > 200-day MA, all in descending order. This "perfect alignment" means the stock is in an uptrend across every time horizon simultaneously — short, medium, and long term.' },
+  { sym: 'B↓', desc: 'Bear Stacked — the mirror image: Price < 20-day MA < 50-day MA < … < 200-day MA. All moving averages in bearish sequence across every timeframe.' },
+  { sym: 'Bar', desc: 'Progress bar — a visual 0–100% scale showing breadth. An empty bar means all stocks are below their 200-day MA; a full bar means all are above. Colour matches the regime: green (≥60%), amber (40–60%), red (<40%).' },
+];
+
+function SectorGlossary() {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="sec-gloss-wrap">
+      <button className={`sec-gloss-btn ${open ? 'on' : ''}`} onClick={() => setOpen((v) => !v)} aria-label="Explain tile symbols">
+        {open ? '✕ close' : 'ⓘ how to read'}
+      </button>
+      {open && (
+        <div className="sec-gloss-panel" role="dialog" aria-label="Sector tile glossary">
+          <div className="sec-gloss-head">Reading the sector tiles</div>
+          <div className="sec-gloss-list">
+            {GLOSSARY_ITEMS.map(({ sym, desc }) => (
+              <div className="sec-gloss-row" key={sym}>
+                <span className="sec-gloss-sym">{sym}</span>
+                <span className="sec-gloss-desc">{desc}</span>
+              </div>
+            ))}
+          </div>
+          <div className="sec-gloss-note">All signals are computed on unadjusted end-of-day prices from the BSE bhavcopy. Moving averages are simple (arithmetic) averages. GC/DC detection window is 25 trading sessions.</div>
+        </div>
+      )}
+    </span>
   );
 }
 
@@ -644,6 +700,28 @@ const CSS = `
 .sec-sig-gc{background:var(--g-xlight);color:var(--g1)}.sec-sig-dc{background:#fdeaea;color:var(--neg)}.sec-sig-bs{background:var(--g-xlight);color:var(--g1)}.sec-sig-bear{background:#fdeaea;color:var(--neg)}
 @media(max-width:900px){.sec-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:560px){.sec-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* Tier 1 — tooltip cursor */
+.sec-tt{cursor:help}
+
+/* Tier 2 — interpretive phrase */
+.sec-reading{font:500 10.5px Raleway,sans-serif;color:var(--muted);margin-top:6px;line-height:1.45;font-style:italic;border-top:1px solid var(--border);padding-top:5px}
+.sec-card.sec-up .sec-reading{color:var(--g2)}.sec-card.sec-dn .sec-reading{color:var(--neg)}.sec-card.sec-warn .sec-reading{color:var(--warn)}
+
+/* Tier 3 — section header + glossary */
+.sec-section-h{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+.sec-gloss-wrap{position:relative;display:inline-flex;align-items:center}
+.sec-gloss-btn{background:none;border:1px solid var(--border);border-radius:6px;font:600 10px JetBrains Mono,monospace;color:var(--muted);cursor:pointer;padding:3px 9px;white-space:nowrap;transition:background .15s,color .15s,border-color .15s}
+.sec-gloss-btn:hover{background:var(--s2);color:var(--text)}
+.sec-gloss-btn.on{background:var(--g1);color:#fff;border-color:var(--g1)}
+.sec-gloss-panel{position:absolute;top:calc(100% + 8px);left:0;width:540px;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-lg,0 8px 32px rgba(0,0,0,.13));padding:18px 20px;z-index:30}
+.sec-gloss-head{font:800 13px Raleway,sans-serif;color:var(--text);margin-bottom:13px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.sec-gloss-list{display:flex;flex-direction:column;gap:10px}
+.sec-gloss-row{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:start}
+.sec-gloss-sym{font:800 11px JetBrains Mono,monospace;background:var(--s2,#f6f6f6);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:3px 5px;text-align:center;white-space:nowrap;line-height:1.4}
+.sec-gloss-desc{font-size:12px;color:var(--text2);line-height:1.6}
+.sec-gloss-note{font:500 11px Raleway,sans-serif;color:var(--muted);margin-top:13px;padding-top:11px;border-top:1px solid var(--border);line-height:1.55}
+@media(max-width:700px){.sec-gloss-panel{width:calc(100vw - 32px);left:-4px}}
 
 .adl-sub{font:500 11px Raleway,sans-serif;color:var(--muted);margin-top:2px}
 .adl-mc-label{font:700 10px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:8px 0 3px}
