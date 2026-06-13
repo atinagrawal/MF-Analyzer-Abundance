@@ -35,12 +35,11 @@ export default function BreadthPage() {
   }, []);
 
   useEffect(() => {
-    if (!date) return;
-    fetch(`/api/sector-breadth?date=${date}`)
+    fetch('/api/sector-breadth')
       .then((r) => r.json())
       .then((d) => { if (!d.error && d.snaps?.length) setSectorData(d); })
       .catch(() => {});
-  }, [date]);
+  }, []);
 
   const snaps = data?.snaps || [];
   const dates = useMemo(() => snaps.map((s) => s.date), [snaps]);
@@ -62,6 +61,33 @@ export default function BreadthPage() {
 
   const [rLabel, rCls] = regimeLabel(cur?.regime_pct);
   const pct50 = cur ? pctOf(cur.a50, cur.t50) : null;
+
+  const adData = useMemo(() => {
+    if (!snaps.length) return [];
+    let cum = 0;
+    return snaps.map((s) => {
+      const hasData = (s.advancing ?? 0) + (s.declining ?? 0) > 0;
+      if (hasData) cum += (s.advancing ?? 0) - (s.declining ?? 0);
+      return { date: s.date, net: (s.advancing ?? 0) - (s.declining ?? 0), cum, hasData };
+    });
+  }, [snaps]);
+
+  const percentileMap = useMemo(() => {
+    if (!snaps.length || !cur) return {};
+    const out = {};
+    for (const n of DMAS) {
+      const vals = snaps.map((s) => pctOf(s['a' + n], s['t' + n])).filter((v) => v != null).sort((a, b) => a - b);
+      const curVal = pctOf(cur['a' + n], cur['t' + n]);
+      if (curVal == null || !vals.length) { out[n] = null; continue; }
+      out[n] = Math.round((vals.filter((v) => v < curVal).length / vals.length) * 100);
+    }
+    return out;
+  }, [snaps, cur]);
+
+  const curSectorSnap = useMemo(() => {
+    if (!sectorData?.snaps) return null;
+    return sectorData.snaps.find((s) => s.date === date) ?? sectorData.snaps[sectorData.snaps.length - 1];
+  }, [sectorData, date]);
 
   const signals = useMemo(() => {
     if (!cur) return [];
@@ -123,6 +149,7 @@ export default function BreadthPage() {
 
         {/* breadth trend over time */}
         {snaps.length > 2 && <TrendChart snaps={snaps} />}
+        {adData.length > 39 && <ADLineChart adData={adData} />}
 
         {/* time controls */}
         {cur && (
@@ -150,6 +177,7 @@ export default function BreadthPage() {
                 <div className="brd-card-meta">{fmtPct(r.pct, 0)} · {fmtNum(r.below)} below</div>
                 <Spark series={r.series} />
                 <div className={`brd-card-delta ${r.delta == null ? '' : r.delta >= 0 ? 'brd-up' : 'brd-down'}`}>{r.delta == null ? '—' : `${r.delta >= 0 ? '▲' : '▼'} ${Math.abs(r.delta).toFixed(1)} pts vs ${mode === 'day' ? 'prev day' : mode === 'week' ? 'prev wk' : 'prev mo'}`}</div>
+                {percentileMap[r.n] != null && <div className={`brd-card-pctile ${percentileMap[r.n] >= 75 ? 'brd-up' : percentileMap[r.n] < 25 ? 'brd-down' : 'brd-neutral'}`}>{percentileMap[r.n]}th pctile of history</div>}
               </div>
             ))}
           </div>
@@ -193,10 +221,17 @@ export default function BreadthPage() {
           </>
         )}
 
-        {sectorData?.snaps?.length > 0 && (
+        {curSectorSnap && sectorData?.sectors && (
           <>
             <div className="brd-section-h">Sector breadth · {date}</div>
-            <SectorGrid snap={sectorData.snaps[sectorData.snaps.length - 1]} sectors={sectorData.sectors} />
+            <SectorGrid snap={curSectorSnap} sectors={sectorData.sectors} />
+          </>
+        )}
+
+        {sectorData?.snaps?.length > 5 && (
+          <>
+            <div className="brd-section-h">Sector rotation · ranked by 200-DMA breadth · week-on-week change</div>
+            <SectorRotation sectorData={sectorData} date={date} />
           </>
         )}
 
@@ -303,6 +338,114 @@ function Spark({ series }) {
   );
 }
 
+function ADLineChart({ adData }) {
+  const [range, setRange] = useState('6M');
+  const [hi, setHi] = useState(null);
+
+  const { allEma19, allEma39 } = useMemo(() => {
+    const k19 = 2 / 20, k39 = 2 / 40;
+    let e19 = null, e39 = null;
+    const allEma19 = [], allEma39 = [];
+    for (const d of adData) {
+      if (d.hasData) {
+        e19 = e19 == null ? d.net : d.net * k19 + e19 * (1 - k19);
+        e39 = e39 == null ? d.net : d.net * k39 + e39 * (1 - k39);
+      }
+      allEma19.push(e19);
+      allEma39.push(e39);
+    }
+    return { allEma19, allEma39 };
+  }, [adData]);
+
+  const N = { '1M': 22, '3M': 66, '6M': 126, '1Y': 252, 'All': adData.length }[range];
+  const startIdx = Math.max(0, adData.length - N);
+  const data = adData.slice(startIdx);
+  const mdata = allEma19.slice(startIdx).map((e19, i) => {
+    const e39 = allEma39[startIdx + i];
+    return e19 != null && e39 != null ? +(e19 - e39).toFixed(1) : null;
+  });
+
+  if (data.length < 5) return null;
+
+  const W = 760, H1 = 150, H2 = 80, padL = 44, padR = 12, padT = 8, padB = 18;
+  const iw = W - padL - padR;
+  const Xc = (i) => padL + (i / Math.max(data.length - 1, 1)) * iw;
+
+  const cumVals = data.filter((d) => d.hasData).map((d) => d.cum);
+  const cumMin = Math.min(...cumVals), cumMax = Math.max(...cumVals), cumRange = cumMax - cumMin || 1;
+  const Yad = (v) => padT + (1 - (v - cumMin) / cumRange) * (H1 - padT - padB);
+  let adPath = '', adStarted = false;
+  data.forEach((d, i) => { if (!d.hasData) return; adPath += `${adStarted ? 'L' : 'M'}${Xc(i).toFixed(1)},${Yad(d.cum).toFixed(1)} `; adStarted = true; });
+  const adFill = adPath ? `${adPath}L${Xc(data.length - 1)},${H1 - padB} L${padL},${H1 - padB} Z` : '';
+  const lastCum = cumVals[cumVals.length - 1] ?? 0;
+  const firstCum = cumVals[0] ?? 0;
+  const adUp = lastCum >= firstCum;
+
+  const mcVals = mdata.filter((v) => v != null);
+  const mcAbs = mcVals.length ? Math.max(Math.abs(Math.min(...mcVals)), Math.abs(Math.max(...mcVals)), 1) : 100;
+  const Ymc = (v) => padT + (1 - (v + mcAbs) / (2 * mcAbs)) * (H2 - padT - padB);
+  const Ymc0 = Ymc(0);
+  const barW = Math.max(1.5, (iw / data.length) - 0.5);
+
+  const hv = hi != null ? data[hi] : null;
+  const hvmc = hi != null ? mdata[hi] : null;
+  const tipFlip = hi != null && Xc(hi) / W > 0.65;
+  const onMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    setHi(Math.max(0, Math.min(data.length - 1, Math.round(((cx / rect.width) * W - padL) / iw * (data.length - 1)))));
+  };
+
+  const fmtCum = (v) => v == null ? '—' : (v >= 0 ? '+' : '') + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + 'k' : v.toLocaleString('en-IN'));
+  const yTicks = [cumMin, (cumMin + cumMax) / 2, cumMax];
+
+  return (
+    <div className="brd-trend">
+      <div className="brd-trend-head">
+        <div>
+          <div className="brd-trend-title">Advance-Decline Line <span className="brd-trend-sub2">cumulative net advances</span></div>
+          <div className="adl-sub">McClellan Oscillator (19-EMA − 39-EMA of net advances) shown below</div>
+        </div>
+        <div className="brd-trend-ranges">
+          {['1M', '3M', '6M', '1Y', 'All'].map((r) => <button key={r} className={`brd-rg ${range === r ? 'on' : ''}`} onClick={() => setRange(r)}>{r}</button>)}
+        </div>
+      </div>
+      <div className="brd-trend-wrap" onMouseMove={onMove} onMouseLeave={() => setHi(null)} onTouchStart={onMove} onTouchMove={onMove}>
+        <svg className="brd-trend-svg" style={{ height: H1 + 'px' }} viewBox={`0 0 ${W} ${H1}`} preserveAspectRatio="none">
+          {yTicks.map((v, k) => (
+            <g key={k}>
+              <line x1={padL} y1={Yad(v)} x2={W - padR} y2={Yad(v)} stroke="var(--border)" strokeWidth="0.5" />
+              <text x={2} y={Yad(v) + 3} fontSize="9" fill="var(--muted)" fontFamily="monospace">{fmtCum(Math.round(v))}</text>
+            </g>
+          ))}
+          {adFill && <path d={adFill} fill={adUp ? 'var(--g-xlight)' : '#fdeaea'} opacity="0.6" />}
+          {adPath && <path d={adPath.trim()} fill="none" stroke={adUp ? 'var(--g2)' : 'var(--neg)'} strokeWidth="2" />}
+          {hi != null && <line x1={Xc(hi)} y1={padT} x2={Xc(hi)} y2={H1 - padB} stroke="var(--muted)" strokeWidth="0.7" strokeDasharray="3 3" />}
+          {hi != null && hv?.hasData && <circle cx={Xc(hi)} cy={Yad(hv.cum)} r="3.5" fill={adUp ? 'var(--g2)' : 'var(--neg)'} />}
+        </svg>
+        <div className="adl-mc-label">McClellan Oscillator</div>
+        <svg className="brd-trend-svg" style={{ height: H2 + 'px', marginTop: '2px' }} viewBox={`0 0 ${W} ${H2}`} preserveAspectRatio="none">
+          <line x1={padL} y1={Ymc0} x2={W - padR} y2={Ymc0} stroke="var(--border)" strokeWidth="1" />
+          {mdata.map((v, i) => {
+            if (v == null) return null;
+            const x = Xc(i), y0 = Ymc0, y1 = Ymc(v), h = Math.abs(y1 - y0);
+            return h > 0.3 ? <rect key={i} x={x - barW / 2} y={Math.min(y0, y1)} width={barW} height={h} fill={v >= 0 ? 'var(--g3)' : 'var(--neg)'} opacity="0.8" /> : null;
+          })}
+          {hi != null && <line x1={Xc(hi)} y1={0} x2={Xc(hi)} y2={H2} stroke="var(--muted)" strokeWidth="0.7" strokeDasharray="3 3" />}
+        </svg>
+        {hi != null && (
+          <div className="brd-tip" style={{ left: `${(Xc(hi) / W) * 100}%`, transform: `translateX(${tipFlip ? 'calc(-100% - 12px)' : '12px'})`, top: '6px' }}>
+            <div className="brd-tip-date">{hv?.date}</div>
+            <div className="brd-tip-row"><span>Net Adv/Dec</span><b style={{ color: hv?.net >= 0 ? 'var(--g2)' : 'var(--neg)' }}>{hv?.hasData ? (hv.net >= 0 ? '+' : '') + hv.net.toLocaleString('en-IN') : '—'}</b></div>
+            <div className="brd-tip-row"><span>A-D Line</span><b>{hv?.hasData ? fmtCum(hv.cum) : '—'}</b></div>
+            {hvmc != null && <div className="brd-tip-row"><span>McClellan</span><b style={{ color: hvmc >= 0 ? 'var(--g2)' : 'var(--neg)' }}>{hvmc >= 0 ? '+' : ''}{hvmc}</b></div>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const SECTOR_COLORS = {
   'Bank': '#1565c0', 'PSU Bank': '#0277bd', 'Financial Services': '#283593',
   'IT': '#00695c', 'Auto': '#558b2f', 'FMCG': '#2e7d32',
@@ -346,6 +489,62 @@ function SectorGrid({ snap, sectors }) {
         );
       })}
     </div>
+  );
+}
+
+function SectorRotation({ sectorData, date }) {
+  if (!sectorData?.snaps?.length || !sectorData?.sectors) return null;
+  const { snaps, sectors } = sectorData;
+  const curIdx = date ? snaps.findIndex((s) => s.date === date) : -1;
+  const i = curIdx < 0 ? snaps.length - 1 : curIdx;
+  const cur = snaps[i];
+  if (!cur) return null;
+
+  const SPARK_WIN = 20, WEEK = 5;
+  const rows = sectors.map((sec) => {
+    const rp = cur[sec]?.regime_pct ?? null;
+    const prev5 = i >= WEEK ? snaps[i - WEEK] : null;
+    const delta = rp != null && prev5?.[sec]?.regime_pct != null ? +(rp - prev5[sec].regime_pct).toFixed(1) : null;
+    const spark = snaps.slice(Math.max(0, i - SPARK_WIN + 1), i + 1).map((s) => s[sec]?.regime_pct ?? null);
+    return { sec, rp, delta, spark };
+  }).sort((a, b) => (b.rp ?? -1) - (a.rp ?? -1));
+
+  return (
+    <div className="sec-rot-list">
+      {rows.map(({ sec, rp, delta, spark }) => {
+        const color = sColor(sec);
+        const cls = rp == null ? '' : rp >= 60 ? 'sec-up' : rp >= 40 ? 'sec-mix' : rp >= 20 ? 'sec-warn' : 'sec-dn';
+        return (
+          <div className={`sec-rot-row ${cls}`} key={sec}>
+            <span className="sec-rot-dot" style={{ background: color }} />
+            <span className="sec-rot-name">{sec}</span>
+            <div className="sec-rot-bar-track">
+              <div className="sec-rot-bar-fill" style={{ width: `${rp ?? 0}%`, background: rp >= 60 ? color : rp >= 20 ? 'var(--warn)' : 'var(--neg)' }} />
+            </div>
+            <span className="sec-rot-pct">{rp != null ? Math.round(rp) + '%' : '—'}</span>
+            <span className={`sec-rot-delta ${delta == null ? '' : delta >= 0 ? 'brd-up' : 'brd-down'}`}>
+              {delta == null ? '—' : (delta >= 0 ? '▲' : '▼') + Math.abs(delta) + 'pt'}
+            </span>
+            <RotSpark series={spark} color={color} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RotSpark({ series, color }) {
+  const pts = (series || []).filter((v) => v != null);
+  if (pts.length < 2) return <div className="rot-spark-empty" />;
+  const W = 80, H = 26;
+  const min = Math.min(...pts), max = Math.max(...pts);
+  const X = (idx) => (idx / (pts.length - 1)) * W;
+  const Y = (v) => H - 2 - ((v - min) / (max - min || 1)) * (H - 4);
+  const d = pts.map((v, idx) => `${idx ? 'L' : 'M'}${X(idx).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="rot-spark" preserveAspectRatio="none">
+      <path d={d} fill="none" stroke={color} strokeWidth="1.5" opacity="0.85" />
+    </svg>
   );
 }
 
@@ -445,4 +644,25 @@ const CSS = `
 .sec-sig-gc{background:var(--g-xlight);color:var(--g1)}.sec-sig-dc{background:#fdeaea;color:var(--neg)}.sec-sig-bs{background:var(--g-xlight);color:var(--g1)}.sec-sig-bear{background:#fdeaea;color:var(--neg)}
 @media(max-width:900px){.sec-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:560px){.sec-grid{grid-template-columns:repeat(2,1fr)}}
+
+.adl-sub{font:500 11px Raleway,sans-serif;color:var(--muted);margin-top:2px}
+.adl-mc-label{font:700 10px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:8px 0 3px}
+
+.brd-card-pctile{font:700 10px JetBrains Mono,monospace;margin-top:4px;opacity:.85}
+
+.sec-rot-list{display:flex;flex-direction:column;gap:5px;margin-bottom:20px}
+.sec-rot-row{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:9px 13px;display:grid;grid-template-columns:10px 155px 1fr 50px 52px 80px;gap:10px;align-items:center;box-shadow:var(--shadow)}
+.sec-rot-dot{width:10px;height:10px;border-radius:50%;display:block}
+.sec-rot-name{font:600 11.5px JetBrains Mono,monospace;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sec-rot-bar-track{height:5px;background:var(--s3,#eef5ee);border-radius:3px;overflow:hidden}
+.sec-rot-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.sec-rot-pct{font:800 13px JetBrains Mono,monospace;color:var(--text);text-align:right}
+.sec-rot-delta{font:700 11px JetBrains Mono,monospace;text-align:right}
+.rot-spark{width:80px;height:26px;display:block}
+.rot-spark-empty{width:80px;height:26px;display:block}
+.sec-rot-row.sec-dn .sec-rot-pct{color:var(--neg)}
+.sec-rot-row.sec-warn .sec-rot-pct{color:var(--warn)}
+.sec-rot-row.sec-up .sec-rot-pct{color:var(--g2)}
+@media(max-width:900px){.sec-rot-row{grid-template-columns:10px 1fr 40px 50px}.sec-rot-bar-track,.rot-spark,.rot-spark-empty{display:none}}
+@media(max-width:560px){.sec-rot-row{grid-template-columns:10px 1fr 40px}.sec-rot-delta{display:none}}
 `;
