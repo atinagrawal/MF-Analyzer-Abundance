@@ -36,8 +36,11 @@ export default function BreadthPage() {
       if (d.error) { setErr(d.error); return; }
       setData(d); setDate(d.asof);
     }).catch(() => setErr('Could not load breadth data.'));
-    fetch('/api/breadth-indices').then((r) => r.json()).then(setIdx).catch(() => {});
   }, [isAuthed]);
+
+  useEffect(() => {
+    fetch('/api/breadth-indices').then((r) => r.json()).then(setIdx).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!isAuthed) return;
@@ -125,13 +128,7 @@ export default function BreadthPage() {
           <p className="page-subtitle">How broad is the move? Participation across ~{cur ? fmtNum(cur.universe) : '2,200'} stocks — moving-average breadth, advance-decline and new highs/lows, updated every trading day.</p>
         </div>
 
-        {status !== 'loading' && !isAuthed && <BreadthGate />}
-
-        <BreadthFAQ />
-
-        {isAuthed && <>
-
-        {/* index strip */}
+        {/* index strip — visible to all visitors */}
         <div className="brd-indices">
           {(idx?.indices || [{ key: 'a' }, { key: 'b' }, { key: 'c' }, { key: 'd' }]).map((ix) => (
             <div className="brd-ix" key={ix.key}>
@@ -145,6 +142,10 @@ export default function BreadthPage() {
             </div>
           ))}
         </div>
+
+        {status !== 'loading' && !isAuthed && <BreadthGate />}
+
+        {isAuthed && <>
 
         {err && <div className="brd-err">{err} The dashboard populates once the nightly breadth job has written snapshots.</div>}
 
@@ -248,6 +249,8 @@ export default function BreadthPage() {
         )}
 
         </>}
+
+        <BreadthFAQ />
 
         <div className="brd-disc">
           <b>Disclaimer.</b> Educational market-breadth analytics by <b>Atin Kumar Agrawal | Abundance Financial Services</b> · AMFI Registered Mutual Funds &amp; SIF Distributor (ARN-251838). Breadth is computed on end-of-day prices for the BSE main-board equity universe (groups A/B); index levels and weekly RSI are sourced separately and may differ slightly from NSE. Moving-average and 52-week figures use unadjusted prices. This is technical market context for education only — not a recommendation to buy or sell any security, index or fund. Past behaviour does not predict future results.
