@@ -35,7 +35,6 @@ const NAV_TOOLS = [
   { key: 'screener',     label: '🔎 MF Screener',     href: '/screener' },
   { key: 'breadth',        label: '📊 Market Breadth',    href: '/market-breadth' },
   { key: 'stock-screener', label: '🔬 Stock Screener',   href: '/stock-screener' },
-  { key: 'faq',            label: '❓ FAQ',              href: '/faq' },
   { key: 'contact',        label: '📞 Contact',          href: 'https://www.getabundance.in/contact-us', external: true },
 ];
 

@@ -247,6 +247,8 @@ export default function BreadthPage() {
 
         </>}
 
+        <BreadthFAQ />
+
         <div className="brd-disc">
           <b>Disclaimer.</b> Educational market-breadth analytics by <b>Atin Kumar Agrawal | Abundance Financial Services</b> · AMFI Registered Mutual Funds &amp; SIF Distributor (ARN-251838). Breadth is computed on end-of-day prices for the BSE main-board equity universe (groups A/B); index levels and weekly RSI are sourced separately and may differ slightly from NSE. Moving-average and 52-week figures use unadjusted prices. This is technical market context for education only — not a recommendation to buy or sell any security, index or fund. Past behaviour does not predict future results.
         </div>
@@ -592,7 +594,7 @@ function BreadthGate() {
       </p>
       <div className="brd-gate-actions">
         <button className="brd-gate-btn" onClick={() => signIn()}>Sign in to continue →</button>
-        <a className="brd-gate-faq" href="/faq">What do these indicators mean?</a>
+        <a className="brd-gate-faq" href="#faq">What do these indicators mean?</a>
       </div>
     </div>
   );
@@ -640,6 +642,79 @@ function SectorGlossary() {
         </div>
       )}
     </span>
+  );
+}
+
+const FAQ_SECTIONS = [
+  {
+    heading: 'Market breadth basics',
+    items: [
+      { q: 'What is market breadth, and why does it matter?', a: `Market breadth measures how many individual stocks are participating in a move, not just whether the index is up or down. An index like Nifty 50 tracks a small basket of large-cap stocks weighted by market cap, so a handful of heavyweights can lift the index even while most stocks are falling.\n\nBreadth tells you whether a rally is broad (most stocks moving together) or narrow (just a few leaders). Broad rallies tend to be durable; narrow ones are more fragile. A market where 80% of stocks are above their 200-day MA is in a fundamentally different condition than one where only 30% are — even if the headline index is at the same level.` },
+      { q: 'How is this different from watching Nifty or Sensex?', a: `Nifty 50 is the weighted average of 50 stocks. Reliance, HDFC Bank, Infosys, and ICICI Bank alone make up roughly 35–40% of its weight. If those four rise strongly, the index can go up even if 800 of the other 1,000 stocks on the exchange are falling.\n\nThis dashboard tracks 1,100+ liquid BSE stocks equally. When it says "42% of stocks are above their 200-day MA," that means 42% of real companies — not 42% of market cap — are in long-term uptrends. That is a more honest picture of what most investors actually hold.` },
+      { q: 'What does the Risk-on / Risk-off regime label mean?', a: `The regime is derived from the percentage of stocks above their 200-day moving average:\n\n• 60% or more → Risk-on (broad uptrend; majority of stocks in long-term upswings)\n• 40–60% → Mixed / Neutral (two-sided market; no strong directional edge)\n• 20–40% → Risk-off (defensive conditions; most stocks below long-term trend)\n• Below 20% → Deep risk-off (broad downtrend; preserve capital, be selective)\n\nThe value is in the direction of change as much as the absolute level.` },
+    ],
+  },
+  {
+    heading: 'Moving average breadth',
+    items: [
+      { q: 'What does "% above 200-day MA" mean?', a: `The 200-day moving average (200-day MA) is the average closing price of a stock over the last 200 trading sessions — roughly 10 months. When a stock's price is above it, the stock is in a long-term uptrend; below it, a long-term downtrend.\n\n"% above 200-day MA" counts what fraction of the 1,100+ tracked stocks are currently above their own 200-day MA. The higher the percentage, the more stocks are individually in uptrends.` },
+      { q: 'Why are there five DMA lines (20, 50, 100, 150, 200)?', a: `Each represents a different time horizon: 20-day (one month, short-term), 50-day (one quarter, medium), 100-day (five months, intermediate), 150-day (seven months), 200-day (ten months, long-term).\n\nWatching all five together shows whether strength is a short-term blip or is embedded across multiple timeframes. When most stocks are above all five MAs simultaneously, conditions are broadly constructive.` },
+      { q: 'What is the historical percentile rank shown on each card?', a: `The percentile rank compares the current breadth reading against every prior reading in the database. A "72nd percentile" means the current reading is higher than 72% of all historical readings.\n\nThis adds context the raw percentage lacks: a reading of 45% above the 200-day MA could be average or elevated depending on history. Green = top quartile (>75th pct), amber = middle range, red = bottom quartile (<25th pct).` },
+    ],
+  },
+  {
+    heading: 'Advance-Decline Line & McClellan Oscillator',
+    items: [
+      { q: 'What is the Advance-Decline (A-D) Line?', a: `Each day, the number of advancing stocks minus declining stocks gives a "net advance" figure. The A-D Line is the running cumulative sum of this number.\n\nWhen the A-D Line is rising, more stocks are advancing than declining on most days — the market has broad participation. When it falls even as the index rises, it is a divergence warning: the rally is narrowing, driven by fewer and fewer stocks. This divergence often precedes corrections.` },
+      { q: 'What is the McClellan Oscillator?', a: `The McClellan Oscillator is the difference between a 19-day EMA and a 39-day EMA of the daily net advances.\n\nPositive and rising → short-term breadth momentum is expanding. Negative and falling → breadth is deteriorating. Extreme readings often signal overbought or oversold conditions. It is more timely than the raw A-D Line and useful for identifying breadth thrusts or exhaustion.` },
+    ],
+  },
+  {
+    heading: 'Signal definitions',
+    items: [
+      { q: 'What is a Golden Cross and a Death Cross?', a: `Both relate to the 50-day and 200-day moving averages of an individual stock:\n\n• Golden Cross (GC): the 50-day MA crosses above the 200-day MA — medium-term momentum has turned bullish relative to the long-term trend.\n• Death Cross (DC): the 50-day MA crosses below the 200-day MA — the mirror image.\n\nThe counts on sector tiles (e.g. "GC 3") show how many stocks within the sector had this crossover within the last 25 trading sessions.` },
+      { q: 'What is Bull Stacked and Bear Stacked?', a: `These describe a "perfect alignment" of all five moving averages for an individual stock:\n\n• Bull Stacked (B↑): Price > 20-day MA > 50-day MA > 100-day MA > 150-day MA > 200-day MA — the stock is in an uptrend across every time horizon simultaneously.\n• Bear Stacked (B↓): Price < 20-day MA < 50-day MA < … < 200-day MA — every timeframe is in a downtrend.\n\nA sector with many bull-stacked stocks is showing exceptionally clean trend alignment.` },
+      { q: 'What are new 52-week highs and lows?', a: `A stock makes a new 52-week high when its intraday high today equals or exceeds the highest point over the prior 252 trading sessions. Expanding new highs alongside a rising index confirms strength. The worrying combination is: index rising, but new lows expanding — it signals the rally is narrowing and distribution is underway in the broader market.` },
+    ],
+  },
+  {
+    heading: 'Sector breadth',
+    items: [
+      { q: 'What does the sector breadth grid show?', a: `The sector grid applies the same 200-day MA breadth calculation to each of the 15 Nifty sectoral indices individually. This lets you see which sectors are in broad uptrends, which are struggling, and which are seeing fresh momentum signals.\n\nSectors with high breadth and rising advance-decline are typically where current market leadership sits.` },
+      { q: 'What does the sector rotation panel show?', a: `The rotation panel ranks all 15 sectors from highest to lowest current 200-day MA breadth and shows the week-on-week change (▲/▼ N points) next to each, plus a 20-session sparkline.\n\nSectors near the top with rising deltas are in a leadership position. Crossings from bottom to top — rapidly improving breadth with a large positive delta — can signal early-stage sector rotation worth paying attention to.` },
+    ],
+  },
+  {
+    heading: 'About the data',
+    items: [
+      { q: 'Which stocks are included?', a: `The dashboard tracks the top 1,100 liquid stocks on the BSE by 60-session average daily turnover. This universe is broad enough to capture the real breadth of the market including mid- and small-cap stocks, while excluding thinly traded stocks where prices can be erratic.` },
+      { q: 'How often does data update?', a: `End-of-day price data is sourced from the BSE bhavcopy — the official daily price file published by the Bombay Stock Exchange after market close, typically available between 6–7 PM IST.\n\nThe nightly pipeline runs at 6 PM IST on weekdays. It downloads the bhavcopy, computes all breadth metrics, per-stock signals, and sector breadth, and writes results to the database. If a date shows no data, either it was a market holiday or the pipeline has not yet run for that day.` },
+      { q: 'Are moving averages adjusted for corporate actions?', a: `No. All moving averages and signals are computed on unadjusted end-of-day closing prices from the BSE bhavcopy. Corporate actions like stock splits or bonus issues can create discontinuities in a stock's price series, but because breadth metrics aggregate hundreds of stocks, the impact of any single stock's corporate action on aggregate readings is minimal.` },
+    ],
+  },
+];
+
+function BreadthFAQ() {
+  return (
+    <section id="faq" className="brd-faq">
+      <div className="brd-faq-head">
+        <div className="brd-section-h" style={{ margin: 0 }}>Frequently asked questions</div>
+        <p className="brd-faq-sub">Understanding every indicator and signal on this page</p>
+      </div>
+      {FAQ_SECTIONS.map((sec) => (
+        <div key={sec.heading} className="brd-faq-sec">
+          <div className="brd-faq-sec-h">{sec.heading}</div>
+          {sec.items.map((item) => (
+            <details key={item.q} className="brd-faq-item">
+              <summary className="brd-faq-q">{item.q}</summary>
+              <div className="brd-faq-a">
+                {item.a.split('\n\n').map((p, i) => <p key={i}>{p}</p>)}
+              </div>
+            </details>
+          ))}
+        </div>
+      ))}
+    </section>
   );
 }
 
@@ -761,6 +836,22 @@ const CSS = `
 .sec-gloss-desc{font-size:12px;color:var(--text2);line-height:1.6}
 .sec-gloss-note{font:500 11px Raleway,sans-serif;color:var(--muted);margin-top:13px;padding-top:11px;border-top:1px solid var(--border);line-height:1.55}
 @media(max-width:700px){.sec-gloss-panel{width:calc(100vw - 32px);left:-4px}}
+
+.brd-faq{margin:32px 0 8px;border-top:1px solid var(--border);padding-top:28px}
+.brd-faq-head{margin-bottom:20px}
+.brd-faq-sub{font-size:13px;color:var(--muted);margin:5px 0 0;line-height:1.5}
+.brd-faq-sec{margin-bottom:22px}
+.brd-faq-sec-h{font:700 10.5px JetBrains Mono,monospace;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding-left:2px}
+.brd-faq-item{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-bottom:5px;transition:border-color .15s}
+.brd-faq-item[open]{border-color:var(--g-light,#a5d6a7)}
+.brd-faq-item[open] .brd-faq-q{border-bottom:1px solid var(--border)}
+.brd-faq-q{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;font:600 13.5px Raleway,sans-serif;color:var(--text);cursor:pointer;user-select:none}
+.brd-faq-q::-webkit-details-marker{display:none}
+.brd-faq-q::after{content:'＋';font:700 15px JetBrains Mono,monospace;color:var(--g2);flex:none}
+.brd-faq-item[open] .brd-faq-q::after{content:'－'}
+.brd-faq-a{padding:14px 18px 16px;font-size:13px;line-height:1.75;color:var(--text2)}
+.brd-faq-a p{margin:0 0 10px}
+.brd-faq-a p:last-child{margin:0}
 
 .brd-gate{text-align:center;padding:64px 32px;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);margin:8px 0 32px}
 .brd-gate-lock{font-size:2.4rem;margin-bottom:16px;line-height:1}
