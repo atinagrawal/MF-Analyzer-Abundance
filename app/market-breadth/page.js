@@ -127,6 +127,8 @@ export default function BreadthPage() {
 
         {status !== 'loading' && !isAuthed && <BreadthGate />}
 
+        <BreadthFAQ />
+
         {isAuthed && <>
 
         {/* index strip */}
@@ -246,8 +248,6 @@ export default function BreadthPage() {
         )}
 
         </>}
-
-        <BreadthFAQ />
 
         <div className="brd-disc">
           <b>Disclaimer.</b> Educational market-breadth analytics by <b>Atin Kumar Agrawal | Abundance Financial Services</b> · AMFI Registered Mutual Funds &amp; SIF Distributor (ARN-251838). Breadth is computed on end-of-day prices for the BSE main-board equity universe (groups A/B); index levels and weekly RSI are sourced separately and may differ slightly from NSE. Moving-average and 52-week figures use unadjusted prices. This is technical market context for education only — not a recommendation to buy or sell any security, index or fund. Past behaviour does not predict future results.
