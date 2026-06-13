@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSession, signIn } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
@@ -19,6 +20,9 @@ function regimeLabel(p) {
 }
 
 export default function BreadthPage() {
+  const { status } = useSession();
+  const isAuthed = status === 'authenticated';
+
   const [data, setData] = useState(null);
   const [idx, setIdx] = useState(null);
   const [err, setErr] = useState('');
@@ -27,19 +31,21 @@ export default function BreadthPage() {
   const [sectorData, setSectorData] = useState(null);
 
   useEffect(() => {
+    if (!isAuthed) return;
     fetch('/api/breadth').then((r) => r.json()).then((d) => {
       if (d.error) { setErr(d.error); return; }
       setData(d); setDate(d.asof);
     }).catch(() => setErr('Could not load breadth data.'));
     fetch('/api/breadth-indices').then((r) => r.json()).then(setIdx).catch(() => {});
-  }, []);
+  }, [isAuthed]);
 
   useEffect(() => {
+    if (!isAuthed) return;
     fetch('/api/sector-breadth')
       .then((r) => r.json())
       .then((d) => { if (!d.error && d.snaps?.length) setSectorData(d); })
       .catch(() => {});
-  }, []);
+  }, [isAuthed]);
 
   const snaps = data?.snaps || [];
   const dates = useMemo(() => snaps.map((s) => s.date), [snaps]);
@@ -118,6 +124,10 @@ export default function BreadthPage() {
           <h1 className="page-title">Market Breadth <span className="brd-prem">PREMIUM</span></h1>
           <p className="page-subtitle">How broad is the move? Participation across ~{cur ? fmtNum(cur.universe) : '2,200'} stocks — moving-average breadth, advance-decline and new highs/lows, updated every trading day.</p>
         </div>
+
+        {status !== 'loading' && !isAuthed && <BreadthGate />}
+
+        {isAuthed && <>
 
         {/* index strip */}
         <div className="brd-indices">
@@ -234,6 +244,8 @@ export default function BreadthPage() {
             <SectorRotation sectorData={sectorData} date={date} />
           </>
         )}
+
+        </>}
 
         <div className="brd-disc">
           <b>Disclaimer.</b> Educational market-breadth analytics by <b>Atin Kumar Agrawal | Abundance Financial Services</b> · AMFI Registered Mutual Funds &amp; SIF Distributor (ARN-251838). Breadth is computed on end-of-day prices for the BSE main-board equity universe (groups A/B); index levels and weekly RSI are sourced separately and may differ slightly from NSE. Moving-average and 52-week figures use unadjusted prices. This is technical market context for education only — not a recommendation to buy or sell any security, index or fund. Past behaviour does not predict future results.
@@ -568,6 +580,24 @@ function RotSpark({ series, color }) {
   );
 }
 
+function BreadthGate() {
+  return (
+    <div className="brd-gate">
+      <div className="brd-gate-lock">🔒</div>
+      <h2 className="brd-gate-title">Market breadth data is for registered users</h2>
+      <p className="brd-gate-desc">
+        Track DMA participation across 1,100+ BSE stocks, advance-decline trends, sector
+        rotation, the McClellan Oscillator, and 15-sector breadth — updated every trading
+        day after BSE bhavcopy publication.
+      </p>
+      <div className="brd-gate-actions">
+        <button className="brd-gate-btn" onClick={() => signIn()}>Sign in to continue →</button>
+        <a className="brd-gate-faq" href="/faq">What do these indicators mean?</a>
+      </div>
+    </div>
+  );
+}
+
 const GLOSSARY_ITEMS = [
   { sym: '42%', desc: 'Breadth — what fraction of the sector\'s stocks are trading above their 200-day moving average. Higher = broader participation in the long-term uptrend. Below 40% signals weak conditions; above 60% signals broad strength.' },
   { sym: '▲ / ▼', desc: 'Advancing and declining stock counts — the number of individual stocks in this sector that closed higher (▲) or lower (▼) than the previous session today. This is not the sector index direction.' },
@@ -581,8 +611,17 @@ const GLOSSARY_ITEMS = [
 
 function SectorGlossary() {
   const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+
   return (
-    <span className="sec-gloss-wrap">
+    <span className="sec-gloss-wrap" ref={ref}>
       <button className={`sec-gloss-btn ${open ? 'on' : ''}`} onClick={() => setOpen((v) => !v)} aria-label="Explain tile symbols">
         {open ? '✕ close' : 'ⓘ how to read'}
       </button>
@@ -722,6 +761,16 @@ const CSS = `
 .sec-gloss-desc{font-size:12px;color:var(--text2);line-height:1.6}
 .sec-gloss-note{font:500 11px Raleway,sans-serif;color:var(--muted);margin-top:13px;padding-top:11px;border-top:1px solid var(--border);line-height:1.55}
 @media(max-width:700px){.sec-gloss-panel{width:calc(100vw - 32px);left:-4px}}
+
+.brd-gate{text-align:center;padding:64px 32px;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);margin:8px 0 32px}
+.brd-gate-lock{font-size:2.4rem;margin-bottom:16px;line-height:1}
+.brd-gate-title{font:800 21px Raleway,sans-serif;color:var(--text);margin:0 0 10px}
+.brd-gate-desc{font-size:14px;color:var(--text2);max-width:500px;margin:0 auto 28px;line-height:1.7}
+.brd-gate-actions{display:flex;align-items:center;justify-content:center;gap:22px;flex-wrap:wrap}
+.brd-gate-btn{padding:12px 26px;background:var(--g1);color:#fff;border:none;border-radius:10px;font:700 13.5px Raleway,sans-serif;cursor:pointer;transition:background .15s}
+.brd-gate-btn:hover{background:var(--g2)}
+.brd-gate-faq{font:600 13px Raleway,sans-serif;color:var(--g2);text-decoration:none;border-bottom:1px solid var(--g-light,#a5d6a7)}
+.brd-gate-faq:hover{color:var(--g1)}
 
 .adl-sub{font:500 11px Raleway,sans-serif;color:var(--muted);margin-top:2px}
 .adl-mc-label{font:700 10px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:8px 0 3px}
