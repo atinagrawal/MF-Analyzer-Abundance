@@ -96,11 +96,11 @@ const FEATURED = [
 ];
 
 const FAQ_ITEMS = [
-  { q: ‘How are the returns calculated?’, a: ‘Point-to-point CAGR from real AMFI NAVs — the latest NAV versus the NAV one, three and five years earlier. For periods shorter than a fund\’s age, the figure is left blank rather than estimated. Since-inception return is the CAGR from the fund\’s launch NAV (₹10) to today, using the oldest available NAV record from mfapi.in.’ },
-  { q: 'How current is the data?', a: 'The dataset is rebuilt every day from AMFI’s official NAV files, so the figures reflect the most recent published NAVs.' },
-  { q: 'What do volatility and max drawdown mean?', a: 'Volatility is the annualised standard deviation of monthly returns — how bumpy the ride was. Max drawdown is the largest peak-to-trough fall. Both are on a month-end basis over the available history.' },
+  { q: "How are the returns calculated?", a: "Point-to-point CAGR from real AMFI NAVs — the latest NAV versus the NAV one, three and five years earlier. For periods shorter than a fund’s age, the figure is left blank rather than estimated. Since-inception return is the CAGR from the fund’s launch NAV (₹10) to today, using the oldest available NAV record from mfapi.in." },
+  { q: "How current is the data?", a: "The dataset is rebuilt every day from AMFI’s official NAV files, so the figures reflect the most recent published NAVs." },
+  { q: "What do volatility and max drawdown mean?", a: "Volatility is the annualised standard deviation of monthly returns — how bumpy the ride was. Max drawdown is the largest peak-to-trough fall. Both are on a month-end basis over the available history." },
 
-  { q: 'Is this investment advice?', a: 'No. This is an educational data tool. Past performance is not indicative of future results, and nothing here is a recommendation. Please consult your financial advisor before investing.' },
+  { q: "Is this investment advice?", a: "No. This is an educational data tool. Past performance is not indicative of future results, and nothing here is a recommendation. Please consult your financial advisor before investing." },
 ];
 
 export default function ScreenerPage() {
