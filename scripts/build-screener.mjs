@@ -198,8 +198,8 @@ async function main() {
       const data = await fetchMfapiInception(code);
       process.stdout.write(`\r[screener] inception: ${++done}/${toFetch.length}   `);
       if (!data) return { code, data: null };
-      // oldest NAV ≤ 11 means this is a true inception record (launch NAV = 10 by SEBI regulation)
-      const source = data.nav <= 11 ? 'mfapi' : 'estimated';
+      // oldest NAV <= 10.2 means this is a true inception record (launch NAV = 10 by SEBI regulation)
+      const source = data.nav <= 10.2 ? 'mfapi' : 'estimated';
       return { code, data, source };
     }, 10);
     process.stdout.write('\n');
@@ -210,7 +210,8 @@ async function main() {
       if (!data) continue;
       inceptionMap[code] = { date: data.date, nav: data.nav, source };
       newEntries.push({ code, date: data.date, nav: data.nav, source });
-      if (source === 'estimated') {
+      // Anything > 10.05 should be manually verified just to be safe
+      if (source === 'estimated' || data.nav > 10.05) {
         needsReview.push({ code, name: uni.get(code)?.name, oldest_amfi_date: data.date, oldest_amfi_nav: data.nav });
       }
     }
