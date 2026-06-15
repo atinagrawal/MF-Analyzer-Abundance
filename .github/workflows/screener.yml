@@ -43,3 +43,14 @@ jobs:
           path: data/screener.json
           retention-days: 7
           if-no-files-found: ignore
+
+      # Funds where mfapi.in oldest NAV >> 10 (pre-AMFI-records) — add overrides
+      # to data/mf-inception-overrides.json to get accurate since-inception returns
+      - name: Upload inception needs-review list
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mf-inception-needs-review
+          path: data/mf-inception-needs-review.json
+          retention-days: 30
+          if-no-files-found: ignore
