@@ -42,7 +42,13 @@ const toISO = (s) => { if (!s) return null; const [dd, mm, yy] = s.split('-'); r
 // After a first run, check data/mf-inception-needs-review.json for funds needing entries here.
 const OVERRIDES_PATH = path.join(__dirname, '..', 'data', 'mf-inception-overrides.json');
 let OVERRIDES = {};
-try { OVERRIDES = JSON.parse(fs.readFileSync(OVERRIDES_PATH, 'utf8')).overrides || {}; } catch (_) {}
+try {
+  const raw = JSON.parse(fs.readFileSync(OVERRIDES_PATH, 'utf8'));
+  // Support both flat {code:{...}} and nested {overrides:{code:{...}}} formats.
+  // Filter to numeric scheme codes only so metadata keys (_comment, _format) are ignored.
+  const src = (raw.overrides && Object.keys(raw.overrides).length > 0) ? raw.overrides : raw;
+  for (const [k, v] of Object.entries(src)) { if (/^\d+$/.test(k)) OVERRIDES[k] = v; }
+} catch (_) {}
 
 async function fetchText(url, tries = 3) {
   for (let i = 0; i < tries; i++) {
@@ -176,6 +182,23 @@ async function main() {
       }
     }
     console.log(`[screener] loaded ${existing.length} existing inception records`);
+
+    // Upsert manual overrides so the DB reflects the correct date/source even for funds
+    // that were already stored as source='estimated' from a previous run.
+    const overrideEntries = Object.entries(OVERRIDES);
+    if (c && overrideEntries.length > 0) {
+      await c.query('BEGIN');
+      for (const [code, ov] of overrideEntries) {
+        await c.query(
+          `INSERT INTO mf_inception (code, inception_date, inception_nav, source)
+           VALUES ($1,$2,$3,'manual')
+           ON CONFLICT (code) DO UPDATE SET inception_date=$2, inception_nav=$3, source='manual'`,
+          [code, ov.inception_date, ov.inception_nav ?? 10]
+        );
+      }
+      await c.query('COMMIT');
+      console.log(`[screener] upserted ${overrideEntries.length} manual inception overrides`);
+    }
   }
 
   // ---- 1. universe ----
