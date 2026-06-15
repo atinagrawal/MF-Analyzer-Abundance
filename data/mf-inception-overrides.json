@@ -1,0 +1,6 @@
+{
+  "_comment": "Manual inception date overrides for funds where the oldest mfapi.in NAV record is significantly above 10 (pre-AMFI-records funds). After the first screener build, check data/mf-inception-needs-review.json for the list of funds that need entries here. Key = AMFI scheme code (integer as string).",
+  "_format": { "inception_date": "YYYY-MM-DD", "inception_nav": "NAV at launch (almost always 10)" },
+  "overrides": {
+  }
+}

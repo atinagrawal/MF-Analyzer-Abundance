@@ -59,6 +59,7 @@ const METRICS = [
   { key: 'vol', label: 'Vol', kind: 'risk' },
   { key: 'max_dd', label: 'Max DD', kind: 'dd' },
   { key: 'ret_per_risk', label: 'Ret/Risk', kind: 'ratio' },
+  { key: 'ret_inception', label: 'Inception', kind: 'ret' },
 ];
 const DEFAULT_COLS = ['ret_1y', 'ret_3y', 'ret_5y', 'max_dd', 'ret_per_risk'];
 const fmtCell = (m, v) => {
@@ -95,7 +96,7 @@ const FEATURED = [
 ];
 
 const FAQ_ITEMS = [
-  { q: 'How are the returns calculated?', a: 'Point-to-point CAGR from real AMFI NAVs — the latest NAV versus the NAV one, three and five years earlier. For periods shorter than a fund’s age, the figure is left blank rather than estimated.' },
+  { q: ‘How are the returns calculated?’, a: ‘Point-to-point CAGR from real AMFI NAVs — the latest NAV versus the NAV one, three and five years earlier. For periods shorter than a fund\’s age, the figure is left blank rather than estimated. Since-inception return is the CAGR from the fund\’s launch NAV (₹10) to today, using the oldest available NAV record from mfapi.in.’ },
   { q: 'How current is the data?', a: 'The dataset is rebuilt every day from AMFI’s official NAV files, so the figures reflect the most recent published NAVs.' },
   { q: 'What do volatility and max drawdown mean?', a: 'Volatility is the annualised standard deviation of monthly returns — how bumpy the ride was. Max drawdown is the largest peak-to-trough fall. Both are on a month-end basis over the available history.' },
 
@@ -508,7 +509,7 @@ function Detail({ f, onClose }) {
     return () => { alive = false; window.removeEventListener('keydown', onKey); };
   }, [f, onClose]);
 
-  const M = [['1Y', f.ret_1y, '%'], ['3Y', f.ret_3y, '%'], ['5Y', f.ret_5y, '%'], ['Volatility', f.vol, '%'], ['Max drawdown', f.max_dd, '%'], ['Return / risk', f.ret_per_risk, '']];
+  const M = [['1Y', f.ret_1y, '%'], ['3Y', f.ret_3y, '%'], ['5Y', f.ret_5y, '%'], ['Since inception', f.ret_inception, '%'], ['Volatility', f.vol, '%'], ['Max drawdown', f.max_dd, '%'], ['Return / risk', f.ret_per_risk, '']];
   return (
     <div className="scr-drawer-wrap" onMouseDown={onClose}>
       <div className="scr-drawer" onMouseDown={(e) => e.stopPropagation()} role="dialog">
@@ -528,7 +529,12 @@ function Detail({ f, onClose }) {
             <div className="scr-dk" key={l}><span>{l}</span><b className={u === '%' && (l.includes('draw')) ? 'scr-neg' : cls(typeof v === 'number' ? v : null)}>{v == null ? '—' : (u === '%' ? (v > 0 && !l.includes('draw') && !l.includes('Vol') ? '+' : '') + v.toFixed(1) + '%' : v.toFixed(2))}</b></div>
           ))}
         </div>
-        <div className="scr-drawer-meta"><span>Latest NAV ₹{f.nav}</span><span>History ~{f.age_years ?? '—'} yrs</span><span>as of {f.asof}</span></div>
+        <div className="scr-drawer-meta">
+          <span>Latest NAV ₹{f.nav}</span>
+          {f.inception_date && <span>Since {new Date(f.inception_date + 'T00:00:00Z').toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span>}
+          <span>Age ~{f.age_years ?? '—'} yrs</span>
+          <span>as of {f.asof}</span>
+        </div>
 
         <div className="scr-drawer-cta">
           <a className="scr-btn primary" href={backtestLink(f)}>⚗ Backtest this fund</a>

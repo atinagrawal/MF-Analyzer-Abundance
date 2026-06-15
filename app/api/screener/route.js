@@ -10,7 +10,7 @@ import pool from '@/lib/db';
 // most requests were slow cold MISSes.
 export const revalidate = 21600;
 
-const COLS = 'code,name,amc,category,structure,nav,nav_date,ret_1m,ret_3m,ret_6m,ret_1y,ret_3y,ret_5y,ret_7y,ret_10y,vol,max_dd,ret_per_risk,age_years,flag,asof';
+const COLS = 'code,name,amc,category,structure,nav,nav_date,ret_1m,ret_3m,ret_6m,ret_1y,ret_3y,ret_5y,ret_7y,ret_10y,vol,max_dd,ret_per_risk,age_years,inception_date,ret_inception,flag,asof';
 
 export async function GET() {
   try {
@@ -27,7 +27,8 @@ export async function GET() {
       ret_1y: num(r.ret_1y), ret_3y: num(r.ret_3y), ret_5y: num(r.ret_5y),
       ret_7y: num(r.ret_7y), ret_10y: num(r.ret_10y),
       vol: num(r.vol), max_dd: num(r.max_dd), ret_per_risk: num(r.ret_per_risk),
-      age_years: num(r.age_years), flag: r.flag, asof: r.asof,
+      age_years: num(r.age_years), inception_date: r.inception_date || null,
+      ret_inception: num(r.ret_inception), flag: r.flag, asof: r.asof,
     }));
     const asof = funds.length ? funds[0].asof : null;
     return new Response(JSON.stringify({ asof, count: funds.length, funds }), {
