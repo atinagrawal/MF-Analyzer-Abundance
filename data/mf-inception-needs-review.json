@@ -1,0 +1,1634 @@
+[
+  {
+    "code": "100784",
+    "name": "Sundaram Banking & PSU Fund (Formerly Known as Sundaram Banking and PSU Debt Fund) Regular Plan - Growth",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.7233
+  },
+  {
+    "code": "100789",
+    "name": "Sundaram Corporate Bond Fund Regular Plan- Growth",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.6236
+  },
+  {
+    "code": "102505",
+    "name": "SBI CREDIT RISK FUND - REGULAR PLAN - GROWTH",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.8413
+  },
+  {
+    "code": "102767",
+    "name": "Aditya Birla Sun Life Dynamic Bond Fund - Growth - Regular Plan",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.7617
+  },
+  {
+    "code": "102849",
+    "name": "Nippon India Dynamic Bond Fund-Growth Plan-Growth Option",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.6248
+  },
+  {
+    "code": "102205",
+    "name": "SBI Dynamic Bond Fund - REGULAR PLAN - Growth",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.321
+  },
+  {
+    "code": "101802",
+    "name": "ICICI Prudential Floating Interest Fund - Growth",
+    "oldest_amfi_date": "2006-04-02",
+    "oldest_amfi_nav": 10.2336
+  },
+  {
+    "code": "102673",
+    "name": "Nippon India Floater Fund - Growth Plan-Growth Option",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.8812
+  },
+  {
+    "code": "101187",
+    "name": "Baroda BNP Paribas GILT FUND - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.762
+  },
+  {
+    "code": "100319",
+    "name": "LIC MF Gilt Fund-PF Plan-Growth",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.4912
+  },
+  {
+    "code": "101934",
+    "name": "SBI GILT FUND - GROWTH - PF (Fixed Period - 3 Yrs) Option",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.3002
+  },
+  {
+    "code": "101932",
+    "name": "SBI GILT FUND - GROWTH - PF (Regular) Option",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.4399
+  },
+  {
+    "code": "150405",
+    "name": "Union Gilt Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2022-08-17",
+    "oldest_amfi_nav": 10.0507
+  },
+  {
+    "code": "102512",
+    "name": "UTI - GILT FUND - Discontinued PF Plan - Growth Option",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.7962
+  },
+  {
+    "code": "131051",
+    "name": "ICICI Prudential Constant Maturity Gilt Fund - Growth",
+    "oldest_amfi_date": "2014-11-05",
+    "oldest_amfi_nav": 10.3689
+  },
+  {
+    "code": "150409",
+    "name": "UTI Gilt Fund with 10 year Constant Duration - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2022-08-03",
+    "oldest_amfi_nav": 10.0673
+  },
+  {
+    "code": "103340",
+    "name": "ICICI Prudential Liquid Fund - Growth",
+    "oldest_amfi_date": "2006-04-02",
+    "oldest_amfi_nav": 10.2253
+  },
+  {
+    "code": "103225",
+    "name": "quant Liquid Fund - Growth Option - Regular Plan",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.2676
+  },
+  {
+    "code": "102672",
+    "name": "Tata Liquid Fund -Regular Plan - Growth Option",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.906
+  },
+  {
+    "code": "102913",
+    "name": "CANARA ROBECO SAVINGS FUND - REGULAR PLAN - GROWTH OPTION",
+    "oldest_amfi_date": "2006-04-01",
+    "oldest_amfi_nav": 10.6652
+  },
+  {
+    "code": "103159",
+    "name": "Tata Treasury Advantage Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.3052
+  },
+  {
+    "code": "102741",
+    "name": "ICICI Prudential Medium Term Bond Fund - Growth",
+    "oldest_amfi_date": "2006-04-02",
+    "oldest_amfi_nav": 10.8092
+  },
+  {
+    "code": "101976",
+    "name": "Aditya Birla Sun Life Money Manager Fund - Growth",
+    "oldest_amfi_date": "2006-04-02",
+    "oldest_amfi_nav": 10.2438
+  },
+  {
+    "code": "103048",
+    "name": "Nippon India Money Market Fund-Growth Plan-Growth Option",
+    "oldest_amfi_date": "2006-04-02",
+    "oldest_amfi_nav": 10.4618
+  },
+  {
+    "code": "102503",
+    "name": "SBI SAVINGS FUND - REGULAR PLAN - GROWTH",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.8865
+  },
+  {
+    "code": "111585",
+    "name": "BANK OF INDIA Short Term Income Fund-Regular Plan- Growth",
+    "oldest_amfi_date": "2008-12-22",
+    "oldest_amfi_nav": 10.2142
+  },
+  {
+    "code": "102591",
+    "name": "Kotak Savings Fund -Growth",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.9019
+  },
+  {
+    "code": "152807",
+    "name": "Baroda BNP Paribas Dividend Yield Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2024-09-16",
+    "oldest_amfi_nav": 10.0748
+  },
+  {
+    "code": "129310",
+    "name": "ICICI Prudential Dividend Yield Equity Fund Growth Option",
+    "oldest_amfi_date": "2014-06-12",
+    "oldest_amfi_nav": 10.92
+  },
+  {
+    "code": "111722",
+    "name": "CANARA ROBECO ELSS TAX SAVER - REGULAR PLAN - GROWTH OPTION",
+    "oldest_amfi_date": "2009-02-03",
+    "oldest_amfi_nav": 10.39
+  },
+  {
+    "code": "104772",
+    "name": "DSP ELSS Tax Saver Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2007-01-22",
+    "oldest_amfi_nav": 10.374
+  },
+  {
+    "code": "104636",
+    "name": "Invesco India ELSS Tax Saver Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2007-01-02",
+    "oldest_amfi_nav": 10.13
+  },
+  {
+    "code": "147544",
+    "name": "ITI ELSS Tax Saver Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2019-10-25",
+    "oldest_amfi_nav": 10.0573
+  },
+  {
+    "code": "107288",
+    "name": "JM ELSS Tax Saver Fund (Regular) - Growth option",
+    "oldest_amfi_date": "2008-04-23",
+    "oldest_amfi_nav": 10.3974
+  },
+  {
+    "code": "133385",
+    "name": "Motilal Oswal ELSS Tax Saver Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2015-01-22",
+    "oldest_amfi_nav": 10.0969
+  },
+  {
+    "code": "151472",
+    "name": "NAVI ELSS TAX SAVER NIFTY 50 INDEX FUND - REGULAR PLAN GROWTH",
+    "oldest_amfi_date": "2023-03-21",
+    "oldest_amfi_nav": 10.0708
+  },
+  {
+    "code": "150589",
+    "name": "WhiteOak Capital ELSS Tax Saver Fund Regular Plan Growth",
+    "oldest_amfi_date": "2022-10-17",
+    "oldest_amfi_nav": 10.057
+  },
+  {
+    "code": "152136",
+    "name": "Helios Flexi Cap Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2023-11-15",
+    "oldest_amfi_nav": 10.22
+  },
+  {
+    "code": "112090",
+    "name": "Kotak Flexicap Fund - Growth",
+    "oldest_amfi_date": "2009-09-17",
+    "oldest_amfi_nav": 10.157
+  },
+  {
+    "code": "149089",
+    "name": "Nippon India Flexi Cap Fund - Regular Plan - Growth Plan - Growth Option",
+    "oldest_amfi_date": "2021-08-18",
+    "oldest_amfi_nav": 10.0874
+  },
+  {
+    "code": "153542",
+    "name": "Unifi Flexi Cap Fund - Regular Growth",
+    "oldest_amfi_date": "2025-06-09",
+    "oldest_amfi_nav": 10.1062
+  },
+  {
+    "code": "131578",
+    "name": "360 ONE Focused Fund -Regular Plan - Growth",
+    "oldest_amfi_date": "2014-10-31",
+    "oldest_amfi_nav": 10.1292
+  },
+  {
+    "code": "117560",
+    "name": "Axis Focused Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2012-07-05",
+    "oldest_amfi_nav": 10.19
+  },
+  {
+    "code": "148884",
+    "name": "Canara Robeco Focused Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2021-05-18",
+    "oldest_amfi_nav": 10.14
+  },
+  {
+    "code": "112901",
+    "name": "DSP Focused Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2010-06-15",
+    "oldest_amfi_nav": 10.167
+  },
+  {
+    "code": "111957",
+    "name": "ICICI Prudential Focused Equity Fund - Growth",
+    "oldest_amfi_date": "2009-06-03",
+    "oldest_amfi_nav": 10.13
+  },
+  {
+    "code": "122387",
+    "name": "Motilal Oswal Focused Fund - Regular Plan Growth Option",
+    "oldest_amfi_date": "2013-05-15",
+    "oldest_amfi_nav": 10.0704
+  },
+  {
+    "code": "104637",
+    "name": "Nippon India Focused Fund -Growth Plan -Growth Option",
+    "oldest_amfi_date": "2006-12-27",
+    "oldest_amfi_nav": 10.1546
+  },
+  {
+    "code": "152824",
+    "name": "ITI Large & Midcap Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-09-13",
+    "oldest_amfi_nav": 10.0753
+  },
+  {
+    "code": "153627",
+    "name": "JM Large & Mid Cap Fund (Regular) - Growth Option",
+    "oldest_amfi_date": "2025-07-30",
+    "oldest_amfi_nav": 10.0535
+  },
+  {
+    "code": "112932",
+    "name": "Mirae Asset Large & Midcap Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2010-07-12",
+    "oldest_amfi_nav": 10.066
+  },
+  {
+    "code": "147701",
+    "name": "Motilal Oswal Large and Midcap Fund - Regular Plan Growth",
+    "oldest_amfi_date": "2019-10-22",
+    "oldest_amfi_nav": 10.2224
+  },
+  {
+    "code": "152383",
+    "name": "PGIM India Large and Midcap Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2024-02-16",
+    "oldest_amfi_nav": 10.14
+  },
+  {
+    "code": "153533",
+    "name": "Samco Large & Mid Cap Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2025-06-30",
+    "oldest_amfi_nav": 10.19
+  },
+  {
+    "code": "112277",
+    "name": "Axis Large Cap Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2010-01-07",
+    "oldest_amfi_nav": 10.08
+  },
+  {
+    "code": "152780",
+    "name": "BAJAJ FINSERV LARGE CAP FUND - REGULAR PLAN - GROWTH",
+    "oldest_amfi_date": "2024-08-23",
+    "oldest_amfi_nav": 10.065
+  },
+  {
+    "code": "112098",
+    "name": "Invesco India Largecap Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2009-08-28",
+    "oldest_amfi_nav": 10.09
+  },
+  {
+    "code": "148351",
+    "name": "ITI Large Cap Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2020-12-29",
+    "oldest_amfi_nav": 10.1218
+  },
+  {
+    "code": "103504",
+    "name": "SBI Large Cap FUND-REGULAR PLAN GROWTH",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.94
+  },
+  {
+    "code": "104481",
+    "name": "DSP Midcap Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2006-11-16",
+    "oldest_amfi_nav": 10.279
+  },
+  {
+    "code": "105758",
+    "name": "HDFC Mid Cap Fund - Growth Plan",
+    "oldest_amfi_date": "2007-07-05",
+    "oldest_amfi_nav": 10.102
+  },
+  {
+    "code": "153327",
+    "name": "Helios Mid Cap Fund - Regular Plan - Growth Plan",
+    "oldest_amfi_date": "2025-03-17",
+    "oldest_amfi_nav": 10.06
+  },
+  {
+    "code": "105503",
+    "name": "Invesco India Midcap Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2007-04-20",
+    "oldest_amfi_nav": 10.07
+  },
+  {
+    "code": "148071",
+    "name": "Union Midcap Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2020-03-30",
+    "oldest_amfi_nav": 10.39
+  },
+  {
+    "code": "150583",
+    "name": "WhiteOak Capital Mid Cap Fund Regular Plan Growth",
+    "oldest_amfi_date": "2022-09-08",
+    "oldest_amfi_nav": 10.077
+  },
+  {
+    "code": "148918",
+    "name": "Aditya Birla Sun Life Multi-Cap Fund-Regular Growth",
+    "oldest_amfi_date": "2021-05-10",
+    "oldest_amfi_nav": 10.12
+  },
+  {
+    "code": "152095",
+    "name": "Edelweiss Multi Cap Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2023-10-30",
+    "oldest_amfi_nav": 10.1428
+  },
+  {
+    "code": "151812",
+    "name": "Mirae Asset Multicap Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2023-08-22",
+    "oldest_amfi_nav": 10.051
+  },
+  {
+    "code": "152650",
+    "name": "Motilal Oswal Multi Cap Fund Regular Plan Growth",
+    "oldest_amfi_date": "2024-06-21",
+    "oldest_amfi_nav": 10.2468
+  },
+  {
+    "code": "152816",
+    "name": "PGIM India Multi Cap Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2024-09-13",
+    "oldest_amfi_nav": 10.08
+  },
+  {
+    "code": "152848",
+    "name": "Samco Multi Cap Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-11-06",
+    "oldest_amfi_nav": 10.06
+  },
+  {
+    "code": "149886",
+    "name": "SBI Multicap Fund- Regular Plan- Growth Option",
+    "oldest_amfi_date": "2022-03-15",
+    "oldest_amfi_nav": 10.1799
+  },
+  {
+    "code": "151235",
+    "name": "Tata Multicap Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2023-02-09",
+    "oldest_amfi_nav": 10.0569
+  },
+  {
+    "code": "149296",
+    "name": "Aditya Birla Sun Life Business Cycle Fund-Regular-Growth",
+    "oldest_amfi_date": "2021-12-08",
+    "oldest_amfi_nav": 10.08
+  },
+  {
+    "code": "103476",
+    "name": "Aditya Birla Sun Life Infrastructure Fund-Growth",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.72
+  },
+  {
+    "code": "152804",
+    "name": "Axis Consumption Fund Regular Plan - Growth",
+    "oldest_amfi_date": "2024-09-18",
+    "oldest_amfi_nav": 10.07
+  },
+  {
+    "code": "147929",
+    "name": "Axis ESG Integration Strategy Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2020-02-18",
+    "oldest_amfi_nav": 10.1
+  },
+  {
+    "code": "152205",
+    "name": "Axis India Manufacturing Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2023-12-27",
+    "oldest_amfi_nav": 10.13
+  },
+  {
+    "code": "148992",
+    "name": "Axis Quant Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2021-07-07",
+    "oldest_amfi_nav": 10.1
+  },
+  {
+    "code": "153072",
+    "name": "BAJAJ FINSERV CONSUMPTION FUND - REGULAR - GROWTH",
+    "oldest_amfi_date": "2024-12-03",
+    "oldest_amfi_nav": 10.088
+  },
+  {
+    "code": "153155",
+    "name": "BAJAJ FINSERV HEALTHCARE FUND - REGULAR - GROWTH",
+    "oldest_amfi_date": "2024-12-30",
+    "oldest_amfi_nav": 10.079
+  },
+  {
+    "code": "152606",
+    "name": "Bandhan Innovation Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-05-02",
+    "oldest_amfi_nav": 10.064
+  },
+  {
+    "code": "112359",
+    "name": "BANK OF INDIA Manufacturing & Infrastructure Fund-Growth",
+    "oldest_amfi_date": "2010-03-10",
+    "oldest_amfi_nav": 10.27
+  },
+  {
+    "code": "145456",
+    "name": "DSP Healthcare Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2018-12-03",
+    "oldest_amfi_nav": 10.053
+  },
+  {
+    "code": "108202",
+    "name": "DSP Natural Resources And New Energy Fund - Regular - Growth",
+    "oldest_amfi_date": "2008-04-29",
+    "oldest_amfi_nav": 10.387
+  },
+  {
+    "code": "112092",
+    "name": "Franklin Build India Fund Growth Plan",
+    "oldest_amfi_date": "2009-09-07",
+    "oldest_amfi_nav": 10.1829
+  },
+  {
+    "code": "152602",
+    "name": "HDFC Manufacturing fund - Growth Option - Regular Plan",
+    "oldest_amfi_date": "2024-05-16",
+    "oldest_amfi_nav": 10.11
+  },
+  {
+    "code": "152682",
+    "name": "Helios Financial Services Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2024-06-25",
+    "oldest_amfi_nav": 10.2
+  },
+  {
+    "code": "150684",
+    "name": "ICICI PRUDENTIAL TRANSPORTATION AND LOGISTICS FUND - Growth",
+    "oldest_amfi_date": "2022-10-31",
+    "oldest_amfi_nav": 10.08
+  },
+  {
+    "code": "117620",
+    "name": "ICICI Prudential US Bluechip Equity Fund - Growth",
+    "oldest_amfi_date": "2012-07-09",
+    "oldest_amfi_nav": 10.15
+  },
+  {
+    "code": "152758",
+    "name": "Invesco India Manufacturing Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-08-19",
+    "oldest_amfi_nav": 10.07
+  },
+  {
+    "code": "149324",
+    "name": "ITI Banking and Financial Services Fund -Regular Plan - Growth Option",
+    "oldest_amfi_date": "2021-12-08",
+    "oldest_amfi_nav": 10.311
+  },
+  {
+    "code": "151381",
+    "name": "Kotak Banking & Financial Services Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2023-03-06",
+    "oldest_amfi_nav": 10.052
+  },
+  {
+    "code": "150626",
+    "name": "Kotak Business Cycle Fund-Regular Plan--Growth",
+    "oldest_amfi_date": "2022-10-06",
+    "oldest_amfi_nav": 10.061
+  },
+  {
+    "code": "152922",
+    "name": "LIC MF Manufacturing Fund-Regular Plan-Growth",
+    "oldest_amfi_date": "2024-10-16",
+    "oldest_amfi_nav": 10.0598
+  },
+  {
+    "code": "114931",
+    "name": "Mirae Asset Great Consumer Fund - Regular Plan - Growth option",
+    "oldest_amfi_date": "2011-03-31",
+    "oldest_amfi_nav": 10.061
+  },
+  {
+    "code": "143785",
+    "name": "Mirae Asset Healthcare Fund -Regular Growth",
+    "oldest_amfi_date": "2018-07-03",
+    "oldest_amfi_nav": 10.059
+  },
+  {
+    "code": "152794",
+    "name": "Motilal Oswal Business Cycle Fund-Regular Plan-Growth",
+    "oldest_amfi_date": "2024-09-02",
+    "oldest_amfi_nav": 10.526
+  },
+  {
+    "code": "153916",
+    "name": "Motilal Oswal Consumption Fund-Regular-Growth",
+    "oldest_amfi_date": "2025-10-29",
+    "oldest_amfi_nav": 10.072
+  },
+  {
+    "code": "153482",
+    "name": "Motilal Oswal Infrastructure Fund-Regular-Growth",
+    "oldest_amfi_date": "2025-05-19",
+    "oldest_amfi_nav": 10.6392
+  },
+  {
+    "code": "152763",
+    "name": "Motilal Owsal Manufacturing Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-08-14",
+    "oldest_amfi_nav": 10.075
+  },
+  {
+    "code": "152692",
+    "name": "Motilal Oswal Quant Fund - Regular - Growth",
+    "oldest_amfi_date": "2024-06-20",
+    "oldest_amfi_nav": 10.0605
+  },
+  {
+    "code": "153751",
+    "name": "Motilal Oswal Special Opportunities Fund-Regular Plan-Growth",
+    "oldest_amfi_date": "2025-08-21",
+    "oldest_amfi_nav": 10.2126
+  },
+  {
+    "code": "152034",
+    "name": "Nippon India Innovation Fund-Regular Plan-Growth Option",
+    "oldest_amfi_date": "2023-09-01",
+    "oldest_amfi_nav": 10.0836
+  },
+  {
+    "code": "108249",
+    "name": "Nippon India Quant Fund -Growth Plan - Growth Option",
+    "oldest_amfi_date": "2008-04-21",
+    "oldest_amfi_nav": 10.1704
+  },
+  {
+    "code": "152256",
+    "name": "quant Commodities Fund - Growth Option - Regular Plan",
+    "oldest_amfi_date": "2023-12-28",
+    "oldest_amfi_nav": 10.0674
+  },
+  {
+    "code": "106170",
+    "name": "quant Infrastructure Fund - Growth Option",
+    "oldest_amfi_date": "2007-09-21",
+    "oldest_amfi_nav": 10.5124
+  },
+  {
+    "code": "152587",
+    "name": "Samco Special Opportunities Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-06-13",
+    "oldest_amfi_nav": 10.36
+  },
+  {
+    "code": "152658",
+    "name": "SBI Automotive Opportunities Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-06-12",
+    "oldest_amfi_nav": 10.3802
+  },
+  {
+    "code": "133858",
+    "name": "SBI BANKING & FINANCIAL SERVICES FUND - REGULAR PLAN - GROWTH",
+    "oldest_amfi_date": "2015-03-05",
+    "oldest_amfi_nav": 10.2369
+  },
+  {
+    "code": "152418",
+    "name": "SBI Energy Opportunities Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-03-01",
+    "oldest_amfi_nav": 10.0908
+  },
+  {
+    "code": "106096",
+    "name": "SBI INFRASTRUCTURE FUND - REGULAR PLAN - GROWTH",
+    "oldest_amfi_date": "2007-07-10",
+    "oldest_amfi_nav": 10.11
+  },
+  {
+    "code": "152774",
+    "name": "SBI Innovative Opportunities Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-08-27",
+    "oldest_amfi_nav": 10.0606
+  },
+  {
+    "code": "113099",
+    "name": "SBI PSU Fund - REGULAR PLAN -Growth",
+    "oldest_amfi_date": "2010-07-12",
+    "oldest_amfi_nav": 10.07
+  },
+  {
+    "code": "150537",
+    "name": "Tata Housing Opportunities Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2022-09-09",
+    "oldest_amfi_nav": 10.0601
+  },
+  {
+    "code": "153059",
+    "name": "Tata India Innovation Fund- Regular Growth",
+    "oldest_amfi_date": "2024-12-05",
+    "oldest_amfi_nav": 10.1354
+  },
+  {
+    "code": "117312",
+    "name": "Taurus Banking & Financial Services Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2012-05-25",
+    "oldest_amfi_nav": 10.16
+  },
+  {
+    "code": "152914",
+    "name": "WhiteOak Capital Digital Bharat Fund Regular Plan Growth",
+    "oldest_amfi_date": "2024-10-14",
+    "oldest_amfi_nav": 10.051
+  },
+  {
+    "code": "152348",
+    "name": "WhiteOak Capital Pharma and Heathcare Fund Regular Plan Growth",
+    "oldest_amfi_date": "2024-02-07",
+    "oldest_amfi_nav": 10.072
+  },
+  {
+    "code": "152643",
+    "name": "WhiteOak Capital Special Opportunities Fund - Regular Growth",
+    "oldest_amfi_date": "2024-06-05",
+    "oldest_amfi_nav": 10.316
+  },
+  {
+    "code": "105804",
+    "name": "Aditya Birla Sun Life Small Cap Fund - GROWTH",
+    "oldest_amfi_date": "2007-05-31",
+    "oldest_amfi_nav": 10.12
+  },
+  {
+    "code": "103360",
+    "name": "Franklin India Small Cap Fund-Growth",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.99
+  },
+  {
+    "code": "145139",
+    "name": "Invesco India Smallcap Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2018-11-02",
+    "oldest_amfi_nav": 10.09
+  },
+  {
+    "code": "153198",
+    "name": "Mirae Asset Small Cap Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2025-02-03",
+    "oldest_amfi_nav": 10.073
+  },
+  {
+    "code": "152232",
+    "name": "Motilal Oswal Small Cap Fund - Regular - Growth",
+    "oldest_amfi_date": "2023-12-29",
+    "oldest_amfi_nav": 10.0845
+  },
+  {
+    "code": "149020",
+    "name": "PGIM India Small Cap Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2021-08-02",
+    "oldest_amfi_nav": 10.13
+  },
+  {
+    "code": "152940",
+    "name": "TRUSTMF SMALL CAP FUND -REGULAR PLAN-GROWTH",
+    "oldest_amfi_date": "2024-11-05",
+    "oldest_amfi_nav": 10.06
+  },
+  {
+    "code": "129647",
+    "name": "Union Small Cap Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2014-06-17",
+    "oldest_amfi_nav": 10.06
+  },
+  {
+    "code": "153304",
+    "name": "Mahindra Manulife Value Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2025-03-05",
+    "oldest_amfi_nav": 10.0856
+  },
+  {
+    "code": "145471",
+    "name": "Union Value Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2018-12-12",
+    "oldest_amfi_nav": 10.1
+  },
+  {
+    "code": "139529",
+    "name": "BANK OF INDIA MID & SMALL CAP EQUITY & DEBT FUND - REGULAR PLAN GROWTH",
+    "oldest_amfi_date": "2016-07-27",
+    "oldest_amfi_nav": 10.13
+  },
+  {
+    "code": "152075",
+    "name": "360 ONE Balanced Hybrid Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2023-10-03",
+    "oldest_amfi_nav": 10.0532
+  },
+  {
+    "code": "141644",
+    "name": "Axis Balanced Advantage Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2017-08-07",
+    "oldest_amfi_nav": 10.07
+  },
+  {
+    "code": "152512",
+    "name": "Helios Balanced Advantage Fund- Regular Plan- Growth Option",
+    "oldest_amfi_date": "2024-03-28",
+    "oldest_amfi_nav": 10.12
+  },
+  {
+    "code": "106317",
+    "name": "Invesco India Balanced Advantage Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2007-10-05",
+    "oldest_amfi_nav": 10.58
+  },
+  {
+    "code": "147787",
+    "name": "ITI Balanced Advantage Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2020-01-03",
+    "oldest_amfi_nav": 10.0581
+  },
+  {
+    "code": "148657",
+    "name": "PGIM India Balanced Advantage Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2021-02-08",
+    "oldest_amfi_nav": 10.17
+  },
+  {
+    "code": "149132",
+    "name": "SBI Balanced Advantage Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2021-09-07",
+    "oldest_amfi_nav": 10.0516
+  },
+  {
+    "code": "140447",
+    "name": "Mahindra Manulife Equity Savings Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2017-02-08",
+    "oldest_amfi_nav": 10.0626
+  },
+  {
+    "code": "103131",
+    "name": "HDFC Multi-Asset Fund - Growth Option",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.5788
+  },
+  {
+    "code": "103408",
+    "name": "SBI MULTI ASSET ALLOCATION FUND - REGULAR PLAN - GROWTH",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.2955
+  },
+  {
+    "code": "152786",
+    "name": "Union Multi Asset Allocation Fund- Regular Plan - Growth Option",
+    "oldest_amfi_date": "2024-09-13",
+    "oldest_amfi_nav": 10.07
+  },
+  {
+    "code": "111599",
+    "name": "UTI Multi Asset Allocation Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2008-12-18",
+    "oldest_amfi_nav": 10.1
+  },
+  {
+    "code": "149783",
+    "name": "Aditya Birla Sun Life Silver ETF FOF-Regular Growth",
+    "oldest_amfi_date": "2022-02-04",
+    "oldest_amfi_nav": 10.0961
+  },
+  {
+    "code": "154077",
+    "name": "Axis Gold and Silver Passive FOF - Regular Plan - Growth",
+    "oldest_amfi_date": "2026-01-01",
+    "oldest_amfi_nav": 10.0777
+  },
+  {
+    "code": "115897",
+    "name": "Axis Gold Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2011-10-25",
+    "oldest_amfi_nav": 10.1438
+  },
+  {
+    "code": "153963",
+    "name": "Axis Multi-Asset Active FoF - Regular Plan - Growth",
+    "oldest_amfi_date": "2025-12-17",
+    "oldest_amfi_nav": 10.0666
+  },
+  {
+    "code": "154130",
+    "name": "Bandhan Gold ETF FOF-Regular-Growth",
+    "oldest_amfi_date": "2026-01-28",
+    "oldest_amfi_nav": 10.7042
+  },
+  {
+    "code": "153794",
+    "name": "Baroda BNP Paribas Gold ETF Fund of Funds Regular Growth",
+    "oldest_amfi_date": "2025-08-22",
+    "oldest_amfi_nav": 10.0755
+  },
+  {
+    "code": "153779",
+    "name": "Edelweiss Multi Asset Omni Fund of Fund- Regular Plan - Growth",
+    "oldest_amfi_date": "2025-09-09",
+    "oldest_amfi_nav": 10.1168
+  },
+  {
+    "code": "152927",
+    "name": "Groww Nifty India Defence ETF FOF - Regular - Growth",
+    "oldest_amfi_date": "2024-10-15",
+    "oldest_amfi_nav": 10.0524
+  },
+  {
+    "code": "115934",
+    "name": "HDFC Gold ETF Fund of Fund - Growth Option",
+    "oldest_amfi_date": "2011-11-02",
+    "oldest_amfi_nav": 10.0748
+  },
+  {
+    "code": "154298",
+    "name": "HSBC Gold ETF Fund of fund - Regular Growth",
+    "oldest_amfi_date": "2026-04-07",
+    "oldest_amfi_nav": 10.1557
+  },
+  {
+    "code": "149334",
+    "name": "ICICI Prudential BSE 500 ETF FOF - Growth",
+    "oldest_amfi_date": "2021-12-02",
+    "oldest_amfi_nav": 10.1196
+  },
+  {
+    "code": "153396",
+    "name": "ICICI Prudential Nifty EV & New Age Automotive ETF FOF - Growth",
+    "oldest_amfi_date": "2025-04-21",
+    "oldest_amfi_nav": 10.2196
+  },
+  {
+    "code": "116077",
+    "name": "Invesco India Gold ETF Fund of Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2011-12-08",
+    "oldest_amfi_nav": 10.1026
+  },
+  {
+    "code": "153922",
+    "name": "Kotak Gold Silver Passive FOF - Regular Plan - Growth",
+    "oldest_amfi_date": "2025-11-04",
+    "oldest_amfi_nav": 10.335
+  },
+  {
+    "code": "151602",
+    "name": "Kotak Silver ETF Fund of Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2023-04-11",
+    "oldest_amfi_nav": 10.4204
+  },
+  {
+    "code": "153382",
+    "name": "Mirae Asset BSE 200 Equal Weight ETF Fund of Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2025-03-19",
+    "oldest_amfi_nav": 10.133
+  },
+  {
+    "code": "153387",
+    "name": "Mirae Asset BSE Select IPO ETF Fund of Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2025-03-19",
+    "oldest_amfi_nav": 10.297
+  },
+  {
+    "code": "153814",
+    "name": "Mirae Asset Gold Silver Passive FoF - Regular Plan - Growth",
+    "oldest_amfi_date": "2025-09-01",
+    "oldest_amfi_nav": 10.308
+  },
+  {
+    "code": "149380",
+    "name": "Mirae Asset Hang Seng TECH ETF Fund of Fund Regular Plan - Growth Option",
+    "oldest_amfi_date": "2021-12-09",
+    "oldest_amfi_nav": 10.194
+  },
+  {
+    "code": "153818",
+    "name": "Mirae Asset Multi Factor Passive FOF - Regular Plan - Growth",
+    "oldest_amfi_date": "2025-09-01",
+    "oldest_amfi_nav": 10.14
+  },
+  {
+    "code": "149788",
+    "name": "Mirae Asset Nifty India Manufacturing ETF FOF - Regular Plan - Growth",
+    "oldest_amfi_date": "2022-02-01",
+    "oldest_amfi_nav": 10.114
+  },
+  {
+    "code": "153194",
+    "name": "Mirae Asset Nifty India New Age Consumption ETF Fund of Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2025-01-03",
+    "oldest_amfi_nav": 10.093
+  },
+  {
+    "code": "152457",
+    "name": "Mirae Asset Nifty Smallcap 250 Momentum Quality 100 ETF Fund of Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-03-04",
+    "oldest_amfi_nav": 10.081
+  },
+  {
+    "code": "152720",
+    "name": "Mirae Asset Nifty200 Alpha 30 ETF Fund of Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-07-29",
+    "oldest_amfi_nav": 10.187
+  },
+  {
+    "code": "149171",
+    "name": "Mirae Asset S&P 500 Top 50 ETF Fund of Fund Regular Growth",
+    "oldest_amfi_date": "2021-09-23",
+    "oldest_amfi_nav": 10.096
+  },
+  {
+    "code": "154281",
+    "name": "Mirae Asset Silver ETF FOF - Regular Plan - Growth",
+    "oldest_amfi_date": "2026-03-25",
+    "oldest_amfi_nav": 10.347
+  },
+  {
+    "code": "145551",
+    "name": "Motilal Oswal Nasdaq 100 Fund of Fund- Regular Plan Growth",
+    "oldest_amfi_date": "2018-12-03",
+    "oldest_amfi_nav": 10.4899
+  },
+  {
+    "code": "148641",
+    "name": "Nippon India Diversified Equity Flexicap Passive FoF - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2021-01-04",
+    "oldest_amfi_nav": 10.0921
+  },
+  {
+    "code": "148663",
+    "name": "Nippon India Multi - Asset Omni FoF - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2021-02-09",
+    "oldest_amfi_nav": 10.1676
+  },
+  {
+    "code": "146514",
+    "name": "Nippon India Nifty Next 50 Junior BeES FoF - Growth Plan - Growth Option",
+    "oldest_amfi_date": "2019-03-11",
+    "oldest_amfi_nav": 10.233
+  },
+  {
+    "code": "149759",
+    "name": "Nippon India Silver ETF FOF-Regular Plan- Growth Option",
+    "oldest_amfi_date": "2022-02-08",
+    "oldest_amfi_nav": 10.1033
+  },
+  {
+    "code": "152290",
+    "name": "Tata Gold ETF Fund of Fund Regular Plan Growth Option",
+    "oldest_amfi_date": "2024-01-24",
+    "oldest_amfi_nav": 10.0534
+  },
+  {
+    "code": "153338",
+    "name": "Union Gold ETF Fund of Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2025-03-04",
+    "oldest_amfi_nav": 10.2175
+  },
+  {
+    "code": "151732",
+    "name": "UTI Silver ETF Fund of Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2023-04-25",
+    "oldest_amfi_nav": 10.6089
+  },
+  {
+    "code": "152147",
+    "name": "Aditya Birla Sun Life US Treasury 3-10 Year Bond ETFs Fund Of Funds-Regular Growth",
+    "oldest_amfi_date": "2023-11-02",
+    "oldest_amfi_nav": 10.0634
+  },
+  {
+    "code": "149817",
+    "name": "DSP Global Innovation Overseas Equity Omni FoF - Regular - Growth",
+    "oldest_amfi_date": "2022-02-15",
+    "oldest_amfi_nav": 10.0513
+  },
+  {
+    "code": "117691",
+    "name": "DSP US Specific Equity Omni FoF - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2012-08-06",
+    "oldest_amfi_nav": 10.0732
+  },
+  {
+    "code": "112293",
+    "name": "DSP World Mining Overseas Equity Omni FoF - Regular Plan - Growth",
+    "oldest_amfi_date": "2010-01-05",
+    "oldest_amfi_nav": 10.5022
+  },
+  {
+    "code": "116633",
+    "name": "Franklin U.S. Opportunities Equity Active Fund of Funds - Growth",
+    "oldest_amfi_date": "2012-02-14",
+    "oldest_amfi_nav": 10.4034
+  },
+  {
+    "code": "106441",
+    "name": "Kotak Global Emerging Market Overseas Equity Omni FOF- Growth",
+    "oldest_amfi_date": "2007-09-28",
+    "oldest_amfi_nav": 10.831
+  },
+  {
+    "code": "149228",
+    "name": "Mahindra Manulife Asia Pacific REITs FOF - Regular Plan - Growth",
+    "oldest_amfi_date": "2021-10-22",
+    "oldest_amfi_nav": 10.0885
+  },
+  {
+    "code": "150594",
+    "name": "Mirae Asset Global Electric & Autonomous Vehicles Equity Passive FOF - Regular Plan - Growth",
+    "oldest_amfi_date": "2022-09-08",
+    "oldest_amfi_nav": 10.101
+  },
+  {
+    "code": "149831",
+    "name": "Navi Total Stock Market US Specific Equity Passive FoF- Regular Plan- Growth",
+    "oldest_amfi_date": "2022-02-24",
+    "oldest_amfi_nav": 10.0965
+  },
+  {
+    "code": "149299",
+    "name": "PGIM India Global Select Real Estate Securities Fund of Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2021-12-08",
+    "oldest_amfi_nav": 10.47
+  },
+  {
+    "code": "153735",
+    "name": "Aditya Birla Sun Life BSE 500 Momentum 50 Index Fund- Regular Growth",
+    "oldest_amfi_date": "2025-08-11",
+    "oldest_amfi_nav": 10.0768
+  },
+  {
+    "code": "148811",
+    "name": "Aditya Birla Sun Life Nifty Smallcap 50 Index Fund-Regular Growth",
+    "oldest_amfi_date": "2021-04-06",
+    "oldest_amfi_nav": 10.1157
+  },
+  {
+    "code": "153530",
+    "name": "ANGEL ONE NIFTY 50 INDEX FUND-REGULAR-GROWTH",
+    "oldest_amfi_date": "2025-05-28",
+    "oldest_amfi_nav": 10.0569
+  },
+  {
+    "code": "153331",
+    "name": "ANGEL ONE NIFTY TOTAL MARKET INDEX FUND REGULAR PLAN GROWTH OPTION",
+    "oldest_amfi_date": "2025-03-05",
+    "oldest_amfi_nav": 10.1909
+  },
+  {
+    "code": "149371",
+    "name": "Axis Nifty 50 Index Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2021-12-08",
+    "oldest_amfi_nav": 10.1388
+  },
+  {
+    "code": "154327",
+    "name": "Axis Nifty India Defence Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2026-05-06",
+    "oldest_amfi_nav": 10.1324
+  },
+  {
+    "code": "151787",
+    "name": "Axis Nifty IT Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2023-07-18",
+    "oldest_amfi_nav": 10.4585
+  },
+  {
+    "code": "149467",
+    "name": "Axis Nifty Next 50 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2022-02-02",
+    "oldest_amfi_nav": 10.2333
+  },
+  {
+    "code": "153508",
+    "name": "Bajaj Finserv Nifty 50 Index Fund - Regular - Growth",
+    "oldest_amfi_date": "2025-05-19",
+    "oldest_amfi_nav": 10.0782
+  },
+  {
+    "code": "153480",
+    "name": "Bajaj Finserv Nifty Next 50 Index Fund - Regular - Growth",
+    "oldest_amfi_date": "2025-05-14",
+    "oldest_amfi_nav": 10.425
+  },
+  {
+    "code": "153113",
+    "name": "Bandhan Nifty 200 Quality 30 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-12-05",
+    "oldest_amfi_nav": 10.0645
+  },
+  {
+    "code": "152179",
+    "name": "Bandhan Nifty Alpha 50 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2023-11-10",
+    "oldest_amfi_nav": 10.061
+  },
+  {
+    "code": "152043",
+    "name": "Bandhan Nifty IT Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2023-09-01",
+    "oldest_amfi_nav": 10.1059
+  },
+  {
+    "code": "152856",
+    "name": "Bandhan Nifty Midcap 150 Index Fund-Regular Plan-Growth",
+    "oldest_amfi_date": "2024-09-20",
+    "oldest_amfi_nav": 10.139
+  },
+  {
+    "code": "153349",
+    "name": "Bandhan Nifty Next 50 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2025-03-03",
+    "oldest_amfi_nav": 10.0889
+  },
+  {
+    "code": "150592",
+    "name": "BANDHAN NIFTY200 MOMENTUM 30 INDEX FUND - GROWTH - REGULAR PLAN",
+    "oldest_amfi_date": "2022-09-05",
+    "oldest_amfi_nav": 10.0617
+  },
+  {
+    "code": "153001",
+    "name": "Baroda BNP Paribas Nifty Midcap 150 Index Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2024-11-06",
+    "oldest_amfi_nav": 10.2545
+  },
+  {
+    "code": "154302",
+    "name": "Choice Nifty 50 Index Fund - Regular Plan Growth",
+    "oldest_amfi_date": "2026-04-09",
+    "oldest_amfi_nav": 10.2258
+  },
+  {
+    "code": "154303",
+    "name": "Choice Nifty Next 50 Index Fund - Regular Plan Growth",
+    "oldest_amfi_date": "2026-04-09",
+    "oldest_amfi_nav": 10.3034
+  },
+  {
+    "code": "146380",
+    "name": "DSP Nifty Next 50 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2019-02-22",
+    "oldest_amfi_nav": 10.0695
+  },
+  {
+    "code": "153495",
+    "name": "Edelweiss BSE Internet Economy Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2025-05-16",
+    "oldest_amfi_nav": 10.0674
+  },
+  {
+    "code": "150848",
+    "name": "Edelweiss CRISIL IBX 50:50 Gilt Plus SDL Sep 2028 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2022-11-14",
+    "oldest_amfi_nav": 10.0505
+  },
+  {
+    "code": "149256",
+    "name": "Edelweiss Nifty 100 Quality 30 Index Fund Regular Plan Growth",
+    "oldest_amfi_date": "2021-10-08",
+    "oldest_amfi_nav": 10.1419
+  },
+  {
+    "code": "152617",
+    "name": "Edelweiss Nifty Alpha Low Volatility 30 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-05-21",
+    "oldest_amfi_nav": 10.0782
+  },
+  {
+    "code": "154312",
+    "name": "Edelweiss Nifty LargeMidcap 250 Plus 8-13 yr G-Sec 70-30 Index Fund Regular Plan Growth",
+    "oldest_amfi_date": "2026-04-09",
+    "oldest_amfi_nav": 10.2733
+  },
+  {
+    "code": "150900",
+    "name": "Edelweiss Nifty Midcap150 Momentum 50 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2022-12-02",
+    "oldest_amfi_nav": 10.1618
+  },
+  {
+    "code": "150897",
+    "name": "Edelweiss Nifty Next 50 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2022-12-02",
+    "oldest_amfi_nav": 10.0769
+  },
+  {
+    "code": "150894",
+    "name": "Edelweiss Nifty Smallcap 250 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2022-12-02",
+    "oldest_amfi_nav": 10.0994
+  },
+  {
+    "code": "153953",
+    "name": "Groww Nifty Midcap 150 Index Fund Regular Growth",
+    "oldest_amfi_date": "2025-11-17",
+    "oldest_amfi_nav": 10.0604
+  },
+  {
+    "code": "152433",
+    "name": "Groww Nifty Smallcap 250 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-03-01",
+    "oldest_amfi_nav": 10.0596
+  },
+  {
+    "code": "149218",
+    "name": "ICICI Prudential NASDAQ 100 Index Fund - Growth",
+    "oldest_amfi_date": "2021-10-19",
+    "oldest_amfi_nav": 10.07
+  },
+  {
+    "code": "150454",
+    "name": "ICICI Prudential Nifty 200 Momentum 30 Index Fund - Growth",
+    "oldest_amfi_date": "2022-08-08",
+    "oldest_amfi_nav": 10.1061
+  },
+  {
+    "code": "150645",
+    "name": "ICICI Prudential Nifty Auto Index Fund - Growth",
+    "oldest_amfi_date": "2022-10-12",
+    "oldest_amfi_nav": 10.0715
+  },
+  {
+    "code": "152481",
+    "name": "ICICI Prudential Nifty LargeMidcap 250 Index Fund - Growth",
+    "oldest_amfi_date": "2024-03-14",
+    "oldest_amfi_nav": 10.1416
+  },
+  {
+    "code": "149390",
+    "name": "ICICI Prudential Nifty Midcap 150 Index Fund - Growth",
+    "oldest_amfi_date": "2021-12-23",
+    "oldest_amfi_nav": 10.0738
+  },
+  {
+    "code": "153544",
+    "name": "ICICI Prudential Nifty200 Quality 30 Index Fund - Growth",
+    "oldest_amfi_date": "2025-06-10",
+    "oldest_amfi_nav": 10.053
+  },
+  {
+    "code": "150637",
+    "name": "ICICI Prudential Nifty50 Equal Weight Index Fund- Growth",
+    "oldest_amfi_date": "2022-10-04",
+    "oldest_amfi_nav": 10.1952
+  },
+  {
+    "code": "152038",
+    "name": "Kotak BSE Housing Index Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2023-09-04",
+    "oldest_amfi_nav": 10.302
+  },
+  {
+    "code": "152664",
+    "name": "Kotak NIFTY 100 Low Volatility 30 Index Fund - Regular plan - Growth option",
+    "oldest_amfi_date": "2024-06-12",
+    "oldest_amfi_nav": 10.0551
+  },
+  {
+    "code": "151783",
+    "name": "Kotak Nifty 200 Momentum 30 Index Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2023-06-20",
+    "oldest_amfi_nav": 10.122
+  },
+  {
+    "code": "153351",
+    "name": "KOTAK NIFTY COMMODITIES INDEX FUND-REGULAR GROWTH",
+    "oldest_amfi_date": "2025-03-18",
+    "oldest_amfi_nav": 10.205
+  },
+  {
+    "code": "152918",
+    "name": "Kotak Nifty Midcap 150 Momentum 50 Index Fund-Regular Plan-Growth",
+    "oldest_amfi_date": "2024-10-11",
+    "oldest_amfi_nav": 10.139
+  },
+  {
+    "code": "152765",
+    "name": "KOTAK NIFTY MIDCAP 50 INDEX FUND-REGULAR PLAN-GROWTH",
+    "oldest_amfi_date": "2024-08-21",
+    "oldest_amfi_nav": 10.126
+  },
+  {
+    "code": "153221",
+    "name": "Kotak Nifty SmallCap 250 Index Fund- Regular - Growth",
+    "oldest_amfi_date": "2025-01-30",
+    "oldest_amfi_nav": 10.107
+  },
+  {
+    "code": "151647",
+    "name": "Kotak Nifty Smallcap 50 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2023-04-18",
+    "oldest_amfi_nav": 10.212
+  },
+  {
+    "code": "154148",
+    "name": "Kotak Nifty200 Value 30 Index Fund - Regular - Growth",
+    "oldest_amfi_date": "2026-02-12",
+    "oldest_amfi_nav": 10.161
+  },
+  {
+    "code": "152970",
+    "name": "Mirae Asset Nifty Total Market Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-10-29",
+    "oldest_amfi_nav": 10.0761
+  },
+  {
+    "code": "153597",
+    "name": "Motilal Oswal BSE 1000 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2025-07-01",
+    "oldest_amfi_nav": 10.1402
+  },
+  {
+    "code": "152711",
+    "name": "Motilal Oswal Nifty India Defence Index Fund Regular Plan Growth",
+    "oldest_amfi_date": "2024-07-09",
+    "oldest_amfi_nav": 10.7383
+  },
+  {
+    "code": "151815",
+    "name": "Motilal Oswal Nifty Microcap 250 Index Fund- Regular- Growth Option",
+    "oldest_amfi_date": "2023-07-11",
+    "oldest_amfi_nav": 10.1351
+  },
+  {
+    "code": "153026",
+    "name": "Motilal Oswal Nifty MidSmall Financial Services Index Fund-Regular Plan-Growth",
+    "oldest_amfi_date": "2024-11-25",
+    "oldest_amfi_nav": 10.1981
+  },
+  {
+    "code": "153022",
+    "name": "Motilal Oswal Nifty MidSmall Healthcare Index Fund-Regular Plan-Growth",
+    "oldest_amfi_date": "2024-11-25",
+    "oldest_amfi_nav": 10.1731
+  },
+  {
+    "code": "153024",
+    "name": "Motilal Oswal Nifty MidSmall India Consumption Index Fund-Regular Plan-Growth",
+    "oldest_amfi_date": "2024-11-25",
+    "oldest_amfi_nav": 10.2752
+  },
+  {
+    "code": "153028",
+    "name": "Motilal Oswal Nifty MidSmall IT and Telecom Index Fund-Regular Plan-Growth",
+    "oldest_amfi_date": "2024-11-25",
+    "oldest_amfi_nav": 10.3491
+  },
+  {
+    "code": "153066",
+    "name": "Nippon India Nifty Auto Index Fund - Regular Plan- Growth Option",
+    "oldest_amfi_date": "2024-12-09",
+    "oldest_amfi_nav": 10.0739
+  },
+  {
+    "code": "153434",
+    "name": "SBI BSE PSU BANK INDEX FUND- Regular Plan- Growth",
+    "oldest_amfi_date": "2025-03-28",
+    "oldest_amfi_nav": 10.0716
+  },
+  {
+    "code": "150672",
+    "name": "SBI Nifty Midcap 150 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2022-10-11",
+    "oldest_amfi_nav": 10.0578
+  },
+  {
+    "code": "148943",
+    "name": "SBI Nifty Next 50 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2021-05-26",
+    "oldest_amfi_nav": 10.0536
+  },
+  {
+    "code": "150676",
+    "name": "SBI Nifty Smallcap 250 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2022-10-11",
+    "oldest_amfi_nav": 10.0574
+  },
+  {
+    "code": "153716",
+    "name": "SBI Nifty100 Low Volatility 30 Index Fund- Regular Plan- Growth",
+    "oldest_amfi_date": "2025-07-31",
+    "oldest_amfi_nav": 10.0804
+  },
+  {
+    "code": "153554",
+    "name": "SBI Nifty200 Quality 30 Index Fund-Regular Plan- Growth",
+    "oldest_amfi_date": "2025-06-10",
+    "oldest_amfi_nav": 10.2025
+  },
+  {
+    "code": "152372",
+    "name": "SBI Nifty50 Equal Weight Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-02-06",
+    "oldest_amfi_nav": 10.1827
+  },
+  {
+    "code": "154064",
+    "name": "Tata BSE Multicap Consumption 50:30:20 Index Fund - Regular Plan Growth Option",
+    "oldest_amfi_date": "2026-01-02",
+    "oldest_amfi_nav": 10.0758
+  },
+  {
+    "code": "152560",
+    "name": "Tata Nifty Auto Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-04-30",
+    "oldest_amfi_nav": 10.1205
+  },
+  {
+    "code": "152574",
+    "name": "Tata Nifty Financial Services Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-04-30",
+    "oldest_amfi_nav": 10.1902
+  },
+  {
+    "code": "152746",
+    "name": "Tata Nifty India Tourism Index Fund - Regular - Growth",
+    "oldest_amfi_date": "2024-07-29",
+    "oldest_amfi_nav": 10.1152
+  },
+  {
+    "code": "153580",
+    "name": "Tata Nifty Midcap 150 Index Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2025-06-25",
+    "oldest_amfi_nav": 10.2739
+  },
+  {
+    "code": "150741",
+    "name": "Tata Nifty Midcap 150 Momentum 50 Index Fund - Growth - Regular Plan",
+    "oldest_amfi_date": "2022-10-31",
+    "oldest_amfi_nav": 10.2168
+  },
+  {
+    "code": "152567",
+    "name": "Tata Nifty MidSmall Healthcare Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-04-30",
+    "oldest_amfi_nav": 10.0799
+  },
+  {
+    "code": "153855",
+    "name": "Tata Nifty Next 50 Index Fund - Regular Plan Growth Option",
+    "oldest_amfi_date": "2025-10-07",
+    "oldest_amfi_nav": 10.0727
+  },
+  {
+    "code": "152573",
+    "name": "Tata Nifty Realty Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-04-30",
+    "oldest_amfi_nav": 10.0605
+  },
+  {
+    "code": "152596",
+    "name": "Tata Nifty500 Multicap Infrastructure 50:30:20 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2024-04-30",
+    "oldest_amfi_nav": 10.0622
+  },
+  {
+    "code": "112948",
+    "name": "Taurus Nifty 50 Index Fund - Regular Plan - Growth",
+    "oldest_amfi_date": "2010-06-21",
+    "oldest_amfi_nav": 10.1702
+  },
+  {
+    "code": "149802",
+    "name": "UTI BSE Sensex Index Fund - Regular Plan -Growth Option",
+    "oldest_amfi_date": "2022-02-01",
+    "oldest_amfi_nav": 10.1404
+  },
+  {
+    "code": "152858",
+    "name": "UTI Nifty 200 Quality 30 Index Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2024-09-24",
+    "oldest_amfi_nav": 10.0714
+  },
+  {
+    "code": "153087",
+    "name": "UTI Nifty Alpha Low-Volatility 30 Index Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2024-12-03",
+    "oldest_amfi_nav": 10.2272
+  },
+  {
+    "code": "153088",
+    "name": "UTI Nifty Midcap 150 Index Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2024-12-03",
+    "oldest_amfi_nav": 10.2039
+  },
+  {
+    "code": "148489",
+    "name": "SBI Children's Fund - Investment Plan - Regular Plan - Growth",
+    "oldest_amfi_date": "2020-10-07",
+    "oldest_amfi_nav": 10.1026
+  },
+  {
+    "code": "102267",
+    "name": "UTI Children's Equity Fund - Regular Plan - Growth Option",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.6036
+  },
+  {
+    "code": "148695",
+    "name": "SBI Retirement Benefit Fund - Aggressive Hybrid Plan - Regular Plan - Growth",
+    "oldest_amfi_date": "2021-02-17",
+    "oldest_amfi_nav": 10.1175
+  },
+  {
+    "code": "148698",
+    "name": "SBI Retirement Benefit Fund - Aggressive Plan - Regular Plan - Growth",
+    "oldest_amfi_date": "2021-02-17",
+    "oldest_amfi_nav": 10.1417
+  },
+  {
+    "code": "148692",
+    "name": "SBI Retirement Benefit Fund - Conservative Hybrid Plan - Regular Plan - Growth",
+    "oldest_amfi_date": "2021-02-17",
+    "oldest_amfi_nav": 10.0524
+  },
+  {
+    "code": "141565",
+    "name": "Sundaram Long Term Micro Cap Tax Advantage Fund Series VI Regular Plan - Growth",
+    "oldest_amfi_date": "2017-10-04",
+    "oldest_amfi_nav": 10.0728
+  },
+  {
+    "code": "149825",
+    "name": "SBI Fixed Maturity Plan (FMP) - Series 59 (1618 Days) - Regular Plan - Growth",
+    "oldest_amfi_date": "2022-02-08",
+    "oldest_amfi_nav": 10.0918
+  },
+  {
+    "code": "149994",
+    "name": "SBI Fixed Maturity Plan (FMP)- Series 61 (1927 Days)- Regular Plan- Growth option",
+    "oldest_amfi_date": "2022-03-29",
+    "oldest_amfi_nav": 10.0683
+  }
+]
