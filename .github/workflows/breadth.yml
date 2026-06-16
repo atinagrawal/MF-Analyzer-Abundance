@@ -4,7 +4,7 @@ name: market-breadth
 # per-stock signals, and sector breadth. Manual backfill via from/to inputs.
 on:
   schedule:
-    - cron: '30 12 * * 1-5'   # 12:30 UTC = 18:00 IST, weekdays (after BSE bhavcopy is published)
+    - cron: '0 13 * * 1-5'    # 13:00 UTC = 18:30 IST, weekdays (after BSE bhavcopy is published)
   workflow_dispatch:
     inputs:
       from:
