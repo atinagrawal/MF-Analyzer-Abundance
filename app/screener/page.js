@@ -48,6 +48,7 @@ function backtestLink(f) {
 // All metric columns. kind controls formatting: ret/abs = % return, risk = vol%,
 // dd = drawdown%, ratio = number. Sub-year periods (1M/3M/6M) are absolute, not annualised.
 const METRICS = [
+  { key: 'nav', label: 'NAV', kind: 'nav' },
   { key: 'ret_1m', label: '1M', kind: 'abs' },
   { key: 'ret_3m', label: '3M', kind: 'abs' },
   { key: 'ret_6m', label: '6M', kind: 'abs' },
@@ -64,12 +65,14 @@ const METRICS = [
 const DEFAULT_COLS = ['ret_1y', 'ret_3y', 'ret_5y', 'max_dd', 'ret_per_risk'];
 const fmtCell = (m, v) => {
   if (v == null) return '—';
+  if (m.kind === 'nav') return '₹' + v.toFixed(4);
   if (m.kind === 'ratio') return v.toFixed(2);
   if (m.kind === 'risk') return v.toFixed(1) + '%';
   if (m.kind === 'dd') return v.toFixed(1) + '%';
   return (v > 0 ? '+' : '') + v.toFixed(1) + '%';
 };
 const cellCls = (m, v) => {
+  if (m.kind === 'nav') return '';
   if (m.kind === 'risk') return '';
   if (m.kind === 'dd') return 'scr-neg';
   if (m.kind === 'ratio') return '';
