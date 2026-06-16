@@ -177,7 +177,9 @@ async function main() {
       `SELECT code, inception_date, inception_nav::float AS inception_nav, source FROM mf_inception`
     );
     for (const r of existing) {
-      if (!inceptionMap[r.code]) {
+      // Skip DB records that have an April 2006 date as source='mfapi' — these are funds that
+      // predate AMFI's digital records and need to be re-evaluated with the corrected logic.
+      if (!inceptionMap[r.code] && !(r.source === 'mfapi' && r.inception_date.startsWith('2006-04'))) {
         inceptionMap[r.code] = { date: r.inception_date, nav: r.inception_nav, source: r.source };
       }
     }
@@ -221,8 +223,11 @@ async function main() {
       const data = await fetchMfapiInception(code);
       process.stdout.write(`\r[screener] inception: ${++done}/${toFetch.length}   `);
       if (!data) return { code, data: null };
-      // oldest NAV <= 10.2 means this is a true inception record (launch NAV = 10 by SEBI regulation)
-      const source = data.nav <= 10.2 ? 'mfapi' : 'estimated';
+      // AMFI digital records begin in April 2006. Any fund whose oldest mfapi.in date
+      // falls in that month almost certainly predates those records — flag as estimated
+      // so the true inception date can be looked up and added to the overrides file.
+      const isAmfiRecordsStart = data.date.startsWith('2006-04');
+      const source = (data.nav <= 10.2 && !isAmfiRecordsStart) ? 'mfapi' : 'estimated';
       return { code, data, source };
     }, 10);
     process.stdout.write('\n');
