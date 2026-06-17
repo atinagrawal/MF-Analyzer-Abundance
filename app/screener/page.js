@@ -22,6 +22,19 @@ function backtestSifLink(s) {
   } catch (e) { return '/backtest'; }
 }
 
+/* ---------- stress test helpers ---------- */
+function formatMonth(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+function getLiquidityColor(days) {
+  if (days <= 5) return '#2e7d32'; // Green
+  if (days <= 10) return '#4caf50'; // Light Green
+  if (days <= 15) return '#ff9800'; // Orange
+  return '#d32f2f'; // Red
+}
+
 /* ---------- helpers ---------- */
 const pctTxt = (v) => (v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%');
 const numTxt = (v, d = 1) => (v == null ? '—' : v.toFixed(d));
@@ -131,6 +144,9 @@ export default function ScreenerPage() {
   const [sifSort, setSifSort] = useState({ key: 'nav', dir: -1 });
   const [sifPage, setSifPage] = useState(0);
 
+  // Stress test state
+  const [stressMap, setStressMap] = useState({});
+
   const isSIF = group === 'SIF';
 
   useEffect(() => {
@@ -138,6 +154,11 @@ export default function ScreenerPage() {
       .then((r) => r.json())
       .then((d) => { if (d.error) setErr(d.error); else setData(d); })
       .catch(() => setErr('Could not load screener data.'));
+
+    fetch('/api/stress-test')
+      .then((r) => r.json())
+      .then((d) => { if (d?.data) setStressMap(d.data); })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -432,19 +453,36 @@ export default function ScreenerPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((f) => (
-                    <tr key={f.code} className="scr-row" onClick={() => setSel(f)}>
-                      <td className="scr-name">
-                        <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSel(f); }}>
-                          <span className="scr-fund-n">{f.name.replace(/\s*-\s*(Regular Plan|Regular|Growth( Option)?| Plan).*/i, '').trim()}{f.flag === 'check' && <span className="scr-flag" title="Unusual value — under review">⚠</span>}</span>
-                          <span className="scr-fund-sub">{shortCat(f.category)}</span>
-                        </button>
-                      </td>
-                      {visibleCols.map((m) => (
-                        <td key={m.key} className={cellCls(m, f[m.key])}>{m.kind === 'ratio' ? <b>{fmtCell(m, f[m.key])}</b> : fmtCell(m, f[m.key])}</td>
-                      ))}
-                    </tr>
-                  ))}
+                  {visible.map((f) => {
+                    const hasStress = stressMap[f.code];
+                    let badgeCls = '';
+                    if (hasStress) {
+                      const d = hasStress.days_50pct;
+                      if (d >= 15) badgeCls = 'scr-table-liq-red';
+                      else if (d >= 7) badgeCls = 'scr-table-liq-amber';
+                      else badgeCls = 'scr-table-liq-green';
+                    }
+                    return (
+                      <tr key={f.code} className="scr-row" onClick={() => setSel(f)}>
+                        <td className="scr-name">
+                          <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSel(f); }}>
+                            <span className="scr-fund-n">{f.name.replace(/\s*-\s*(Regular Plan|Regular|Growth( Option)?| Plan).*/i, '').trim()}{f.flag === 'check' && <span className="scr-flag" title="Unusual value — under review">⚠</span>}</span>
+                            <span className="scr-fund-sub">
+                              {shortCat(f.category)}
+                              {hasStress && (
+                                <span className={`scr-table-liq-badge ${badgeCls}`} title={`Liquidity disclosure: Takes ${hasStress.days_50pct} days to liquidate 50% under stress`}>
+                                  💧 {hasStress.days_50pct}d
+                                </span>
+                              )}
+                            </span>
+                          </button>
+                        </td>
+                        {visibleCols.map((m) => (
+                          <td key={m.key} className={cellCls(m, f[m.key])}>{m.kind === 'ratio' ? <b>{fmtCell(m, f[m.key])}</b> : fmtCell(m, f[m.key])}</td>
+                        ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -490,7 +528,7 @@ export default function ScreenerPage() {
       </div>
       <Footer activePage="screener" />
 
-      {sel && <Detail f={sel} onClose={() => setSel(null)} />}
+      {sel && <Detail f={sel} stress={stressMap[sel.code]} onClose={() => setSel(null)} />}
       {sifSel && <SifDetail s={sifSel} onClose={() => setSifSel(null)} />}
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
     </div>
@@ -498,7 +536,7 @@ export default function ScreenerPage() {
 }
 
 /* ---------- fund detail drawer (fetches NAV sparkline on open) ---------- */
-function Detail({ f, onClose }) {
+function Detail({ f, stress, onClose }) {
   const [nav, setNav] = useState(null);
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -524,6 +562,11 @@ function Detail({ f, onClose }) {
           <button className="scr-x" onClick={onClose} aria-label="Close">×</button>
         </div>
         {f.flag === 'check' && <div className="scr-warn">⚠ One or more returns look unusual for this fund — we’re reviewing the source NAV. Treat with caution.</div>}
+        {stress && stress.days_50pct > 20 && (
+          <div className="scr-warn" style={{ backgroundColor: 'rgba(211, 47, 47, 0.08)', border: '1px solid rgba(211, 47, 47, 0.2)', color: '#d32f2f' }}>
+            ⚠️ <b>Liquidity Alert:</b> This fund takes <b>{stress.days_50pct} days</b> to liquidate 50% of its portfolio under stress. High redemption volume could significantly impact portfolio values.
+          </div>
+        )}
 
         <Spark nav={nav} />
 
@@ -532,6 +575,93 @@ function Detail({ f, onClose }) {
             <div className="scr-dk" key={l}><span>{l}</span><b className={u === '%' && (l.includes('draw')) ? 'scr-neg' : cls(typeof v === 'number' ? v : null)}>{v == null ? '—' : (u === '%' ? (v > 0 && !l.includes('draw') && !l.includes('Vol') ? '+' : '') + v.toFixed(1) + '%' : v.toFixed(2))}</b></div>
           ))}
         </div>
+
+        {stress && (
+          <div className="scr-stress-section">
+            <div className="scr-stress-title">💧 Liquidity &amp; Stress Test Analysis</div>
+            <div className="scr-stress-month">Data as of {formatMonth(stress.month)}</div>
+            
+            <div className="scr-stress-liquidity-grid">
+              <div className="scr-stress-liq-card">
+                <div className="scr-liq-label">Days to Liquidate 50%</div>
+                <div className="scr-liq-val">{stress.days_50pct} days</div>
+                <div className="scr-liq-meter">
+                  <div className="scr-liq-meter-fill" style={{ width: `${Math.min(100, (stress.days_50pct / 30) * 100)}%`, backgroundColor: getLiquidityColor(stress.days_50pct) }}></div>
+                </div>
+              </div>
+              <div className="scr-stress-liq-card">
+                <div className="scr-liq-label">Days to Liquidate 25%</div>
+                <div className="scr-liq-val">{stress.days_25pct} days</div>
+                <div className="scr-liq-meter">
+                  <div className="scr-liq-meter-fill" style={{ width: `${Math.min(100, (stress.days_25pct / 15) * 100)}%`, backgroundColor: getLiquidityColor(stress.days_25pct * 2) }}></div>
+                </div>
+              </div>
+            </div>
+
+            {stress.days_50pct >= 15 && stress.days_50pct <= 20 && (
+              <div className="scr-warn-liquidity">
+                ⚠️ <b>Moderate Liquidity Risk:</b> Takes {stress.days_50pct} days to liquidate half of the portfolio under stress conditions.
+              </div>
+            )}
+
+            <div className="scr-stress-kpis" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '12px' }}>
+              <div className="scr-dk">
+                <span>Top 10 Investors</span>
+                <b>{stress.top10_investors_pct ? `${stress.top10_investors_pct}%` : '—'}</b>
+              </div>
+              <div className="scr-dk">
+                <span>Turnover Ratio</span>
+                <b>{stress.turnover_ratio ? `${stress.turnover_ratio}%` : '—'}</b>
+              </div>
+              <div className="scr-dk">
+                <span>Portfolio Beta</span>
+                <b>{stress.beta ? stress.beta.toFixed(2) : '—'}</b>
+              </div>
+            </div>
+
+            <div className="scr-allocation-card">
+              <div className="scr-alloc-title">Asset Allocation Breakdown</div>
+              <div className="scr-alloc-bars">
+                <div className="scr-alloc-item">
+                  <div className="scr-alloc-lbl">Large Cap ({stress.large_cap_pct}%)</div>
+                  <div className="scr-alloc-bar-bg"><div className="scr-alloc-bar-fill large-cap" style={{ width: `${stress.large_cap_pct}%` }}></div></div>
+                </div>
+                <div className="scr-alloc-item">
+                  <div className="scr-alloc-lbl">Mid Cap ({stress.mid_cap_pct}%)</div>
+                  <div className="scr-alloc-bar-bg"><div className="scr-alloc-bar-fill mid-cap" style={{ width: `${stress.mid_cap_pct}%` }}></div></div>
+                </div>
+                <div className="scr-alloc-item">
+                  <div className="scr-alloc-lbl">Small Cap ({stress.small_cap_pct}%)</div>
+                  <div className="scr-alloc-bar-bg"><div className="scr-alloc-bar-fill small-cap" style={{ width: `${stress.small_cap_pct}%` }}></div></div>
+                </div>
+                <div className="scr-alloc-item">
+                  <div className="scr-alloc-lbl">Cash ({stress.cash_pct}%)</div>
+                  <div className="scr-alloc-bar-bg"><div className="scr-alloc-bar-fill cash" style={{ width: `${stress.cash_pct}%` }}></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="scr-valuation-card">
+              <div className="scr-alloc-title">PE Valuation vs Benchmark</div>
+              <div className="scr-pe-grid">
+                <div className="scr-pe-item">
+                  <div className="scr-pe-label">Portfolio PE</div>
+                  <div className="scr-pe-val">{stress.pe_portfolio ? stress.pe_portfolio.toFixed(1) : '—'}</div>
+                </div>
+                <div className="scr-pe-item">
+                  <div className="scr-pe-label">Benchmark PE</div>
+                  <div className="scr-pe-val">{stress.pe_benchmark ? stress.pe_benchmark.toFixed(1) : '—'}</div>
+                </div>
+              </div>
+              {stress.pe_benchmark_1ya && (
+                <div className="scr-pe-history">
+                  Benchmark PE: 1Y ago <b>{stress.pe_benchmark_1ya.toFixed(1)}</b> {stress.pe_benchmark_2ya && <>| 2Y ago <b>{stress.pe_benchmark_2ya.toFixed(1)}</b></>}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="scr-drawer-meta">
           <span>Latest NAV ₹{f.nav}</span>
           {f.inception_date && <span>Since {new Date(f.inception_date + 'T00:00:00Z').toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span>}
@@ -765,4 +895,171 @@ const CSS = `
   .scr-select{max-width:100%;flex:1}
 }
 @media (prefers-reduced-motion: reduce){ .scr-drawer,.scr-drawer-wrap{animation:none} .scr-btn:hover{transform:none} }
+
+/* Table liquidity badge styles */
+.scr-table-liq-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font: 700 9px JetBrains Mono, monospace;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.scr-table-liq-green {
+  background: rgba(46, 125, 50, 0.08);
+  color: #2e7d32;
+  border: 1px solid rgba(46, 125, 50, 0.15);
+}
+.scr-table-liq-amber {
+  background: rgba(230, 81, 0, 0.08);
+  color: #e65100;
+  border: 1px solid rgba(230, 81, 0, 0.15);
+}
+.scr-table-liq-red {
+  background: rgba(211, 47, 47, 0.08);
+  color: #d32f2f;
+  border: 1px solid rgba(211, 47, 47, 0.15);
+}
+
+/* Stress test section in drawer */
+.scr-stress-section {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.scr-stress-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.scr-stress-month {
+  font: 500 11px JetBrains Mono, monospace;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.scr-stress-liquidity-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.scr-stress-liq-card {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.scr-liq-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.scr-liq-val {
+  font: 800 18px JetBrains Mono, monospace;
+  color: var(--text);
+}
+.scr-liq-meter {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+.scr-liq-meter-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.scr-warn-liquidity {
+  background: rgba(230, 81, 0, 0.08);
+  border: 1px solid rgba(230, 81, 0, 0.15);
+  color: #e65100;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+.scr-allocation-card, .scr-valuation-card {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.scr-alloc-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  letter-spacing: 0.03em;
+}
+.scr-alloc-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.scr-alloc-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.scr-alloc-lbl {
+  font: 600 10.5px JetBrains Mono, monospace;
+  color: var(--text2);
+}
+.scr-alloc-bar-bg {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.scr-alloc-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+.scr-alloc-bar-fill.large-cap { background: #1b5e20; }
+.scr-alloc-bar-fill.mid-cap { background: #2e7d32; }
+.scr-alloc-bar-fill.small-cap { background: #e65100; }
+.scr-alloc-bar-fill.cash { background: #0288d1; }
+
+.scr-pe-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.scr-pe-item {
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+}
+.scr-pe-label {
+  font-size: 9px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+.scr-pe-val {
+  font: 800 16px JetBrains Mono, monospace;
+  color: var(--text);
+}
+.scr-pe-history {
+  font: 500 10px JetBrains Mono, monospace;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 8px;
+  border-top: 1px dashed var(--border);
+  padding-top: 6px;
+}
 `;

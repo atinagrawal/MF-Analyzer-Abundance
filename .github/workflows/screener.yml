@@ -34,6 +34,11 @@ jobs:
           MONTHS: "60"
         run: node scripts/build-screener.mjs
 
+      - name: Fetch + upsert monthly stress test data
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: node scripts/fetch-stress-test.mjs
+
       # Optional artifact for debugging / a static fallback
       - name: Upload JSON artifact
         if: always()
