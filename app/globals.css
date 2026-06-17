@@ -9004,6 +9004,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   font-family: 'JetBrains Mono', monospace;
   margin-top: 3px;
 }
+.sp-data-age {
+  color: var(--muted);
+  opacity: .75;
+}
+.sp-stale-warn {
+  margin-top: 6px;
+  padding: 5px 10px;
+  background: #fff3e0;
+  border: 1px solid #ffcc80;
+  border-radius: 7px;
+  font-size: .58rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #8a4300;
+}
 .sp-close {
   flex-shrink: 0;
   width: 32px; height: 32px;

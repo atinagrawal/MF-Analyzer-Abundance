@@ -304,11 +304,19 @@ function SectorPanel({ sector, onClose }) {
   const unch    = parseInt(advance.unchanged || 0);
   const total   = adv + dec + unch || 1;
 
-  const sorted    = [...stocks].sort((a, b) => b.pChange - a.pChange);
+  const sorted    = [...stocks].filter(s => s.pChange != null).sort((a, b) => b.pChange - a.pChange);
   const gainers   = sorted.slice(0, 5);
-  const losers    = sorted.slice(-5).reverse();
-  const nearHigh  = [...stocks].sort((a, b) => a.nearWKH - b.nearWKH).slice(0, 4);
-  const nearLow   = [...stocks].sort((a, b) => b.nearWKL - a.nearWKL).slice(0, 4);
+  const losers    = sorted.length >= 2 ? sorted.slice(-Math.min(5, Math.floor(sorted.length / 2))).reverse() : [];
+  const nearHigh  = [...stocks].filter(s => s.nearWKH != null).sort((a, b) => b.nearWKH - a.nearWKH).slice(0, 4);
+  const nearLow   = [...stocks].filter(s => s.nearWKL != null).sort((a, b) => a.nearWKL - b.nearWKL).slice(0, 4);
+
+  const cachedAt  = detail?.cached_at ? new Date(detail.cached_at) : null;
+  const dataAgeMs = cachedAt ? Date.now() - cachedAt.getTime() : null;
+  const dataStale = detail?.stale || (dataAgeMs != null && dataAgeMs > 4 * 60 * 60 * 1000);
+  const dataAgeLabel = dataAgeMs == null ? null
+    : dataAgeMs < 60000 ? 'just now'
+    : dataAgeMs < 3600000 ? `${Math.floor(dataAgeMs / 60000)}m ago`
+    : `${Math.floor(dataAgeMs / 3600000)}h ${Math.floor((dataAgeMs % 3600000) / 60000)}m ago`;
 
   const range52 = meta.yearHigh - meta.yearLow;
   const pos52   = range52 > 0
@@ -330,8 +338,10 @@ function SectorPanel({ sector, onClose }) {
               {detail && (
                 <div className="sp-subtitle">
                   {meta.timeVal} · {adv}↑ {unch > 0 ? `${unch}— ` : ''}{dec}↓
+                  {dataAgeLabel && <span className="sp-data-age"> · data {dataAgeLabel}</span>}
                 </div>
               )}
+              {dataStale && <div className="sp-stale-warn">⚠ Cached data — live NSE unavailable, showing last snapshot</div>}
             </div>
             <button className="sp-close" onClick={onClose} aria-label="Close">✕</button>
           </div>
