@@ -122,7 +122,7 @@ async function upsertRecords(client, records) {
         turnover_ratio    = EXCLUDED.turnover_ratio,
         fetched_at        = NOW()
     `, [
-      r.SchemeID,
+      r.resolvedCode || r.SchemeID,
       r.SchemeName,
       r.MF_Name,
       r.Cat_ID === 17 ? 'mid_cap' : 'small_cap',
@@ -164,17 +164,61 @@ async function upsertRecords(client, records) {
   try {
     await ensureTable(client);
 
+    // Fetch all regular-growth funds from mf_screener to map SchemeIDs to 6-digit AMFI codes
+    const { rows: screenerList } = await client.query(
+      'SELECT code, name, amc, category FROM mf_screener'
+    );
+
+    function normalizeAmc(name) {
+      if (!name) return '';
+      return name.toLowerCase()
+        .replace(/mutual\s+fund/gi, '')
+        .replace(/asset\s+management/gi, '')
+        .replace(/amc/gi, '')
+        .trim();
+    }
+
+    function resolveSchemeCode(r) {
+      const targetCat = r.Cat_ID === 17 ? 'Mid Cap Fund' : 'Small Cap Fund';
+      const normStressAmc = normalizeAmc(r.MF_Name);
+
+      const candidates = screenerList.filter(m => {
+        const catMatch = m.category === `Equity Scheme - ${targetCat}`;
+        if (!catMatch) return false;
+
+        const normScreenerAmc = normalizeAmc(m.amc);
+        if (normStressAmc === 'quant' && normScreenerAmc.startsWith('quantum')) return false;
+        if (normStressAmc.startsWith('quantum') && normScreenerAmc === 'quant') return false;
+        return normScreenerAmc.includes(normStressAmc) || normStressAmc.includes(normScreenerAmc);
+      });
+
+      if (candidates.length === 1) {
+        return Number(candidates[0].code);
+      }
+      return r.SchemeID;
+    }
+
     let totalUpserted = 0;
     for (const cat of CATS) {
       const records = await fetchCat(cat.id, dateStr);
       console.log(`[stress-test] ${cat.name}: ${records.length} records`);
       
-      // Annotate with parsed month date
-      const annotated = records.map(r => ({ ...r, month: monthDate }));
+      // Annotate with parsed month date and resolve standard scheme code
+      const annotated = records.map(r => ({
+        ...r,
+        month: monthDate,
+        resolvedCode: resolveSchemeCode(r)
+      }));
       const count = await upsertRecords(client, annotated);
       totalUpserted += count;
       console.log(`[stress-test] ${cat.name}: upserted ${count} rows`);
     }
+
+    // Purge old temporary records that used raw SchemeIDs (< 100000)
+    const { rowCount: purged } = await client.query(
+      'DELETE FROM mf_stress_test WHERE scheme_code < 100000'
+    );
+    console.log(`[stress-test] Purged ${purged} temporary SchemeID records (< 100000)`);
 
     console.log(`[stress-test] Done! Total upserted: ${totalUpserted} rows for ${dateStr}`);
   } finally {
