@@ -19,13 +19,17 @@ export const dynamic = 'force-dynamic';
 const PLAN_PRICE_PAISE = 58882; // ₹499 + 18% GST = ₹588.82
 
 export async function POST() {
-  // Instantiate inside the handler so env vars are available at runtime
-  const rz = new Razorpay({
-    key_id:     process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-  });
-
   try {
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error('[checkout] Missing RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET env vars');
+      return Response.json({ error: 'Payment not configured. Try again later.' }, { status: 503 });
+    }
+
+    const rz = new Razorpay({
+      key_id:     process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+
     const session = await auth();
     if (!session?.user?.id) {
       return Response.json({ error: 'Sign in to continue' }, { status: 401 });
@@ -59,7 +63,9 @@ export async function POST() {
     return Response.json({ orderId: order.id, amount: PLAN_PRICE_PAISE, currency: 'INR' });
 
   } catch (err) {
-    console.error('[checkout]', err.message);
+    // Razorpay SDK throws plain objects, not Error instances
+    const msg = err?.message || err?.error?.description || JSON.stringify(err);
+    console.error('[checkout]', msg);
     return Response.json({ error: 'Could not create order. Try again.' }, { status: 500 });
   }
 }
