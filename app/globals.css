@@ -5200,13 +5200,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
     font-size: .58rem;
     padding: 2px 4px;
   }
-  /* Hide less-important columns */
-  .idx-table th:nth-child(4),
-  .idx-table td:nth-child(4),
-  .idx-table th:nth-child(5),
-  .idx-table td:nth-child(5) {
-    display: none;
-  }
 }
 
 /* ── CAS tracker: fund cards on small screens ── */
@@ -7933,7 +7926,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   }
 
   /* 3. Ultra-compact table */
-  .idx-table              { font-size: .68rem; }
+  .idx-table              { font-size: .68rem; min-width: 520px; }
   .idx-table td,
   .idx-table th           { padding: 8px 6px; }
   .idx-table th:first-child,
@@ -7954,6 +7947,26 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
     margin: 0 -4px;
     border-left: none;
     border-right: none;
+  }
+
+  /* 5. Column hiding — correctly scoped per row to prevent data shift.
+        Row-1 group headers and row-2 sub-headers are targeted separately
+        from tbody cells so the same physical column is hidden in all rows. */
+
+  /* Hide 3Y and 5Y sub-headers (row 2: nth-child counts within that row) */
+  .idx-table thead tr:nth-child(2) th:nth-child(4),
+  .idx-table thead tr:nth-child(2) th:nth-child(5),
+  /* Hide 3Y (col 5) and 5Y (col 6) data cells */
+  .idx-table tbody td:nth-child(5),
+  .idx-table tbody td:nth-child(6),
+  /* Hide Riskometer row-1 header (rowSpan=2, nth-child(5) of row 1) */
+  .idx-table thead tr:nth-child(1) th:nth-child(5),
+  /* Hide Compare row-1 header (nth-child(6) of row 1) */
+  .idx-table thead tr:nth-child(1) th:nth-child(6),
+  /* Hide Riskometer and Compare data cells */
+  .idx-table tbody td:nth-child(12),
+  .idx-table tbody td:nth-child(13) {
+    display: none;
   }
 }
 
