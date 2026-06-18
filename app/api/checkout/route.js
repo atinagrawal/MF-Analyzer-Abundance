@@ -16,7 +16,7 @@ import { auth } from '@/auth';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const PLAN_PRICE_PAISE = 99900; // ₹999 in paise
+const PLAN_PRICE_PAISE = 58882; // ₹499 + 18% GST = ₹588.82
 
 export async function POST() {
   // Instantiate inside the handler so env vars are available at runtime

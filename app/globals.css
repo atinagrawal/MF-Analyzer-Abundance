@@ -9581,3 +9581,120 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .sp-movers-grid, .sp-extremes-grid { grid-template-columns: 1fr; }
   .sp-perf-row { grid-template-columns: 1fr 1fr; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   BREADTH / SCREENER GATE  (sign-in gate + Pro paywall)
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.brd-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 56px 28px 48px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  max-width: 520px;
+  margin: 32px auto;
+  gap: 14px;
+}
+
+.brd-gate-lock {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.brd-gate-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: -.3px;
+}
+
+.brd-gate-desc {
+  font-size: .78rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.6;
+  max-width: 400px;
+}
+
+.brd-gate-pricing {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.brd-gate-amount {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -1px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.brd-gate-period {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.brd-gate-total {
+  font-size: .68rem;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.brd-gate-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.brd-gate-btn {
+  display: block;
+  width: 100%;
+  padding: 13px 20px;
+  background: var(--g1);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: .82rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Raleway', sans-serif;
+  transition: background .15s;
+}
+.brd-gate-btn:hover:not(:disabled) { background: var(--g2); }
+.brd-gate-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+.brd-gate-btn-pro {
+  background: var(--g1);
+}
+
+.brd-gate-faq {
+  font-size: .7rem;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color .14s;
+}
+.brd-gate-faq:hover { color: var(--g1); }
+
+.brd-gate-error {
+  font-size: .7rem;
+  color: var(--neg);
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .brd-gate { padding: 40px 20px 36px; margin: 20px auto; }
+  .brd-gate-title { font-size: .95rem; }
+}

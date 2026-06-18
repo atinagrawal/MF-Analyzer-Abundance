@@ -125,10 +125,10 @@ export default function PricingPage() {
             <div className="pricing-badge">Best value</div>
             <div className="pricing-tier pro-tier">Pro</div>
             <div className="pricing-price">
-              <span className="pricing-amount">₹999</span>
-              <span className="pricing-period">/ year</span>
+              <span className="pricing-amount">₹499</span>
+              <span className="pricing-period">/yr + 18% GST</span>
             </div>
-            <p className="pricing-tagline">Portfolio tracker + all free features. ~₹83/month.</p>
+            <p className="pricing-tagline">Total ₹588.82 · Market Breadth, Stock Screener, Portfolio Tracker & more.</p>
             <ul className="pricing-features">
               {PRO_FEATURES.map(f => (
                 <li key={f}><span className="feat-check pro-check">✓</span>{f}</li>
@@ -150,7 +150,7 @@ export default function PricingPage() {
                     onClick={handleUpgrade}
                     disabled={loading || !planKnown}
                   >
-                    {loading ? 'Opening checkout…' : status !== 'authenticated' ? 'Sign in to upgrade' : 'Upgrade to Pro — ₹999/yr'}
+                    {loading ? 'Opening checkout…' : status !== 'authenticated' ? 'Sign in to upgrade' : 'Upgrade to Pro — ₹499 + GST'}
                   </button>
                   {error && <p className="pricing-error">{error}</p>}
                   <p className="pricing-secure">🔒 Secured by Razorpay · UPI, Cards, Net Banking</p>

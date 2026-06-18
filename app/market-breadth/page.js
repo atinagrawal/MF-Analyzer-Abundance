@@ -60,8 +60,9 @@ function SsSignalBadges({ s }) {
 }
 
 export default function BreadthPage() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const isAuthed = status === 'authenticated';
+  const isPro    = session?.user?.plan === 'pro';
 
   const [data, setData] = useState(null);
   const [idx, setIdx] = useState(null);
@@ -76,33 +77,33 @@ export default function BreadthPage() {
   const [ssLoaded, setSsLoaded] = useState(false);
 
   useEffect(() => {
-    if (!isAuthed) return;
+    if (!isAuthed || !isPro) return;
     fetch('/api/breadth').then((r) => r.json()).then((d) => {
       if (d.error) { setErr(d.error); return; }
       setData(d); setDate(d.asof);
     }).catch(() => setErr('Could not load breadth data.'));
-  }, [isAuthed]);
+  }, [isAuthed, isPro]);
 
   useEffect(() => {
     fetch('/api/breadth-indices').then((r) => r.json()).then(setIdx).catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (!isAuthed) return;
+    if (!isAuthed || !isPro) return;
     fetch('/api/sector-breadth')
       .then((r) => r.json())
       .then((d) => { if (!d.error && d.snaps?.length) setSectorData(d); })
       .catch(() => {});
-  }, [isAuthed]);
+  }, [isAuthed, isPro]);
 
   useEffect(() => {
-    if (tab !== 'screener' || ssLoaded) return;
+    if (tab !== 'screener' || !isPro || ssLoaded) return;
     setSsLoaded(true);
     fetch('/api/stock-signals')
       .then((r) => r.json())
       .then((d) => { if (d.error) { setSsErr(d.error); return; } setSsRaw(d); })
       .catch(() => setSsErr('Could not load stock signals.'));
-  }, [tab, ssLoaded]);
+  }, [tab, isPro, ssLoaded]);
 
   const snaps = data?.snaps || [];
   const dates = useMemo(() => snaps.map((s) => s.date), [snaps]);
@@ -204,8 +205,9 @@ export default function BreadthPage() {
 
         {tab === 'breadth' && <>
         {status !== 'loading' && !isAuthed && <BreadthGate />}
+        {status !== 'loading' && isAuthed && !isPro && <ProGate />}
 
-        {isAuthed && <>
+        {isAuthed && isPro && <>
 
         {err && <div className="brd-err">{err} The dashboard populates once the nightly breadth job has written snapshots.</div>}
 
@@ -317,7 +319,11 @@ export default function BreadthPage() {
         </div>
         </>}
 
-        {tab === 'screener' && <StockScreenerSection raw={ssRaw} err={ssErr} />}
+        {tab === 'screener' && (
+          !isAuthed ? <BreadthGate /> :
+          !isPro    ? <ProGate /> :
+          <StockScreenerSection raw={ssRaw} err={ssErr} />
+        )}
       </div>
       <Footer activePage="breadth" />
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
@@ -648,11 +654,69 @@ function RotSpark({ series, color }) {
   );
 }
 
+function ProGate() {
+  const { data: session } = useSession();
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+
+  async function handleUpgrade() {
+    setLoading(true);
+    setError('');
+    try {
+      const res  = await fetch('/api/checkout', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not create order');
+
+      const rzp = new window.Razorpay({
+        key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        order_id:    data.orderId,
+        amount:      data.amount,
+        currency:    data.currency,
+        name:        'Abundance Financial Services',
+        description: 'Pro Plan — 1 year',
+        image:       '/logo-192.png',
+        prefill: { name: session?.user?.name || '', email: session?.user?.email || '' },
+        theme: { color: '#1a7a4a' },
+        handler() { window.location.reload(); },
+        modal: { ondismiss() { setLoading(false); } },
+      });
+      rzp.open();
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="brd-gate">
+      <div className="brd-gate-lock">⭐</div>
+      <h2 className="brd-gate-title">Market Breadth is a Pro feature</h2>
+      <p className="brd-gate-desc">
+        Track DMA participation across 1,100+ BSE stocks, advance-decline trends,
+        sector rotation, the McClellan Oscillator, and 15-sector breadth —
+        updated every trading day after market close.
+      </p>
+      <div className="brd-gate-pricing">
+        <span className="brd-gate-amount">₹499</span>
+        <span className="brd-gate-period">/yr + 18% GST</span>
+        <span className="brd-gate-total">· Total ₹588.82</span>
+      </div>
+      <div className="brd-gate-actions">
+        <button className="brd-gate-btn brd-gate-btn-pro" onClick={handleUpgrade} disabled={loading}>
+          {loading ? 'Opening checkout…' : 'Upgrade to Pro →'}
+        </button>
+        <a className="brd-gate-faq" href="/pricing">See all Pro features</a>
+      </div>
+      {error && <p className="brd-gate-error">{error}</p>}
+    </div>
+  );
+}
+
 function BreadthGate() {
   return (
     <div className="brd-gate">
       <div className="brd-gate-lock">🔒</div>
-      <h2 className="brd-gate-title">Market breadth data is for registered users</h2>
+      <h2 className="brd-gate-title">Sign in to access Market Breadth</h2>
       <p className="brd-gate-desc">
         Track DMA participation across 1,100+ BSE stocks, advance-decline trends, sector
         rotation, the McClellan Oscillator, and 15-sector breadth — updated every trading

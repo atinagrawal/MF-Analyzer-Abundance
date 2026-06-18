@@ -66,7 +66,7 @@ export async function POST(req) {
 
     // Validate amount, currency, and status — reject anything that doesn't
     // match the Pro plan price to prevent replayed or manipulated events.
-    if (payment.amount !== 99900 || payment.currency !== 'INR' || payment.status !== 'captured') {
+    if (payment.amount !== 58882 || payment.currency !== 'INR' || payment.status !== 'captured') {
       console.warn('[razorpay-webhook] unexpected amount/currency/status', payment.id, payment.amount, payment.currency, payment.status);
       return Response.json({ ok: true });
     }
