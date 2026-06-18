@@ -60,7 +60,7 @@ export async function POST() {
       [order.id, userId]
     );
 
-    return Response.json({ orderId: order.id, amount: PLAN_PRICE_PAISE, currency: 'INR' });
+    return Response.json({ orderId: order.id, amount: PLAN_PRICE_PAISE, currency: 'INR', keyId: process.env.RAZORPAY_KEY_ID });
 
   } catch (err) {
     // Razorpay SDK throws plain objects, not Error instances

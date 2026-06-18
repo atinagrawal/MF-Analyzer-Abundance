@@ -668,7 +668,7 @@ function ProGate() {
       if (!res.ok) throw new Error(data.error || 'Could not create order');
 
       const rzp = new window.Razorpay({
-        key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key:         data.keyId,
         order_id:    data.orderId,
         amount:      data.amount,
         currency:    data.currency,
