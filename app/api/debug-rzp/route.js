@@ -15,7 +15,7 @@ export async function GET() {
   const ks  = process.env.RAZORPAY_KEY_SECRET ?? '';
 
   return Response.json({
-    key_id:     { present: kid.length > 0, prefix: kid.slice(0, 12), length: kid.length },
-    key_secret: { present: ks.length  > 0, prefix: ks.slice(0, 4),  length: ks.length  },
+    key_id:     kid || '(not set)',        // public value — safe to expose
+    key_secret: { present: ks.length > 0, length: ks.length }, // no secret material
   });
 }
