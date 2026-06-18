@@ -119,6 +119,7 @@ function UserAvatar({ session, onNavClose }) {
   const email    = user?.email || '';
   const image    = user?.image || null;
   const role     = user?.role  || 'client';
+  const plan     = user?.plan  || 'free';
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
@@ -173,19 +174,43 @@ function UserAvatar({ session, onNavClose }) {
             <div style={{ fontSize: '.62rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {email}
             </div>
-            <div style={{
-              display: 'inline-block', marginTop: 6,
-              fontSize: '.52rem', fontWeight: 800,
-              letterSpacing: '.5px', textTransform: 'uppercase',
-              padding: '2px 7px', borderRadius: 4,
-              fontFamily: "'JetBrains Mono', monospace",
-              background: role === 'admin' ? '#fff3e0' : role === 'distributor' ? '#e8f5e9' : 'var(--s2)',
-              color: role === 'admin' ? '#e65100' : role === 'distributor' ? '#1b5e20' : 'var(--muted)',
-              border: '1px solid var(--border)',
-            }}>
-              {role}
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 6 }}>
+              <div style={{
+                display: 'inline-block',
+                fontSize: '.52rem', fontWeight: 800,
+                letterSpacing: '.5px', textTransform: 'uppercase',
+                padding: '2px 7px', borderRadius: 4,
+                fontFamily: "'JetBrains Mono', monospace",
+                background: role === 'admin' ? '#fff3e0' : role === 'distributor' ? '#e8f5e9' : 'var(--s2)',
+                color: role === 'admin' ? '#e65100' : role === 'distributor' ? '#1b5e20' : 'var(--muted)',
+                border: '1px solid var(--border)',
+              }}>
+                {role}
+              </div>
+              <div style={{
+                display: 'inline-block',
+                fontSize: '.52rem', fontWeight: 800,
+                letterSpacing: '.5px', textTransform: 'uppercase',
+                padding: '2px 7px', borderRadius: 4,
+                fontFamily: "'JetBrains Mono', monospace",
+                background: plan === 'pro' ? '#e8f5e9' : 'var(--s2)',
+                color:      plan === 'pro' ? '#1b5e20' : 'var(--muted)',
+                border: '1px solid var(--border)',
+              }}>
+                {plan === 'pro' ? '★ Pro' : 'Free'}
+              </div>
             </div>
           </div>
+
+          {/* Upgrade — free users only */}
+          {plan !== 'pro' && (
+            <a href="/pricing" onClick={() => { setOpen(false); onNavClose?.(); }}
+              style={{ display: 'block', padding: '10px 14px', fontSize: '.75rem', fontWeight: 700, color: '#1a7a4a', textDecoration: 'none', borderBottom: '1px solid var(--border)', transition: 'background .12s', background: '#f0faf4' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#e0f5ea'}
+              onMouseLeave={e => e.currentTarget.style.background = '#f0faf4'}>
+              ★ Upgrade to Pro — ₹999/yr
+            </a>
+          )}
 
           {/* My Portfolio */}
           <a href="/portfolio" onClick={() => { setOpen(false); onNavClose?.(); }}

@@ -106,6 +106,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session?.user) {
         session.user.id   = user.id;
         session.user.role = user.role ?? 'client';
+        // Include plan so client components can check without extra fetch
+        const plan    = user.plan ?? 'free';
+        const expires = user.plan_expires_at ? new Date(user.plan_expires_at) : null;
+        session.user.plan = (plan === 'pro' && expires && expires > new Date()) ? 'pro' : 'free';
       }
       return session;
     },
