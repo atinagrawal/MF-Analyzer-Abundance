@@ -29,13 +29,21 @@ export async function POST(req) {
     return Response.json({ error: 'Missing signature' }, { status: 400 });
   }
 
-  // Verify the payload came from Razorpay
+  // Verify the payload came from Razorpay.
+  // Use timingSafeEqual to prevent timing-based signature oracle attacks.
   const expected = crypto
     .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
     .update(body)
     .digest('hex');
 
-  if (expected !== signature) {
+  const expectedBuf = Buffer.from(expected, 'hex');
+  let signatureBuf;
+  try { signatureBuf = Buffer.from(signature, 'hex'); } catch { signatureBuf = Buffer.alloc(0); }
+
+  const valid = expectedBuf.length === signatureBuf.length &&
+                crypto.timingSafeEqual(expectedBuf, signatureBuf);
+
+  if (!valid) {
     console.warn('[razorpay-webhook] invalid signature');
     return Response.json({ error: 'Invalid signature' }, { status: 400 });
   }
@@ -56,6 +64,24 @@ export async function POST(req) {
       return Response.json({ ok: true }); // acknowledge to stop retries
     }
 
+    // Validate amount, currency, and status — reject anything that doesn't
+    // match the Pro plan price to prevent replayed or manipulated events.
+    if (payment.amount !== 99900 || payment.currency !== 'INR' || payment.status !== 'captured') {
+      console.warn('[razorpay-webhook] unexpected amount/currency/status', payment.id, payment.amount, payment.currency, payment.status);
+      return Response.json({ ok: true });
+    }
+
+    // Cross-check order_id against what we stored at checkout time so a
+    // payment from a different user's order cannot activate someone else's plan.
+    const { rows: orderRows } = await pool.query(
+      `SELECT id FROM users WHERE id = $1 AND razorpay_order_id = $2`,
+      [userId, payment.order_id]
+    );
+    if (!orderRows[0]) {
+      console.warn('[razorpay-webhook] order_id/user mismatch — ignoring', payment.id);
+      return Response.json({ ok: true });
+    }
+
     // Grant Pro for 1 year from today
     const expiresAt = new Date();
     expiresAt.setFullYear(expiresAt.getFullYear() + 1);
@@ -66,7 +92,7 @@ export async function POST(req) {
               plan_expires_at   = $1,
               razorpay_order_id = $2
         WHERE id = $3`,
-      [expiresAt, payment.order_id ?? null, userId]
+      [expiresAt, payment.order_id, userId]
     );
 
     console.log(`[razorpay-webhook] Pro activated for user ${userId} until ${expiresAt.toISOString()}`);
