@@ -9,7 +9,7 @@
 /* ── Summary strip ── */
 .pms-stat-strip {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 14px;
   margin-bottom: 28px;
 }
@@ -475,6 +475,23 @@
   background: var(--g-xlight);
 }
 
+
+/* Per-strategy data month badge — shown only on rows using previous month's data */
+.pms-month-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: .57rem;
+  font-family: var(--mono);
+  font-weight: 500;
+  background: var(--border);
+  color: var(--muted);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 6px;
+  vertical-align: middle;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
 
 /* Strategy name cell */
 .pms-strat-name {

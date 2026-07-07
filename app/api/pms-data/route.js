@@ -26,8 +26,10 @@ import * as cheerio from 'cheerio';
 //  In local dev: blob layer is skipped gracefully; memory layer only.
 // ══════════════════════════════════════════════════════════════════════════
 
-const MEM_TTL_MS  = 6 * 60 * 60 * 1000;   // 6 hours  — in-memory TTL
-const BLOB_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days  — blob TTL
+const MEM_TTL_MS          = 6  * 60 * 60 * 1000;   // 6 hours  — in-memory TTL (settled data)
+const MEM_TTL_PARTIAL_MS  = 1  * 60 * 60 * 1000;   // 1 hour   — in-memory TTL (reporting window)
+const BLOB_TTL_MS         = 30 * 24 * 60 * 60 * 1000; // 30 days — blob TTL (settled data)
+const BLOB_TTL_PARTIAL_MS = 24 * 60 * 60 * 1000;   // 24 hours — blob TTL (reporting window)
 
 /** @type {Map<string, { data: any[], ts: number }>} */
 const memCache = new Map();
@@ -53,7 +55,7 @@ function parseVal(str) {
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 const BLOB_BASE  = 'pms-cache';
 
-async function readFromBlob(key) {
+async function readFromBlob(key, ttlMs = BLOB_TTL_MS) {
     if (!BLOB_TOKEN) return null;
     try {
         const { list } = await import('@vercel/blob');
@@ -66,8 +68,8 @@ async function readFromBlob(key) {
         if (!res.ok) return null;
 
         const payload = await res.json();
-        // Check blob TTL
-        if (!isFresh(payload.ts, BLOB_TTL_MS)) {
+        // Check blob TTL (shorter during reporting window)
+        if (!isFresh(payload.ts, ttlMs)) {
             console.log(`[PMS cache] Blob STALE for ${key}`);
             return null;
         }
@@ -168,26 +170,31 @@ export async function POST(request) {
     try {
         const body = await request.json();
         const {
-            strategy  = 'Equity',
-            month     = '2',
-            year      = '2026',
-            asOnDate  = '2026-2-28',
-            bustCache = false,
+            strategy          = 'Equity',
+            month             = '2',
+            year              = '2026',
+            asOnDate          = '2026-2-28',
+            bustCache         = false,
+            isReportingWindow = false,
         } = body;
+
+        // Use shorter TTLs during the reporting window so we pick up new submissions daily
+        const memTtl  = isReportingWindow ? MEM_TTL_PARTIAL_MS  : MEM_TTL_MS;
+        const blobTtl = isReportingWindow ? BLOB_TTL_PARTIAL_MS : BLOB_TTL_MS;
 
         const key = cacheKey(strategy, month, year);
 
         // ── Layer 1: Memory cache ───────────────────────────────────
         if (!bustCache) {
             const mem = memCache.get(key);
-            if (isFresh(mem?.ts, MEM_TTL_MS)) {
+            if (isFresh(mem?.ts, memTtl)) {
                 return ok(mem.data, { source: 'memory', ageMinutes: Math.round((Date.now() - mem.ts) / 60000) });
             }
         }
 
         // ── Layer 2: Blob cache ─────────────────────────────────────
         if (!bustCache) {
-            const blob = await readFromBlob(key);
+            const blob = await readFromBlob(key, blobTtl);
             if (blob) {
                 // Warm memory cache from blob
                 memCache.set(key, { data: blob.data, ts: blob.ts });
@@ -231,7 +238,8 @@ export async function POST(request) {
             if (stale) {
                 return ok(stale.data, { source: 'stale-memory', stale: true }, 200);
             }
-            const blobStale = await readFromBlob(key).catch(() => null);
+            // Ignore TTL on error — serve whatever we have
+            const blobStale = await readFromBlob(key, Infinity).catch(() => null);
             if (blobStale) {
                 return ok(blobStale.data, { source: 'stale-blob', stale: true }, 200);
             }

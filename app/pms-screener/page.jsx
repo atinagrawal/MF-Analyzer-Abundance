@@ -23,7 +23,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { PMSCompareBar, PMSCompareModal } from './PMSCompare';
-import { getLatestPmsDataDate } from '@/lib/pmsDate';
+import { getPmsDataMonths } from '@/lib/pmsDate';
 import { PMS_FAQ } from '@/lib/pmsFaq';
 import './pms-screener.css';
 
@@ -103,8 +103,8 @@ function PMSScreenerInner() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
-    // Compute current data month once — used throughout component
-    const pmsDate = useMemo(() => getLatestPmsDataDate(), []);
+    // Compute both data months once — latest (may be partial) and prev (settled)
+    const dataMonths = useMemo(() => getPmsDataMonths(), []);
 
     // Read strategy from URL (?strategy=Debt); validate against known list
     const urlStrategy = searchParams.get('strategy');
@@ -172,30 +172,56 @@ function PMSScreenerInner() {
     const clearCompare = useCallback(() => setCompareList([]), []);
 
     // ── Data fetch ────────────────────────────────────────────────────────
-    // useCallback with [strategy, pmsDate] deps prevents a stale-closure bug
-    // where fetchData() captures an old `strategy` value from the render scope.
+    // Fetches both months in parallel, then merges: each strategy uses its
+    // most recently available data. Strategies missing from the latest month
+    // fall back to the previous month and are tagged dataMonth='prev'.
     const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch('/api/pms-data', {
+            const post = (m, isPartial) => fetch('/api/pms-data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     strategy,
-                    month: String(pmsDate.month),
-                    year: String(pmsDate.year),
-                    asOnDate: pmsDate.asOnDate,
+                    month   : String(m.month),
+                    year    : String(m.year),
+                    asOnDate: m.asOnDate,
+                    isReportingWindow: isPartial,
                 }),
             });
-            const result = await res.json();
-            if (result.status === 'success') setData(result.data);
-            else throw new Error(result.message || 'API error');
+
+            const [latestRes, prevRes] = await Promise.all([
+                post(dataMonths.latest, true),  // latest month — short cache, data still coming in
+                post(dataMonths.prev,   false), // prev month   — settled, 30-day cache
+            ]);
+
+            const [latestJson, prevJson] = await Promise.all([
+                latestRes.json(), prevRes.json(),
+            ]);
+
+            if (latestJson.status !== 'success') throw new Error(latestJson.message || 'API error');
+            if (prevJson.status   !== 'success') throw new Error(prevJson.message   || 'API error');
+
+            // Build lookup of strategies already present in latest month
+            const latestKeys = new Set(
+                latestJson.data.map(d => `${d.portfolioManager}|||${d.strategyName}`)
+            );
+
+            // Merge: latest-month rows first, then prev-month rows not yet in latest
+            const merged = [
+                ...latestJson.data.map(d => ({ ...d, dataMonth: 'latest' })),
+                ...prevJson.data
+                    .filter(d => !latestKeys.has(`${d.portfolioManager}|||${d.strategyName}`))
+                    .map(d => ({ ...d, dataMonth: 'prev' })),
+            ];
+
+            setData(merged);
         } catch (e) {
             setError(e.message);
         }
         setLoading(false);
-    }, [strategy, pmsDate]);
+    }, [strategy, dataMonths]);
 
     // ── Effects ───────────────────────────────────────────────────────────
     useEffect(() => {
@@ -293,6 +319,7 @@ function PMSScreenerInner() {
         const avg1Y = valid1Y.length ? (valid1Y.reduce((s, d) => s + d.ret1Y, 0) / valid1Y.length).toFixed(1) : null;
         const totalAum = visible.reduce((s, d) => s + (d.aum ?? 0), 0);
         const beatBenchmark = valid1Y.filter(d => d.ret1Y > BENCHMARK_1Y).length;
+        const latestCount = visible.filter(d => d.dataMonth === 'latest').length;
         return {
             count: visible.length,
             total: data.length,
@@ -300,6 +327,8 @@ function PMSScreenerInner() {
             totalAum,
             beatBenchmark,
             hiddenCount: data.length - visible.length,
+            latestCount,
+            prevCount: visible.length - latestCount,
         };
     }, [data, showSmallAum, smallAumProviders]);
 
@@ -348,8 +377,7 @@ function PMSScreenerInner() {
                 <div className="page-header">
                     <div className="page-eyebrow">
                         <div className="live-dot"></div>
-                        {/* Dynamic month — no longer hardcoded "Feb 2026" */}
-                        <span className="page-eyebrow-text">APMI Official Data · {pmsDate.label}</span>
+                        <span className="page-eyebrow-text">APMI Official Data · {dataMonths.latest.shortLabel} / {dataMonths.prev.shortLabel} · Per strategy</span>
                     </div>
                     <h1 className="page-title">PMS <span>Screener</span></h1>
                     <p className="page-subtitle">
@@ -396,6 +424,13 @@ function PMSScreenerInner() {
                             <div className="pst-label">Combined AUM</div>
                             <div className="pst-val">{fmtAum(stats.totalAum)}</div>
                             <div className="pst-sub">Under management</div>
+                        </div>
+                        <div className="pms-stat-tile">
+                            <div className="pst-label">Data Coverage</div>
+                            <div className="pst-val" style={{ fontSize: '1rem' }}>
+                                {stats.latestCount} <span style={{ fontSize: '.65rem', color: 'var(--muted)', fontWeight: 400 }}>/ {stats.prevCount}</span>
+                            </div>
+                            <div className="pst-sub">{dataMonths.latest.shortLabel} / {dataMonths.prev.shortLabel} reporting</div>
                         </div>
                     </div>
                 )}
@@ -622,7 +657,12 @@ function PMSScreenerInner() {
                                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                                                     <div className="pms-avatar">{initials(fund.portfolioManager)}</div>
                                                     <div>
-                                                        <span className="pms-strat-name">{fund.strategyName}</span>
+                                                        <span className="pms-strat-name">
+                                                            {fund.strategyName}
+                                                            {fund.dataMonth === 'prev' && (
+                                                                <span className="pms-month-badge" title={`Latest available data is ${dataMonths.prev.label}`}>{dataMonths.prev.shortLabel}</span>
+                                                            )}
+                                                        </span>
                                                         <span className="pms-strat-mgr">{fund.portfolioManager}</span>
                                                     </div>
                                                 </div>
@@ -684,7 +724,12 @@ function PMSScreenerInner() {
                                     <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '14px' }}>
                                         <div className="pms-avatar">{initials(fund.portfolioManager)}</div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div className="gc-name">{fund.strategyName}</div>
+                                            <div className="gc-name">
+                                                {fund.strategyName}
+                                                {fund.dataMonth === 'prev' && (
+                                                    <span className="pms-month-badge" title={`Latest available data is ${dataMonths.prev.label}`}>{dataMonths.prev.shortLabel}</span>
+                                                )}
+                                            </div>
                                             <div className="gc-mgr">{fund.portfolioManager}</div>
                                         </div>
                                     </div>
@@ -721,7 +766,7 @@ function PMSScreenerInner() {
                 {!loading && !error && (
                     <div className="src-line">
                         <div className="src-dot"></div>
-                        Source: APMI India · Discretionary {strategy} strategies · {pmsDate.label} · TWRR methodology
+                        Source: APMI India · Discretionary {strategy} strategies · {dataMonths.latest.shortLabel} / {dataMonths.prev.shortLabel} · TWRR methodology · Per strategy latest available
                     </div>
                 )}
 
@@ -765,7 +810,7 @@ function PMSScreenerInner() {
             {showCompare && compareList.length >= 2 && (
                 <PMSCompareModal
                     funds={compareList}
-                    dataLabel={pmsDate.label}
+                    dataLabel={dataMonths.latest.label}
                     onClose={() => setShowCompare(false)}
                     onRemove={id => { removeFromCompare(id); if (compareList.length <= 2) setShowCompare(false); }}
                 />
@@ -849,7 +894,7 @@ function PMSScreenerInner() {
                             )}
 
                             <div className="pd-source" style={{ marginTop: '28px' }}>
-                                <strong>Disclosure:</strong> Data from APMI India · Discretionary {strategy} strategies · {pmsDate.label} · TWRR, net of all fees. Past performance is not indicative of future results. Min PMS investment ₹50L per SEBI.
+                                <strong>Disclosure:</strong> Data from APMI India · Discretionary {strategy} strategies · Returns as of {selected.dataMonth === 'prev' ? dataMonths.prev.label : dataMonths.latest.label} · TWRR, net of all fees. Past performance is not indicative of future results. Min PMS investment ₹50L per SEBI.
                             </div>
                         </div>
                     </>
