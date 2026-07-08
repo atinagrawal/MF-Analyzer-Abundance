@@ -402,35 +402,35 @@ function PMSScreenerInner() {
 
                 {/* ── Summary Stats ── */}
                 {!loading && !error && stats && (
-                    <div className="pms-stat-strip">
-                        <div className="pms-stat-tile">
-                            <div className="pst-label">Strategies Shown</div>
-                            <div className="pst-val">{stats.count}</div>
-                            <div className="pst-sub">of {stats.total} total · {strategy}</div>
+                    <div className="pms-stat-bar">
+                        <div className="pms-stat-seg">
+                            <div className="pss-label">Strategies Shown</div>
+                            <div className="pss-val">{stats.count}</div>
+                            <div className="pss-sub">of {stats.total} total · {strategy}</div>
                         </div>
-                        <div className="pms-stat-tile">
-                            <div className="pst-label">Avg 1Y Return</div>
-                            <div className="pst-val" style={{ color: parseFloat(stats.avg1Y) >= 0 ? 'var(--g1)' : 'var(--neg)' }}>
+                        <div className="pms-stat-seg">
+                            <div className="pss-label">Avg 1Y Return</div>
+                            <div className="pss-val" style={{ color: parseFloat(stats.avg1Y) >= 0 ? 'var(--g1)' : 'var(--neg)' }}>
                                 {stats.avg1Y ? `${stats.avg1Y}%` : '—'}
                             </div>
-                            <div className="pst-sub">Across visible strategies</div>
+                            <div className="pss-sub">Across visible strategies</div>
                         </div>
-                        <div className="pms-stat-tile">
-                            <div className="pst-label">Beat Nifty 50</div>
-                            <div className="pst-val">{stats.beatBenchmark}</div>
-                            <div className="pst-sub">of {stats.count} vs {BENCHMARK_1Y}% benchmark</div>
+                        <div className="pms-stat-seg">
+                            <div className="pss-label">Beat Nifty 50</div>
+                            <div className="pss-val">{stats.beatBenchmark}</div>
+                            <div className="pss-sub">of {stats.count} vs {BENCHMARK_1Y}% benchmark</div>
                         </div>
-                        <div className="pms-stat-tile">
-                            <div className="pst-label">Combined AUM</div>
-                            <div className="pst-val">{fmtAum(stats.totalAum)}</div>
-                            <div className="pst-sub">Under management</div>
+                        <div className="pms-stat-seg">
+                            <div className="pss-label">Combined AUM</div>
+                            <div className="pss-val">{fmtAum(stats.totalAum)}</div>
+                            <div className="pss-sub">Under management</div>
                         </div>
-                        <div className="pms-stat-tile">
-                            <div className="pst-label">Data Coverage</div>
-                            <div className="pst-val" style={{ fontSize: '1rem' }}>
-                                {stats.latestCount} <span style={{ fontSize: '.65rem', color: 'var(--muted)', fontWeight: 400 }}>/ {stats.prevCount}</span>
+                        <div className="pms-stat-seg">
+                            <div className="pss-label">Data Coverage</div>
+                            <div className="pss-val">
+                                {stats.latestCount} <span style={{ fontSize: '.65rem', color: 'var(--pms-muted)', fontWeight: 400 }}>/ {stats.prevCount}</span>
                             </div>
-                            <div className="pst-sub">{dataMonths.latest.shortLabel} / {dataMonths.prev.shortLabel} reporting</div>
+                            <div className="pss-sub">{dataMonths.latest.shortLabel} / {dataMonths.prev.shortLabel} reporting</div>
                         </div>
                     </div>
                 )}

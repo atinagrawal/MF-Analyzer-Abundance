@@ -88,7 +88,7 @@ const jsonLd = {
             },
             speakable: {
                 '@type': 'SpeakableSpecification',
-                cssSelector: ['h1', '.page-subtitle', '.pms-stat-strip'],
+                cssSelector: ['h1', '.page-subtitle', '.pms-stat-bar'],
             },
             about: [
                 { '@type': 'Thing', name: 'Portfolio Management Services', sameAs: 'https://en.wikipedia.org/wiki/Portfolio_management' },
