@@ -6,6 +6,54 @@
    Responsive: 5 breakpoints — 1100 / 900 / 680 / 480 / 360
 ══════════════════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════════════════
+   EDITORIAL REDESIGN — page-scoped tokens & foundation
+   All tokens/overrides here are scoped under #pms-screener-main
+   so no other page on the site is affected. Forest green
+   (--g1/--g2/--neg from globals.css) is reused unchanged for
+   financial return coloring; these new tokens are for page
+   chrome only (background, borders, muted text, typography).
+══════════════════════════════════════════════════════ */
+#pms-screener-main {
+  --pms-bg: #f7f3ec;
+  --pms-surface: #fffdf8;
+  --pms-border: #e8e0d0;
+  --pms-muted: #9c8f78;
+  --pms-muted-2: #8a7d64;
+  --pms-text: #221c12;
+  --pms-serif: Georgia, 'Times New Roman', serif;
+  --pms-sans: Arial, Helvetica, sans-serif;
+
+  background: var(--pms-bg);
+  border-radius: 16px;
+  padding: 8px 20px 32px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+#pms-screener-main .page-header {
+  padding: 24px 8px 8px;
+}
+
+#pms-screener-main .page-eyebrow-text {
+  font-family: var(--pms-sans);
+}
+
+#pms-screener-main .page-title {
+  font-family: var(--pms-serif);
+  font-weight: 400;
+  color: var(--pms-text);
+}
+
+#pms-screener-main .page-title span {
+  font-weight: 700;
+}
+
+#pms-screener-main .page-subtitle {
+  font-family: var(--pms-sans);
+  color: var(--pms-muted-2);
+}
+
 /* ── Summary strip ── */
 .pms-stat-strip {
   display: grid;
