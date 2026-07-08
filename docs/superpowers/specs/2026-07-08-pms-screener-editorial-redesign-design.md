@@ -51,6 +51,18 @@ This line must be added to:
 
 No change needed to `PMSCompare.jsx` (already correct) or `layout.jsx` (JSON-LD already includes ARN/APRN as structured data).
 
+## Responsive Behavior
+
+The page must remain fully usable at every breakpoint already established in `pms-screener.css` (1100 / 900 / 680 / 480 / 360px), following existing patterns rather than inventing new ones:
+
+- **Stat bar** (new, replaces `.pms-stat-strip`): single 5-segment row on desktop. At ≤900px, wraps to a 2-column grid (matching the current `.pms-stat-strip` tablet behavior); at ≤680px/480px stays 2-column with reduced font size; at ≤360px collapses to 1 column. Vertical divider rules only render between segments that end up horizontally adjacent after wrapping.
+- **Featured + secondary top performer** (new, replaces `.top-perf-grid`): side-by-side (1.3fr/1fr) on desktop. At ≤900px, stacks vertically — full-width feature card on top, full-width secondary list below (this differs from the old grid's 2-column tablet behavior, since the feature card's large return figure needs full width to stay legible). At ≤480px, secondary list items keep single-row layout but with tighter padding.
+- **Controls bar** (search + pills): single row on desktop. At ≤680px, search goes full-width on its own row (reusing the existing `order: -1` pattern from `.pms-search`), and pills become a horizontally-scrollable row reusing the existing `.controls-bar` nowrap+overflow-x+hidden-scrollbar pattern. At ≤480px, pills wrap to a 2-per-row grid if scroll proves awkward in testing.
+- **Table**: reuse the existing `.pms-table-wrap { overflow-x: auto }` horizontal-scroll pattern with its fade-edge indicator (`::after`, shown ≤768px) — already fixed in a prior session and known to work. The 5Y/Inception toggle simply adds two more columns to the scrollable width; no new mobile-specific handling required. Grid view remains available as the more mobile-friendly alternative and keeps its existing responsive column counts (2-col ≤1100px/900px, 1-col ≤480px).
+- **Drawer, pagination, compare bar/modal**: no changes — already responsive (full-width slide-up drawer ≤900px, stacked pagination ≤680px, scrollable/full-screen compare UI) and confirmed working; only their colors/typography adjust to match the editorial palette, per the "What does NOT change" section above.
+
+Any new class introduced for the redesign must carry its own responsive rules at these same five breakpoints, placed alongside the existing per-breakpoint media query blocks (not scattered into new ad-hoc breakpoints).
+
 ## What does NOT change
 
 - Data fetching/merge logic (`getPmsDataMonths`, latest+prev month merge, `dataMonth` tagging) — untouched, this is a separate concern already shipped
