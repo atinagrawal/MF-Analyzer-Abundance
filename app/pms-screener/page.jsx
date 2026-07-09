@@ -439,20 +439,33 @@ function PMSScreenerInner() {
                 {!loading && !error && topPerformers.length > 0 && (
                     <div style={{ marginBottom: '28px' }}>
                         <div className="section-head">
-                            <span className="section-title">🏆 Top Performers · 1Y Return</span>
+                            <span className="section-title">🏆 Top Performer · 1Y Return</span>
                             <span className="section-badge">CLICK TO DEEP DIVE</span>
                         </div>
-                        <div className="top-perf-grid">
-                            {topPerformers.map((fund, i) => (
-                                <div key={fund.id} className="winner-card" onClick={() => setSelected(fund)}>
-                                    <div className="wc-label">#{i + 1} · {fund.portfolioManager}</div>
-                                    <div className="wc-name">{fund.strategyName}</div>
-                                    <div className="wc-footer">
-                                        <span className="wc-ret">{fmtRet(fund.ret1Y)}</span>
-                                        <span className="wc-aum">{fmtAum(fund.aum)}</span>
-                                    </div>
+                        <div className="pms-perf-layout">
+                            <div className="pms-perf-feature" onClick={() => setSelected(topPerformers[0])}>
+                                <div className="pf-rank">#1 {strategy} Strategy</div>
+                                <div className="pf-name">{topPerformers[0].strategyName}</div>
+                                <div className="pf-mgr">{topPerformers[0].portfolioManager}</div>
+                                <div className="pf-ret">{fmtRet(topPerformers[0].ret1Y)}<span>1Y return</span></div>
+                                <div className="pf-meta">
+                                    {fmtAum(topPerformers[0].aum)} AUM
+                                    {topPerformers[0].ret1Y !== null && ` · ${(topPerformers[0].ret1Y - BENCHMARK_1Y >= 0 ? '+' : '')}${(topPerformers[0].ret1Y - BENCHMARK_1Y).toFixed(1)}% vs Nifty 50`}
                                 </div>
-                            ))}
+                            </div>
+                            {topPerformers.length > 1 && (
+                                <div className="pms-perf-secondary">
+                                    {topPerformers.slice(1, 4).map(fund => (
+                                        <div key={fund.id} className="pf-sec-item" onClick={() => setSelected(fund)}>
+                                            <span>
+                                                <span className="pf-sec-name">{fund.strategyName}</span>
+                                                <span className="pf-sec-mgr">{fund.portfolioManager}</span>
+                                            </span>
+                                            <span className="pf-sec-ret">{fmtRet(fund.ret1Y)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
