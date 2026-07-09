@@ -275,14 +275,19 @@ function parseRiskometer(text) {
 // ── Fixed Income PDF — Hybrid Indices parser ────────────────────────────────
 // Source: niftyindices.com/Index_Dashboard_Fixed_Income/Index_Dashboard_FixedIncome_MAR2026.pdf
 //
-// pdf-parse v1.1.1 (the same version used for equity PDF) renders each hybrid row as:
+// pdf-parse renders each hybrid row with a run of 4 hyphens for the 4 missing
+// columns (Yield, MacD, Maturity, ModD), followed by the 6 return numbers.
+// The spacing around those hyphens has changed across pdf-parse/PDF-source
+// versions — seen both with zero spacing:
 //   "NIFTY 50 Hybrid Composite Debt 70:30 Index-----8.33-10.48-6.30-1.959.098.85"
-// The "----" is a 4-dash separator for 4 missing columns (Yield, MacD, Maturity, ModD).
-// The 5th visible dash is the minus sign of the 1M return value itself.
-// Multi-line names have data on the next line:
+// and with single-space spacing:
+//   "NIFTY 50 Hybrid Composite Debt 70:30 Index - - - - 1.84 6.02 -5.09 -2.81 8.28 8.89"
+// PLACEHOLDER_RUN below tolerates optional whitespace between each hyphen so
+// both variants parse correctly without needing to know which one is current.
+// Multi-line names have data on the next line, same tolerant matching applies:
 //   "NIFTY Multi Asset - Equity : Arbitrage : REITs/InvITs"
 //   "(50:40:10) Index"
-//   "-----5.90-6.45-3.223.7911.329.95"
+//   "- - - - 1.49 7.36 0.44 3.99 11.42 10.31"
 //
 // 6 return values per index: 1M, 3M, 6M, 1Y, 3Y, 5Y.
 // All other fields (Yield, Duration, Vol, Beta, P/E, P/B, DY) are null for hybrids.
@@ -310,10 +315,19 @@ function parseFiHybridText(text) {
 
   const STOP = /^(Fixed Income Indices Dashboard|About NSE|Index Statistics and|www\.|Contact:|Disclaimer)/;
 
-  // Strip the leading 4-dash separator, then extract all signed floats with 2dp
+  // The 4 missing columns (Yield, MacD, Maturity, ModD) render as a run of 4
+  // hyphens. Different pdf-parse/PDF-source combinations have rendered this
+  // with zero spacing ("Index----8.33...") and with single-space spacing
+  // ("Index - - - - 8.33...") — allow optional whitespace between each hyphen
+  // so both forms match. Single hyphens inside fund names (e.g. "8-13 yr",
+  // "G-Sec") never appear 4-in-a-row, so this stays unambiguous.
+  const PLACEHOLDER_RUN = /-\s*-\s*-\s*-\s*/;
+
+  // Numbers are always signed floats with exactly 2 decimals — this pattern
+  // never matches a lone hyphen placeholder, so it works regardless of the
+  // spacing variant above.
   function extractReturns(dataStr) {
-    const after = dataStr.replace(/^-{4}/, '');
-    return (after.match(/-?\d+\.\d{2}/g) || []).map(Number);
+    return (dataStr.match(/-?\d+\.\d{2}/g) || []).map(Number);
   }
 
   let i = startIdx + 1;
@@ -321,8 +335,8 @@ function parseFiHybridText(text) {
     const line = lines[i];
     if (STOP.test(line)) break;
 
-    // Standalone data line (for multi-line names): 4+ hyphens then a digit or minus+digit
-    if (/^-{4,}-?\d/.test(line)) {
+    // Standalone data line (for multi-line names): placeholder run then a digit or minus+digit
+    if (new RegExp('^' + PLACEHOLDER_RUN.source + '-?\\d').test(line)) {
       if (hybrids.length > 0 && hybrids[hybrids.length - 1]._pending) {
         const nums = extractReturns(line);
         if (nums.length >= 6) {
@@ -336,8 +350,8 @@ function parseFiHybridText(text) {
     }
 
     if (line.startsWith('NIFTY')) {
-      // 4+ consecutive hyphens mark the data separator (single hyphens in names like "8-13" are safe)
-      const dashIdx = line.search(/----/);
+      // The placeholder run marks the data separator
+      const dashIdx = line.search(PLACEHOLDER_RUN);
 
       if (dashIdx !== -1) {
         // Single-line: name + ---- + data concatenated on same line
