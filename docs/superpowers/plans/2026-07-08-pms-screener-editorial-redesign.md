@@ -1716,6 +1716,679 @@ If no fixes were needed, skip this commit — Task 8 was a verification-only pas
 
 ---
 
+### Task 9: Extend editorial palette to drawer, grid view, and pagination
+
+**Added after the final whole-branch review** flagged a gap between the design spec (which said the drawer and grid view should get "the same lighter visual treatment" as the rest of the page) and Tasks 1-8 (which never actually restyled them) — the drawer, grid-card view, and pagination controls still used the pre-redesign `--surface`/`--border`/`--muted`/`--text`/`--s2`/`--s3` tokens and mono-everywhere typography, so opening the drawer or switching to Grid view dropped the user out of the cream/editorial look back into the original green-tinted chrome.
+
+**Files:**
+- Modify: `app/pms-screener/pms-screener.css` (drawer section, grid-card section, pagination section)
+
+**Interfaces:**
+- No JSX changes — purely a token/typography substitution in CSS, following the exact same pattern already established in Tasks 1-7: chrome (backgrounds, borders, muted/label text, headings) moves to `--pms-*` tokens and `var(--pms-sans)`/`var(--pms-serif)`; financial gain/loss colors (`--g1`, `--g2`, `--g3`, `--g4`, `--neg`, `--g-xlight`, and any gradient using them) and all numeric VALUE fields' mono font stay completely untouched.
+
+- [ ] **Step 1: Restyle the drawer**
+
+In `app/pms-screener/pms-screener.css`, replace the drawer rules as follows.
+
+Replace `.pms-drawer` (background/border only — everything else unchanged):
+
+```css
+.pms-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 100%;
+  max-width: 520px;
+  height: 100vh;
+  height: 100dvh;
+  /* dynamic viewport height for mobile */
+  background: var(--surface);
+  border-left: 1.5px solid var(--border);
+  box-shadow: -12px 0 60px rgba(27, 94, 32, .12);
+  z-index: 201;
+  transform: translateX(100%);
+  transition: transform .45s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+```
+
+with:
+
+```css
+.pms-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 100%;
+  max-width: 520px;
+  height: 100vh;
+  height: 100dvh;
+  /* dynamic viewport height for mobile */
+  background: var(--pms-surface);
+  border-left: 1px solid var(--pms-border);
+  box-shadow: -12px 0 60px rgba(27, 94, 32, .12);
+  z-index: 201;
+  transform: translateX(100%);
+  transition: transform .45s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+```
+
+Replace `.pd-header`:
+
+```css
+.pd-header {
+  padding: 28px 32px 24px;
+  background: var(--s2);
+  border-bottom: 1.5px solid var(--border);
+  position: relative;
+  flex-shrink: 0;
+}
+```
+
+with:
+
+```css
+.pd-header {
+  padding: 28px 32px 24px;
+  background: var(--pms-bg);
+  border-bottom: 1px solid var(--pms-border);
+  position: relative;
+  flex-shrink: 0;
+}
+```
+
+Replace `.pd-close` and `.pd-close:hover`:
+
+```css
+.pd-close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  width: 40px;
+  height: 40px;
+  /* larger touch target */
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  font-size: 18px;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: .15s;
+  line-height: 1;
+}
+
+.pd-close:hover {
+  background: var(--s3);
+  color: var(--text);
+  transform: scale(1.05);
+}
+```
+
+with:
+
+```css
+.pd-close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  width: 40px;
+  height: 40px;
+  /* larger touch target */
+  background: var(--pms-surface);
+  border: 1px solid var(--pms-border);
+  border-radius: 50%;
+  font-size: 18px;
+  color: var(--pms-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: .15s;
+  line-height: 1;
+}
+
+.pd-close:hover {
+  background: var(--pms-bg);
+  color: var(--pms-text);
+  transform: scale(1.05);
+}
+```
+
+Replace `.pd-provider`:
+
+```css
+.pd-provider {
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-family: 'JetBrains Mono', monospace;
+}
+```
+
+with:
+
+```css
+.pd-provider {
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--pms-muted);
+  margin-bottom: 6px;
+  font-family: var(--pms-sans);
+}
+```
+
+Replace `.pd-name` (the fund/strategy name heading — give it the same serif treatment as `.pf-name`/`.pms-strat-name`; the green accent moves to only the return figure elsewhere in the drawer, which is unaffected by this rule):
+
+```css
+.pd-name {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--g1);
+  letter-spacing: -.3px;
+  line-height: 1.2;
+  margin-bottom: 20px;
+}
+```
+
+with:
+
+```css
+.pd-name {
+  font-family: var(--pms-serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--pms-text);
+  letter-spacing: 0;
+  line-height: 1.2;
+  margin-bottom: 20px;
+}
+```
+
+Replace `.pd-metric`:
+
+```css
+.pd-metric {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 10px;
+  text-align: center;
+}
+```
+
+with:
+
+```css
+.pd-metric {
+  background: var(--pms-surface);
+  border: 1px solid var(--pms-border);
+  border-radius: 10px;
+  padding: 12px 10px;
+  text-align: center;
+}
+```
+
+Replace `.pdm-label` and `.pdm-val`:
+
+```css
+.pdm-label {
+  font-size: .5rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 4px;
+}
+
+.pdm-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+```
+
+with:
+
+```css
+.pdm-label {
+  font-size: .5rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--pms-muted);
+  font-family: var(--pms-sans);
+  margin-bottom: 4px;
+}
+
+.pdm-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--pms-text);
+}
+```
+
+Note: `.pdm-val`'s color is set here as a base default; the drawer's inline `style={{ color: ... }}` on the 1Y Return and vs Nifty 50 metrics (in `page.jsx`, unchanged by this task) overrides it with `var(--g2)`/`var(--neg)` for those two specific values — that inline override is untouched and still correct.
+
+Replace `.pd-section-head`:
+
+```css
+.pd-section-head {
+  font-size: .6rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 14px;
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+```
+
+with:
+
+```css
+.pd-section-head {
+  font-size: .6rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--pms-muted);
+  font-family: var(--pms-sans);
+  margin-bottom: 14px;
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+```
+
+Replace `.pd-ret-lbl`:
+
+```css
+.pd-ret-lbl {
+  font-size: .62rem;
+  font-weight: 700;
+  color: var(--muted);
+  width: 80px;
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+```
+
+with:
+
+```css
+.pd-ret-lbl {
+  font-size: .62rem;
+  font-weight: 700;
+  color: var(--pms-muted);
+  width: 80px;
+  flex-shrink: 0;
+  font-family: var(--pms-sans);
+}
+```
+
+Replace `.sim-card` and `.sim-label` (background/border/muted only — `.sim-result`/`.sim-gain` keep their financial `--g1`/`--g2`/`--neg` colors, untouched):
+
+```css
+.sim-card {
+  background: var(--g-xlight);
+  border: 1.5px solid var(--border2);
+  border-radius: var(--r);
+  padding: 20px;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.sim-label {
+  font-size: .72rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+```
+
+with:
+
+```css
+.sim-card {
+  background: var(--g-xlight);
+  border: 1.5px solid var(--border2);
+  border-radius: var(--r);
+  padding: 20px;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.sim-label {
+  font-size: .72rem;
+  color: var(--pms-muted);
+  margin-bottom: 6px;
+  line-height: 1.5;
+  font-family: var(--pms-sans);
+}
+```
+
+(`.sim-card`'s `--g-xlight`/`--border2` are deliberately left as-is — they signal "this is a highlighted result," which is a financial-emphasis surface, not page chrome.)
+
+Replace `.pd-source`:
+
+```css
+.pd-source {
+  font-size: .58rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-top: 24px;
+  font-family: 'JetBrains Mono', monospace;
+}
+```
+
+with:
+
+```css
+.pd-source {
+  font-size: .58rem;
+  color: var(--pms-muted);
+  line-height: 1.6;
+  margin-top: 24px;
+  font-family: var(--pms-sans);
+}
+```
+
+- [ ] **Step 2: Restyle the grid card view**
+
+Replace `.pms-grid-card`:
+
+```css
+.pms-grid-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  padding: 20px 20px 16px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+```
+
+with:
+
+```css
+.pms-grid-card {
+  background: var(--pms-surface);
+  border: 1px solid var(--pms-border);
+  border-radius: var(--r);
+  padding: 20px 20px 16px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+```
+
+Replace `.gc-name`, `.gc-mgr`, `.gc-divider`, `.gc-m-label`:
+
+```css
+.gc-name {
+  font-weight: 800;
+  font-size: .88rem;
+  color: var(--text);
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+
+.gc-mgr {
+  font-size: .62rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 14px;
+}
+
+.gc-divider {
+  height: 1px;
+  background: var(--border);
+  margin-bottom: 14px;
+}
+```
+
+```css
+.gc-m-label {
+  font-size: .52rem;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+```
+
+with:
+
+```css
+.gc-name {
+  font-family: var(--pms-serif);
+  font-weight: 700;
+  font-size: .92rem;
+  color: var(--pms-text);
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+
+.gc-mgr {
+  font-family: var(--pms-sans);
+  font-size: .62rem;
+  color: var(--pms-muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 14px;
+}
+
+.gc-divider {
+  height: 1px;
+  background: var(--pms-border);
+  margin-bottom: 14px;
+}
+```
+
+```css
+.gc-m-label {
+  font-size: .52rem;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--pms-muted);
+  font-family: var(--pms-sans);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+```
+
+Note: `.gc-m-val` keeps its `'JetBrains Mono', monospace` font unchanged (it renders numeric return values via inline `cagr-pos`/`cagr-neg` coloring in `page.jsx`, untouched) — do not modify `.gc-m-val`.
+
+- [ ] **Step 3: Restyle pagination**
+
+Replace `.pms-pagination`:
+
+```css
+.pms-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1.5px solid var(--border);
+  background: var(--s2);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+```
+
+with:
+
+```css
+.pms-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid var(--pms-border);
+  background: var(--pms-bg);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+```
+
+Replace `.pg-info`:
+
+```css
+.pg-info {
+  font-size: .66rem;
+  font-weight: 700;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+```
+
+with:
+
+```css
+.pg-info {
+  font-size: .66rem;
+  font-weight: 700;
+  color: var(--pms-muted);
+  font-family: var(--pms-sans);
+}
+```
+
+Replace `.pg-btn`, `.pg-btn:hover:not(:disabled)` (the `.active` state keeps `--g1`, untouched):
+
+```css
+.pg-btn {
+  padding: 6px 11px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Raleway', sans-serif;
+  transition: .15s;
+  min-width: 36px;
+  min-height: 36px;
+  text-align: center;
+}
+
+.pg-btn:hover:not(:disabled) {
+  background: var(--s3);
+  border-color: var(--border2);
+  color: var(--g2);
+}
+```
+
+with:
+
+```css
+.pg-btn {
+  padding: 6px 11px;
+  border: 1px solid var(--pms-border);
+  border-radius: 7px;
+  background: var(--pms-surface);
+  color: var(--pms-muted);
+  font-size: .72rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--pms-sans);
+  transition: .15s;
+  min-width: 36px;
+  min-height: 36px;
+  text-align: center;
+}
+
+.pg-btn:hover:not(:disabled) {
+  background: var(--pms-bg);
+  border-color: var(--g3);
+  color: var(--g2);
+}
+```
+
+Replace `.pg-size-sel`:
+
+```css
+.pg-size-sel {
+  padding: 6px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: .72rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Raleway', sans-serif;
+  outline: none;
+  height: 36px;
+}
+```
+
+with:
+
+```css
+.pg-size-sel {
+  padding: 6px 10px;
+  border: 1px solid var(--pms-border);
+  border-radius: 7px;
+  background: var(--pms-surface);
+  color: var(--pms-text);
+  font-size: .72rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--pms-sans);
+  outline: none;
+  height: 36px;
+}
+```
+
+- [ ] **Step 4: Verify in browser (or via dev-server compile + code trace if no browser is available)**
+
+Confirm:
+- The drawer's background, borders, close button, labels, and the fund-name heading now use the cream/editorial palette and serif name treatment, matching the main page
+- The 1Y Return / vs Nifty 50 metric values in the drawer still color green/red via their existing inline `style` (unaffected by this task)
+- The wealth-simulation card's result/gain figures still color via `--g1`/`--g2`/`--neg` (unaffected)
+- Grid view cards now show serif strategy names and cream/editorial chrome, matching the table view
+- Pagination (both table and grid view) now uses the lighter pill/editorial treatment, with the active page button still filled forest green
+- `npm run dev` compiles clean
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add app/pms-screener/pms-screener.css
+git commit -m "style(pms-screener): extend editorial palette to drawer, grid view, and pagination"
+```
+
+---
+
 ## Plan Self-Review Notes
 
 - **Spec coverage:** Editorial direction + forest green (Task 1), stat strip→bar (Task 2), top performers featured+secondary (Task 3), controls bar pills (Task 4), table 6-col default + toggle (Task 5), regulatory disclosure (Task 6), FAQ typography (implied by "restyled to match new typography" in spec, Task 7), full responsive behavior (Task 8 + responsive rules folded into Tasks 2-5). Compare bar/modal and data-fetch/API logic are explicitly out of scope per spec and untouched throughout.
