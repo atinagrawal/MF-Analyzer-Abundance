@@ -170,6 +170,7 @@ function PMSScreenerInner() {
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [extraCols, setExtraCols] = useState(() => new Set());
     const [benchmarks, setBenchmarks] = useState(null);
+    const [drawerBenchmark, setDrawerBenchmark] = useState({ loading: false, value: null });
 
     function toggleExtraCol(key) {
         setExtraCols(prev => {
@@ -285,6 +286,37 @@ function PMSScreenerInner() {
             })
             .catch(() => setBenchmarks(null));
     }, []);
+
+    // ── Drawer: per-strategy benchmark — lazy-fetched only when the drawer
+    // opens for that strategy (each one is a separate APMI request, unlike
+    // the bulk /api/pms-data table, so we don't fetch these upfront). Cached
+    // server-side per IAID, so re-opening the same strategy is instant.
+    useEffect(() => {
+        if (!selected?.apmiLink) {
+            setDrawerBenchmark({ loading: false, value: null });
+            return;
+        }
+        let iaid;
+        try {
+            iaid = new URL(selected.apmiLink).searchParams.get('IAID');
+        } catch {
+            iaid = null;
+        }
+        if (!iaid) {
+            setDrawerBenchmark({ loading: false, value: null });
+            return;
+        }
+        let cancelled = false;
+        setDrawerBenchmark({ loading: true, value: null });
+        fetch(`/api/pms-benchmark?iaid=${encodeURIComponent(iaid)}`)
+            .then(r => r.json())
+            .then(json => {
+                if (cancelled) return;
+                setDrawerBenchmark({ loading: false, value: json.status === 'success' ? json.benchmark : null });
+            })
+            .catch(() => { if (!cancelled) setDrawerBenchmark({ loading: false, value: null }); });
+        return () => { cancelled = true; };
+    }, [selected]);
 
     // ── Sort ──────────────────────────────────────────────────────────────
     function handleSort(col) {
@@ -925,6 +957,14 @@ function PMSScreenerInner() {
                             </div>
                         </div>
                         <div className="pd-body">
+                            {(drawerBenchmark.loading || drawerBenchmark.value) && (
+                                <div className="pd-benchmark">
+                                    <span className="pd-benchmark-label">Benchmark</span>
+                                    <span className="pd-benchmark-val">
+                                        {drawerBenchmark.loading ? 'Loading…' : drawerBenchmark.value}
+                                    </span>
+                                </div>
+                            )}
                             <div className="pd-section-head">Returns Across All Time Horizons</div>
                             <div className="pd-ret-bars">
                                 {retPeriods.map(rp => (

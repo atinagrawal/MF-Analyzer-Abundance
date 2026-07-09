@@ -939,6 +939,33 @@
   flex: 1;
 }
 
+/* Per-strategy benchmark — lazy-fetched from APMI's detail page when the
+   drawer opens; shown above the returns breakdown for context. */
+.pd-benchmark {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--pms-border);
+}
+
+.pd-benchmark-label {
+  font-family: var(--pms-sans);
+  font-size: .6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--pms-muted);
+}
+
+.pd-benchmark-val {
+  font-family: var(--pms-serif);
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--pms-text);
+}
+
 .pd-section-head {
   font-size: .6rem;
   font-weight: 800;
