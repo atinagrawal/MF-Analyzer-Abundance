@@ -1050,24 +1050,34 @@
   border-radius: 10px;
 }
 
-/* Source line (inline) */
+/* Source line (two-line layout) */
 .src-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: .6rem;
-  color: var(--muted);
-  font-family: 'JetBrains Mono', monospace;
   margin-top: 8px;
   margin-bottom: 28px;
 }
 
+.src-line-main {
+  font-size: .6rem;
+  color: var(--pms-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.src-line-reg {
+  font-size: .58rem;
+  color: var(--pms-muted-2);
+  font-family: var(--pms-sans);
+  margin-top: 3px;
+}
+
 .src-dot {
+  display: inline-block;
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--g3);
   flex-shrink: 0;
+  margin-right: 8px;
+  margin-top: 2px;
 }
 
 /* ── Pagination ── */
