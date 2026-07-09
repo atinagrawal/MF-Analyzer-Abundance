@@ -689,8 +689,8 @@
 }
 
 .pms-grid-card {
-  background: var(--surface);
-  border: 1.5px solid var(--border);
+  background: var(--pms-surface);
+  border: 1px solid var(--pms-border);
   border-radius: var(--r);
   padding: 20px 20px 16px;
   box-shadow: var(--shadow);
@@ -724,16 +724,18 @@
 }
 
 .gc-name {
-  font-weight: 800;
-  font-size: .88rem;
-  color: var(--text);
+  font-family: var(--pms-serif);
+  font-weight: 700;
+  font-size: .92rem;
+  color: var(--pms-text);
   margin-bottom: 3px;
   line-height: 1.3;
 }
 
 .gc-mgr {
+  font-family: var(--pms-sans);
   font-size: .62rem;
-  color: var(--muted);
+  color: var(--pms-muted);
   text-transform: uppercase;
   letter-spacing: .4px;
   margin-bottom: 14px;
@@ -741,7 +743,7 @@
 
 .gc-divider {
   height: 1px;
-  background: var(--border);
+  background: var(--pms-border);
   margin-bottom: 14px;
 }
 
@@ -759,8 +761,8 @@
   font-size: .52rem;
   text-transform: uppercase;
   letter-spacing: .6px;
-  color: var(--muted);
-  font-family: 'JetBrains Mono', monospace;
+  color: var(--pms-muted);
+  font-family: var(--pms-sans);
   font-weight: 700;
   margin-bottom: 4px;
 }
@@ -798,8 +800,8 @@
   height: 100vh;
   height: 100dvh;
   /* dynamic viewport height for mobile */
-  background: var(--surface);
-  border-left: 1.5px solid var(--border);
+  background: var(--pms-surface);
+  border-left: 1px solid var(--pms-border);
   box-shadow: -12px 0 60px rgba(27, 94, 32, .12);
   z-index: 201;
   transform: translateX(100%);
@@ -822,8 +824,8 @@
 
 .pd-header {
   padding: 28px 32px 24px;
-  background: var(--s2);
-  border-bottom: 1.5px solid var(--border);
+  background: var(--pms-bg);
+  border-bottom: 1px solid var(--pms-border);
   position: relative;
   flex-shrink: 0;
 }
@@ -835,11 +837,11 @@
   width: 40px;
   height: 40px;
   /* larger touch target */
-  background: var(--surface);
-  border: 1.5px solid var(--border);
+  background: var(--pms-surface);
+  border: 1px solid var(--pms-border);
   border-radius: 50%;
   font-size: 18px;
-  color: var(--muted);
+  color: var(--pms-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -849,8 +851,8 @@
 }
 
 .pd-close:hover {
-  background: var(--s3);
-  color: var(--text);
+  background: var(--pms-bg);
+  color: var(--pms-text);
   transform: scale(1.05);
 }
 
@@ -865,16 +867,17 @@
   font-weight: 800;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--pms-muted);
   margin-bottom: 6px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--pms-sans);
 }
 
 .pd-name {
+  font-family: var(--pms-serif);
   font-size: 1.4rem;
-  font-weight: 800;
-  color: var(--g1);
-  letter-spacing: -.3px;
+  font-weight: 700;
+  color: var(--pms-text);
+  letter-spacing: 0;
   line-height: 1.2;
   margin-bottom: 20px;
 }
@@ -886,8 +889,8 @@
 }
 
 .pd-metric {
-  background: var(--surface);
-  border: 1.5px solid var(--border);
+  background: var(--pms-surface);
+  border: 1px solid var(--pms-border);
   border-radius: 10px;
   padding: 12px 10px;
   text-align: center;
@@ -898,8 +901,8 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: var(--muted);
-  font-family: 'JetBrains Mono', monospace;
+  color: var(--pms-muted);
+  font-family: var(--pms-sans);
   margin-bottom: 4px;
 }
 
@@ -907,7 +910,7 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 1rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--pms-text);
 }
 
 .pd-body {
@@ -922,8 +925,8 @@
   font-weight: 800;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: var(--muted);
-  font-family: 'JetBrains Mono', monospace;
+  color: var(--pms-muted);
+  font-family: var(--pms-sans);
   margin-bottom: 14px;
   margin-top: 24px;
   display: flex;
@@ -956,10 +959,10 @@
 .pd-ret-lbl {
   font-size: .62rem;
   font-weight: 700;
-  color: var(--muted);
+  color: var(--pms-muted);
   width: 80px;
   flex-shrink: 0;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--pms-sans);
 }
 
 .pd-ret-bar-wrap {
@@ -1001,9 +1004,10 @@
 
 .sim-label {
   font-size: .72rem;
-  color: var(--muted);
+  color: var(--pms-muted);
   margin-bottom: 6px;
   line-height: 1.5;
+  font-family: var(--pms-sans);
 }
 
 .sim-result {
@@ -1028,10 +1032,10 @@
 /* Source line */
 .pd-source {
   font-size: .58rem;
-  color: var(--muted);
+  color: var(--pms-muted);
   line-height: 1.6;
   margin-top: 24px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--pms-sans);
 }
 
 /* Loading skeleton */
@@ -1086,8 +1090,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
-  border-top: 1.5px solid var(--border);
-  background: var(--s2);
+  border-top: 1px solid var(--pms-border);
+  background: var(--pms-bg);
   flex-wrap: wrap;
   gap: 10px;
 }
@@ -1095,8 +1099,8 @@
 .pg-info {
   font-size: .66rem;
   font-weight: 700;
-  color: var(--muted);
-  font-family: 'JetBrains Mono', monospace;
+  color: var(--pms-muted);
+  font-family: var(--pms-sans);
 }
 
 .pg-controls {
@@ -1108,14 +1112,14 @@
 
 .pg-btn {
   padding: 6px 11px;
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--pms-border);
   border-radius: 7px;
-  background: var(--surface);
-  color: var(--muted);
+  background: var(--pms-surface);
+  color: var(--pms-muted);
   font-size: .72rem;
   font-weight: 700;
   cursor: pointer;
-  font-family: 'Raleway', sans-serif;
+  font-family: var(--pms-sans);
   transition: .15s;
   min-width: 36px;
   min-height: 36px;
@@ -1123,8 +1127,8 @@
 }
 
 .pg-btn:hover:not(:disabled) {
-  background: var(--s3);
-  border-color: var(--border2);
+  background: var(--pms-bg);
+  border-color: var(--g3);
   color: var(--g2);
 }
 
@@ -1141,14 +1145,14 @@
 
 .pg-size-sel {
   padding: 6px 10px;
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--pms-border);
   border-radius: 7px;
-  background: var(--surface);
-  color: var(--text);
+  background: var(--pms-surface);
+  color: var(--pms-text);
   font-size: .72rem;
   font-weight: 600;
   cursor: pointer;
-  font-family: 'Raleway', sans-serif;
+  font-family: var(--pms-sans);
   outline: none;
   height: 36px;
 }
