@@ -1582,11 +1582,11 @@
 }
 
 .pms-faq-title {
-  font-family: 'Raleway', sans-serif;
-  font-size: 1.35rem;
-  font-weight: 800;
+  font-family: var(--pms-serif);
+  font-size: 1.5rem;
+  font-weight: 700;
   color: var(--g1);
-  letter-spacing: -.3px;
+  letter-spacing: 0;
   margin: 0 0 6px;
 }
 
