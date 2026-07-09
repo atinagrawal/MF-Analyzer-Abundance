@@ -28,11 +28,30 @@ import { PMS_FAQ } from '@/lib/pmsFaq';
 import './pms-screener.css';
 
 // ── Constants ─────────────────────────────────────────────────────────────
-const BENCHMARK_1Y = 18.5;
-const PAGE_SIZE_OPTIONS = [25, 50, 100];
+const PAGE_SIZE_OPTIONS = [15, 25, 50];
 const AUM_THRESHOLD = { Equity: 50, Debt: 10, 'Multi Asset': 10, Hybrid: 10 };
 const STRATEGIES = ['Equity', 'Debt', 'Multi Asset', 'Hybrid'];
 const MAX_COMPARE = 3;
+
+// Return-period columns in display order. AUM/1M/3M/6M/1Y/3Y are always
+// visible; the rest are opt-in via checkboxes in the advanced filters panel.
+const RETURN_COLUMNS = [
+    { key: 'ret1M',        label: '1M',        optional: false },
+    { key: 'ret3M',        label: '3M',        optional: false },
+    { key: 'ret6M',        label: '6M',        optional: false },
+    { key: 'ret1Y',        label: '1Y',        optional: false },
+    { key: 'ret2Y',        label: '2Y',        optional: true },
+    { key: 'ret3Y',        label: '3Y',        optional: false },
+    { key: 'ret4Y',        label: '4Y',        optional: true },
+    { key: 'ret5Y',        label: '5Y',        optional: true },
+    { key: 'retInception', label: 'Inception', optional: true },
+];
+const OPTIONAL_RETURN_COLUMNS = RETURN_COLUMNS.filter(c => c.optional);
+
+// Broad-market TRI benchmarks shown for reference (live from /api/index-dashboard).
+// APMI doesn't attribute one "correct" benchmark per PMS category, so these are
+// shown as general reference points rather than a pass/fail comparison.
+const BENCHMARK_NAMES = ['NIFTY 50', 'Nifty 500', 'Nifty Smallcap 250', 'Nifty Midcap 150'];
 
 // PMS_FAQ is imported from lib/pmsFaq.js — single source of truth for HTML accordion + JSON-LD.
 
@@ -85,12 +104,12 @@ function PMSFaqItem({ question, answer }) {
 
 // ── Sort header — defined outside the component so React doesn't treat
 // it as a new component type on every render (which causes re-mounts).
-function ThSort({ col, label, left, sortCol, sortDir, onSort }) {
+function ThSort({ col, label, left, highlight, sortCol, sortDir, onSort }) {
     return (
         <th
             onClick={() => onSort(col)}
             className={sortCol === col ? 'col-active' : ''}
-            style={left ? { textAlign: 'left' } : {}}
+            style={{ ...(left ? { textAlign: 'left' } : {}), ...(highlight ? { color: 'var(--g2)' } : {}) }}
         >
             {label} <span className="sort-icon">{sortCol === col ? (sortDir === -1 ? '▼' : '▲') : '⇅'}</span>
         </th>
@@ -144,12 +163,21 @@ function PMSScreenerInner() {
     const [sortCol, setSortCol] = useState('ret1Y');
     const [sortDir, setSortDir] = useState(-1);
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(50);
+    const [pageSize, setPageSize] = useState(15);
     const [showSmallAum, setShowSmallAum] = useState(false);
     const [compareList, setCompareList] = useState([]);
     const [showCompare, setShowCompare] = useState(false);
     const [showAdvanced, setShowAdvanced] = useState(false);
-    const [showAllColumns, setShowAllColumns] = useState(false);
+    const [extraCols, setExtraCols] = useState(() => new Set());
+    const [benchmarks, setBenchmarks] = useState(null);
+
+    function toggleExtraCol(key) {
+        setExtraCols(prev => {
+            const next = new Set(prev);
+            next.has(key) ? next.delete(key) : next.add(key);
+            return next;
+        });
+    }
 
     // Advanced filter state
     const [aumTier, setAumTier] = useState('all');
@@ -241,6 +269,23 @@ function PMSScreenerInner() {
         setShowSmallAum(hasAdvanced);
     }, [aumTier, minAumFilter, maxAumFilter, minRet]);
 
+    // ── Benchmark data — live TRI returns, fetched once (not per-strategy) ──
+    useEffect(() => {
+        fetch('/api/index-dashboard')
+            .then(r => r.json())
+            .then(json => {
+                if (!json?.indices) return;
+                const found = BENCHMARK_NAMES
+                    .map(name => {
+                        const idx = json.indices.find(i => i.name.toLowerCase() === name.toLowerCase());
+                        return idx ? { name, r1y: idx.returns.r1y, r3y: idx.returns.r3y, r5y: idx.returns.r5y } : null;
+                    })
+                    .filter(Boolean);
+                setBenchmarks(found.length ? found : null);
+            })
+            .catch(() => setBenchmarks(null));
+    }, []);
+
     // ── Sort ──────────────────────────────────────────────────────────────
     function handleSort(col) {
         if (sortCol === col) setSortDir(d => d * -1);
@@ -319,26 +364,30 @@ function PMSScreenerInner() {
         const valid1Y = visible.filter(d => d.ret1Y !== null);
         const avg1Y = valid1Y.length ? (valid1Y.reduce((s, d) => s + d.ret1Y, 0) / valid1Y.length).toFixed(1) : null;
         const totalAum = visible.reduce((s, d) => s + (d.aum ?? 0), 0);
-        const beatBenchmark = valid1Y.filter(d => d.ret1Y > BENCHMARK_1Y).length;
         const latestCount = visible.filter(d => d.dataMonth === 'latest').length;
         return {
             count: visible.length,
             total: data.length,
             avg1Y,
             totalAum,
-            beatBenchmark,
             hiddenCount: data.length - visible.length,
             latestCount,
             prevCount: visible.length - latestCount,
         };
     }, [data, showSmallAum, smallAumProviders]);
 
-    const topPerformers = useMemo(() =>
-        [...filtered].filter(d => d.ret1Y !== null).sort((a, b) => b.ret1Y - a.ret1Y).slice(0, 4),
-        [filtered]
-    );
+    const topByPeriod = useMemo(() => {
+        const rank = field => [...filtered].filter(d => d[field] !== null).sort((a, b) => b[field] - a[field]).slice(0, 3);
+        return { ret1Y: rank('ret1Y'), ret3Y: rank('ret3Y'), ret5Y: rank('ret5Y') };
+    }, [filtered]);
 
     const maxAum = useMemo(() => Math.max(...filtered.map(d => d.aum ?? 0), 1), [filtered]);
+
+    // ── Table column visibility ──────────────────────────────────────────
+    const visibleReturnCols = useMemo(() =>
+        RETURN_COLUMNS.filter(c => !c.optional || extraCols.has(c.key)),
+        [extraCols]
+    );
 
     // ── Drawer ret periods ────────────────────────────────────────────────
     const retPeriods = selected ? [
@@ -417,11 +466,6 @@ function PMSScreenerInner() {
                             <div className="pss-sub">Across visible strategies</div>
                         </div>
                         <div className="pms-stat-seg">
-                            <div className="pss-label">Beat Nifty 50</div>
-                            <div className="pss-val">{stats.beatBenchmark}</div>
-                            <div className="pss-sub">of {stats.count} vs {BENCHMARK_1Y}% benchmark</div>
-                        </div>
-                        <div className="pms-stat-seg">
                             <div className="pss-label">Combined AUM</div>
                             <div className="pss-val">{fmtAum(stats.totalAum)}</div>
                             <div className="pss-sub">Under management</div>
@@ -436,37 +480,48 @@ function PMSScreenerInner() {
                     </div>
                 )}
 
-                {/* ── Top 4 Performers ── */}
-                {!loading && !error && topPerformers.length > 0 && (
+                {/* ── Benchmark reference panel — live TRI data, no pass/fail framing ── */}
+                {!loading && !error && benchmarks && (
+                    <div className="pms-bench-bar">
+                        <span className="pms-bench-label">Broad Market TRI</span>
+                        {benchmarks.map(b => (
+                            <div key={b.name} className="pms-bench-item">
+                                <span className="pms-bench-name">{b.name}</span>
+                                <span className="pms-bench-ret">1Y {fmtRet(b.r1y)}</span>
+                                <span className="pms-bench-ret">3Y {fmtRet(b.r3y)}</span>
+                                <span className="pms-bench-ret">5Y {fmtRet(b.r5y)}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* ── Top Performers by period ── */}
+                {!loading && !error && (topByPeriod.ret1Y.length > 0 || topByPeriod.ret3Y.length > 0 || topByPeriod.ret5Y.length > 0) && (
                     <div style={{ marginBottom: '28px' }}>
                         <div className="section-head">
-                            <span className="section-title">🏆 Top Performer · 1Y Return</span>
+                            <span className="section-title">🏆 Top Performers · By Period</span>
                             <span className="section-badge">CLICK TO DEEP DIVE</span>
                         </div>
-                        <div className="pms-perf-layout">
-                            <div className="pms-perf-feature" onClick={() => setSelected(topPerformers[0])}>
-                                <div className="pf-rank">#1 {strategy} Strategy</div>
-                                <div className="pf-name">{topPerformers[0].strategyName}</div>
-                                <div className="pf-mgr">{topPerformers[0].portfolioManager}</div>
-                                <div className="pf-ret">{fmtRet(topPerformers[0].ret1Y)}<span>1Y return</span></div>
-                                <div className="pf-meta">
-                                    {fmtAum(topPerformers[0].aum)} AUM
-                                    {topPerformers[0].ret1Y !== null && ` · ${(topPerformers[0].ret1Y - BENCHMARK_1Y >= 0 ? '+' : '')}${(topPerformers[0].ret1Y - BENCHMARK_1Y).toFixed(1)}% vs Nifty 50`}
-                                </div>
-                            </div>
-                            {topPerformers.length > 1 && (
-                                <div className="pms-perf-secondary">
-                                    {topPerformers.slice(1, 4).map(fund => (
-                                        <div key={fund.id} className="pf-sec-item" onClick={() => setSelected(fund)}>
+                        <div className="pms-mini-grid">
+                            {[
+                                { period: 'ret1Y', title: '1 Year',  list: topByPeriod.ret1Y },
+                                { period: 'ret3Y', title: '3 Years', list: topByPeriod.ret3Y },
+                                { period: 'ret5Y', title: '5 Years', list: topByPeriod.ret5Y },
+                            ].map(col => (
+                                <div key={col.period} className="pms-mini-col">
+                                    <div className="pms-mini-title">{col.title}</div>
+                                    {col.list.length === 0 && <div className="pms-mini-empty">No data</div>}
+                                    {col.list.map((fund, i) => (
+                                        <div key={fund.id} className="pms-mini-item" onClick={() => setSelected(fund)}>
                                             <span>
-                                                <span className="pf-sec-name">{fund.strategyName}</span>
-                                                <span className="pf-sec-mgr">{fund.portfolioManager}</span>
+                                                <span className="pms-mini-name"><span className="pms-mini-rank">{i + 1}.</span>{fund.strategyName}</span>
+                                                <span className="pms-mini-mgr">{fund.portfolioManager}</span>
                                             </span>
-                                            <span className="pf-sec-ret">{fmtRet(fund.ret1Y)}</span>
+                                            <span className="pms-mini-ret">{fmtRet(fund[col.period])}</span>
                                         </div>
                                     ))}
                                 </div>
-                            )}
+                            ))}
                         </div>
                     </div>
                 )}
@@ -575,11 +630,27 @@ function PMSScreenerInner() {
                                         setMinRet('');
                                         setProviderFilter('');
                                         setSearch('');
+                                        setExtraCols(new Set());
                                         // Also clear strategy and search from URL
                                         router.replace('/pms-screener', { scroll: false });
                                     }}>
                                         Clear All
                                     </button>
+                                </div>
+                            </div>
+                            <div className="af-group">
+                                <label className="af-label">Return Periods Shown</label>
+                                <div className="af-options">
+                                    {OPTIONAL_RETURN_COLUMNS.map(col => (
+                                        <label key={col.key} className={`af-col-chk ${extraCols.has(col.key) ? 'active' : ''}`}>
+                                            <input
+                                                type="checkbox"
+                                                checked={extraCols.has(col.key)}
+                                                onChange={() => toggleExtraCol(col.key)}
+                                            />
+                                            {col.label}
+                                        </label>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -603,7 +674,7 @@ function PMSScreenerInner() {
                                 {[...Array(8)].map((_, i) => (
                                     <tr key={i} className="pms-loading-row">
                                         <td><div className="sk" style={{ width: '180px', height: '14px', marginBottom: '6px' }}></div><div className="sk" style={{ width: '120px', height: '10px' }}></div></td>
-                                        {[...Array(showAllColumns ? 7 : 5)].map((_, j) => <td key={j}><div className="sk" style={{ width: '52px', height: '13px', marginLeft: 'auto' }}></div></td>)}
+                                        {[...Array(visibleReturnCols.length)].map((_, j) => <td key={j}><div className="sk" style={{ width: '52px', height: '13px', marginLeft: 'auto' }}></div></td>)}
                                     </tr>
                                 ))}
                             </tbody>
@@ -615,39 +686,27 @@ function PMSScreenerInner() {
                 {!loading && !error && viewMode === 'table' && (
                     <div className="pms-table-card">
                         <div className="pms-table-wrap">
-                            <table className="pms-table" style={{ minWidth: showAllColumns ? 890 : 746 }}>
+                            <table className="pms-table" style={{ minWidth: 36 + 200 + 110 + 72 * visibleReturnCols.length }}>
                                 {/*
                                   colgroup locks column widths once — browser reads these under
                                   table-layout: fixed and never recalculates them from cell content.
-                                  Collapsed (default): 36 + 240 + 110 + 5×72 = 746px
-                                  Expanded (showAllColumns): 36 + 240 + 110 + 7×72 = 890px
+                                  Return columns are dynamic per visibleReturnCols (checkboxes in
+                                  the advanced filters panel control which optional periods show).
                                 */}
                                 <colgroup>
                                     <col style={{ width: 36 }} />   {/* ⚖ compare */}
-                                    <col style={{ width: 240 }} />  {/* Strategy & Manager */}
+                                    <col style={{ width: 200 }} />  {/* Strategy & Manager */}
                                     <col style={{ width: 110 }} />  {/* AUM */}
-                                    <col style={{ width: 72 }} />   {/* 1M */}
-                                    <col style={{ width: 72 }} />   {/* 3M */}
-                                    <col style={{ width: 72 }} />   {/* 6M */}
-                                    <col style={{ width: 72 }} />   {/* 1Y */}
-                                    <col style={{ width: 72 }} />   {/* 3Y */}
-                                    {showAllColumns && <col style={{ width: 72 }} />}   {/* 5Y */}
-                                    {showAllColumns && <col style={{ width: 72 }} />}   {/* Inception */}
+                                    {visibleReturnCols.map(c => <col key={c.key} style={{ width: 72 }} />)}
                                 </colgroup>
                                 <thead>
                                     <tr>
                                         <th style={{ width: 32, textAlign: 'center', color: 'var(--muted)', fontSize: '.65rem' }} title="Add to compare (max 3)">⚖</th>
                                         <ThSort col="strategyName" label="Strategy & Manager" left sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
                                         <ThSort col="aum" label="AUM (Cr)" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
-                                        <ThSort col="ret1M" label="1M" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
-                                        <ThSort col="ret3M" label="3M" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
-                                        <ThSort col="ret6M" label="6M" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
-                                        <th onClick={() => handleSort('ret1Y')} className={sortCol === 'ret1Y' ? 'col-active' : ''} style={{ color: 'var(--g2)' }}>
-                                            1Y <span className="sort-icon">{sortCol === 'ret1Y' ? (sortDir === -1 ? '▼' : '▲') : '⇅'}</span>
-                                        </th>
-                                        <ThSort col="ret3Y" label="3Y" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
-                                        {showAllColumns && <ThSort col="ret5Y" label="5Y" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />}
-                                        {showAllColumns && <ThSort col="retInception" label="Inception" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />}
+                                        {visibleReturnCols.map(c => (
+                                            <ThSort key={c.key} col={c.key} label={c.label} highlight={c.key === 'ret1Y'} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                                        ))}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -690,18 +749,14 @@ function PMSScreenerInner() {
                                                     {fmtAum(fund.aum)}
                                                 </div>
                                             </td>
-                                            <td><span className={`ret-chip ${getReturnClass(fund.ret1M)}`}>{fmtRet(fund.ret1M)}</span></td>
-                                            <td><span className={`ret-chip ${getReturnClass(fund.ret3M)}`}>{fmtRet(fund.ret3M)}</span></td>
-                                            <td><span className={`ret-chip ${getReturnClass(fund.ret6M)}`}>{fmtRet(fund.ret6M)}</span></td>
-                                            <td><span className={`ret-chip ${getReturnClass(fund.ret1Y)}`}>{fmtRet(fund.ret1Y)}</span></td>
-                                            <td><span className={`ret-chip ${getReturnClass(fund.ret3Y)}`}>{fmtRet(fund.ret3Y)}</span></td>
-                                            {showAllColumns && <td><span className={`ret-chip ${getReturnClass(fund.ret5Y)}`}>{fmtRet(fund.ret5Y)}</span></td>}
-                                            {showAllColumns && <td><span className={`ret-chip ${getReturnClass(fund.retInception)}`}>{fmtRet(fund.retInception)}</span></td>}
+                                            {visibleReturnCols.map(c => (
+                                                <td key={c.key}><span className={`ret-chip ${getReturnClass(fund[c.key])}`}>{fmtRet(fund[c.key])}</span></td>
+                                            ))}
                                         </tr>
                                     ))}
                                     {paginated.length === 0 && (
                                         <tr>
-                                            <td colSpan={showAllColumns ? 10 : 8} style={{ textAlign: 'center', padding: '56px', color: 'var(--pms-muted)', fontFamily: 'Arial, sans-serif' }}>
+                                            <td colSpan={3 + visibleReturnCols.length} style={{ textAlign: 'center', padding: '56px', color: 'var(--pms-muted)', fontFamily: 'Arial, sans-serif' }}>
                                                 No strategies match your filters.
                                             </td>
                                         </tr>
@@ -709,10 +764,6 @@ function PMSScreenerInner() {
                                 </tbody>
                             </table>
                         </div>
-
-                        <button className="pms-col-toggle" onClick={() => setShowAllColumns(v => !v)}>
-                            {showAllColumns ? '− Hide 5Y & Inception returns' : '+ Show 5Y & Inception returns'}
-                        </button>
 
                         {totalPages > 1 && (
                             <div className="pms-pagination">
@@ -864,10 +915,8 @@ function PMSScreenerInner() {
                                     <div className="pdm-val" style={{ color: (selected.ret1Y ?? 0) >= 0 ? 'var(--g2)' : 'var(--neg)' }}>{fmtRet(selected.ret1Y)}</div>
                                 </div>
                                 <div className="pd-metric">
-                                    <div className="pdm-label">vs Nifty 50</div>
-                                    <div className="pdm-val" style={{ color: (selected.ret1Y ?? 0) > BENCHMARK_1Y ? 'var(--g2)' : 'var(--neg)' }}>
-                                        {selected.ret1Y !== null ? `${(selected.ret1Y - BENCHMARK_1Y).toFixed(1)}%` : '—'}
-                                    </div>
+                                    <div className="pdm-label">3Y Return</div>
+                                    <div className="pdm-val" style={{ color: (selected.ret3Y ?? 0) >= 0 ? 'var(--g2)' : 'var(--neg)' }}>{fmtRet(selected.ret3Y)}</div>
                                 </div>
                             </div>
                         </div>

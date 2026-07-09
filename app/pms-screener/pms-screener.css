@@ -100,96 +100,98 @@
   margin-top: 2px;
 }
 
-/* ── Top performer: feature + secondary list ── */
-.pms-perf-layout {
-  display: grid;
-  grid-template-columns: 1.3fr 1fr;
-  gap: 16px;
-  margin-bottom: 0;
-}
-
-.pms-perf-feature {
-  background: var(--pms-surface);
-  border-left: 3px solid var(--g1);
-  border-radius: 0 10px 10px 0;
-  padding: 20px 22px;
-  cursor: pointer;
-  transition: box-shadow .15s;
-}
-
-.pms-perf-feature:hover {
-  box-shadow: var(--shadow-lg);
-}
-
-.pf-rank {
-  font-family: var(--pms-sans);
-  font-size: .62rem;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  color: var(--g1);
-  margin-bottom: 6px;
-}
-
-.pf-name {
-  font-family: var(--pms-serif);
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--pms-text);
-  margin-bottom: 2px;
-}
-
-.pf-mgr {
-  font-family: var(--pms-sans);
-  font-size: .68rem;
-  color: var(--pms-muted);
-  margin-bottom: 14px;
-}
-
-.pf-ret {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 1.9rem;
-  font-weight: 700;
-  color: var(--g1);
-}
-
-.pf-ret span {
-  font-family: var(--pms-sans);
-  font-size: .68rem;
-  color: var(--pms-muted);
-  font-weight: 400;
-  margin-left: 6px;
-}
-
-.pf-meta {
-  font-family: var(--pms-sans);
-  font-size: .68rem;
-  color: var(--pms-muted-2);
-  margin-top: 10px;
-}
-
-.pms-perf-secondary {
+/* ── Benchmark reference panel — live TRI data, no pass/fail framing ── */
+.pms-bench-bar {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.pf-sec-item {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   background: var(--pms-surface);
   border: 1px solid var(--pms-border);
-  border-radius: 8px;
-  padding: 10px 14px;
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+}
+
+.pms-bench-label {
+  font-family: var(--pms-sans);
+  font-size: .6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--pms-muted);
+  flex-shrink: 0;
+}
+
+.pms-bench-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-left: 10px;
+  border-left: 1px solid var(--pms-border);
+}
+
+.pms-bench-name {
+  font-family: var(--pms-serif);
+  font-size: .74rem;
+  font-weight: 700;
+  color: var(--pms-text);
+}
+
+.pms-bench-ret {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .68rem;
+  color: var(--pms-muted-2);
+}
+
+/* ── Top performers: 1Y / 3Y / 5Y mini-leaderboards ── */
+.pms-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.pms-mini-col {
+  background: var(--pms-surface);
+  border: 1px solid var(--pms-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.pms-mini-title {
+  font-family: var(--pms-sans);
+  font-size: .6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--g1);
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.pms-mini-empty {
+  font-family: var(--pms-sans);
+  font-size: .68rem;
+  color: var(--pms-muted);
+  text-align: center;
+  padding: 8px 0;
+}
+
+.pms-mini-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--pms-border);
   cursor: pointer;
-  transition: border-color .15s;
 }
 
-.pf-sec-item:hover {
-  border-color: var(--g3);
+.pms-mini-item:last-child {
+  border-bottom: none;
 }
 
-.pf-sec-name {
+.pms-mini-name {
   font-family: var(--pms-serif);
   font-size: .78rem;
   font-weight: 700;
@@ -197,21 +199,27 @@
   display: block;
 }
 
-.pf-sec-mgr {
+.pms-mini-rank {
   font-family: var(--pms-sans);
-  font-size: .62rem;
+  color: var(--pms-muted);
+  font-weight: 700;
+  margin-right: 3px;
+}
+
+.pms-mini-mgr {
+  font-family: var(--pms-sans);
+  font-size: .6rem;
   color: var(--pms-muted);
   display: block;
   margin-top: 1px;
 }
 
-.pf-sec-ret {
+.pms-mini-ret {
   font-family: 'JetBrains Mono', monospace;
-  font-size: .95rem;
+  font-size: .85rem;
   font-weight: 700;
   color: var(--g1);
   flex-shrink: 0;
-  margin-left: 10px;
 }
 
 /* ── Filters & controls bar ── */
@@ -409,8 +417,8 @@
 .pms-table {
   width: 100%;
   border-collapse: collapse;
-  /* min-width is now set inline per-row in page.jsx based on showAllColumns,
-     since the column count itself changes (746px collapsed / 890px expanded). */
+  /* min-width is set inline in page.jsx based on visibleReturnCols.length,
+     since the return-column count itself changes with the checkbox picker. */
   /* Fixed layout: column widths are determined by the <col> / first-row widths,
      NOT recalculated from cell content on every re-render. This prevents the
      layout-shift that occurs when sorting changes the data in each column. */
@@ -446,11 +454,11 @@
   max-width: 36px;
 }
 
-/* Strategy & Manager column — flex-fills remaining space */
+/* Strategy & Manager column */
 .pms-table th:nth-child(2) {
   text-align: left;
   padding-left: 14px;
-  width: 240px;
+  width: 200px;
 }
 
 /* AUM column */
@@ -577,28 +585,10 @@
   white-space: nowrap;
 }
 
-/* Column-visibility toggle (5Y / Inception) */
-.pms-col-toggle {
-  display: block;
-  width: 100%;
-  text-align: center;
-  padding: 10px;
-  font-family: var(--pms-sans);
-  font-size: .68rem;
-  font-weight: 600;
-  color: var(--g1);
-  background: none;
-  border: none;
-  border-top: 1px dashed var(--pms-border);
-  cursor: pointer;
-  transition: background .15s;
-}
-
-.pms-col-toggle:hover {
-  background: var(--pms-bg);
-}
-
-/* Strategy name cell */
+/* Strategy name cell — wraps to as many lines as the name needs, rather
+   than truncating with an ellipsis (fixed-width column via table-layout:fixed
+   still bounds it horizontally; overflow:hidden on the parent <td> is enough
+   since wrapped text never escapes the column width). */
 .pms-strat-name {
   font-family: var(--pms-serif);
   font-weight: 700;
@@ -606,10 +596,8 @@
   color: var(--pms-text);
   line-height: 1.3;
   display: block;
-  /* Ellipsis clip for long names under fixed-width column */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .pms-strat-mgr {
@@ -1198,7 +1186,7 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .pms-perf-layout {
+  .pms-mini-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1236,10 +1224,6 @@
   /* Container: tighter side padding */
   .container {
     padding: 0 14px;
-  }
-
-  .pf-ret {
-    font-size: 1.5rem;
   }
 
   /* Cream panel: track .container's tighter side padding on small screens
@@ -1324,18 +1308,6 @@
 
   .pms-grid-view {
     grid-template-columns: 1fr;
-  }
-
-  .pms-perf-feature {
-    padding: 14px 16px;
-  }
-
-  .pf-name {
-    font-size: 1.05rem;
-  }
-
-  .pf-ret {
-    font-size: 1.3rem;
   }
 
   /* Provider full width */
@@ -1509,6 +1481,37 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+/* Column-visibility checkboxes (2Y/4Y/5Y/Inception) in the "Return Periods
+   Shown" advanced-filter group — styled as a checkbox pill matching .cat-btn */
+.af-col-chk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--s2);
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: .15s;
+}
+
+.af-col-chk:hover {
+  border-color: var(--border2);
+}
+
+.af-col-chk.active {
+  background: var(--g1);
+  border-color: var(--g1);
+  color: white;
+}
+
+.af-col-chk input {
+  cursor: pointer;
 }
 
 .af-ret-controls {
