@@ -7,12 +7,29 @@
  *  instead of hardcoding "Feb 2026" in the modal subtitle.
  *  Passed from page.jsx: <PMSCompareModal dataLabel={pmsDate.label} ... />
  */
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import './pms-compare.css';
 
 const MAX_COMPARE = 3;
 const INVESTMENT = 5000000; // ₹50L
-const BENCHMARK_1Y = 18.5;
+
+/** Normalizes an index/benchmark name for matching ("Nifty 500 TRI" ~ "Nifty 500"). */
+function normalizeIndexName(name) {
+  return (name || '')
+    .toLowerCase()
+    .replace(/\btri\b/g, '')
+    .replace(/\btotal return index\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Finds a benchmark's real return data in the NSE index-dashboard list, if present. */
+function findBenchmarkReturns(benchmarkName, indices) {
+  if (!benchmarkName || !indices) return null;
+  const target = normalizeIndexName(benchmarkName);
+  const match = indices.find(idx => normalizeIndexName(idx.name) === target);
+  return match ? match.returns : null;
+}
 
 function fmtRet(v) {
   if (v === null || v === undefined) return '—';
@@ -89,6 +106,47 @@ export function PMSCompareBar({ selected, onRemove, onClear, onCompare }) {
  */
 export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
   const n = funds.length;
+
+  // ── Real per-fund benchmarks ─────────────────────────────────────────
+  // Each fund's declared benchmark (e.g. "BSE 500 TRI") lives only on its
+  // own APMI detail page, not the bulk table — fetch one per fund (same
+  // cached endpoint the drawer uses). Separately fetch the full NSE index
+  // list once, to look up a real return figure for whichever benchmarks
+  // happen to match an NSE index. Benchmarks tracking a BSE index (or any
+  // non-NSE source) won't have a match — alpha is left blank rather than
+  // computed against a substitute, since that would be exactly the kind
+  // of fabricated number this replaces.
+  const [benchNames, setBenchNames] = useState({});
+  const [benchLoading, setBenchLoading] = useState(true);
+  const [indexData, setIndexData] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setBenchLoading(true);
+    Promise.all(funds.map(f => {
+      let iaid = null;
+      try { iaid = f.apmiLink ? new URL(f.apmiLink).searchParams.get('IAID') : null; } catch { /* ignore */ }
+      if (!iaid) return Promise.resolve({ id: f.id, name: null });
+      return fetch(`/api/pms-benchmark?iaid=${encodeURIComponent(iaid)}`)
+        .then(r => r.json())
+        .then(j => ({ id: f.id, name: j.status === 'success' ? j.benchmark : null }))
+        .catch(() => ({ id: f.id, name: null }));
+    })).then(results => {
+      if (cancelled) return;
+      const map = {};
+      results.forEach(r => { map[r.id] = r.name; });
+      setBenchNames(map);
+      setBenchLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [funds]);
+
+  useEffect(() => {
+    fetch('/api/index-dashboard')
+      .then(r => r.json())
+      .then(j => setIndexData(j?.indices || null))
+      .catch(() => setIndexData(null));
+  }, []);
 
   const winners = useMemo(() => {
     const w = {};
@@ -191,24 +249,46 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
               );
             })}
 
-            {/* Alpha vs benchmark */}
+            {/* Alpha vs each fund's OWN declared benchmark (real data, not a
+                single generic Nifty 50 guess) — see the useEffects above */}
             <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
-              📈 Alpha vs Benchmark (Nifty 50 · {BENCHMARK_1Y}% 1Y)
+              📈 Alpha vs Own Benchmark
+            </div>
+            <div className="cmp-row">
+              <div className="cmp-cell" style={{ fontWeight: 700 }}>Benchmark</div>
+              {funds.map(f => (
+                <div key={f.id} className="cmp-cell">
+                  <span className="cmp-ret neu" style={{ fontWeight: 600 }}>
+                    {benchLoading ? 'Loading…' : (benchNames[f.id] || '—')}
+                  </span>
+                </div>
+              ))}
             </div>
             <div className="cmp-row">
               <div className="cmp-cell" style={{ fontWeight: 700 }}>1Y Alpha</div>
-              {funds.map((f, i) => {
-                const alpha = f.ret1Y !== null && f.ret1Y !== undefined ? (f.ret1Y - BENCHMARK_1Y).toFixed(2) : null;
-                const isBest = winners['ret1Y']?.[i] === i;
-                return (
-                  <div key={f.id} className={`cmp-cell${isBest ? ' cmp-ret-best' : ''}`}>
-                    {alpha !== null
-                      ? <span className={`cmp-ret ${parseFloat(alpha) > 0 ? 'pos' : 'neg'}`}>{parseFloat(alpha) > 0 ? '+' : ''}{alpha}%</span>
-                      : <span className="cmp-ret neu">—</span>}
-                    {isBest && n > 1 && <span style={{ fontSize: '.55rem', marginLeft: 4, color: 'var(--g3)' }}>↑ best</span>}
-                  </div>
-                );
-              })}
+              {(() => {
+                // Compute all alphas first so "best" only considers funds that
+                // actually have a real matched benchmark return.
+                const alphas = funds.map(f => {
+                  const benchReturns = findBenchmarkReturns(benchNames[f.id], indexData);
+                  if (f.ret1Y == null || !benchReturns || benchReturns.r1y == null) return null;
+                  return +(f.ret1Y - benchReturns.r1y).toFixed(2);
+                });
+                const validAlphas = alphas.filter(a => a !== null);
+                const maxAlpha = validAlphas.length ? Math.max(...validAlphas) : null;
+                return funds.map((f, i) => {
+                  const alpha = alphas[i];
+                  const isBest = n > 1 && alpha !== null && alpha === maxAlpha;
+                  return (
+                    <div key={f.id} className={`cmp-cell${isBest ? ' cmp-ret-best' : ''}`}>
+                      {alpha !== null
+                        ? <span className={`cmp-ret ${alpha > 0 ? 'pos' : alpha < 0 ? 'neg' : 'neu'}`}>{alpha > 0 ? '+' : ''}{alpha}%</span>
+                        : <span className="cmp-ret neu" title="No matching NSE index found for this benchmark">—</span>}
+                      {isBest && <span style={{ fontSize: '.55rem', marginLeft: 4, color: 'var(--g3)' }}>↑ best</span>}
+                    </div>
+                  );
+                });
+              })()}
             </div>
 
             {/* Wealth simulation */}
