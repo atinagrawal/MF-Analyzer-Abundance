@@ -8,13 +8,22 @@
 
 /* ══════════════════════════════════════════════════════
    EDITORIAL REDESIGN — page-scoped tokens & foundation
-   All tokens/overrides here are scoped under #pms-screener-main
-   so no other page on the site is affected. Forest green
-   (--g1/--g2/--neg from globals.css) is reused unchanged for
-   financial return coloring; these new tokens are for page
-   chrome only (background, borders, muted text, typography).
+   Tokens are defined on :root (not #pms-screener-main) because the
+   slide-out drawer and its backdrop render as SIBLINGS of <main
+   id="pms-screener-main">, not descendants (see page.jsx — they're
+   placed after </main>, alongside <Footer>). CSS custom properties
+   only inherit down the DOM tree from where they're defined, so
+   scoping them to #pms-screener-main left every var(--pms-*) inside
+   the drawer resolving to nothing — the drawer's "background:
+   var(--pms-surface)" was silently invalid, making it render
+   transparent. :root is safe here since this file only loads on the
+   /pms-screener route and every --pms-* name is uniquely prefixed,
+   so nothing else on the site can collide with or be affected by it.
+   Forest green (--g1/--g2/--neg from globals.css) is reused unchanged
+   for financial return coloring; these new tokens are for page chrome
+   only (background, borders, muted text, typography).
 ══════════════════════════════════════════════════════ */
-#pms-screener-main {
+:root {
   --pms-bg: #f7f3ec;
   --pms-surface: #fffdf8;
   --pms-border: #e8e0d0;
@@ -23,7 +32,9 @@
   --pms-text: #221c12;
   --pms-serif: Georgia, 'Times New Roman', serif;
   --pms-sans: Arial, Helvetica, sans-serif;
+}
 
+#pms-screener-main {
   background: var(--pms-bg);
   border-radius: 16px;
   padding: 8px 20px 32px;
