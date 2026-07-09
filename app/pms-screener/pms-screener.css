@@ -224,14 +224,14 @@
 }
 
 .pms-search {
-  padding: 8px 14px;
-  border: 1.5px solid var(--border2);
-  border-radius: 10px;
-  font-family: 'Raleway', sans-serif;
+  padding: 9px 14px;
+  border: 1px solid var(--pms-border);
+  border-radius: 20px;
+  font-family: var(--pms-sans);
   font-size: .78rem;
-  font-weight: 600;
-  color: var(--text);
-  background: var(--surface);
+  font-weight: 400;
+  color: var(--pms-text);
+  background: var(--pms-surface);
   outline: none;
   width: 200px;
   min-width: 0;
@@ -245,14 +245,14 @@
 
 /* Provider dropdown */
 .pms-provider-sel {
-  padding: 8px 12px;
-  border: 1.5px solid var(--border2);
-  border-radius: 10px;
-  font-family: 'Raleway', sans-serif;
+  padding: 8px 14px;
+  border: 1px solid var(--pms-border);
+  border-radius: 20px;
+  font-family: var(--pms-sans);
   font-size: .75rem;
-  font-weight: 600;
-  color: var(--text);
-  background: var(--surface);
+  font-weight: 400;
+  color: var(--pms-text);
+  background: var(--pms-surface);
   outline: none;
   max-width: 220px;
   min-width: 0;
@@ -270,32 +270,31 @@
   font-weight: 700;
   padding: 5px 12px;
   border-radius: 20px;
-  background: var(--s2);
-  border: 1px solid var(--border);
-  color: var(--muted);
+  background: var(--pms-surface);
+  border: 1px solid var(--pms-border);
+  color: var(--pms-muted);
   font-family: 'JetBrains Mono', monospace;
   white-space: nowrap;
 }
 
 .view-btn {
-  padding: 7px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
+  padding: 8px 16px;
+  border: 1px solid var(--pms-border);
+  border-radius: 20px;
   font-size: .72rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   transition: .15s;
-  background: var(--s2);
-  color: var(--muted);
-  font-family: 'Raleway', sans-serif;
+  background: var(--pms-surface);
+  color: var(--pms-muted-2);
+  font-family: var(--pms-sans);
   white-space: nowrap;
   min-height: 36px;
   /* touch target */
 }
 
 .view-btn:hover {
-  background: var(--s3);
-  border-color: var(--border2);
+  border-color: var(--g3);
   color: var(--g2);
 }
 
@@ -303,6 +302,19 @@
   background: var(--g1);
   border-color: var(--g1);
   color: white;
+}
+
+/* Strategy tabs (.cat-btn is a shared global class — scope-override here only) */
+#pms-screener-main .cat-btn {
+  border-radius: 20px;
+  border: 1px solid var(--pms-border);
+  background: var(--pms-surface);
+  font-family: var(--pms-sans);
+}
+
+#pms-screener-main .cat-btn.active {
+  background: var(--g1);
+  border-color: var(--g1);
 }
 
 /* Initials Avatar */
