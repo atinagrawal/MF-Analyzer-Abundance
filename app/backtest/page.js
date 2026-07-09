@@ -1093,7 +1093,7 @@ const CSS = `
 .bt-disc b,.bt-disc strong{color:var(--text2)}
 .bt-arn{margin-top:8px;font:600 11px JetBrains Mono,monospace;color:var(--g3)}
 
-.bt-modal{position:fixed;inset:0;background:#0d260d66;backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;padding:5vh 14px;z-index:90;animation:bt-in .2s}
+.bt-modal{position:fixed;inset:0;background:#0d260d66;backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;padding:5vh 14px;z-index:10000;animation:bt-in .2s}
 .bt-modal-c{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:560px;max-height:86vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden}
 .bt-modal-h{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px}
 .bt-modal-h h3{margin:0;font-size:16px;font-weight:700;color:var(--g1)}
@@ -1177,7 +1177,7 @@ const CSS = `
 .bt-tap-hint{font:600 11px JetBrains Mono,monospace;color:var(--muted);text-align:right;margin-top:8px}
 
 /* ---- fund detail: drawer (desktop) / bottom-sheet (mobile) ---- */
-.bt-drawer-wrap{position:fixed;inset:0;background:#0d260d55;backdrop-filter:blur(3px);z-index:95;display:flex;justify-content:flex-end;animation:bt-fade .2s ease}
+.bt-drawer-wrap{position:fixed;inset:0;background:#0d260d55;backdrop-filter:blur(3px);z-index:10000;display:flex;justify-content:flex-end;animation:bt-fade .2s ease}
 .bt-drawer{background:var(--surface);width:440px;max-width:100%;height:100%;overflow-y:auto;box-shadow:var(--shadow-lg);padding:20px;animation:bt-slidein .28s cubic-bezier(.2,.7,.3,1)}
 @keyframes bt-slidein{from{transform:translateX(40px);opacity:.4}to{transform:none;opacity:1}}
 .bt-drawer-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:16px}
@@ -1235,7 +1235,7 @@ const CSS = `
 
 /* ---- share button + toast ---- */
 .bt-share{color:var(--g1)}
-.bt-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--g1);color:#fff;font:600 13px Raleway,sans-serif;padding:11px 18px;border-radius:10px;box-shadow:var(--shadow-lg);z-index:120;animation:bt-toastin .25s ease}
+.bt-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--g1);color:#fff;font:600 13px Raleway,sans-serif;padding:11px 18px;border-radius:10px;box-shadow:var(--shadow-lg);z-index:10000;animation:bt-toastin .25s ease}
 @keyframes bt-toastin{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
 
 /* ---- risk / drawdown ---- */

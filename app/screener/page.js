@@ -864,7 +864,7 @@ const CSS = `
 .scr-disc b{color:var(--text2)}
 
 /* drawer */
-.scr-drawer-wrap{position:fixed;inset:0;background:#0d260d55;backdrop-filter:blur(3px);z-index:95;display:flex;justify-content:flex-end;animation:scrfade .2s ease}
+.scr-drawer-wrap{position:fixed;inset:0;background:#0d260d55;backdrop-filter:blur(3px);z-index:10000;display:flex;justify-content:flex-end;animation:scrfade .2s ease}
 .scr-drawer{background:var(--surface);width:460px;max-width:100%;height:100%;overflow-y:auto;box-shadow:var(--shadow-lg);padding:22px;animation:scrslide .28s cubic-bezier(.2,.7,.3,1)}
 @keyframes scrfade{from{opacity:0}to{opacity:1}}
 @keyframes scrslide{from{transform:translateX(40px);opacity:.4}to{transform:none;opacity:1}}

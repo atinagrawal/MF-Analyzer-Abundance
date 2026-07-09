@@ -5394,8 +5394,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   body > * { display: none !important; }
 
   /* The planner is inside a fixed-pos div — make it static for print */
-  body [style*="position: fixed"][style*="z-index: 3000"],
-  body [style*="position:fixed"][style*="z-index:3000"] {
+  body [style*="position: fixed"][style*="z-index: 10000"],
+  body [style*="position:fixed"][style*="z-index:10000"] {
     display: block !important;
     position: static !important;
     width: 100% !important;
@@ -7314,7 +7314,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .sif-hist-overlay {
   position: fixed;
   inset: 0;
-  z-index: 4000;
+  z-index: 10000; /* must clear .navbar's z-index:9999 or nav content bleeds through */
   background: rgba(0,0,0,.55);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
@@ -9190,7 +9190,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .sp-overlay {
   position: fixed;
   inset: 0;
-  z-index: 4000;
+  z-index: 10000; /* must clear .navbar's z-index:9999 or nav content bleeds through */
   background: rgba(0,0,0,.48);
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);

@@ -344,7 +344,7 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
   }, [target, strategy, slabPct, skipLocked, holdings, today, exitLoadOverrides]);
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}
       onClick={onClose}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.35)', backdropFilter: 'blur(2px)' }} />
 
@@ -761,7 +761,7 @@ function RedemptionPlanner({ fund, onClose }) {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 3000,
+      position: 'fixed', inset: 0, zIndex: 10000,
       display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
     }}
       onClick={onClose}
