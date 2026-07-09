@@ -761,14 +761,17 @@
   font-weight: 700;
 }
 
-/* ── Slide-out Drawer ── */
+/* ── Slide-out Drawer ──
+   z-index must clear globals.css's .navbar (z-index: 9999) — otherwise the
+   navbar's own child elements (which carry their own backgrounds) paint on
+   top of this fixed-position drawer instead of being covered by it. */
 .pms-drawer-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(22, 38, 22, 0.45);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  z-index: 200;
+  z-index: 10000;
   opacity: 0;
   pointer-events: none;
   transition: opacity .35s ease;
@@ -791,7 +794,7 @@
   background: var(--pms-surface);
   border-left: 1px solid var(--pms-border);
   box-shadow: -12px 0 60px rgba(27, 94, 32, .12);
-  z-index: 201;
+  z-index: 10001;
   transform: translateX(100%);
   transition: transform .45s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
