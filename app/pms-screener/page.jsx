@@ -149,6 +149,7 @@ function PMSScreenerInner() {
     const [compareList, setCompareList] = useState([]);
     const [showCompare, setShowCompare] = useState(false);
     const [showAdvanced, setShowAdvanced] = useState(false);
+    const [showAllColumns, setShowAllColumns] = useState(false);
 
     // Advanced filter state
     const [aumTier, setAumTier] = useState('all');
@@ -602,7 +603,7 @@ function PMSScreenerInner() {
                                 {[...Array(8)].map((_, i) => (
                                     <tr key={i} className="pms-loading-row">
                                         <td><div className="sk" style={{ width: '180px', height: '14px', marginBottom: '6px' }}></div><div className="sk" style={{ width: '120px', height: '10px' }}></div></td>
-                                        {[...Array(7)].map((_, j) => <td key={j}><div className="sk" style={{ width: '52px', height: '13px', marginLeft: 'auto' }}></div></td>)}
+                                        {[...Array(showAllColumns ? 7 : 5)].map((_, j) => <td key={j}><div className="sk" style={{ width: '52px', height: '13px', marginLeft: 'auto' }}></div></td>)}
                                     </tr>
                                 ))}
                             </tbody>
@@ -614,11 +615,12 @@ function PMSScreenerInner() {
                 {!loading && !error && viewMode === 'table' && (
                     <div className="pms-table-card">
                         <div className="pms-table-wrap">
-                            <table className="pms-table">
+                            <table className="pms-table" style={{ minWidth: showAllColumns ? 890 : 746 }}>
                                 {/*
                                   colgroup locks column widths once — browser reads these under
                                   table-layout: fixed and never recalculates them from cell content.
-                                  Total = 36 + 240 + 110 + 7×72 = 890px (> min-width: 820px ✓)
+                                  Collapsed (default): 36 + 240 + 110 + 5×72 = 746px
+                                  Expanded (showAllColumns): 36 + 240 + 110 + 7×72 = 890px
                                 */}
                                 <colgroup>
                                     <col style={{ width: 36 }} />   {/* ⚖ compare */}
@@ -629,8 +631,8 @@ function PMSScreenerInner() {
                                     <col style={{ width: 72 }} />   {/* 6M */}
                                     <col style={{ width: 72 }} />   {/* 1Y */}
                                     <col style={{ width: 72 }} />   {/* 3Y */}
-                                    <col style={{ width: 72 }} />   {/* 5Y */}
-                                    <col style={{ width: 72 }} />   {/* Inception */}
+                                    {showAllColumns && <col style={{ width: 72 }} />}   {/* 5Y */}
+                                    {showAllColumns && <col style={{ width: 72 }} />}   {/* Inception */}
                                 </colgroup>
                                 <thead>
                                     <tr>
@@ -644,8 +646,8 @@ function PMSScreenerInner() {
                                             1Y <span className="sort-icon">{sortCol === 'ret1Y' ? (sortDir === -1 ? '▼' : '▲') : '⇅'}</span>
                                         </th>
                                         <ThSort col="ret3Y" label="3Y" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
-                                        <ThSort col="ret5Y" label="5Y" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
-                                        <ThSort col="retInception" label="Inception" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                                        {showAllColumns && <ThSort col="ret5Y" label="5Y" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />}
+                                        {showAllColumns && <ThSort col="retInception" label="Inception" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -693,13 +695,13 @@ function PMSScreenerInner() {
                                             <td><span className={`ret-chip ${getReturnClass(fund.ret6M)}`}>{fmtRet(fund.ret6M)}</span></td>
                                             <td><span className={`ret-chip ${getReturnClass(fund.ret1Y)}`}>{fmtRet(fund.ret1Y)}</span></td>
                                             <td><span className={`ret-chip ${getReturnClass(fund.ret3Y)}`}>{fmtRet(fund.ret3Y)}</span></td>
-                                            <td><span className={`ret-chip ${getReturnClass(fund.ret5Y)}`}>{fmtRet(fund.ret5Y)}</span></td>
-                                            <td><span className={`ret-chip ${getReturnClass(fund.retInception)}`}>{fmtRet(fund.retInception)}</span></td>
+                                            {showAllColumns && <td><span className={`ret-chip ${getReturnClass(fund.ret5Y)}`}>{fmtRet(fund.ret5Y)}</span></td>}
+                                            {showAllColumns && <td><span className={`ret-chip ${getReturnClass(fund.retInception)}`}>{fmtRet(fund.retInception)}</span></td>}
                                         </tr>
                                     ))}
                                     {paginated.length === 0 && (
                                         <tr>
-                                            <td colSpan={10} style={{ textAlign: 'center', padding: '56px', color: 'var(--muted)', fontFamily: 'Raleway' }}>
+                                            <td colSpan={showAllColumns ? 10 : 8} style={{ textAlign: 'center', padding: '56px', color: 'var(--pms-muted)', fontFamily: 'Arial, sans-serif' }}>
                                                 No strategies match your filters.
                                             </td>
                                         </tr>
@@ -707,6 +709,10 @@ function PMSScreenerInner() {
                                 </tbody>
                             </table>
                         </div>
+
+                        <button className="pms-col-toggle" onClick={() => setShowAllColumns(v => !v)}>
+                            {showAllColumns ? '− Hide 5Y & Inception returns' : '+ Show 5Y & Inception returns'}
+                        </button>
 
                         {totalPages > 1 && (
                             <div className="pms-pagination">
