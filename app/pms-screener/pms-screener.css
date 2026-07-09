@@ -111,49 +111,66 @@
   margin-top: 2px;
 }
 
-/* ── Benchmark reference panel — live TRI data, no pass/fail framing ── */
-.pms-bench-bar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  background: var(--pms-surface);
-  border: 1px solid var(--pms-border);
-  border-radius: 10px;
-  padding: 10px 16px;
-  margin-bottom: 20px;
-}
-
-.pms-bench-label {
+/* ── Benchmark reference panel — live TRI data, no pass/fail framing ──
+   4-card grid, one per index, color-coded 1Y/3Y/5Y returns (matching the
+   site's standard green/red financial semantics — same as .ret-chip). */
+.pms-bench-head {
   font-family: var(--pms-sans);
   font-size: .6rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .06em;
   color: var(--pms-muted);
-  flex-shrink: 0;
+  margin-bottom: 8px;
 }
 
-.pms-bench-item {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding-left: 10px;
-  border-left: 1px solid var(--pms-border);
+.pms-bench-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.pms-bench-card {
+  background: var(--pms-surface);
+  border: 1px solid var(--pms-border);
+  border-radius: 10px;
+  padding: 12px 14px;
 }
 
 .pms-bench-name {
   font-family: var(--pms-serif);
-  font-size: .74rem;
+  font-size: .78rem;
   font-weight: 700;
   color: var(--pms-text);
+  margin-bottom: 8px;
 }
 
-.pms-bench-ret {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: .68rem;
-  color: var(--pms-muted-2);
+.pms-bench-rets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
+
+.pms-bench-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.pms-bench-p {
+  font-family: var(--pms-sans);
+  font-size: .64rem;
+  color: var(--pms-muted);
+}
+
+.pms-bench-v {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.pms-bench-v.g { color: var(--g1); }
+.pms-bench-v.r { color: var(--neg); }
 
 /* ── Top performers: 1Y / 3Y / 5Y mini-leaderboards ── */
 .pms-mini-grid {
@@ -1248,6 +1265,10 @@
     padding-right: 14px;
   }
 
+  .pms-bench-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   /* Controls: search + provider each take full row */
   .pms-controls {
     row-gap: 8px;
@@ -1318,6 +1339,10 @@
   #pms-screener-main {
     padding-left: 12px;
     padding-right: 12px;
+  }
+
+  .pms-bench-grid {
+    grid-template-columns: 1fr;
   }
 
   .pms-grid-view {

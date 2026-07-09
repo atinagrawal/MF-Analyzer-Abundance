@@ -482,16 +482,20 @@ function PMSScreenerInner() {
 
                 {/* ── Benchmark reference panel — live TRI data, no pass/fail framing ── */}
                 {!loading && !error && benchmarks && (
-                    <div className="pms-bench-bar">
-                        <span className="pms-bench-label">Broad Market TRI</span>
-                        {benchmarks.map(b => (
-                            <div key={b.name} className="pms-bench-item">
-                                <span className="pms-bench-name">{b.name}</span>
-                                <span className="pms-bench-ret">1Y {fmtRet(b.r1y)}</span>
-                                <span className="pms-bench-ret">3Y {fmtRet(b.r3y)}</span>
-                                <span className="pms-bench-ret">5Y {fmtRet(b.r5y)}</span>
-                            </div>
-                        ))}
+                    <div style={{ marginBottom: '20px' }}>
+                        <div className="pms-bench-head">Broad Market TRI · 3Y &amp; 5Y are CAGR</div>
+                        <div className="pms-bench-grid">
+                            {benchmarks.map(b => (
+                                <div key={b.name} className="pms-bench-card">
+                                    <div className="pms-bench-name">{b.name}</div>
+                                    <div className="pms-bench-rets">
+                                        <div className="pms-bench-row"><span className="pms-bench-p">1Y</span><span className={`pms-bench-v ${(b.r1y ?? 0) >= 0 ? 'g' : 'r'}`}>{fmtRet(b.r1y)}</span></div>
+                                        <div className="pms-bench-row"><span className="pms-bench-p">3Y</span><span className={`pms-bench-v ${(b.r3y ?? 0) >= 0 ? 'g' : 'r'}`}>{fmtRet(b.r3y)}</span></div>
+                                        <div className="pms-bench-row"><span className="pms-bench-p">5Y</span><span className={`pms-bench-v ${(b.r5y ?? 0) >= 0 ? 'g' : 'r'}`}>{fmtRet(b.r5y)}</span></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
 
