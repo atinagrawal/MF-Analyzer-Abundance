@@ -112,13 +112,16 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
   // own APMI detail page, not the bulk table — fetch one per fund (same
   // cached endpoint the drawer uses). Separately fetch the full NSE index
   // list once, to look up a real return figure for whichever benchmarks
-  // happen to match an NSE index. Benchmarks tracking a BSE index (or any
-  // non-NSE source) won't have a match — alpha is left blank rather than
-  // computed against a substitute, since that would be exactly the kind
-  // of fabricated number this replaces.
+  // happen to match an NSE index. For benchmarks that don't match any NSE
+  // index (commonly because they track a BSE index instead — APMI doesn't
+  // restrict PMS managers to one exchange's benchmarks), fall back to
+  // /api/bse-index, which does the equivalent lookup against BSE's own
+  // index data. Only if NEITHER source has the benchmark is alpha left
+  // blank — we never substitute a different index just to show a number.
   const [benchNames, setBenchNames] = useState({});
   const [benchLoading, setBenchLoading] = useState(true);
   const [indexData, setIndexData] = useState(null);
+  const [bseReturns, setBseReturns] = useState({});
 
   useEffect(() => {
     let cancelled = false;
@@ -147,6 +150,33 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
       .then(j => setIndexData(j?.indices || null))
       .catch(() => setIndexData(null));
   }, []);
+
+  // BSE fallback — only for funds whose benchmark has no NSE match, and
+  // only once both benchmark names and NSE data have finished loading.
+  useEffect(() => {
+    if (benchLoading || !indexData) return;
+    const needsBse = funds.filter(f => {
+      const name = benchNames[f.id];
+      return name && !findBenchmarkReturns(name, indexData);
+    });
+    if (!needsBse.length) return;
+    let cancelled = false;
+    Promise.all(needsBse.map(f =>
+      fetch(`/api/bse-index?name=${encodeURIComponent(benchNames[f.id])}`)
+        .then(r => r.json())
+        .then(j => ({ id: f.id, returns: j.status === 'success' && j.matched ? j.returns : null }))
+        .catch(() => ({ id: f.id, returns: null }))
+    )).then(results => {
+      if (cancelled) return;
+      setBseReturns(prev => {
+        const next = { ...prev };
+        results.forEach(r => { next[r.id] = r.returns; });
+        return next;
+      });
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- benchNames/funds identity changes every render; gate on benchLoading/indexData instead
+  }, [benchLoading, indexData]);
 
   const winners = useMemo(() => {
     const w = {};
@@ -268,9 +298,10 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
               <div className="cmp-cell" style={{ fontWeight: 700 }}>1Y Alpha</div>
               {(() => {
                 // Compute all alphas first so "best" only considers funds that
-                // actually have a real matched benchmark return.
+                // actually have a real matched benchmark return. Try NSE first,
+                // fall back to BSE — never substitute a different index.
                 const alphas = funds.map(f => {
-                  const benchReturns = findBenchmarkReturns(benchNames[f.id], indexData);
+                  const benchReturns = findBenchmarkReturns(benchNames[f.id], indexData) || bseReturns[f.id];
                   if (f.ret1Y == null || !benchReturns || benchReturns.r1y == null) return null;
                   return +(f.ret1Y - benchReturns.r1y).toFixed(2);
                 });
@@ -283,7 +314,7 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
                     <div key={f.id} className={`cmp-cell${isBest ? ' cmp-ret-best' : ''}`}>
                       {alpha !== null
                         ? <span className={`cmp-ret ${alpha > 0 ? 'pos' : alpha < 0 ? 'neg' : 'neu'}`}>{alpha > 0 ? '+' : ''}{alpha}%</span>
-                        : <span className="cmp-ret neu" title="No matching NSE index found for this benchmark">—</span>}
+                        : <span className="cmp-ret neu" title="No matching NSE or BSE index found for this benchmark">—</span>}
                       {isBest && <span style={{ fontSize: '.55rem', marginLeft: 4, color: 'var(--g3)' }}>↑ best</span>}
                     </div>
                   );
