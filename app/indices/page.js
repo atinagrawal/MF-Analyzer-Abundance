@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
-const CAT_LABELS = { 
-  broad: 'Broad', 
-  sectoral: 'Sectoral', 
-  strategy: 'Strategy', 
+const CAT_LABELS = {
+  broad: 'Broad',
+  sectoral: 'Sectoral',
+  strategy: 'Strategy',
   thematic: 'Thematic',
   hybrid: 'Hybrid',
+  bond: 'Bonds',
 };
 
 function fmtRet(v) {
@@ -137,27 +138,38 @@ export default function IndicesPage() {
   const [sortKey, setSortKey] = useState('r1y');
   const [sortDir, setSortDir] = useState(-1);
   const [catFilter, setCatFilter] = useState('all');
+  const [exchFilter, setExchFilter] = useState('all');
   const [searchFilter, setSearchFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [metadata, setMetadata] = useState({ month: '', year: '', count: 0, asOf: '' });
+  const [metadata, setMetadata] = useState({ month: '', year: '', count: 0, asOf: '', bseCount: 0 });
 
   useEffect(() => {
     async function loadData() {
-      try {
-        const res = await fetch('/api/index-dashboard');
-        if (!res.ok) throw new Error(`API returned ${res.status}`);
-        const data = await res.json();
+      const [nseRes, bseRes] = await Promise.allSettled([
+        fetch('/api/index-dashboard').then(r => { if (!r.ok) throw new Error(`API returned ${r.status}`); return r.json(); }),
+        fetch('/api/bse-index-dashboard').then(r => { if (!r.ok) throw new Error(`API returned ${r.status}`); return r.json(); }),
+      ]);
 
-        if (!data.indices?.length) throw new Error('No index data in response');
+      const nseData = nseRes.status === 'fulfilled' && nseRes.value.indices?.length ? nseRes.value : null;
+      const bseData = bseRes.status === 'fulfilled' && bseRes.value.indices?.length ? bseRes.value : null;
 
-        setAllData(data.indices);
-        setMetadata({ month: data.month, year: data.year, count: data.count, asOf: data.asOf || '' });
+      if (!nseData && !bseData) {
+        setError(nseRes.status === 'rejected' ? nseRes.reason.message : 'No index data in response');
         setLoading(false);
-      } catch (e) {
-        setError(e.message);
-        setLoading(false);
+        return;
       }
+
+      const nseIndices = (nseData?.indices || []).map(r => ({ ...r, exchange: r.exchange || 'NSE' }));
+      const bseIndices = bseData?.indices || [];
+
+      setAllData([...nseIndices, ...bseIndices]);
+      setMetadata({
+        month: nseData?.month || '', year: nseData?.year || '',
+        count: nseData?.count || 0, asOf: nseData?.asOf || '',
+        bseCount: bseData?.count || 0,
+      });
+      setLoading(false);
     }
     loadData();
   }, []);
@@ -176,6 +188,7 @@ export default function IndicesPage() {
 
   let rows = allData.slice();
   if (catFilter !== 'all') rows = rows.filter(r => r.cat === catFilter);
+  if (exchFilter !== 'all') rows = rows.filter(r => r.exchange === exchFilter);
   if (searchFilter) {
     const q = searchFilter.toLowerCase();
     rows = rows.filter(r => r.name.toLowerCase().includes(q));
@@ -305,19 +318,22 @@ export default function IndicesPage() {
         <div className="page-header">
           <div className="page-eyebrow">
             <div className="live-dot"></div>
-            <span className="eyebrow-text">NSE Index Dashboard</span>
+            <span className="eyebrow-text">NSE + BSE Index Dashboard</span>
           </div>
           <h1 className="page-title">
             Index <span>Returns</span> & Valuation
           </h1>
           <p className="page-subtitle">
-            {metadata.count > 0 
+            {metadata.count > 0 || metadata.bseCount > 0
               ? (() => {
                   const day = metadata.asOf ? ordinal(parseInt(metadata.asOf.split('-')[2], 10)) : '';
                   const dateStr = day ? `${day} ${metadata.month} ${metadata.year}` : `${metadata.month} ${metadata.year}`;
-                  return `${metadata.count} NSE indices as of ${dateStr} — returns, P/E, P/B, Beta, Volatility. Source: NSE Indices Limited (equity + hybrid)`;
+                  const nsePart = metadata.count > 0 ? `${metadata.count} NSE indices as of ${dateStr}` : '';
+                  const bsePart = metadata.bseCount > 0 ? `${metadata.bseCount} BSE indices` : '';
+                  const both = [nsePart, bsePart].filter(Boolean).join(' + ');
+                  return `${both} — returns, P/E, P/B, Beta, Volatility. Sources: NSE Indices Limited, BSE Ltd.`;
                 })()
-              : 'Loading NSE index dashboard...'}
+              : 'Loading index dashboard...'}
           </p>
         </div>
 
@@ -330,6 +346,11 @@ export default function IndicesPage() {
           <button className={`cat-btn ${catFilter === 'strategy' ? 'active' : ''}`} onClick={() => filterCat('strategy')}>Strategy</button>
           <button className={`cat-btn ${catFilter === 'thematic' ? 'active' : ''}`} onClick={() => filterCat('thematic')}>Thematic</button>
           <button className={`cat-btn ${catFilter === 'hybrid'   ? 'active' : ''}`} onClick={() => filterCat('hybrid')}>Hybrid</button>
+          <button className={`cat-btn ${catFilter === 'bond'     ? 'active' : ''}`} onClick={() => filterCat('bond')}>Bonds</button>
+          <span className="controls-divider" />
+          <button className={`cat-btn ${exchFilter === 'all' ? 'active' : ''}`} onClick={() => setExchFilter('all')}>All Exchanges</button>
+          <button className={`cat-btn ${exchFilter === 'NSE' ? 'active' : ''}`} onClick={() => setExchFilter('NSE')}>NSE</button>
+          <button className={`cat-btn ${exchFilter === 'BSE' ? 'active' : ''}`} onClick={() => setExchFilter('BSE')}>BSE</button>
           <input
             type="text"
             className="search-box"
@@ -439,6 +460,7 @@ export default function IndicesPage() {
                         <td>
                           <div className="idx-name-cell">
                             {r.name}
+                            <span className={`exch-pill exch-${r.exchange}`}>{r.exchange}</span>
                             <span className={`cat-pill cat-${r.cat}`}>
                               {CAT_LABELS[r.cat] || r.cat}
                             </span>
@@ -469,7 +491,7 @@ export default function IndicesPage() {
               </table>
             </div>
             <div className="src-text">
-              Data: NSE Indices · {metadata.month} {metadata.year} · TRI basis · {metadata.count} indices
+              Data: NSE Indices ({metadata.month} {metadata.year}, TRI basis, {metadata.count} indices) + BSE Ltd. ({metadata.bseCount} indices, price basis)
             </div>
           </div>
         )}

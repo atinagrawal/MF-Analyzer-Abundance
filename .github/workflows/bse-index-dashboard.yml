@@ -1,0 +1,27 @@
+name: bse-index-dashboard
+
+# Nightly: fetch all ~141 BSE indices (returns + P/E, P/B, Div. Yield) into
+# bse_index_dashboard, so the Indices page can merge BSE alongside NSE.
+on:
+  schedule:
+    - cron: '30 13 * * 1-5'    # 13:30 UTC = 19:00 IST, weekdays (after market-breadth's bhavcopy run)
+  workflow_dispatch:
+
+concurrency:
+  group: bse-index-dashboard
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install pg@8 --no-save
+      - name: Build BSE index dashboard
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: node scripts/build-bse-index-dashboard.mjs
