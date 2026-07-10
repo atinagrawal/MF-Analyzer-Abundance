@@ -378,9 +378,17 @@ function PMSScreenerInner() {
         }
 
         arr.sort((a, b) => {
-            const av = a[sortCol] ?? -Infinity;
-            const bv = b[sortCol] ?? -Infinity;
-            return typeof av === 'string' ? sortDir * av.localeCompare(bv) : sortDir * (bv - av);
+            const av = a[sortCol];
+            const bv = b[sortCol];
+            // Missing values always sort last, regardless of direction — a -Infinity/0
+            // fallback would flip which end they land on depending on sortDir, making
+            // no-data funds look like top performers in the default (▼) view.
+            const aMissing = av === null || av === undefined || av === '';
+            const bMissing = bv === null || bv === undefined || bv === '';
+            if (aMissing && bMissing) return 0;
+            if (aMissing) return 1;
+            if (bMissing) return -1;
+            return typeof av === 'string' ? sortDir * av.localeCompare(bv) : sortDir * (av - bv);
         });
 
         return arr;
