@@ -11,34 +11,26 @@
  * against a BSE index rather than an NSE one — those previously showed no
  * alpha data at all in the PMS compare modal.
  *
- * Endpoints (api.bseindia.com — discovered via network inspection, no
- * official docs): FillddlIndex/w for the symbol list, IndexArchDailyPAR/w
- * for daily OHLC history. Both require Origin/Referer headers matching
- * bseindia.com or the WAF (Akamai) rejects the request; no auth token
- * needed otherwise.
+ * Fetch/matching logic lives in lib/bseIndex.js, shared with
+ * pages/api/nifty-tri.js (Rolling Returns). See that module for why BSE
+ * (not NSE) and the exact endpoints used.
  *
  * Note: BSE does not expose a separately-named "TRI" symbol per index —
  * e.g. "BSE 500" is the closest available series to what APMI strategies
- * call "BSE 500 TRI". Returns computed here are therefore PRICE returns
- * (same caveat as our NSE index-dashboard data), not a literal Total
- * Return Index. 1Y is an absolute return; 3Y/5Y are CAGR — same
- * convention used everywhere else on the site.
+ * call "BSE 500 TRI". Returns computed here are therefore PRICE returns,
+ * not a literal Total Return Index. 1Y is an absolute return; 3Y/5Y are
+ * CAGR — same convention used everywhere else on the site.
  *
  * Two-layer cache (memory + Blob): the symbol list rarely changes (30-day
- * TTL); each index's computed returns refresh daily (new trading day).
+ * TTL, cached in lib/bseIndex.js's caller-side memory below); each
+ * index's computed returns refresh daily (new trading day).
  */
 
 import { NextResponse } from 'next/server';
+import { fetchBseSymbolList, findBseSymbol, fetchBseDailySeries } from '@/lib/bseIndex';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const BSE_HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-    Origin: 'https://www.bseindia.com',
-    Referer: 'https://www.bseindia.com/',
-    Accept: 'application/json, text/plain, */*',
-};
 
 const SYMBOL_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const SERIES_TTL_MS = 24 * 60 * 60 * 1000;      // 1 day
@@ -53,50 +45,11 @@ function isFresh(ts, ttlMs) {
     return ts && Date.now() - ts < ttlMs;
 }
 
-/** Normalizes an index/benchmark name for matching ("Nifty 500 TRI" ~ "Nifty 500"). */
-function normalizeIndexName(name) {
-    return (name || '')
-        .toLowerCase()
-        .replace(/\btri\b/g, '')
-        .replace(/\btotal return index\b/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-async function fetchSymbolList() {
+async function getSymbolList() {
     if (isFresh(symbolListCache?.ts, SYMBOL_TTL_MS)) return symbolListCache.list;
-    const res = await fetch('https://api.bseindia.com/BseIndiaAPI/api/FillddlIndex/w?fmdt=&todt=', {
-        headers: BSE_HEADERS, cache: 'no-store',
-    });
-    if (!res.ok) throw new Error(`BSE symbol list responded ${res.status}`);
-    const json = await res.json();
-    const list = json.Table || [];
+    const list = await fetchBseSymbolList();
     symbolListCache = { list, ts: Date.now() };
     return list;
-}
-
-function findSymbol(name, list) {
-    const target = normalizeIndexName(name);
-    const match = list.find(x => normalizeIndexName(x.shortalias) === target);
-    return match ? match.Indx_cd : null;
-}
-
-function fmtDateDDMMYYYY(d) {
-    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-}
-
-async function fetchDailySeries(symbol) {
-    const to = new Date();
-    const from = new Date();
-    from.setFullYear(from.getFullYear() - 6); // 6y window covers 5Y CAGR with margin
-    const url = `https://api.bseindia.com/BseIndiaAPI/api/IndexArchDailyPAR/w?fmdt=${fmtDateDDMMYYYY(from)}&index=${encodeURIComponent(symbol)}&period=D&todt=${fmtDateDDMMYYYY(to)}`;
-    const res = await fetch(url, { headers: BSE_HEADERS, cache: 'no-store' });
-    if (!res.ok) throw new Error(`BSE daily series responded ${res.status}`);
-    const json = await res.json();
-    return (json.Table || [])
-        .map(r => ({ date: new Date(r.tdate), close: r.I_close }))
-        .filter(r => !isNaN(r.date.getTime()) && typeof r.close === 'number')
-        .sort((a, b) => a.date - b.date);
 }
 
 /** Closest row at or before targetDate (nearest prior trading day). */
@@ -118,8 +71,6 @@ function computeReturns(rows) {
     const y5 = closestOnOrBefore(rows, yearsAgo(5));
 
     return {
-        // 1Y: absolute return. 3Y/5Y: CAGR. Matches the convention used
-        // everywhere else on the site (NSE data documents itself the same way).
         r1y: y1 ? +(((latest.close / y1.close) - 1) * 100).toFixed(2) : null,
         r3y: y3 ? +((Math.pow(latest.close / y3.close, 1 / 3) - 1) * 100).toFixed(2) : null,
         r5y: y5 ? +((Math.pow(latest.close / y5.close, 1 / 5) - 1) * 100).toFixed(2) : null,
@@ -169,11 +120,12 @@ export async function GET(request) {
     }
 
     try {
-        const symbolList = await fetchSymbolList();
-        const symbol = findSymbol(name, symbolList);
-        if (!symbol) {
+        const symbolList = await getSymbolList();
+        const matched = findBseSymbol(name, symbolList);
+        if (!matched) {
             return NextResponse.json({ status: 'success', matched: false, returns: null });
         }
+        const { symbol } = matched;
 
         const mem = seriesCache.get(symbol);
         if (isFresh(mem?.ts, SERIES_TTL_MS)) {
@@ -192,7 +144,9 @@ export async function GET(request) {
         }
 
         const fetchPromise = (async () => {
-            const rows = await fetchDailySeries(symbol);
+            const to = new Date();
+            const from = new Date(); from.setFullYear(from.getFullYear() - 6); // 6y covers 5Y CAGR with margin
+            const rows = await fetchBseDailySeries(symbol, { from, to });
             const returns = computeReturns(rows);
             seriesCache.set(symbol, { returns, ts: Date.now() });
             writeToBlob(symbol, returns); // fire-and-forget

@@ -7,31 +7,36 @@ import Footer from '@/components/Footer';
 /* ═══════════════════════════════════════════════════════
    CONSTANTS
 ═══════════════════════════════════════════════════════ */
+// Sourced from BSE (api.bseindia.com), not NSE — NSE blocks server/cloud
+// IPs via Akamai (see scripts/ingest-eod.mjs and lib/bseIndex.js), so
+// niftyindices.com's now-broken cookie-based endpoint was replaced with
+// BSE's public index API rather than an equally NSE-dependent fix. Every
+// name below is a real BSE index (verified against BSE's own symbol
+// list) — not a substitute standing in for the old NIFTY-branded one.
 const ALL_INDICES = {
   broad: [
-    'NIFTY 50','Nifty Next 50','Nifty 100','Nifty 200','Nifty 500',
-    'Nifty Midcap 150','Nifty Midcap 50','Nifty Midcap 100','Nifty Midcap Select',
-    'Nifty Smallcap 250','Nifty Smallcap 50','Nifty Smallcap 100','Nifty Smallcap 500',
-    'Nifty LargeMidcap 250','Nifty MidSmallcap 400','Nifty Total Market',
-    'Nifty Microcap 250','Nifty500 Multicap 50:25:25',
+    'BSE SENSEX','BSE SENSEX Next 50','BSE 100','BSE 200','BSE 500',
+    'BSE MidCap','BSE 150 MidCap Index','BSE SmallCap','BSE 250 SmallCap Index',
+    'BSE LargeMidCap','BSE 250 LargeMidCap Index','BSE MidSmallCap',
+    'BSE AllCap','BSE 250 MICROCAP','BSE 1000','BSE India 150',
   ],
   sectoral: [
-    'Nifty Bank','Nifty IT','Nifty Pharma','Nifty FMCG','Nifty Auto',
-    'Nifty Financial Services','Nifty Private Bank','Nifty PSU Bank',
-    'Nifty Realty','Nifty Metal','Nifty Healthcare Index','Nifty Infrastructure',
-    'Nifty MNC','Nifty Media','Nifty Chemicals','Nifty Oil & Gas',
-    'Nifty Consumer Durables','Nifty500 Healthcare',
+    'BSE BANKEX','BSE Information Technology','BSE Healthcare','BSE Fast Moving Consumer Goods',
+    'BSE AUTO','BSE Financial Services','BSE Private Banks Index','BSE PSU BANK',
+    'BSE REALTY','BSE METAL','BSE OIL & GAS','BSE CONSUMER DURABLES',
+    'BSE Telecommunication','BSE India Infrastructure Index','BSE POWER',
+    'BSE CAPITAL GOODS','BSE Industrials','BSE Utilities',
   ],
   strategy: [
-    'Nifty Alpha 50','Nifty Dividend Opportunities 50','Nifty High Beta 50',
-    'Nifty Low Volatility 50','Nifty50 Equal Weight','Nifty100 Quality 30',
-    'Nifty200 Momentum 30','Nifty500 Value 50','Nifty500 Quality 50',
-    'Nifty Midcap150 Momentum 50','Nifty Midcap150 Quality 50',
-    'Nifty100 Alpha 30','Nifty200 Alpha 30','Nifty500 Momentum 50',
+    'BSE Momentum Index','BSE Low Volatility Index','BSE Enhanced Value Index','BSE Quality Index',
+    'BSE SENSEX EQUAL WEIGHT','BSE 500 Dividend Leaders 50','BSE 500 Momentum 50',
+    'BSE 500 Quality 50','BSE 500 Low Volatility 50','BSE 500 Enhanced Value 50',
+    'BSE Midcap 150 Momentum 30','BSE Midcap 150 Quality 30',
+    'BSE LARGECAP 100 QUALITY 30','BSE LARGECAP 100 LOW VOLATILITY 30','BSE LARGECAP 100 MOMENTUM 30',
   ],
 };
 const CAT_LABELS = { broad: 'Broad Market', sectoral: 'Sectoral', strategy: 'Strategy & Thematic' };
-const QUICK_CHIPS = ['NIFTY 50','Nifty Next 50','Nifty Midcap 150','Nifty Smallcap 250','Nifty 500','Nifty Bank','Nifty IT','Nifty Pharma'];
+const QUICK_CHIPS = ['BSE SENSEX','BSE 500','BSE MidCap','BSE SmallCap','BSE BANKEX','BSE Information Technology','BSE Healthcare','BSE Fast Moving Consumer Goods'];
 const WINDOWS = [1,3,5,7,10];
 
 /* ═══════════════════════════════════════════════════════
@@ -256,7 +261,7 @@ export default function RollingPage() {
   const [fundB, setFundB] = useState({ code:null, name:null, nav:null });
   // Benchmark
   const [benchMode, setBenchMode] = useState('index'); // 'index' | 'fund'
-  const [benchIndex, setBenchIndex] = useState('NIFTY 50');
+  const [benchIndex, setBenchIndex] = useState('BSE SENSEX');
   const [benchNav, setBenchNav]   = useState(null);
   // Window
   const [win, setWin] = useState(5);
@@ -543,7 +548,7 @@ export default function RollingPage() {
                     {QUICK_CHIPS.map(chip => (
                       <button key={chip} className={`bench-chip${benchIndex===chip?' active':''}`}
                         onClick={()=>{selectBenchIndex(chip);setShowIdxDrop(false);}}>
-                        {chip.replace('NIFTY 50','Nifty 50').replace('Nifty Midcap 150','Mid 150').replace('Nifty Smallcap 250','Small 250').replace('Nifty 500','N 500').replace('Nifty Bank','Bank').replace('Nifty Pharma','Pharma')}
+                        {chip.replace('BSE Information Technology','BSE IT').replace('BSE Fast Moving Consumer Goods','BSE FMCG')}
                       </button>
                     ))}
                   </div>
@@ -571,7 +576,7 @@ export default function RollingPage() {
                   </div>
                   <div className="bench-pill">
                     <span id="benchPillName" style={{display:'block',fontSize:'.75rem',fontWeight:700,color:'var(--g1)'}}>{benchIndex}</span>
-                    <span style={{display:'block',fontSize:'.6rem',color:'var(--muted)',fontFamily:'JetBrains Mono,monospace',marginTop:2}}>TRI · NSE</span>
+                    <span style={{display:'block',fontSize:'.6rem',color:'var(--muted)',fontFamily:'JetBrains Mono,monospace',marginTop:2}}>Price Index · BSE</span>
                   </div>
                 </div>
               ) : (
