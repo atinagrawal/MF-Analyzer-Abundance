@@ -121,6 +121,7 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
   const [benchNames, setBenchNames] = useState({});
   const [benchLoading, setBenchLoading] = useState(true);
   const [indexData, setIndexData] = useState(null);
+  const [nseLoading, setNseLoading] = useState(true);
   const [bseReturns, setBseReturns] = useState({});
 
   useEffect(() => {
@@ -148,13 +149,19 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
     fetch('/api/index-dashboard')
       .then(r => r.json())
       .then(j => setIndexData(j?.indices || null))
-      .catch(() => setIndexData(null));
+      .catch(() => setIndexData(null))
+      .finally(() => setNseLoading(false));
   }, []);
 
   // BSE fallback — only for funds whose benchmark has no NSE match, and
-  // only once both benchmark names and NSE data have finished loading.
+  // only once both benchmark names and the NSE fetch attempt have finished.
+  // Gating on `nseLoading` rather than `!indexData` matters: niftyindices.com's
+  // PDF source is flaky (see lib/bseIndex.js's header comment) and a failed
+  // NSE fetch also sets indexData to null — that must NOT be treated the same
+  // as "still loading", or a down NSE source silently kills the BSE fallback
+  // for every strategy, even though BSE lookups don't depend on NSE at all.
   useEffect(() => {
-    if (benchLoading || !indexData) return;
+    if (benchLoading || nseLoading) return;
     const needsBse = funds.filter(f => {
       const name = benchNames[f.id];
       return name && !findBenchmarkReturns(name, indexData);
@@ -175,8 +182,8 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
       });
     });
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- benchNames/funds identity changes every render; gate on benchLoading/indexData instead
-  }, [benchLoading, indexData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- benchNames/funds identity changes every render; gate on benchLoading/nseLoading instead
+  }, [benchLoading, nseLoading]);
 
   const winners = useMemo(() => {
     const w = {};
