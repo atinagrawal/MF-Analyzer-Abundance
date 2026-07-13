@@ -109,7 +109,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Include plan so client components can check without extra fetch
         const plan    = user.plan ?? 'free';
         const expires = user.plan_expires_at ? new Date(user.plan_expires_at) : null;
-        session.user.plan = (plan === 'pro' && expires && expires > new Date()) ? 'pro' : 'free';
+        const isLifetime  = plan === 'pro_lifetime';
+        const isProAnnual = plan === 'pro' && expires && expires > new Date();
+        session.user.plan          = (isLifetime || isProAnnual) ? 'pro' : 'free';
+        session.user.planTier      = isLifetime ? 'lifetime' : isProAnnual ? 'annual' : 'free';
+        session.user.planExpiresAt = isProAnnual ? expires.toISOString() : null;
       }
       return session;
     },

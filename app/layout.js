@@ -91,8 +91,11 @@ export default function RootLayout({ children }) {
         </AuthProvider>
         <SpeedInsights />
 
-        {/* Razorpay checkout — loaded lazily, only needed on pricing page */}
-        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+        {/* Razorpay checkout — used on pricing + market-breadth's upgrade gate.
+            afterInteractive (not lazyOnload) so it's ready by the time a user
+            reaches for the upgrade button; handleUpgrade() still guards against
+            window.Razorpay not existing yet on a very fast click / slow network. */}
+        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
 
         {/* Google Analytics — must use next/script so the tag actually
             executes on the client. Raw <script> JSX tags are inert. */}

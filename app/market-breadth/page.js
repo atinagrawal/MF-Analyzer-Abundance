@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { startCheckout } from '@/lib/checkoutClient';
 
 const DMAS = [20, 50, 100, 150, 200];
 const pctOf = (a, t) => (t ? (100 * a) / t : null);
@@ -663,24 +664,12 @@ function ProGate() {
     setLoading(true);
     setError('');
     try {
-      const res  = await fetch('/api/checkout', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not create order');
-
-      const rzp = new window.Razorpay({
-        key:         data.keyId,
-        order_id:    data.orderId,
-        amount:      data.amount,
-        currency:    data.currency,
-        name:        'Abundance Financial Services',
-        description: 'Pro Plan — 1 year',
-        image:       '/logo-192.png',
-        prefill: { name: session?.user?.name || '', email: session?.user?.email || '' },
-        theme: { color: '#1a7a4a' },
-        handler() { window.location.reload(); },
-        modal: { ondismiss() { setLoading(false); } },
+      await startCheckout({
+        plan: 'annual',
+        session,
+        onSuccess() { window.location.reload(); },
+        onDismiss() { setLoading(false); },
       });
-      rzp.open();
     } catch (err) {
       setError(err.message);
       setLoading(false);
@@ -705,7 +694,7 @@ function ProGate() {
         <button className="brd-gate-btn brd-gate-btn-pro" onClick={handleUpgrade} disabled={loading}>
           {loading ? 'Opening checkout…' : 'Upgrade to Pro →'}
         </button>
-        <a className="brd-gate-faq" href="/pricing">See all Pro features</a>
+        <a className="brd-gate-faq" href="/pricing">See all Pro features · Lifetime plan available</a>
       </div>
       {error && <p className="brd-gate-error">{error}</p>}
     </div>

@@ -7952,6 +7952,38 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   border-radius: 10px;
 }
 
+/* Third (Lifetime) column — same base .pricing-grid, wider max-width */
+.pricing-grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+  max-width: 1180px;
+}
+
+.pricing-card-lifetime {
+  border-color: #b8860b;
+  box-shadow: 0 4px 24px rgba(184,134,11,.14);
+}
+
+.pricing-badge-lifetime {
+  background: #b8860b;
+}
+
+.lifetime-tier { color: #96690a; }
+.lifetime-check { color: #b8860b; }
+
+.pricing-btn-lifetime {
+  background: #b8860b;
+  color: #fff;
+  border-color: #b8860b;
+}
+.pricing-btn-lifetime:hover:not(:disabled) {
+  background: #96690a;
+  border-color: #96690a;
+}
+.pricing-btn-lifetime:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
 .pricing-faq {
   max-width: 820px;
   margin: 0 auto 60px;

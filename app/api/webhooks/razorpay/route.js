@@ -58,6 +58,7 @@ export async function POST(req) {
   if (event.event === 'payment.captured') {
     const payment = event.payload?.payment?.entity;
     const userId  = payment?.notes?.userId;
+    const plan    = payment?.notes?.plan === 'lifetime' ? 'lifetime' : 'annual';
 
     if (!userId) {
       console.error('[razorpay-webhook] payment.captured missing userId in notes', payment?.id);
@@ -65,8 +66,9 @@ export async function POST(req) {
     }
 
     // Validate amount, currency, and status — reject anything that doesn't
-    // match the Pro plan price to prevent replayed or manipulated events.
-    if (payment.amount !== 58882 || payment.currency !== 'INR' || payment.status !== 'captured') {
+    // match the expected plan price to prevent replayed or manipulated events.
+    const expectedAmount = plan === 'lifetime' ? 235882 : 58882;
+    if (payment.amount !== expectedAmount || payment.currency !== 'INR' || payment.status !== 'captured') {
       console.warn('[razorpay-webhook] unexpected amount/currency/status', payment.id, payment.amount, payment.currency, payment.status);
       return Response.json({ ok: true });
     }
@@ -82,20 +84,31 @@ export async function POST(req) {
       return Response.json({ ok: true });
     }
 
-    // Grant Pro for 1 year from today
-    const expiresAt = new Date();
-    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    if (plan === 'lifetime') {
+      await pool.query(
+        `UPDATE users
+            SET plan              = 'pro_lifetime',
+                plan_expires_at   = NULL,
+                razorpay_order_id = $1
+          WHERE id = $2`,
+        [payment.order_id, userId]
+      );
+      console.log(`[razorpay-webhook] Lifetime Pro activated for user ${userId}`);
+    } else {
+      // Grant Pro for 1 year from today
+      const expiresAt = new Date();
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
-    await pool.query(
-      `UPDATE users
-          SET plan              = 'pro',
-              plan_expires_at   = $1,
-              razorpay_order_id = $2
-        WHERE id = $3`,
-      [expiresAt, payment.order_id, userId]
-    );
-
-    console.log(`[razorpay-webhook] Pro activated for user ${userId} until ${expiresAt.toISOString()}`);
+      await pool.query(
+        `UPDATE users
+            SET plan              = 'pro',
+                plan_expires_at   = $1,
+                razorpay_order_id = $2
+          WHERE id = $3`,
+        [expiresAt, payment.order_id, userId]
+      );
+      console.log(`[razorpay-webhook] Pro activated for user ${userId} until ${expiresAt.toISOString()}`);
+    }
   }
 
   return Response.json({ ok: true });

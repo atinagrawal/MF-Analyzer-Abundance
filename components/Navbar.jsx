@@ -114,13 +114,21 @@ function UserAvatar({ session, onNavClose }) {
     signOut({ callbackUrl });
   };
 
-  const user     = session.user;
-  const name     = user?.name  || 'User';
-  const email    = user?.email || '';
-  const image    = user?.image || null;
-  const role     = user?.role  || 'client';
-  const plan     = user?.plan  || 'free';
-  const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const user      = session.user;
+  const name      = user?.name  || 'User';
+  const email     = user?.email || '';
+  const image     = user?.image || null;
+  const role      = user?.role  || 'client';
+  const plan      = user?.plan  || 'free';
+  const planTier  = user?.planTier || 'free'; // 'free' | 'annual' | 'lifetime'
+  const initials  = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+  // On-site renewal reminder — annual Pro only, within 30 days of expiry.
+  // Lifetime members never expire, so this never applies to them.
+  const daysToExpiry = (planTier === 'annual' && user?.planExpiresAt)
+    ? Math.ceil((new Date(user.planExpiresAt) - new Date()) / 864e5)
+    : null;
+  const showRenewalReminder = daysToExpiry != null && daysToExpiry <= 30 && daysToExpiry >= 0;
 
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -193,13 +201,19 @@ function UserAvatar({ session, onNavClose }) {
                 letterSpacing: '.5px', textTransform: 'uppercase',
                 padding: '2px 7px', borderRadius: 4,
                 fontFamily: "'JetBrains Mono', monospace",
-                background: plan === 'pro' ? '#e8f5e9' : 'var(--s2)',
-                color:      plan === 'pro' ? '#1b5e20' : 'var(--muted)',
+                background: planTier === 'lifetime' ? '#fff8e1' : plan === 'pro' ? '#e8f5e9' : 'var(--s2)',
+                color:      planTier === 'lifetime' ? '#96690a' : plan === 'pro' ? '#1b5e20' : 'var(--muted)',
                 border: '1px solid var(--border)',
               }}>
-                {plan === 'pro' ? '★ Pro' : 'Free'}
+                {planTier === 'lifetime' ? '★ Lifetime' : plan === 'pro' ? '★ Pro' : 'Free'}
               </div>
             </div>
+            {showRenewalReminder && (
+              <a href="/pricing" onClick={() => { setOpen(false); onNavClose?.(); }}
+                style={{ display: 'block', marginTop: 6, fontSize: '.62rem', fontWeight: 700, color: '#e65100', textDecoration: 'none' }}>
+                ⚠ Pro expires in {daysToExpiry} day{daysToExpiry === 1 ? '' : 's'} — Renew →
+              </a>
+            )}
           </div>
 
           {/* Upgrade — free users only */}
@@ -208,7 +222,7 @@ function UserAvatar({ session, onNavClose }) {
               style={{ display: 'block', padding: '10px 14px', fontSize: '.75rem', fontWeight: 700, color: '#1a7a4a', textDecoration: 'none', borderBottom: '1px solid var(--border)', transition: 'background .12s', background: '#f0faf4' }}
               onMouseEnter={e => e.currentTarget.style.background = '#e0f5ea'}
               onMouseLeave={e => e.currentTarget.style.background = '#f0faf4'}>
-              ★ Upgrade to Pro — ₹999/yr
+              ★ Upgrade to Pro — ₹499/yr + GST
             </a>
           )}
 
