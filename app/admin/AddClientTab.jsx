@@ -8,9 +8,11 @@ export default function AddClientTab() {
   const [step, setStep]         = useState('form'); // form | uploading | done | error
   const [msg, setMsg]           = useState('');
   const [userId, setUserId]     = useState('');
-  const [pdfFile, setPdfFile]   = useState(null);
+  const [casFile, setCasFile]   = useState(null);
   const [password, setPassword] = useState('');
   const [parsing, setParsing]   = useState(false);
+
+  const isMfCentral = (casFile?.name || '').toLowerCase().endsWith('.xlsx');
 
   async function handleCreateUser(e) {
     e.preventDefault();
@@ -35,17 +37,21 @@ export default function AddClientTab() {
 
   async function handleUploadCas(e) {
     e.preventDefault();
-    if (!pdfFile || !userId) return;
+    if (!casFile || !userId) return;
     setParsing(true);
-    setMsg('Parsing CAS…');
+    setMsg(isMfCentral ? 'Parsing MF Central report…' : 'Parsing CAS…');
     try {
       const formData = new FormData();
-      formData.append('file', pdfFile);
-      formData.append('password', password);
-      const parseRes = await fetch('/api/parse', { method: 'POST', body: formData });
+      formData.append('file', casFile);
+      if (!isMfCentral) formData.append('password', password);
+      const parseRes = await fetch(isMfCentral ? '/api/parse-mfcentral' : '/api/parse', {
+        method: 'POST', body: formData,
+      });
       if (!parseRes.ok) {
         const err = await parseRes.json().catch(() => ({}));
-        throw new Error(err.detail || (parseRes.status === 401 ? 'Incorrect password' : 'Parse failed'));
+        throw new Error(
+          err.error || err.detail || (parseRes.status === 401 ? 'Incorrect password' : 'Parse failed')
+        );
       }
       const data = await parseRes.json();
       setMsg('Saving portfolio…');
@@ -55,7 +61,7 @@ export default function AddClientTab() {
       const saveRes = await fetch('/api/cas/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ parsedData: data, fileName: pdfFile.name, panCount, targetUserId: userId }),
+        body: JSON.stringify({ parsedData: data, fileName: casFile.name, panCount, targetUserId: userId }),
       });
       if (!saveRes.ok) throw new Error('Failed to save portfolio');
       setMsg(`Done! Portfolio saved for ${email}.`);
@@ -69,7 +75,7 @@ export default function AddClientTab() {
 
   function reset() {
     setEmail(''); setName(''); setStep('form'); setMsg('');
-    setUserId(''); setPdfFile(null); setPassword('');
+    setUserId(''); setCasFile(null); setPassword('');
   }
 
   return (
@@ -141,18 +147,23 @@ export default function AddClientTab() {
               </div>
               <form onSubmit={handleUploadCas}>
                 <div style={{ marginBottom: 14 }}>
-                  <div className="field-label">CAS PDF File</div>
-                  <input type="file" accept=".pdf" required
+                  <div className="field-label">CAS PDF or MF Central Excel Report</div>
+                  <input type="file" accept=".pdf,.xlsx" required
                     className="file-input"
-                    onChange={e => setPdfFile(e.target.files[0])} />
+                    onChange={e => setCasFile(e.target.files[0])} />
+                  <div className="admin-upload-hint">
+                    CAMS/KFintech: upload the password-protected .pdf. MF Central: upload the "Detailed Report" .xlsx — no password needed.
+                  </div>
                 </div>
-                <div style={{ marginBottom: 16 }}>
-                  <div className="field-label">PDF Password</div>
-                  <input type="password" value={password} required
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="Enter PDF password"
-                    className="field-input" />
-                </div>
+                {!isMfCentral && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div className="field-label">PDF Password</div>
+                    <input type="password" value={password} required={!isMfCentral}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="Enter PDF password"
+                      className="field-input" />
+                  </div>
+                )}
                 <button type="submit" className="submit-btn" disabled={parsing}>
                   {parsing ? 'Parsing…' : '🔓 Parse & Save CAS'}
                 </button>

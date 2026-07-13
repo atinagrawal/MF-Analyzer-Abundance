@@ -154,3 +154,10 @@
   color: var(--muted);
   font-family: 'JetBrains Mono', monospace;
 }
+
+.admin-upload-hint {
+  font-size: .6rem;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.5;
+}
