@@ -29,11 +29,147 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** Role dropdown — reused in both the desktop side panel and the mobile drill-down. */
+function RoleSelect({ user, sessionUserId, roleChanging, onChange }) {
+  return (
+    <div className="admin-role-row">
+      <span className="admin-role-row-label">Role</span>
+      <select
+        className="admin-role-select"
+        value={user.role}
+        disabled={roleChanging === user.id || user.id === sessionUserId}
+        onChange={e => onChange(user.id, e.target.value)}
+      >
+        <option value="client">client</option>
+        <option value="distributor">distributor</option>
+        <option value="admin">admin</option>
+      </select>
+    </div>
+  );
+}
+
+/** CAS portfolio list — reused in both the desktop side panel and the mobile drill-down. */
+function PortfolioList({ selectedUser, portfolios, portsLoading, deletingId, setDeletingId, deleteInFlight, deletePortfolio, notifying, notifyMsg, notifyClient }) {
+  return (
+    <>
+      <div style={{
+        fontSize: '.58rem', fontWeight: 800, letterSpacing: '1.5px',
+        textTransform: 'uppercase', color: 'var(--muted)',
+        fontFamily: "'JetBrains Mono', monospace", marginBottom: 10,
+      }}>
+        CAS Portfolios ({portfolios.length})
+      </div>
+      {portsLoading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[1, 2].map(i => <div key={i} className="sk" style={{ height: 52, borderRadius: 10 }} />)}
+        </div>
+      ) : portfolios.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '16px 0' }}>
+          <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginBottom: 12 }}>
+            No CAS uploads yet
+          </div>
+          <a
+            href={`/cas-tracker?userId=${selectedUser.id}&uname=${encodeURIComponent(selectedUser.name || selectedUser.email || '')}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{
+              display: 'inline-block', fontSize: '.65rem', fontWeight: 700,
+              padding: '7px 14px', borderRadius: 7,
+              background: 'var(--g1)', color: '#fff',
+              textDecoration: 'none', whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--g2)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
+          >
+            View Manual Holdings →
+          </a>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {portfolios.map(p => (
+            <div key={p.id} style={{
+              padding: '10px 12px', borderRadius: 10,
+              border: '1.5px solid var(--border)', background: 'var(--s2)',
+            }}>
+              {deletingId === p.id ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <span style={{ fontSize: '.68rem', fontWeight: 600, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    Delete "{p.file_name}"?
+                  </span>
+                  <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+                    <button onClick={() => deletePortfolio(p.id)} disabled={deleteInFlight}
+                      style={{ fontSize: '.62rem', fontWeight: 800, color: '#fff', background: 'var(--neg)',
+                        border: 'none', borderRadius: 6, padding: '5px 10px', cursor: 'pointer' }}>
+                      {deleteInFlight ? '…' : 'Delete'}
+                    </button>
+                    <button onClick={() => setDeletingId('')} disabled={deleteInFlight}
+                      style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted)', background: 'none',
+                        border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
+                      📄 {p.file_name}
+                    </div>
+                    <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+                      {p.pan_count} PAN{p.pan_count !== 1 ? 's' : ''} · {fmtDate(p.uploaded_at)}
+                    </div>
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:4, flexShrink:0, alignItems:'flex-end' }}>
+                    <div style={{ display:'flex', gap:5 }}>
+                      <button onClick={e=>{e.stopPropagation();notifyClient(p);}} disabled={notifying===p.id}
+                        style={{ fontSize:'.6rem', fontWeight:700, padding:'4px 9px', borderRadius:6,
+                          border:'1.5px solid var(--border)', background:notifying===p.id?'var(--s3)':'var(--s2)',
+                          color:'var(--g2)', cursor:notifying===p.id?'not-allowed':'pointer',
+                          whiteSpace:'nowrap', fontFamily:'Raleway, sans-serif' }}>
+                        {notifying===p.id?'…':'✉'}
+                      </button>
+                      <button onClick={e=>{e.stopPropagation();setDeletingId(p.id);}}
+                        title="Delete this CAS upload"
+                        style={{ fontSize:'.6rem', fontWeight:700, padding:'4px 9px', borderRadius:6,
+                          border:'1.5px solid var(--border)', background:'var(--s2)',
+                          color:'var(--muted)', cursor:'pointer',
+                          whiteSpace:'nowrap', fontFamily:'Raleway, sans-serif' }}
+                        onMouseEnter={e=>e.currentTarget.style.color='var(--neg)'}
+                        onMouseLeave={e=>e.currentTarget.style.color='var(--muted)'}>
+                        🗑
+                      </button>
+                      <a href={`/cas-tracker?load=${encodeURIComponent(p.blob_key)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        onClick={e=>e.stopPropagation()}
+                        style={{ fontSize:'.65rem', fontWeight:700, padding:'5px 11px', borderRadius:6,
+                          background:'var(--g1)', color:'#fff', textDecoration:'none', whiteSpace:'nowrap' }}
+                        onMouseEnter={e=>e.currentTarget.style.background='var(--g2)'}
+                        onMouseLeave={e=>e.currentTarget.style.background='var(--g1)'}>
+                        View →
+                      </a>
+                    </div>
+                    {notifyMsg.id===p.id&&(
+                      <div style={{ fontSize:'.58rem', fontWeight:700,
+                        color:notifyMsg.type==='ok'?'var(--g1)':'var(--neg)' }}>
+                        {notifyMsg.text}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function UsersTab({ session }) {
   const [users, setUsers]               = useState([]);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [portfolios, setPortfolios]     = useState([]);
   const [portsLoading, setPortsLoading] = useState(false);
   const [roleChanging, setRoleChanging] = useState('');
@@ -61,6 +197,19 @@ export default function UsersTab({ session }) {
       .finally(() => setPortsLoading(false));
   }
 
+  function selectUserCard(user) {
+    selectUser(user);
+    setMobileDetailOpen(true);
+  }
+
+  function closeDesktopPanel() {
+    setSelectedUser(null);
+  }
+
+  function closeMobileDrilldown() {
+    setMobileDetailOpen(false);
+  }
+
   async function changeRole(userId, newRole) {
     setRoleChanging(userId);
     try {
@@ -72,6 +221,7 @@ export default function UsersTab({ session }) {
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      setSelectedUser(prev => prev && prev.id === userId ? { ...prev, role: newRole } : prev);
     } catch (e) { alert(e.message); }
     finally { setRoleChanging(''); }
   }
@@ -116,228 +266,169 @@ export default function UsersTab({ session }) {
 
   if (error) return <div className="error-box">⚠ {error}</div>;
 
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: selectedUser ? '1fr 340px' : '1fr', gap: 20 }}>
-      <div className="table-card">
-        <div className="table-wrap">
-          <table className="idx-table" style={{ minWidth: 600 }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', paddingLeft: 16 }}>User</th>
-                <th>Role</th>
-                <th>Portfolios</th>
-                <th>Last Upload</th>
-                <th>Joined</th>
-                <th style={{ textAlign: 'center' }}>Change Role</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                [...Array(5)].map((_, i) => (
-                  <tr key={i}>
-                    {[180, 60, 50, 80, 80, 100].map((w, j) => (
-                      <td key={j}><div className="sk" style={{ width: w, height: 13 }} /></td>
-                    ))}
-                  </tr>
-                ))
-              ) : users.map(u => (
-                <tr
-                  key={u.id}
-                  onClick={() => selectUser(u)}
-                  style={{ cursor: 'pointer', background: selectedUser?.id === u.id ? 'var(--g-xlight)' : undefined }}
-                >
-                  <td style={{ textAlign: 'left', paddingLeft: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                      {u.image ? (
-                        <img src={u.image} alt="" width={26} height={26}
-                          style={{ borderRadius: '50%', flexShrink: 0 }}
-                          referrerPolicy="no-referrer" />
-                      ) : (
-                        <div style={{
-                          width: 26, height: 26, borderRadius: '50%',
-                          background: 'var(--s3)', display: 'flex',
-                          alignItems: 'center', justifyContent: 'center',
-                          fontSize: '.6rem', fontWeight: 800, color: 'var(--g2)',
-                        }}>
-                          {(u.name || u.email || '?')[0].toUpperCase()}
-                        </div>
-                      )}
-                      <div>
-                        <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text)' }}>
-                          {u.name || <em style={{ color: 'var(--muted)' }}>Pending</em>}
-                          {u.id === session.user.id && (
-                            <span style={{ fontSize: '.52rem', color: 'var(--muted)', marginLeft: 6 }}>(you)</span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
-                          {u.email}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ textAlign: 'center' }}><RoleBadge role={u.role} /></td>
-                  <td style={{ fontFamily: "'JetBrains Mono', monospace", textAlign: 'right' }}>
-                    {u.portfolio_count || 0}
-                  </td>
-                  <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.65rem' }}>{fmtDate(u.last_upload)}</td>
-                  <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.65rem' }}>{fmtDate(u.created_at)}</td>
-                  <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                    <select
-                      value={u.role}
-                      disabled={roleChanging === u.id || u.id === session.user.id}
-                      onChange={e => changeRole(u.id, e.target.value)}
-                      style={{
-                        fontSize: '.65rem', fontWeight: 700,
-                        border: '1.5px solid var(--border)', borderRadius: 6,
-                        background: 'var(--s2)', color: 'var(--text)',
-                        padding: '3px 6px', cursor: 'pointer',
-                        fontFamily: "'Raleway', sans-serif",
-                        opacity: roleChanging === u.id ? 0.5 : 1,
-                      }}
-                    >
-                      <option value="client">client</option>
-                      <option value="distributor">distributor</option>
-                      <option value="admin">admin</option>
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="src-text">Click a row to view that user's CAS uploads</div>
-      </div>
+  const detailProps = {
+    selectedUser, portfolios, portsLoading, deletingId, setDeletingId,
+    deleteInFlight, deletePortfolio, notifying, notifyMsg, notifyClient,
+  };
 
-      {selectedUser && (
-        <div className="table-card" style={{ height: 'fit-content' }}>
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: '.78rem', fontWeight: 800, color: 'var(--text)' }}>
+  return (
+    <>
+      {/* ══ MOBILE / TABLET (<768px) ══ */}
+      <div className="admin-mobile-only">
+        {mobileDetailOpen && selectedUser ? (
+          <div>
+            <button className="admin-drilldown-back" onClick={closeMobileDrilldown}>
+              ← Back to Users
+            </button>
+            <div className="table-card">
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '.85rem', fontWeight: 800, color: 'var(--text)' }}>
                   {selectedUser.name || selectedUser.email}
                 </div>
-                <div style={{ fontSize: '.6rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+                <div style={{ fontSize: '.62rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
                   {selectedUser.email}
                 </div>
               </div>
-              <button onClick={() => setSelectedUser(null)}
-                style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '.9rem', color: 'var(--muted)', padding: 4 }}>
-                ✕
-              </button>
+              <div style={{ padding: '12px 16px' }}>
+                <RoleSelect
+                  user={selectedUser}
+                  sessionUserId={session.user.id}
+                  roleChanging={roleChanging}
+                  onChange={changeRole}
+                />
+                <PortfolioList {...detailProps} />
+              </div>
             </div>
           </div>
-          <div style={{ padding: '12px 16px' }}>
-            <div style={{
-              fontSize: '.58rem', fontWeight: 800, letterSpacing: '1.5px',
-              textTransform: 'uppercase', color: 'var(--muted)',
-              fontFamily: "'JetBrains Mono', monospace", marginBottom: 10,
-            }}>
-              CAS Portfolios ({portfolios.length})
-            </div>
-            {portsLoading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[1, 2].map(i => <div key={i} className="sk" style={{ height: 52, borderRadius: 10 }} />)}
-              </div>
-            ) : portfolios.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginBottom: 12 }}>
-                  No CAS uploads yet
+        ) : (
+          <div>
+            {loading ? (
+              [...Array(4)].map((_, i) => (
+                <div key={i} className="sk" style={{ height: 62, borderRadius: 10, marginBottom: 8 }} />
+              ))
+            ) : users.map(u => (
+              <button key={u.id} className="admin-user-card" onClick={() => selectUserCard(u)}>
+                <div className="admin-user-card-avatar">
+                  {u.image ? <img src={u.image} alt="" referrerPolicy="no-referrer" /> : (u.name || u.email || '?')[0].toUpperCase()}
                 </div>
-                <a
-                  href={`/cas-tracker?userId=${selectedUser.id}&uname=${encodeURIComponent(selectedUser.name || selectedUser.email || '')}`}
-                  target="_blank" rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-block', fontSize: '.65rem', fontWeight: 700,
-                    padding: '7px 14px', borderRadius: 7,
-                    background: 'var(--g1)', color: '#fff',
-                    textDecoration: 'none', whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--g2)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
-                >
-                  View Manual Holdings →
-                </a>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {portfolios.map(p => (
-                  <div key={p.id} style={{
-                    padding: '10px 12px', borderRadius: 10,
-                    border: '1.5px solid var(--border)', background: 'var(--s2)',
-                  }}>
-                    {deletingId === p.id ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                        <span style={{ fontSize: '.68rem', fontWeight: 600, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          Delete "{p.file_name}"?
-                        </span>
-                        <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-                          <button onClick={() => deletePortfolio(p.id)} disabled={deleteInFlight}
-                            style={{ fontSize: '.62rem', fontWeight: 800, color: '#fff', background: 'var(--neg)',
-                              border: 'none', borderRadius: 6, padding: '5px 10px', cursor: 'pointer' }}>
-                            {deleteInFlight ? '…' : 'Delete'}
-                          </button>
-                          <button onClick={() => setDeletingId('')} disabled={deleteInFlight}
-                            style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted)', background: 'none',
-                              border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer' }}>
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
-                            📄 {p.file_name}
+                <div className="admin-user-card-body">
+                  <div className="admin-user-card-name">
+                    {u.name || <em style={{ color: 'var(--muted)' }}>Pending</em>}
+                    {u.id === session.user.id && <span style={{ fontSize: '.55rem', color: 'var(--muted)', marginLeft: 5 }}>(you)</span>}
+                  </div>
+                  <div className="admin-user-card-email">{u.email}</div>
+                  <div className="admin-user-card-sub">{u.portfolio_count || 0} portfolio{u.portfolio_count === 1 ? '' : 's'} · joined {fmtDate(u.created_at)}</div>
+                </div>
+                <RoleBadge role={u.role} />
+              </button>
+            ))}
+            <div className="src-text">Tap a user to view their CAS uploads and manage their role</div>
+          </div>
+        )}
+      </div>
+
+      {/* ══ DESKTOP (≥768px) ══ */}
+      <div className="admin-desktop-only" style={{ display: 'grid', gridTemplateColumns: selectedUser ? '1fr 340px' : '1fr', gap: 20 }}>
+        <div className="table-card">
+          <div className="table-wrap">
+            <table className="idx-table" style={{ minWidth: 520 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', paddingLeft: 16 }}>User</th>
+                  <th>Role</th>
+                  <th>Portfolios</th>
+                  <th>Last Upload</th>
+                  <th>Joined</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  [...Array(5)].map((_, i) => (
+                    <tr key={i}>
+                      {[180, 60, 50, 80, 80].map((w, j) => (
+                        <td key={j}><div className="sk" style={{ width: w, height: 13 }} /></td>
+                      ))}
+                    </tr>
+                  ))
+                ) : users.map(u => (
+                  <tr
+                    key={u.id}
+                    onClick={() => selectUser(u)}
+                    style={{ cursor: 'pointer', background: selectedUser?.id === u.id ? 'var(--g-xlight)' : undefined }}
+                  >
+                    <td style={{ textAlign: 'left', paddingLeft: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                        {u.image ? (
+                          <img src={u.image} alt="" width={26} height={26}
+                            style={{ borderRadius: '50%', flexShrink: 0 }}
+                            referrerPolicy="no-referrer" />
+                        ) : (
+                          <div style={{
+                            width: 26, height: 26, borderRadius: '50%',
+                            background: 'var(--s3)', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center',
+                            fontSize: '.6rem', fontWeight: 800, color: 'var(--g2)',
+                          }}>
+                            {(u.name || u.email || '?')[0].toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text)' }}>
+                            {u.name || <em style={{ color: 'var(--muted)' }}>Pending</em>}
+                            {u.id === session.user.id && (
+                              <span style={{ fontSize: '.52rem', color: 'var(--muted)', marginLeft: 6 }}>(you)</span>
+                            )}
                           </div>
                           <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
-                            {p.pan_count} PAN{p.pan_count !== 1 ? 's' : ''} · {fmtDate(p.uploaded_at)}
+                            {u.email}
                           </div>
-                        </div>
-                        <div style={{ display:'flex', flexDirection:'column', gap:4, flexShrink:0, alignItems:'flex-end' }}>
-                          <div style={{ display:'flex', gap:5 }}>
-                            <button onClick={e=>{e.stopPropagation();notifyClient(p);}} disabled={notifying===p.id}
-                              style={{ fontSize:'.6rem', fontWeight:700, padding:'4px 9px', borderRadius:6,
-                                border:'1.5px solid var(--border)', background:notifying===p.id?'var(--s3)':'var(--s2)',
-                                color:'var(--g2)', cursor:notifying===p.id?'not-allowed':'pointer',
-                                whiteSpace:'nowrap', fontFamily:'Raleway, sans-serif' }}>
-                              {notifying===p.id?'…':'✉'}
-                            </button>
-                            <button onClick={e=>{e.stopPropagation();setDeletingId(p.id);}}
-                              title="Delete this CAS upload"
-                              style={{ fontSize:'.6rem', fontWeight:700, padding:'4px 9px', borderRadius:6,
-                                border:'1.5px solid var(--border)', background:'var(--s2)',
-                                color:'var(--muted)', cursor:'pointer',
-                                whiteSpace:'nowrap', fontFamily:'Raleway, sans-serif' }}
-                              onMouseEnter={e=>e.currentTarget.style.color='var(--neg)'}
-                              onMouseLeave={e=>e.currentTarget.style.color='var(--muted)'}>
-                              🗑
-                            </button>
-                            <a href={`/cas-tracker?load=${encodeURIComponent(p.blob_key)}`}
-                              target="_blank" rel="noopener noreferrer"
-                              onClick={e=>e.stopPropagation()}
-                              style={{ fontSize:'.65rem', fontWeight:700, padding:'5px 11px', borderRadius:6,
-                                background:'var(--g1)', color:'#fff', textDecoration:'none', whiteSpace:'nowrap' }}
-                              onMouseEnter={e=>e.currentTarget.style.background='var(--g2)'}
-                              onMouseLeave={e=>e.currentTarget.style.background='var(--g1)'}>
-                              View →
-                            </a>
-                          </div>
-                          {notifyMsg.id===p.id&&(
-                            <div style={{ fontSize:'.58rem', fontWeight:700,
-                              color:notifyMsg.type==='ok'?'var(--g1)':'var(--neg)' }}>
-                              {notifyMsg.text}
-                            </div>
-                          )}
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </td>
+                    <td style={{ textAlign: 'center' }}><RoleBadge role={u.role} /></td>
+                    <td style={{ fontFamily: "'JetBrains Mono', monospace", textAlign: 'right' }}>
+                      {u.portfolio_count || 0}
+                    </td>
+                    <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.65rem' }}>{fmtDate(u.last_upload)}</td>
+                    <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.65rem' }}>{fmtDate(u.created_at)}</td>
+                  </tr>
                 ))}
-              </div>
-            )}
+              </tbody>
+            </table>
           </div>
+          <div className="src-text">Click a row to view that user's CAS uploads and manage their role</div>
         </div>
-      )}
-    </div>
+
+        {selectedUser && (
+          <div className="table-card" style={{ height: 'fit-content' }}>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: '.78rem', fontWeight: 800, color: 'var(--text)' }}>
+                    {selectedUser.name || selectedUser.email}
+                  </div>
+                  <div style={{ fontSize: '.6rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    {selectedUser.email}
+                  </div>
+                </div>
+                <button onClick={closeDesktopPanel}
+                  style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '.9rem', color: 'var(--muted)', padding: 4 }}>
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div style={{ padding: '12px 16px' }}>
+              <RoleSelect
+                user={selectedUser}
+                sessionUserId={session.user.id}
+                roleChanging={roleChanging}
+                onChange={changeRole}
+              />
+              <PortfolioList {...detailProps} />
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

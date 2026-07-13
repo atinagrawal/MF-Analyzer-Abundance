@@ -30,3 +30,127 @@
   color: var(--g1);
   border-bottom-color: var(--g2);
 }
+
+/* ── Responsive visibility toggle — reused by Users and Manual Holdings ── */
+.admin-desktop-only { display: block; }
+.admin-mobile-only   { display: none; }
+
+@media (max-width: 768px) {
+  .admin-desktop-only { display: none; }
+  .admin-mobile-only   { display: block; }
+}
+
+/* ── Users tab: mobile card list ── */
+.admin-user-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--s2);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: 'Raleway', sans-serif;
+  margin-bottom: 8px;
+  transition: border-color .15s, background .15s;
+}
+.admin-user-card:hover {
+  border-color: var(--border2);
+  background: var(--s3);
+}
+.admin-user-card-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--s3);
+  font-size: .7rem;
+  font-weight: 800;
+  color: var(--g2);
+  overflow: hidden;
+}
+.admin-user-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.admin-user-card-body {
+  flex: 1;
+  min-width: 0;
+}
+.admin-user-card-name {
+  font-size: .8rem;
+  font-weight: 800;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.admin-user-card-email {
+  font-size: .62rem;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.admin-user-card-sub {
+  font-size: .62rem;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+/* ── Users tab: mobile drill-down detail view ── */
+.admin-drilldown-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--g2);
+  padding: 0 0 14px;
+  font-family: 'Raleway', sans-serif;
+}
+
+/* ── Role select — shared between desktop detail panel and mobile drill-down ── */
+.admin-role-select {
+  font-size: .68rem;
+  font-weight: 700;
+  border: 1.5px solid var(--border2);
+  border-radius: 8px;
+  background: var(--s2);
+  color: var(--text);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: 'Raleway', sans-serif;
+}
+.admin-role-select:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.admin-role-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.admin-role-row-label {
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
