@@ -1,0 +1,32 @@
+/* app/admin/admin.css — Admin Panel styles. Reuses design tokens from
+   app/globals.css (--g1/--g2/--g3, --neg, --muted, --border, --s2/--s3,
+   etc.) — never redefine those here. */
+
+.admin-tab-bar {
+  display: flex;
+  border-bottom: 1.5px solid var(--border);
+  margin-bottom: 24px;
+  gap: 0;
+  overflow-x: auto;
+}
+
+.admin-tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  font-family: 'Raleway', sans-serif;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border-bottom: 2.5px solid transparent;
+  color: var(--muted);
+  margin-bottom: -1.5px;
+  transition: color .15s, border-color .15s;
+}
+
+.admin-tab-btn.active {
+  color: var(--g1);
+  border-bottom-color: var(--g2);
+}
