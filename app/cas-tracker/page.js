@@ -1013,6 +1013,24 @@ function CasTrackerInner() {
   const [editingName, setEditingName] = useState('');
   const [savingPanName, setSavingPanName] = useState(false);
   const [selectedIsXlsx, setSelectedIsXlsx] = useState(false); // MF Central .xlsx report vs CAMS/KFintech .pdf
+  const [deletingId, setDeletingId] = useState('');   // saved-portfolio id showing delete confirm, or ''
+  const [deleteInFlight, setDeleteInFlight] = useState(false);
+
+  async function deleteSavedPortfolio(id) {
+    setDeleteInFlight(true);
+    try {
+      const res = await fetch('/api/cas/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        setSavedPortfolios(prev => prev.filter(p => p.id !== id));
+      }
+    } catch { /* non-fatal — entry stays in the list, user can retry */ }
+    setDeleteInFlight(false);
+    setDeletingId('');
+  }
 
   async function savePanName(pan) {
     const name = editingName.trim();
@@ -1562,32 +1580,74 @@ function CasTrackerInner() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {savedPortfolios.map(p => (
-                      <button
-                        key={p.id}
-                        onClick={() => loadSavedPortfolio(p.blob_key)}
-                        style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '10px 14px', borderRadius: 10,
-                          border: '1.5px solid var(--border)', background: 'var(--s2)',
-                          cursor: 'pointer', textAlign: 'left', width: '100%',
-                          transition: 'border-color .15s, background .15s',
-                          fontFamily: 'Raleway, sans-serif',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--s3)'; e.currentTarget.style.borderColor = 'var(--border2)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'var(--s2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
-                      >
-                        <div>
-                          <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>
-                            📄 {p.file_name}
+                      <div key={p.id} style={{
+                        borderRadius: 10, border: '1.5px solid var(--border)',
+                        background: 'var(--s2)', overflow: 'hidden',
+                      }}>
+                        {deletingId === p.id ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', gap: 10 }}>
+                            <span style={{ fontSize: '.72rem', color: 'var(--text)', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              Delete "{p.file_name}"? This can't be undone.
+                            </span>
+                            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                              <button
+                                onClick={() => deleteSavedPortfolio(p.id)}
+                                disabled={deleteInFlight}
+                                style={{ fontSize: '.68rem', fontWeight: 800, color: '#fff', background: 'var(--neg)', border: 'none', borderRadius: 6, padding: '5px 10px', cursor: 'pointer' }}
+                              >
+                                {deleteInFlight ? '…' : 'Delete'}
+                              </button>
+                              <button
+                                onClick={() => setDeletingId('')}
+                                disabled={deleteInFlight}
+                                style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer' }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           </div>
-                          <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
-                            {p.pan_count} PAN{p.pan_count !== 1 ? 's' : ''} · {new Date(p.uploaded_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                            <button
+                              onClick={() => loadSavedPortfolio(p.blob_key)}
+                              style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                padding: '10px 14px', border: 'none', background: 'none',
+                                cursor: 'pointer', textAlign: 'left', flex: 1, minWidth: 0,
+                                transition: 'background .15s',
+                                fontFamily: 'Raleway, sans-serif',
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background = 'var(--s3)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                            >
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  📄 {p.file_name}
+                                </div>
+                                <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+                                  {p.pan_count} PAN{p.pan_count !== 1 ? 's' : ''} · {new Date(p.uploaded_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </div>
+                              </div>
+                              <span style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--g2)', flexShrink: 0, marginLeft: 8 }}>
+                                Load →
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => setDeletingId(p.id)}
+                              title="Delete this saved CAS"
+                              style={{
+                                border: 'none', borderLeft: '1.5px solid var(--border)', background: 'none',
+                                cursor: 'pointer', padding: '0 12px', color: 'var(--muted)', fontSize: '.85rem',
+                                flexShrink: 0,
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.color = 'var(--neg)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; }}
+                            >
+                              🗑
+                            </button>
                           </div>
-                        </div>
-                        <span style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--g2)', flexShrink: 0, marginLeft: 8 }}>
-                          Load →
-                        </span>
-                      </button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}

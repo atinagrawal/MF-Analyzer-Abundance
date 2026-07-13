@@ -65,6 +65,8 @@ function UsersTab({ session }) {
   const [roleChanging, setRoleChanging] = useState('');
   const [notifying,    setNotifying]    = useState('');
   const [notifyMsg,    setNotifyMsg]    = useState({ id: '', type: '', text: '' });
+  const [deletingId,     setDeletingId]     = useState('');
+  const [deleteInFlight, setDeleteInFlight] = useState(false);
 
   useEffect(() => {
     fetch('/api/admin/users')
@@ -120,6 +122,22 @@ function UsersTab({ session }) {
     } catch (err) {
       setNotifyMsg({ id: portfolio.id, type: 'err', text: err.message });
     } finally { setNotifying(''); }
+  }
+
+  async function deletePortfolio(id) {
+    setDeleteInFlight(true);
+    try {
+      const res = await fetch('/api/cas/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        setPortfolios(prev => prev.filter(p => p.id !== id));
+      }
+    } catch { /* non-fatal — entry stays, admin can retry */ }
+    setDeleteInFlight(false);
+    setDeletingId('');
   }
 
   if (error) return <div className="error-box">⚠ {error}</div>;
@@ -272,42 +290,73 @@ function UsersTab({ session }) {
                   <div key={p.id} style={{
                     padding: '10px 12px', borderRadius: 10,
                     border: '1.5px solid var(--border)', background: 'var(--s2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
                   }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
-                        📄 {p.file_name}
-                      </div>
-                      <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
-                        {p.pan_count} PAN{p.pan_count !== 1 ? 's' : ''} · {fmtDate(p.uploaded_at)}
-                      </div>
-                    </div>
-                    <div style={{ display:'flex', flexDirection:'column', gap:4, flexShrink:0, alignItems:'flex-end' }}>
-                      <div style={{ display:'flex', gap:5 }}>
-                        <button onClick={e=>{e.stopPropagation();notifyClient(p);}} disabled={notifying===p.id}
-                          style={{ fontSize:'.6rem', fontWeight:700, padding:'4px 9px', borderRadius:6,
-                            border:'1.5px solid var(--border)', background:notifying===p.id?'var(--s3)':'var(--s2)',
-                            color:'var(--g2)', cursor:notifying===p.id?'not-allowed':'pointer',
-                            whiteSpace:'nowrap', fontFamily:'Raleway, sans-serif' }}>
-                          {notifying===p.id?'…':'✉'}
-                        </button>
-                        <a href={`/cas-tracker?load=${encodeURIComponent(p.blob_key)}`}
-                          target="_blank" rel="noopener noreferrer"
-                          onClick={e=>e.stopPropagation()}
-                          style={{ fontSize:'.65rem', fontWeight:700, padding:'5px 11px', borderRadius:6,
-                            background:'var(--g1)', color:'#fff', textDecoration:'none', whiteSpace:'nowrap' }}
-                          onMouseEnter={e=>e.currentTarget.style.background='var(--g2)'}
-                          onMouseLeave={e=>e.currentTarget.style.background='var(--g1)'}>
-                          View →
-                        </a>
-                      </div>
-                      {notifyMsg.id===p.id&&(
-                        <div style={{ fontSize:'.58rem', fontWeight:700,
-                          color:notifyMsg.type==='ok'?'var(--g1)':'var(--neg)' }}>
-                          {notifyMsg.text}
+                    {deletingId === p.id ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                        <span style={{ fontSize: '.68rem', fontWeight: 600, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          Delete "{p.file_name}"?
+                        </span>
+                        <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+                          <button onClick={() => deletePortfolio(p.id)} disabled={deleteInFlight}
+                            style={{ fontSize: '.62rem', fontWeight: 800, color: '#fff', background: 'var(--neg)',
+                              border: 'none', borderRadius: 6, padding: '5px 10px', cursor: 'pointer' }}>
+                            {deleteInFlight ? '…' : 'Delete'}
+                          </button>
+                          <button onClick={() => setDeletingId('')} disabled={deleteInFlight}
+                            style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted)', background: 'none',
+                              border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer' }}>
+                            Cancel
+                          </button>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
+                            📄 {p.file_name}
+                          </div>
+                          <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+                            {p.pan_count} PAN{p.pan_count !== 1 ? 's' : ''} · {fmtDate(p.uploaded_at)}
+                          </div>
+                        </div>
+                        <div style={{ display:'flex', flexDirection:'column', gap:4, flexShrink:0, alignItems:'flex-end' }}>
+                          <div style={{ display:'flex', gap:5 }}>
+                            <button onClick={e=>{e.stopPropagation();notifyClient(p);}} disabled={notifying===p.id}
+                              style={{ fontSize:'.6rem', fontWeight:700, padding:'4px 9px', borderRadius:6,
+                                border:'1.5px solid var(--border)', background:notifying===p.id?'var(--s3)':'var(--s2)',
+                                color:'var(--g2)', cursor:notifying===p.id?'not-allowed':'pointer',
+                                whiteSpace:'nowrap', fontFamily:'Raleway, sans-serif' }}>
+                              {notifying===p.id?'…':'✉'}
+                            </button>
+                            <button onClick={e=>{e.stopPropagation();setDeletingId(p.id);}}
+                              title="Delete this CAS upload"
+                              style={{ fontSize:'.6rem', fontWeight:700, padding:'4px 9px', borderRadius:6,
+                                border:'1.5px solid var(--border)', background:'var(--s2)',
+                                color:'var(--muted)', cursor:'pointer',
+                                whiteSpace:'nowrap', fontFamily:'Raleway, sans-serif' }}
+                              onMouseEnter={e=>e.currentTarget.style.color='var(--neg)'}
+                              onMouseLeave={e=>e.currentTarget.style.color='var(--muted)'}>
+                              🗑
+                            </button>
+                            <a href={`/cas-tracker?load=${encodeURIComponent(p.blob_key)}`}
+                              target="_blank" rel="noopener noreferrer"
+                              onClick={e=>e.stopPropagation()}
+                              style={{ fontSize:'.65rem', fontWeight:700, padding:'5px 11px', borderRadius:6,
+                                background:'var(--g1)', color:'#fff', textDecoration:'none', whiteSpace:'nowrap' }}
+                              onMouseEnter={e=>e.currentTarget.style.background='var(--g2)'}
+                              onMouseLeave={e=>e.currentTarget.style.background='var(--g1)'}>
+                              View →
+                            </a>
+                          </div>
+                          {notifyMsg.id===p.id&&(
+                            <div style={{ fontSize:'.58rem', fontWeight:700,
+                              color:notifyMsg.type==='ok'?'var(--g1)':'var(--neg)' }}>
+                              {notifyMsg.text}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
