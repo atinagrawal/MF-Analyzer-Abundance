@@ -1088,8 +1088,16 @@ function CasTrackerInner() {
 
   // Fetch manual holdings + SIF NAVs when signed in
   // Admin viewing a client: use ?userId={clientId} to get their holdings
+  //
+  // Guarded with `cancelled` because switching between clients (viewedUserId
+  // changing) doesn't remount this page — it's a client-side navigation on
+  // the same route. Without this guard, a slow response for a PREVIOUSLY
+  // viewed client can resolve after a faster response for the client the
+  // admin has since switched to, silently overwriting the correct holdings
+  // (including admin-added SIF entries) with the wrong client's data.
   useEffect(() => {
     if (!isSignedIn) return;
+    let cancelled = false;
     setManualLoading(true);
     const url = (isAdmin && viewedUserId)
       ? `/api/holdings?userId=${viewedUserId}`
@@ -1097,11 +1105,13 @@ function CasTrackerInner() {
     fetch(url)
       .then(r => r.json())
       .then(async d => {
+        if (cancelled) return;
         const holdings = d.holdings || [];
         setManualHoldings(holdings);
         const hasSIF = holdings.some(h => h.fund_type === 'SIF');
         if (hasSIF) {
           const r2 = await fetch('/api/sif-nav').catch(() => null);
+          if (cancelled) return;
           if (r2?.ok) {
             const sifData = await r2.json();
             const navMap = {};
@@ -1114,7 +1124,8 @@ function CasTrackerInner() {
         }
       })
       .catch(() => {})
-      .finally(() => setManualLoading(false));
+      .finally(() => { if (!cancelled) setManualLoading(false); });
+    return () => { cancelled = true; };
   }, [isSignedIn, isAdmin, viewedUserId]);
 
   async function processCasData(data, cached) {
