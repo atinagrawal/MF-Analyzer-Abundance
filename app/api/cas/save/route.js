@@ -15,6 +15,8 @@ import { auth }   from '@/auth';
 import pool        from '@/lib/db';
 import { put }     from '@vercel/blob';
 
+const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
 export async function POST(req) {
   try {
     const session = await auth();
@@ -33,6 +35,15 @@ export async function POST(req) {
       ? targetUserId
       : session.user.id;
 
+    // Extract PANs server-side (not trusted from the client) — this becomes
+    // the authorization source for pan_investor_names: a user/admin may only
+    // read or rename a PAN that appears in one of their own saved uploads.
+    const pans = [...new Set(
+      (parsedData.folios || [])
+        .map(f => (f.PAN || '').toUpperCase().trim())
+        .filter(p => PAN_REGEX.test(p))
+    )];
+
     // Write to Vercel Blob: cas/{userId}/{timestamp}-{sanitisedName}.json
     const ts       = Date.now();
     const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 60);
@@ -47,10 +58,10 @@ export async function POST(req) {
 
     // Log to database
     const result = await pool.query(
-      `INSERT INTO cas_portfolios (user_id, file_name, blob_key, pan_count)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO cas_portfolios (user_id, file_name, blob_key, pan_count, pans)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id, uploaded_at`,
-      [userId, fileName, blobKey, panCount ?? 0]
+      [userId, fileName, blobKey, panCount ?? 0, pans]
     );
 
     const row = result.rows[0];

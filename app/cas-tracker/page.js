@@ -1009,6 +1009,30 @@ function CasTrackerInner() {
   const [portfolioDataByPan, setPortfolioDataByPan] = useState({});
   const [activePan, setActivePan] = useState('');
   const [fromCache, setFromCache] = useState(false);
+  const [editingPan, setEditingPan] = useState('');   // PAN currently being renamed, or ''
+  const [editingName, setEditingName] = useState('');
+  const [savingPanName, setSavingPanName] = useState(false);
+
+  async function savePanName(pan) {
+    const name = editingName.trim();
+    if (!name) { setEditingPan(''); return; }
+    setSavingPanName(true);
+    try {
+      const res = await fetch('/api/cas/pan-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pan, name, targetUserId: (isAdmin && viewedUserId) ? viewedUserId : undefined }),
+      });
+      if (res.ok) {
+        setPortfolioDataByPan(prev => ({
+          ...prev,
+          [pan]: { ...prev[pan], investorName: name },
+        }));
+      }
+    } catch { /* non-fatal — tab keeps its previous name */ }
+    setSavingPanName(false);
+    setEditingPan('');
+  }
 
   // ── Auth + saved portfolios ──
   const { data: session, status: authStatus } = useSession();
@@ -1247,6 +1271,20 @@ function CasTrackerInner() {
     if (pans.length === 0) {
       throw new Error('No active holdings found in this statement.');
     }
+
+    // Saved investor-name labels (set by the user/admin on a previous visit)
+    // take priority over whatever the CAS parser guessed.
+    try {
+      const realPans = pans.filter(p => p !== 'UNKNOWN' && PAN_REGEX.test(p));
+      if (realPans.length) {
+        const targetQS = (isAdmin && viewedUserId) ? `&targetUserId=${viewedUserId}` : '';
+        const res = await fetch(`/api/cas/pan-name?pans=${realPans.join(',')}${targetQS}`);
+        const { names } = await res.json();
+        Object.entries(names || {}).forEach(([pan, name]) => {
+          if (portfolioData[pan] && name) portfolioData[pan].investorName = name;
+        });
+      }
+    } catch { /* non-fatal — fall back to parser-derived names */ }
 
     setPortfolioDataByPan(portfolioData);
     setActivePan(pans[0]);
@@ -1596,15 +1634,44 @@ function CasTrackerInner() {
                 {panKeys.filter(p => p !== '__manual__').map(pan => {
                   const info = portfolioDataByPan[pan];
                   const firstName = info.investorName.split(' ')[0];
+                  const hasRealName = PAN_REGEX.test(pan) && !isPanLike(info.investorName) && info.investorName !== 'Unknown Investor' && !info.investorName.startsWith('Investor (');
+
+                  if (editingPan === pan) {
+                    return (
+                      <div key={pan} className="pan-tab-editing">
+                        <input
+                          autoFocus
+                          value={editingName}
+                          onChange={e => setEditingName(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') savePanName(pan); if (e.key === 'Escape') setEditingPan(''); }}
+                          placeholder="Investor name"
+                          maxLength={100}
+                        />
+                        <button className="pte-save" onClick={() => savePanName(pan)} disabled={savingPanName} title="Save">✓</button>
+                        <button className="pte-cancel" onClick={() => setEditingPan('')} title="Cancel">✕</button>
+                      </div>
+                    );
+                  }
+
                   return (
-                    <button
-                      key={pan}
-                      onClick={() => setActivePan(pan)}
-                      className={`pan-tab ${pan === activePan ? 'active' : ''}`}
-                    >
-                      <span className="pan-code">{pan}</span>
-                      <span>{firstName}'s Portfolio</span>
-                    </button>
+                    <div key={pan} className="pan-tab-outer">
+                      <button
+                        onClick={() => setActivePan(pan)}
+                        className={`pan-tab ${pan === activePan ? 'active' : ''}`}
+                      >
+                        <span className="pan-code">{pan}</span>
+                        <span>{firstName}'s Portfolio</span>
+                      </button>
+                      {PAN_REGEX.test(pan) && (
+                        <button
+                          className="pan-tab-rename-btn"
+                          title="Rename investor"
+                          onClick={() => { setEditingName(hasRealName ? info.investorName : ''); setEditingPan(pan); }}
+                        >
+                          ✎
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -1889,6 +1956,8 @@ function CasTrackerInner() {
                'A CAS consolidates all your mutual fund holdings across every AMC linked to your PAN. Download it from camsonline.com or kfintech.com using your PAN and registered email. Use your PAN in ALL CAPS as the PDF password.'],
               ['Does this support Family CAS with multiple PANs?',
                'Yes. The parser detects multiple PANs in one CAS and creates separate dashboard tabs per family member. Switch between them with one click.'],
+              ['Can I name each investor in a multi-PAN family CAS?',
+               'Yes. Click the ✎ next to any PAN tab to label it with the investor’s name. We store that name against the PAN so it’s remembered the next time that PAN appears in a CAS upload — it’s only ever shown to you and your AMFI-registered distributor.'],
               ['How is current value calculated?',
                'Current Value = Units x Live NAV from AMFI official end-of-day data, fetched fresh on each page load.'],
               ['What is FIFO capital gains calculation?',
