@@ -1012,6 +1012,7 @@ function CasTrackerInner() {
   const [editingPan, setEditingPan] = useState('');   // PAN currently being renamed, or ''
   const [editingName, setEditingName] = useState('');
   const [savingPanName, setSavingPanName] = useState(false);
+  const [selectedIsXlsx, setSelectedIsXlsx] = useState(false); // MF Central .xlsx report vs CAMS/KFintech .pdf
 
   async function savePanName(pan) {
     const name = editingName.trim();
@@ -1335,32 +1336,35 @@ function CasTrackerInner() {
     const formData = new FormData(e.target);
     const pdfFile = formData.get('pdf-file');
     const password = formData.get('pdf-password');
+    const isMfCentral = (pdfFile?.name || '').toLowerCase().endsWith('.xlsx');
 
     try {
       let data = null;
       let cached = false;
-      
+
       const cachedData = readCache(pdfFile);
       if (cachedData) {
         data = cachedData;
         cached = true;
         setLoadingText('Loading from cache…');
       } else {
-        setLoadingText('Decrypting & Parsing…');
+        setLoadingText(isMfCentral ? 'Parsing MF Central report…' : 'Decrypting & Parsing…');
         const uploadFormData = new FormData();
         uploadFormData.append('file', pdfFile);
-        uploadFormData.append('password', password);
+        if (!isMfCentral) uploadFormData.append('password', password);
 
-        const parseRes = await fetch('/api/parse', {
+        const parseRes = await fetch(isMfCentral ? '/api/parse-mfcentral' : '/api/parse', {
           method: 'POST',
           body: uploadFormData
         });
 
         if (!parseRes.ok) {
+          const errBody = await parseRes.json().catch(() => ({}));
           throw new Error(
-            parseRes.status === 401
+            errBody.error ||
+            (parseRes.status === 401
               ? 'Incorrect password. Try your PAN in ALL CAPS.'
-              : 'Failed to decrypt or parse the statement.'
+              : 'Failed to decrypt or parse the statement.')
           );
         }
 
@@ -1387,6 +1391,7 @@ function CasTrackerInner() {
     setActivePan('');
     setFromCache(false);
     setSaveStatus('');
+    setSelectedIsXlsx(false);
   }
 
   async function loadSavedPortfolio(blobKey) {
@@ -1499,32 +1504,35 @@ function CasTrackerInner() {
             {authStatus !== 'unauthenticated' && (
             <form id="cas-form" className="upload-card" onSubmit={handleSubmit}>
               <div style={{ marginBottom: '18px' }}>
-                <div className="field-label">CAS PDF File</div>
+                <div className="field-label">CAS PDF or MF Central Excel Report</div>
                 <input
                   type="file"
                   name="pdf-file"
                   id="pdf-file"
-                  accept=".pdf"
+                  accept=".pdf,.xlsx"
                   required
                   className="file-input"
+                  onChange={e => setSelectedIsXlsx((e.target.files?.[0]?.name || '').toLowerCase().endsWith('.xlsx'))}
                 />
               </div>
 
-              <div style={{ marginBottom: '18px' }}>
-                <div className="field-label">PAN Password (ALL CAPS)</div>
-                <input
-                  type="password"
-                  name="pdf-password"
-                  id="pdf-password"
-                  placeholder="ABCDE1234F"
-                  required
-                  className="field-input"
-                />
-              </div>
+              {!selectedIsXlsx && (
+                <div style={{ marginBottom: '18px' }}>
+                  <div className="field-label">PAN Password (ALL CAPS)</div>
+                  <input
+                    type="password"
+                    name="pdf-password"
+                    id="pdf-password"
+                    placeholder="ABCDE1234F"
+                    required={!selectedIsXlsx}
+                    className="field-input"
+                  />
+                </div>
+              )}
 
               <button type="submit" className="submit-btn">
                 <span>🔓</span>
-                <span>Parse & Track</span>
+                <span>{selectedIsXlsx ? 'Parse & Track (MF Central)' : 'Parse & Track'}</span>
               </button>
 
               <div className="security-note">
@@ -1976,7 +1984,7 @@ function CasTrackerInner() {
               ['How does ELSS lock-in tracking work?',
                'ELSS investments are locked for 3 years from each purchase date. We compute the locked value and unlocked portion for each ELSS fund separately so you know exactly what is redeemable today.'],
               ['Which CAS formats are supported?',
-               'Both CAMS (camsonline.com) and KFintech (kfintech.com) password-protected PDFs are supported. Enter your PAN in ALL CAPS as the password.'],
+               'CAMS (camsonline.com) and KFintech (kfintech.com) password-protected PDFs, plus MF Central\'s (mfcentral.com) "Detailed Report" Excel download — no password needed for the Excel format. For PDFs, enter your PAN in ALL CAPS as the password.'],
               ['Does this support SIF (Specialised Investment Funds)?',
                'Yes. SIF holdings added by your distributor appear alongside mutual funds with live NAVs from AMFI. Standard CAS PDFs do not yet include SIF statements, so your distributor adds them separately.'],
             ].map(([q, a], i, arr) => (
