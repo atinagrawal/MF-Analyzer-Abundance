@@ -32,12 +32,12 @@
 }
 
 /* ── Responsive visibility toggle — reused by Users and Manual Holdings ── */
-.admin-desktop-only { display: block !important; }
-.admin-mobile-only   { display: none !important; }
+.admin-desktop-only { display: block; }
+.admin-mobile-only   { display: none; }
 
 @media (max-width: 768px) {
   .admin-desktop-only { display: none !important; }
-  .admin-mobile-only   { display: block !important; }
+  .admin-mobile-only   { display: block; }
 }
 
 /* ── Users tab: mobile card list ── */
