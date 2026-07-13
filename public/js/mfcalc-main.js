@@ -506,6 +506,13 @@ function calcPeriodReturn(rawData,months){
   if(i<0)return null;
   const sl=rawData.slice(i);if(sl.length<5)return null;
   const v0=parseFloat(sl[0].nav),v1=parseFloat(sl[sl.length-1].nav);
+  // Periods over 1 year are annualized (CAGR), matching every other returns
+  // table on the site (MF Screener, PMS Screener, Indices, Rolling Returns).
+  // Periods of 1 year or less stay a plain absolute/cumulative return.
+  if(months>12){
+    const yrs=months/12;
+    return((Math.pow(v1/v0,1/yrs)-1)*100).toFixed(2);
+  }
   return((v1-v0)/v0*100).toFixed(2);
 }
 function calcRiskMetrics(rawData){
