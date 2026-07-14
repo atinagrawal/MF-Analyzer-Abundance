@@ -161,3 +161,116 @@
   margin-top: 4px;
   line-height: 1.5;
 }
+
+/* ── Manual Holdings tab: responsive form ── */
+.admin-holding-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+}
+
+@media (max-width: 640px) {
+  .admin-holding-form-grid {
+    /* Single column — the inline gridColumn:'1/-1' on Fund Name/SIF
+       Scheme/Notes becomes a no-op here (a 1-column grid is already
+       full-width for every child), so no extra override rule is needed. */
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Manual Holdings tab: mobile card list ── */
+.admin-holding-card {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--s2);
+  margin-bottom: 8px;
+}
+.admin-holding-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.admin-holding-card-name {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.admin-holding-card-notes {
+  font-size: .6rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.admin-holding-card-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+.admin-holding-metric-label {
+  font-size: .55rem;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.admin-holding-metric-value {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 1px;
+}
+.admin-holding-card-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* ── Inline two-step delete confirm — reused wherever this pattern applies ── */
+.admin-inline-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.admin-inline-confirm-text {
+  font-size: .68rem;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-inline-confirm-actions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.admin-inline-confirm-delete {
+  font-size: .62rem;
+  font-weight: 800;
+  color: #fff;
+  background: var(--neg);
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.admin-inline-confirm-cancel {
+  font-size: .62rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+}

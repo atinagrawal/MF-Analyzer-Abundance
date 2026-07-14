@@ -4,6 +4,185 @@ import { useState, useEffect } from 'react';
 
 const FUND_TYPES = ['Equity MF', 'Debt MF', 'Hybrid MF', 'Index Fund / ETF', 'SIF', 'Other'];
 
+function HoldingRow({ h, i, navMap, openEdit, deletingId, setDeletingId, deleteInFlight, confirmDelete }) {
+  const purchaseNav = parseFloat(h.purchase_nav);
+  const units       = parseFloat(h.units);
+  const liveNav     = h.amfi_code ? (navMap[h.amfi_code.trim()] ?? null) : null;
+  const currentVal  = liveNav != null ? units * liveNav : units * purchaseNav;
+  const invested    = units * purchaseNav;
+  const gain        = currentVal - invested;
+  const gainPct     = invested > 0 ? ((gain / invested) * 100).toFixed(2) : '0.00';
+  const isProfit    = gain >= 0;
+  const hasLive     = liveNav != null;
+
+  return (
+    <tr>
+      <td style={{ textAlign: 'left', paddingLeft: 16 }}>
+        <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text)' }}>{h.fund_name}</div>
+        {h.notes && (
+          <div style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 2 }}>{h.notes}</div>
+        )}
+      </td>
+      <td>
+        <span style={{
+          fontSize: '.52rem', fontWeight: 800, padding: '2px 6px',
+          borderRadius: 4, background: h.fund_type === 'SIF' ? '#e0f2f1' : 'var(--s2)',
+          color: h.fund_type === 'SIF' ? '#00695c' : 'var(--muted)',
+          border: '1px solid var(--border)',
+          fontFamily: "'JetBrains Mono', monospace",
+        }}>
+          {h.fund_type}
+        </span>
+      </td>
+      <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{units.toFixed(4)}</td>
+      <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>₹{purchaseNav.toFixed(4)}</td>
+      <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        {hasLive
+          ? <span>₹{liveNav.toFixed(4)} <span style={{ fontSize: '.52rem', color: 'var(--g1)' }}>●</span></span>
+          : <span style={{ color: 'var(--muted)' }}>—</span>
+        }
+      </td>
+      <td style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
+        ₹{Math.round(currentVal).toLocaleString('en-IN')}
+        {!hasLive && <div style={{ fontSize: '.52rem', color: 'var(--muted)', fontWeight: 400 }}>est.</div>}
+      </td>
+      <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        <span style={{ color: isProfit ? 'var(--pos)' : 'var(--neg)', fontWeight: 700 }}>
+          {isProfit ? '+' : ''}{gainPct}%
+        </span>
+      </td>
+      <td style={{ textAlign: 'center' }}>
+        {deletingId === h.id ? (
+          <div className="admin-inline-confirm">
+            <span className="admin-inline-confirm-text">Delete?</span>
+            <div className="admin-inline-confirm-actions">
+              <button className="admin-inline-confirm-delete" disabled={deleteInFlight} onClick={() => confirmDelete(h.id)}>
+                {deleteInFlight ? '…' : 'Yes'}
+              </button>
+              <button className="admin-inline-confirm-cancel" disabled={deleteInFlight} onClick={() => setDeletingId('')}>
+                No
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+            <button onClick={() => openEdit(i)}
+              style={{
+                padding: '3px 10px', borderRadius: 6, border: '1.5px solid var(--border)',
+                background: 'var(--s2)', cursor: 'pointer', fontSize: '.65rem',
+                fontWeight: 700, color: 'var(--g2)', fontFamily: 'Raleway, sans-serif',
+              }}>
+              Edit
+            </button>
+            <button onClick={() => setDeletingId(h.id)}
+              style={{
+                padding: '3px 10px', borderRadius: 6, border: '1.5px solid #ffcdd2',
+                background: 'var(--neg-bg)', cursor: 'pointer', fontSize: '.65rem',
+                fontWeight: 700, color: 'var(--neg)', fontFamily: 'Raleway, sans-serif',
+              }}>
+              Delete
+            </button>
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function HoldingCard({ h, i, navMap, openEdit, deletingId, setDeletingId, deleteInFlight, confirmDelete }) {
+  const purchaseNav = parseFloat(h.purchase_nav);
+  const units       = parseFloat(h.units);
+  const liveNav     = h.amfi_code ? (navMap[h.amfi_code.trim()] ?? null) : null;
+  const currentVal  = liveNav != null ? units * liveNav : units * purchaseNav;
+  const invested    = units * purchaseNav;
+  const gain        = currentVal - invested;
+  const gainPct     = invested > 0 ? ((gain / invested) * 100).toFixed(2) : '0.00';
+  const isProfit    = gain >= 0;
+  const hasLive     = liveNav != null;
+
+  return (
+    <div className="admin-holding-card">
+      <div className="admin-holding-card-head">
+        <div style={{ minWidth: 0 }}>
+          <div className="admin-holding-card-name">{h.fund_name}</div>
+          {h.notes && <div className="admin-holding-card-notes">{h.notes}</div>}
+        </div>
+        <span style={{
+          fontSize: '.52rem', fontWeight: 800, padding: '2px 6px', borderRadius: 4, flexShrink: 0,
+          background: h.fund_type === 'SIF' ? '#e0f2f1' : 'var(--s3)',
+          color: h.fund_type === 'SIF' ? '#00695c' : 'var(--muted)',
+          border: '1px solid var(--border)', fontFamily: "'JetBrains Mono', monospace",
+        }}>
+          {h.fund_type}
+        </span>
+      </div>
+
+      <div className="admin-holding-card-metrics">
+        <div>
+          <div className="admin-holding-metric-label">Units</div>
+          <div className="admin-holding-metric-value">{units.toFixed(4)}</div>
+        </div>
+        <div>
+          <div className="admin-holding-metric-label">Purchase NAV</div>
+          <div className="admin-holding-metric-value">₹{purchaseNav.toFixed(4)}</div>
+        </div>
+        <div>
+          <div className="admin-holding-metric-label">Current NAV</div>
+          <div className="admin-holding-metric-value">
+            {hasLive ? <>₹{liveNav.toFixed(4)} <span style={{ color: 'var(--g1)' }}>●</span></> : '—'}
+          </div>
+        </div>
+        <div>
+          <div className="admin-holding-metric-label">Current Value</div>
+          <div className="admin-holding-metric-value">
+            ₹{Math.round(currentVal).toLocaleString('en-IN')}
+            {!hasLive && <span style={{ fontWeight: 400, color: 'var(--muted)' }}> est.</span>}
+          </div>
+        </div>
+        <div>
+          <div className="admin-holding-metric-label">Gain / Loss</div>
+          <div className="admin-holding-metric-value" style={{ color: isProfit ? 'var(--pos)' : 'var(--neg)' }}>
+            {isProfit ? '+' : ''}{gainPct}%
+          </div>
+        </div>
+      </div>
+
+      {deletingId === h.id ? (
+        <div className="admin-inline-confirm">
+          <span className="admin-inline-confirm-text">Delete this holding?</span>
+          <div className="admin-inline-confirm-actions">
+            <button className="admin-inline-confirm-delete" disabled={deleteInFlight} onClick={() => confirmDelete(h.id)}>
+              {deleteInFlight ? '…' : 'Yes'}
+            </button>
+            <button className="admin-inline-confirm-cancel" disabled={deleteInFlight} onClick={() => setDeletingId('')}>
+              No
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="admin-holding-card-actions">
+          <button onClick={() => openEdit(i)}
+            style={{
+              padding: '4px 12px', borderRadius: 6, border: '1.5px solid var(--border)',
+              background: 'var(--s3)', cursor: 'pointer', fontSize: '.65rem',
+              fontWeight: 700, color: 'var(--g2)', fontFamily: 'Raleway, sans-serif',
+            }}>
+            Edit
+          </button>
+          <button onClick={() => setDeletingId(h.id)}
+            style={{
+              padding: '4px 12px', borderRadius: 6, border: '1.5px solid #ffcdd2',
+              background: 'var(--neg-bg)', cursor: 'pointer', fontSize: '.65rem',
+              fontWeight: 700, color: 'var(--neg)', fontFamily: 'Raleway, sans-serif',
+            }}>
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ManualHoldingsTab() {
   const [users, setUsers]           = useState([]);
   const [selUserId, setSelUserId]   = useState('');
@@ -14,6 +193,8 @@ export default function ManualHoldingsTab() {
   const [msg, setMsg]               = useState({ type: '', text: '' });
   const [showForm, setShowForm]     = useState(false);
   const [editIdx, setEditIdx]       = useState(null);
+  const [deletingId, setDeletingId]         = useState('');
+  const [deleteInFlight, setDeleteInFlight] = useState(false);
   // SIF scheme search
   const [sifSchemes, setSifSchemes] = useState([]);   // all 53 SIF schemes
   const [sifSearch, setSifSearch]   = useState('');   // search query
@@ -119,11 +300,20 @@ export default function ManualHoldingsTab() {
     setShowForm(true);
   }
 
-  async function handleDelete(id) {
-    if (!confirm('Delete this holding?')) return;
-    const res = await fetch(`/api/admin/holdings?id=${id}&userId=${selUserId}`, { method: 'DELETE' });
-    if (res.ok) setHoldings(prev => prev.filter(h => h.id !== id));
-    else alert('Delete failed');
+  async function confirmDelete(id) {
+    setDeleteInFlight(true);
+    try {
+      const res = await fetch(`/api/admin/holdings?id=${id}&userId=${selUserId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setHoldings(prev => prev.filter(h => h.id !== id));
+      } else {
+        setMsg({ type: 'err', text: 'Delete failed' });
+      }
+    } catch {
+      setMsg({ type: 'err', text: 'Delete failed' });
+    }
+    setDeleteInFlight(false);
+    setDeletingId('');
   }
 
   async function handleSave(e) {
@@ -237,7 +427,7 @@ export default function ManualHoldingsTab() {
             {editIdx !== null ? 'Edit Holding' : 'Add New Holding'}
           </div>
           <form onSubmit={handleSave}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px' }}>
+            <div className="admin-holding-form-grid">
 
               <div>
                 <div className="field-label">Fund Type *</div>
@@ -412,9 +602,9 @@ export default function ManualHoldingsTab() {
         </div>
       )}
 
-      {/* ── Holdings table ───────────────────────────────────────────────── */}
+      {/* ── Holdings: desktop table ─────────────────────────────────────── */}
       {selUserId && !loading && holdings.length > 0 && (
-        <div className="table-card">
+        <div className="admin-desktop-only table-card">
           <div className="table-wrap">
             <table className="idx-table" style={{ minWidth: 820 }}>
               <thead>
@@ -430,79 +620,32 @@ export default function ManualHoldingsTab() {
                 </tr>
               </thead>
               <tbody>
-                {holdings.map((h, i) => {
-                  const purchaseNav = parseFloat(h.purchase_nav);
-                  const units       = parseFloat(h.units);
-                  const liveNav     = h.amfi_code ? (navMap[h.amfi_code.trim()] ?? null) : null;
-                  const currentVal  = liveNav != null ? units * liveNav : units * purchaseNav;
-                  const invested    = units * purchaseNav;
-                  const gain        = currentVal - invested;
-                  const gainPct     = invested > 0 ? ((gain / invested) * 100).toFixed(2) : '0.00';
-                  const isProfit    = gain >= 0;
-                  const hasLive     = liveNav != null;
-
-                  return (
-                    <tr key={h.id}>
-                      <td style={{ textAlign: 'left', paddingLeft: 16 }}>
-                        <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text)' }}>{h.fund_name}</div>
-                        {h.notes && (
-                          <div style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 2 }}>{h.notes}</div>
-                        )}
-                      </td>
-                      <td>
-                        <span style={{
-                          fontSize: '.52rem', fontWeight: 800, padding: '2px 6px',
-                          borderRadius: 4, background: h.fund_type === 'SIF' ? '#e0f2f1' : 'var(--s2)',
-                          color: h.fund_type === 'SIF' ? '#00695c' : 'var(--muted)',
-                          border: '1px solid var(--border)',
-                          fontFamily: "'JetBrains Mono', monospace",
-                        }}>
-                          {h.fund_type}
-                        </span>
-                      </td>
-                      <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{units.toFixed(4)}</td>
-                      <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>₹{purchaseNav.toFixed(4)}</td>
-                      <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                        {hasLive
-                          ? <span>₹{liveNav.toFixed(4)} <span style={{ fontSize: '.52rem', color: 'var(--g1)' }}>●</span></span>
-                          : <span style={{ color: 'var(--muted)' }}>—</span>
-                        }
-                      </td>
-                      <td style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
-                        ₹{Math.round(currentVal).toLocaleString('en-IN')}
-                        {!hasLive && <div style={{ fontSize: '.52rem', color: 'var(--muted)', fontWeight: 400 }}>est.</div>}
-                      </td>
-                      <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                        <span style={{ color: isProfit ? 'var(--pos)' : 'var(--neg)', fontWeight: 700 }}>
-                          {isProfit ? '+' : ''}{gainPct}%
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                          <button onClick={() => openEdit(i)}
-                            style={{
-                              padding: '3px 10px', borderRadius: 6, border: '1.5px solid var(--border)',
-                              background: 'var(--s2)', cursor: 'pointer', fontSize: '.65rem',
-                              fontWeight: 700, color: 'var(--g2)', fontFamily: 'Raleway, sans-serif',
-                            }}>
-                            Edit
-                          </button>
-                          <button onClick={() => handleDelete(h.id)}
-                            style={{
-                              padding: '3px 10px', borderRadius: 6, border: '1.5px solid #ffcdd2',
-                              background: 'var(--neg-bg)', cursor: 'pointer', fontSize: '.65rem',
-                              fontWeight: 700, color: 'var(--neg)', fontFamily: 'Raleway, sans-serif',
-                            }}>
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {holdings.map((h, i) => (
+                  <HoldingRow
+                    key={h.id} h={h} i={i} navMap={navMap} openEdit={openEdit}
+                    deletingId={deletingId} setDeletingId={setDeletingId}
+                    deleteInFlight={deleteInFlight} confirmDelete={confirmDelete}
+                  />
+                ))}
               </tbody>
             </table>
           </div>
+          <div className="src-text">
+            Current NAV: SIF from AMFI · MF from mfapi.in · Live indicator ● = NAV fetched
+          </div>
+        </div>
+      )}
+
+      {/* ── Holdings: mobile/tablet cards ───────────────────────────────── */}
+      {selUserId && !loading && holdings.length > 0 && (
+        <div className="admin-mobile-only">
+          {holdings.map((h, i) => (
+            <HoldingCard
+              key={h.id} h={h} i={i} navMap={navMap} openEdit={openEdit}
+              deletingId={deletingId} setDeletingId={setDeletingId}
+              deleteInFlight={deleteInFlight} confirmDelete={confirmDelete}
+            />
+          ))}
           <div className="src-text">
             Current NAV: SIF from AMFI · MF from mfapi.in · Live indicator ● = NAV fetched
           </div>
