@@ -1015,9 +1015,11 @@ function CasTrackerInner() {
   const [selectedIsXlsx, setSelectedIsXlsx] = useState(false); // MF Central .xlsx report vs CAMS/KFintech .pdf
   const [deletingId, setDeletingId] = useState('');   // saved-portfolio id showing delete confirm, or ''
   const [deleteInFlight, setDeleteInFlight] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   async function deleteSavedPortfolio(id) {
     setDeleteInFlight(true);
+    setDeleteError('');
     try {
       const res = await fetch('/api/cas/delete', {
         method: 'DELETE',
@@ -1026,10 +1028,15 @@ function CasTrackerInner() {
       });
       if (res.ok) {
         setSavedPortfolios(prev => prev.filter(p => p.id !== id));
+        setDeletingId('');
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setDeleteError(body.error || 'Could not delete this CAS.');
       }
-    } catch { /* non-fatal — entry stays in the list, user can retry */ }
+    } catch {
+      setDeleteError('Could not delete this CAS. Please try again.');
+    }
     setDeleteInFlight(false);
-    setDeletingId('');
   }
 
   async function savePanName(pan) {
@@ -1585,26 +1592,33 @@ function CasTrackerInner() {
                         background: 'var(--s2)', overflow: 'hidden',
                       }}>
                         {deletingId === p.id ? (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', gap: 10 }}>
-                            <span style={{ fontSize: '.72rem', color: 'var(--text)', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              Delete "{p.file_name}"? This can't be undone.
-                            </span>
-                            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                              <button
-                                onClick={() => deleteSavedPortfolio(p.id)}
-                                disabled={deleteInFlight}
-                                style={{ fontSize: '.68rem', fontWeight: 800, color: '#fff', background: 'var(--neg)', border: 'none', borderRadius: 6, padding: '5px 10px', cursor: 'pointer' }}
-                              >
-                                {deleteInFlight ? '…' : 'Delete'}
-                              </button>
-                              <button
-                                onClick={() => setDeletingId('')}
-                                disabled={deleteInFlight}
-                                style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer' }}
-                              >
-                                Cancel
-                              </button>
+                          <div style={{ padding: '10px 14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                              <span style={{ fontSize: '.72rem', color: 'var(--text)', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                Delete "{p.file_name}"? This can't be undone.
+                              </span>
+                              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                                <button
+                                  onClick={() => deleteSavedPortfolio(p.id)}
+                                  disabled={deleteInFlight}
+                                  style={{ fontSize: '.68rem', fontWeight: 800, color: '#fff', background: 'var(--neg)', border: 'none', borderRadius: 6, padding: '5px 10px', cursor: 'pointer' }}
+                                >
+                                  {deleteInFlight ? '…' : 'Delete'}
+                                </button>
+                                <button
+                                  onClick={() => { setDeletingId(''); setDeleteError(''); }}
+                                  disabled={deleteInFlight}
+                                  style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer' }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
                             </div>
+                            {deleteError && (
+                              <div style={{ marginTop: 8, fontSize: '.68rem', color: 'var(--neg)', fontWeight: 600 }}>
+                                ⚠ {deleteError}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div style={{ display: 'flex', alignItems: 'stretch' }}>
@@ -1633,7 +1647,7 @@ function CasTrackerInner() {
                               </span>
                             </button>
                             <button
-                              onClick={() => setDeletingId(p.id)}
+                              onClick={() => { setDeletingId(p.id); setDeleteError(''); }}
                               title="Delete this saved CAS"
                               style={{
                                 border: 'none', borderLeft: '1.5px solid var(--border)', background: 'none',

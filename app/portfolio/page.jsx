@@ -4,13 +4,16 @@
  * app/portfolio/page.jsx — Client Portfolio Portal
  *
  * Personalized wealth dashboard for signed-in clients.
- * Fetches the most recent saved CAS portfolio and manual holdings,
- * computes totals, and presents a premium private-banking style view.
+ * Fetches every saved CAS portfolio and manual holdings, merges them
+ * (deduped by PAN+folio+scheme so a re-uploaded statement doesn't
+ * double-count and an older statement's exclusive holdings aren't
+ * dropped), computes totals, and presents a premium private-banking
+ * style view.
  *
  * Data flow:
- *   1. GET /api/cas/list            → find most recent saved CAS blob key
- *   2. GET /api/cas/load?key=...    → load full portfolio JSON
- *   3. processCasData()             → compute holding values + totals
+ *   1. GET /api/cas/list            → all saved CAS blob keys, newest first
+ *   2. GET /api/cas/load?key=...    → load each portfolio JSON (parallel)
+ *   3. merge folios, newest statement wins per (PAN, folio, scheme)
  *   4. GET /api/holdings            → manual holdings (incl. SIF)
  *   5. GET /api/sif-nav             → SIF live NAVs
  */
@@ -168,12 +171,48 @@ function PortfolioInner() {
           } catch {}
         }
 
-        // 3. Load latest CAS if available
+        // 3. Load ALL saved CAS files — not just the latest — so holdings
+        // spread across multiple statements (e.g. different registrars,
+        // or an older upload the newest one doesn't cover) aren't dropped.
+        // ports is sorted newest-first, so when the same (PAN, folio,
+        // scheme) key shows up in more than one file — a re-upload of the
+        // same statement — the first (most recent) file to claim a key
+        // wins and later duplicates are skipped, avoiding double-counting.
         if (ports.length > 0) {
-          const latest = ports[0];
-          const loadRes = await fetch(`/api/cas/load?key=${encodeURIComponent(latest.blob_key)}`);
-          if (loadRes.ok) {
-            const data = await loadRes.json();
+          const loadResults = await Promise.allSettled(
+            ports.map(p =>
+              fetch(`/api/cas/load?key=${encodeURIComponent(p.blob_key)}`)
+                .then(r => (r.ok ? r.json() : null))
+            )
+          );
+
+          const seenKeys = new Set();
+          const mergedFolios = [];
+          let gName = '';
+
+          loadResults.forEach(res => {
+            if (res.status !== 'fulfilled' || !res.value) return;
+            const fileData = res.value;
+            if (!gName) gName = (fileData.investor_info?.name || '').trim();
+
+            (fileData.folios || []).forEach(folio => {
+              const pan = (folio.PAN || '').toUpperCase().trim();
+              const folioNo = (folio.folio || '').trim();
+              const keptSchemes = (folio.schemes || []).filter(scheme => {
+                const units = parseFloat(scheme.close) || 0;
+                if (units < 0.001) return false;
+                const fundKey = scheme.amfi || (scheme.scheme || '').trim().toLowerCase();
+                const dedupKey = `${pan}|${folioNo}|${fundKey}`;
+                if (seenKeys.has(dedupKey)) return false;
+                seenKeys.add(dedupKey);
+                return true;
+              });
+              if (keptSchemes.length) mergedFolios.push({ ...folio, schemes: keptSchemes });
+            });
+          });
+
+          if (mergedFolios.length > 0) {
+            const data = { folios: mergedFolios };
             setCasData(data);
 
             // Compute totals from CAS
@@ -182,7 +221,7 @@ function PortfolioInner() {
             const panInvestorMap = {};
 
             // Build PAN→name map
-            (data.folios || []).forEach(folio => {
+            mergedFolios.forEach(folio => {
               if (folio.PAN && folio.PAN.length === 10) {
                 const transactions = (folio.schemes || []).flatMap(s => s.transactions || []);
                 for (const txn of transactions) {
@@ -195,12 +234,11 @@ function PortfolioInner() {
             });
 
             // Investor name
-            const gName = (data.investor_info?.name || '').trim();
             setInvestorName(gName || session.user.name || 'Investor');
 
             // Collect holdings with concurrent NAV fetch
             const allAmfi = new Set();
-            (data.folios || []).forEach(folio => {
+            mergedFolios.forEach(folio => {
               (folio.schemes || []).forEach(scheme => {
                 const units = parseFloat(scheme.close) || 0;
                 if (units > 0 && scheme.amfi) allAmfi.add(scheme.amfi);
@@ -236,7 +274,7 @@ function PortfolioInner() {
             const panMap = {}; // PAN → { name, current, invested, holdings }
             const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
-            (data.folios || []).forEach(folio => {
+            mergedFolios.forEach(folio => {
               const pan = (folio.PAN || '').toUpperCase().trim();
               const validPan = pan.length === 10 && PAN_RE.test(pan) ? pan : 'SHARED';
 

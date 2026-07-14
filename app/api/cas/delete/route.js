@@ -39,6 +39,21 @@ export async function DELETE(req) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Non-admin self-service deletes must leave at least 1 CAS on file —
+    // admins are exempt (e.g. cleaning up a client's bad upload).
+    if (!isAdmin) {
+      const { rows: countRows } = await pool.query(
+        `SELECT COUNT(*)::int AS n FROM cas_portfolios WHERE user_id = $1`,
+        [owner]
+      );
+      if (countRows[0].n <= 1) {
+        return Response.json(
+          { error: 'You must keep at least one CAS on file. Upload a replacement before deleting this one.' },
+          { status: 409 }
+        );
+      }
+    }
+
     // Delete the Blob object first — if this fails, the DB row is left
     // intact so the entry (and a retry) is still visible instead of
     // silently leaking storage.
