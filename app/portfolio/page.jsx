@@ -23,6 +23,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { schemeXirr, manualHoldingXirr } from '@/lib/xirr';
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
 
@@ -310,6 +311,7 @@ function PortfolioInner() {
                   isLive:   !!navMap[scheme.amfi],
                   category: inferCategory(scheme.scheme),
                   isSIF:    false,
+                  xirr:     schemeXirr(scheme, value),
                 };
                 panMap[validPan].holdings.push(h);
                 holdings.push(h);
@@ -329,6 +331,7 @@ function PortfolioInner() {
                 liveNav: ln ?? pu, units: u, isLive: ln != null,
                 category: h.fund_type === 'SIF' ? 'sif' : inferCategory(h.fund_name),
                 isSIF: h.fund_type === 'SIF', isManual: true,
+                xirr: manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: val }),
               };
               holdings.push(mh);
               // Attribute to specific PAN if set and that PAN exists in the CAS
@@ -366,6 +369,7 @@ function PortfolioInner() {
               category: h.fund_type === 'SIF' ? 'sif' : inferCategory(h.fund_name),
               isSIF:    h.fund_type === 'SIF',
               isManual: true,
+              xirr:     manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: (ln ?? pu) * u }),
             });
           });
           setTotals({ current: manualVal, invested: 0, manual: manualVal });
@@ -739,7 +743,14 @@ function PortfolioInner() {
                     </div>
                     <div className="pf-hc-gain" data-pos={gPos ? 'true' : 'false'}>
                       <span>{gPos ? '+' : '−'}₹{fmtINR(Math.abs(gain))}</span>
-                      <span className="pf-hc-gpct">{gPos ? '+' : ''}{gPct}%</span>
+                      <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                        <span className="pf-hc-gpct">{gPos ? '+' : ''}{gPct}%</span>
+                        {Number.isFinite(h.xirr) && (
+                          <span className="pf-hc-gpct" style={{ opacity: .75 }}>
+                            {h.xirr >= 0 ? '+' : ''}{(h.xirr * 100).toFixed(1)}% XIRR
+                          </span>
+                        )}
+                      </span>
                     </div>
                   </div>
                 );

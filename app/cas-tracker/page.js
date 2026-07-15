@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { schemeXirr, manualHoldingXirr } from '@/lib/xirr';
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const CACHE_PREFIX = 'cas_parse_v2_';
@@ -1294,6 +1295,7 @@ function CasTrackerInner() {
       const casCost = parseFloat(scheme.valuation?.cost || 0);
       h.avgPurchaseNav = h.units > 0 && casCost > 0 ? casCost / h.units : 0;
       h.amfiCode       = scheme.amfi || null;  // preserved for FIFO planner
+      h.xirr           = schemeXirr(scheme, h.value);  // null if transaction history is incomplete
       portfolioData[pan].current  += h.value;
       portfolioData[pan].invested += h.invested;
       delete h.scheme;
@@ -1855,6 +1857,7 @@ function CasTrackerInner() {
                   nominee:       null,
                   advisor:       null,
                   notes:         h.notes || null,
+                  xirr:          manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: val }),
                   // classification
                   source:        'manual',
                   fund_type:     h.fund_type,
@@ -1989,6 +1992,15 @@ function CasTrackerInner() {
                               <div className={`fund-gain-pct ${fProfit ? 'pos' : 'neg'}`}>
                                 {fProfit ? '+' : ''}{fGainPct}%
                               </div>
+                              {Number.isFinite(fund.xirr) && (
+                                <div style={{
+                                  fontSize: '.62rem', fontWeight: 700,
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  color: fund.xirr >= 0 ? 'var(--g1)' : 'var(--neg)',
+                                }}>
+                                  {fund.xirr >= 0 ? '+' : ''}{(fund.xirr * 100).toFixed(1)}% XIRR
+                                </div>
+                              )}
                             </div>
                           </div>
 
