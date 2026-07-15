@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { schemeXirr, manualHoldingXirr } from '@/lib/xirr';
+import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows, combinedXirr } from '@/lib/xirr';
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const CACHE_PREFIX = 'cas_parse_v2_';
@@ -1296,6 +1296,7 @@ function CasTrackerInner() {
       h.avgPurchaseNav = h.units > 0 && casCost > 0 ? casCost / h.units : 0;
       h.amfiCode       = scheme.amfi || null;  // preserved for FIFO planner
       h.xirr           = schemeXirr(scheme, h.value);  // null if transaction history is incomplete
+      h.xirrFlows      = schemeCashFlows(scheme);       // raw flows, pooled for portfolio-level XIRR
       portfolioData[pan].current  += h.value;
       portfolioData[pan].invested += h.invested;
       delete h.scheme;
@@ -1778,13 +1779,24 @@ function CasTrackerInner() {
               const manualMapped = manualHoldings.map(h => {
                 const pu = parseFloat(h.purchase_nav), u = parseFloat(h.units);
                 const ln = h.fund_type === 'SIF' ? (sifNavMap[h.amfi_code] ?? null) : null;
-                return { value: (ln ?? pu) * u, invested: pu * u };
+                const value = (ln ?? pu) * u;
+                return {
+                  value, invested: pu * u,
+                  xirrFlows: manualHoldingCashFlows({ purchaseDate: h.purchase_date, invested: pu * u }),
+                };
               });
               const totalCurrent  = currentInfo.current  + manualMapped.reduce((s,h) => s + h.value,    0);
               const totalInvested = currentInfo.invested  + manualMapped.reduce((s,h) => s + h.invested, 0);
               const totalGain     = totalCurrent - totalInvested;
               const totalGainPct  = totalInvested > 0 ? ((totalGain / totalInvested) * 100).toFixed(2) : '0.00';
               const tProfit       = totalGain >= 0;
+              // Portfolio-level XIRR: only shown when every holding — CAS
+              // and manual alike — has a trustworthy transaction history.
+              const allFlows = [
+                ...(currentInfo.holdings || []).map(h => h.xirrFlows),
+                ...manualMapped.map(h => h.xirrFlows),
+              ];
+              const portfolioXirrVal = allFlows.length ? combinedXirr(allFlows, totalCurrent) : null;
               return (
                 <div className="stat-grid animate-stagger">
                   <div className="stat-card">
@@ -1806,6 +1818,15 @@ function CasTrackerInner() {
                         {tProfit ? '+' : ''}{totalGainPct}%
                       </div>
                     </div>
+                    {Number.isFinite(portfolioXirrVal) && (
+                      <div style={{
+                        fontSize: '.65rem', fontWeight: 700, marginTop: 4,
+                        fontFamily: "'JetBrains Mono', monospace",
+                        color: portfolioXirrVal >= 0 ? 'var(--g1)' : 'var(--neg)',
+                      }}>
+                        {portfolioXirrVal >= 0 ? '+' : ''}{(portfolioXirrVal * 100).toFixed(1)}% Portfolio XIRR
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -1858,6 +1879,7 @@ function CasTrackerInner() {
                   advisor:       null,
                   notes:         h.notes || null,
                   xirr:          manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: val }),
+                  xirrFlows:     manualHoldingCashFlows({ purchaseDate: h.purchase_date, invested: pu * u }),
                   // classification
                   source:        'manual',
                   fund_type:     h.fund_type,

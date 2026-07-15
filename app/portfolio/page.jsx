@@ -23,7 +23,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { schemeXirr, manualHoldingXirr } from '@/lib/xirr';
+import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows, combinedXirr } from '@/lib/xirr';
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
 
@@ -312,6 +312,7 @@ function PortfolioInner() {
                   category: inferCategory(scheme.scheme),
                   isSIF:    false,
                   xirr:     schemeXirr(scheme, value),
+                  xirrFlows: schemeCashFlows(scheme),
                 };
                 panMap[validPan].holdings.push(h);
                 holdings.push(h);
@@ -332,6 +333,7 @@ function PortfolioInner() {
                 category: h.fund_type === 'SIF' ? 'sif' : inferCategory(h.fund_name),
                 isSIF: h.fund_type === 'SIF', isManual: true,
                 xirr: manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: val }),
+                xirrFlows: manualHoldingCashFlows({ purchaseDate: h.purchase_date, invested: pu * u }),
               };
               holdings.push(mh);
               // Attribute to specific PAN if set and that PAN exists in the CAS
@@ -343,8 +345,20 @@ function PortfolioInner() {
               }
             });
 
+            // Portfolio-level XIRR: only shown when every holding — CAS and
+            // manual alike — has a trustworthy transaction history. Computed
+            // per PAN (so the PAN selector shows the right scoped number)
+            // and once for the full combined portfolio.
+            Object.values(panMap).forEach(p => {
+              const flows = p.holdings.map(h => h.xirrFlows);
+              p.xirr = flows.length ? combinedXirr(flows, p.current) : null;
+            });
+            const overallXirr = holdings.length
+              ? combinedXirr(holdings.map(h => h.xirrFlows), casCurrent + manualVal)
+              : null;
+
             setPanPortfolios(panMap);
-            setTotals({ current: casCurrent + manualVal, invested: casInvested, manual: manualVal });
+            setTotals({ current: casCurrent + manualVal, invested: casInvested, manual: manualVal, xirr: overallXirr });
             setTopHoldings(holdings.sort((a, b) => b.value - a.value).slice(0, 6));
             setPhase('ready');
           } else {
@@ -370,9 +384,13 @@ function PortfolioInner() {
               isSIF:    h.fund_type === 'SIF',
               isManual: true,
               xirr:     manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: (ln ?? pu) * u }),
+              xirrFlows: manualHoldingCashFlows({ purchaseDate: h.purchase_date, invested: pu * u }),
             });
           });
-          setTotals({ current: manualVal, invested: 0, manual: manualVal });
+          const manualOnlyXirr = mhList.length
+            ? combinedXirr(mhList.map(h => h.xirrFlows), manualVal)
+            : null;
+          setTotals({ current: manualVal, invested: 0, manual: manualVal, xirr: manualOnlyXirr });
           setTopHoldings(mhList.sort((a, b) => b.value - a.value).slice(0, 6));
           setInvestorName(session.user.name || 'Investor');
           setPhase(manual.length > 0 ? 'ready' : 'empty');
@@ -482,7 +500,7 @@ function PortfolioInner() {
     ? panPortfolios[activePan].holdings
     : topHoldings;
   const displayTotals = (activePan !== 'all' && panPortfolios[activePan])
-    ? { current: panPortfolios[activePan].current, invested: panPortfolios[activePan].invested, manual: 0 }
+    ? { current: panPortfolios[activePan].current, invested: panPortfolios[activePan].invested, manual: 0, xirr: panPortfolios[activePan].xirr }
     : totals;
   const displayName = (activePan !== 'all' && panPortfolios[activePan])
     ? panPortfolios[activePan].name
@@ -599,6 +617,11 @@ function PortfolioInner() {
               {signed && totals.invested > 0 && (
                 <div className="pf-stat-sub" style={{ color: isProfit ? 'var(--g3)' : 'var(--neg-light)' }}>
                   {isProfit ? '+' : ''}{gainPct}% all-time
+                </div>
+              )}
+              {signed && Number.isFinite(displayTotals.xirr) && (
+                <div className="pf-stat-sub" style={{ color: displayTotals.xirr >= 0 ? 'var(--g3)' : 'var(--neg-light)' }}>
+                  {displayTotals.xirr >= 0 ? '+' : ''}{(displayTotals.xirr * 100).toFixed(1)}% Portfolio XIRR
                 </div>
               )}
             </div>
