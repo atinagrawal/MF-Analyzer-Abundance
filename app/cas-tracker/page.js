@@ -1866,6 +1866,7 @@ function CasTrackerInner() {
                 const ln = h.fund_type === 'SIF' ? (sifNavMap[h.amfi_code] ?? null) : null;
                 const val = (ln ?? pu) * u;
                 return {
+                  id:            `manual-${h.id}`,
                   // shared display fields
                   name:          h.fund_name,
                   folio:         h.folio || null,
@@ -1890,6 +1891,7 @@ function CasTrackerInner() {
 
               const casHoldings = (currentInfo.holdings || []).map(h => ({
                 ...h, source: 'cas', fund_type: 'Mutual Fund',
+                id: `cas-${activePan}-${h.folio || ''}-${h.amfiCode || h.name}`,
               }));
 
               const allHoldings = [...casHoldings, ...manualMapped];
@@ -1907,7 +1909,7 @@ function CasTrackerInner() {
                     const isManual = fund.source === 'manual';
 
                     return (
-                      <div key={idx} className="fund-card">
+                      <div key={fund.id || idx} className="fund-card">
                         <div>
                           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 6 }}>
                             <ProviderAvatar

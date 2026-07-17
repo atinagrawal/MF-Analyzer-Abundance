@@ -308,6 +308,7 @@ function PortfolioInner() {
                 panMap[validPan].current  += value;
                 panMap[validPan].invested += invested;
                 const h = {
+                  id: `${validPan}-${folio.folio || ''}-${scheme.amfi || scheme.scheme}`,
                   name:     scheme.scheme,
                   value, invested, liveNav, units,
                   isLive:   !!navMap[scheme.amfi],
@@ -330,6 +331,7 @@ function PortfolioInner() {
               const val = (ln ?? pu) * u;
               manualVal += val;
               const mh = {
+                id: `manual-${h.id}`,
                 name: h.fund_name, value: val, invested: pu * u,
                 liveNav: ln ?? pu, units: u, isLive: ln != null,
                 category: h.fund_type === 'SIF' ? 'sif' : inferCategory(h.fund_name),
@@ -376,6 +378,7 @@ function PortfolioInner() {
             const ln = h.fund_type === 'SIF' ? (localSifMap[h.amfi_code] ?? null) : null;
             manualVal += (ln ?? pu) * u;
             mhList.push({
+              id:       `manual-${h.id}`,
               name:     h.fund_name,
               value:    (ln ?? pu) * u,
               invested: pu * u,
@@ -664,7 +667,7 @@ function PortfolioInner() {
                   const gPos  = gain >= 0;
                   const pct   = displayTotals.current > 0 ? (h.value / displayTotals.current * 100).toFixed(1) : '0';
                   return (
-                    <div key={i} className="pf-holding-row">
+                    <div key={h.id || i} className="pf-holding-row">
                       <ProviderAvatar
                         name={h.name.split(' ')[0]}
                         logoPath={getMFLogoFromSchemeName(h.name)}
@@ -748,7 +751,7 @@ function PortfolioInner() {
                 const gPos = gain >= 0;
                 const pct  = displayTotals.current > 0 ? (h.value / displayTotals.current * 100).toFixed(1) : '0';
                 return (
-                  <div key={i} className="pf-holding-card">
+                  <div key={h.id || i} className="pf-holding-card">
                     <div className="pf-hc-head">
                       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
                         <ProviderAvatar
