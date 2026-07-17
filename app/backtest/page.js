@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import ProviderAvatar from "@/components/ProviderAvatar";
+import { getMFLogo, getSIFLogo, getMFLogoFromSchemeName } from "@/lib/providerLogos";
 
 /* ============================================================
    Abundance · Portfolio Backtester  (per-fund strategies)
@@ -432,6 +434,17 @@ export default function BacktestPage() {
                 <div className="bt-hold" key={h.key}>
                   <div className="bt-hold-top">
                     <span className="bt-dot" style={{ background: PALETTE[i % PALETTE.length] }} />
+                    <ProviderAvatar
+                      name={h.kind === 'sif' ? (h.name.split(' -')[0] || h.name) : h.name.split(' -')[0] || h.name}
+                      logoPath={
+                        h.kind === 'sif'
+                          ? getSIFLogo(h.name.split(' -')[0] || h.name)
+                          : getMFLogo(h.name.split(' -')[0] || h.name) ||
+                            getMFLogoFromSchemeName(h.name)
+                      }
+                      size={28}
+                      radius={7}
+                    />
                     <div className="bt-hold-main">
                       <div className="bt-hold-name">{h.name}</div>
                       <div className="bt-hold-tag"><span className={`bt-kind bt-kind-${h.kind}`}>{h.kind === "mf" ? "Mutual Fund" : "SIF"}</span>{total > 1 && <span className="bt-tranche">tranche {occ} of {total}</span>}{h.cat && <span className="bt-cat">{h.cat}</span>}</div>

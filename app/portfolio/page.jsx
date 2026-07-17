@@ -24,6 +24,8 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows, combinedXirr } from '@/lib/xirr';
+import ProviderAvatar from '@/components/ProviderAvatar';
+import { getMFLogoFromSchemeName } from '@/lib/providerLogos';
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
 
@@ -663,6 +665,13 @@ function PortfolioInner() {
                   const pct   = displayTotals.current > 0 ? (h.value / displayTotals.current * 100).toFixed(1) : '0';
                   return (
                     <div key={i} className="pf-holding-row">
+                      <ProviderAvatar
+                        name={h.name.split(' ')[0]}
+                        logoPath={getMFLogoFromSchemeName(h.name)}
+                        size={24}
+                        radius={6}
+                        style={{ flexShrink: 0, marginRight: 4 }}
+                      />
                       <div className="pf-holding-cat" style={{ background: cat.bg }}>
                         <span style={{ color: cat.fg, fontSize: '.48rem', fontWeight: 900, letterSpacing: '.5px', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace" }}>
                           {cat.label}
@@ -742,8 +751,16 @@ function PortfolioInner() {
                   <div key={i} className="pf-holding-card">
                     <div className="pf-hc-head">
                       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
-                        <div className="pf-hc-cat" style={{ background: cat.bg, color: cat.fg }}>{cat.label}</div>
-                        {h.isManual && <div className="pf-hc-cat" style={{ background: 'var(--s3)', color: 'var(--muted)' }}>Manual</div>}
+                        <ProviderAvatar
+                          name={h.name.split(' ')[0]}
+                          logoPath={getMFLogoFromSchemeName(h.name)}
+                          size={28}
+                          radius={7}
+                        />
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <div className="pf-hc-cat" style={{ background: cat.bg, color: cat.fg }}>{cat.label}</div>
+                          {h.isManual && <div className="pf-hc-cat" style={{ background: 'var(--s3)', color: 'var(--muted)' }}>Manual</div>}
+                        </div>
                       </div>
                       <div className="pf-hc-pct">{pct}% of portfolio</div>
                     </div>

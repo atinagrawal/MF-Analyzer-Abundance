@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import ProviderAvatar from '@/components/ProviderAvatar';
+import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
 
 /* ---------- SIF helpers ---------- */
 const SIF_STRATEGY_LABELS = {
@@ -400,10 +402,18 @@ export default function ScreenerPage() {
                     return (
                       <tr key={s.scheme_id} className="scr-row" onClick={() => setSifSel(s)}>
                         <td className="scr-name">
-                          <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSifSel(s); }}>
-                            <span className="scr-fund-n">{s.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim()}</span>
-                            <span className="scr-fund-sub">{s.scheme_id}</span>
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <ProviderAvatar
+                              name={s.sif_name}
+                              logoPath={getSIFLogo(s.sif_name)}
+                              size={26}
+                              radius={6}
+                            />
+                            <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSifSel(s); }}>
+                              <span className="scr-fund-n">{s.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim()}</span>
+                              <span className="scr-fund-sub">{s.scheme_id}</span>
+                            </button>
+                          </div>
                         </td>
                         <td style={{textAlign:'left'}}>
                           <span className={`scr-sif-badge scr-sif-badge-${fam.toLowerCase()}`}>{sifStratShort(s.category)}</span>
@@ -466,17 +476,25 @@ export default function ScreenerPage() {
                     return (
                       <tr key={f.code} className="scr-row" onClick={() => setSel(f)}>
                         <td className="scr-name">
-                          <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSel(f); }}>
-                            <span className="scr-fund-n">{f.name.replace(/\s*-\s*(Regular Plan|Regular|Growth( Option)?| Plan).*/i, '').trim()}{f.flag === 'check' && <span className="scr-flag" title="Unusual value — under review">⚠</span>}</span>
-                            <span className="scr-fund-sub">
-                              {shortCat(f.category)}
-                              {hasStress && (
-                                <span className={`scr-table-liq-badge ${badgeCls}`} title={`Liquidity disclosure: Takes ${hasStress.days_50pct} days to liquidate 50% under stress`}>
-                                  💧 {hasStress.days_50pct}d
-                                </span>
-                              )}
-                            </span>
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <ProviderAvatar
+                              name={f.amc}
+                              logoPath={getMFLogo(f.amc)}
+                              size={26}
+                              radius={6}
+                            />
+                            <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSel(f); }}>
+                              <span className="scr-fund-n">{f.name.replace(/\s*-\s*(Regular Plan|Regular|Growth( Option)?| Plan).*/i, '').trim()}{f.flag === 'check' && <span className="scr-flag" title="Unusual value — under review">⚠</span>}</span>
+                              <span className="scr-fund-sub">
+                                {shortCat(f.category)}
+                                {hasStress && (
+                                  <span className={`scr-table-liq-badge ${badgeCls}`} title={`Liquidity disclosure: Takes ${hasStress.days_50pct} days to liquidate 50% under stress`}>
+                                    💧 {hasStress.days_50pct}d
+                                  </span>
+                                )}
+                              </span>
+                            </button>
+                          </div>
                         </td>
                         {visibleCols.map((m) => (
                           <td key={m.key} className={cellCls(m, f[m.key])}>{m.kind === 'ratio' ? <b>{fmtCell(m, f[m.key])}</b> : fmtCell(m, f[m.key])}</td>
@@ -556,9 +574,17 @@ function Detail({ f, stress, onClose }) {
     <div className="scr-drawer-wrap" onMouseDown={onClose}>
       <div className="scr-drawer" onMouseDown={(e) => e.stopPropagation()} role="dialog">
         <div className="scr-drawer-h">
-          <div>
-            <div className="scr-drawer-name">{f.name}</div>
-            <div className="scr-drawer-tags"><span className="scr-tag">{f.amc}</span><span className="scr-tag alt">{shortCat(f.category)}</span><span className="scr-tag alt">{f.structure}</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+            <ProviderAvatar
+              name={f.amc}
+              logoPath={getMFLogo(f.amc)}
+              size={36}
+              radius={8}
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="scr-drawer-name">{f.name}</div>
+              <div className="scr-drawer-tags"><span className="scr-tag">{f.amc}</span><span className="scr-tag alt">{shortCat(f.category)}</span><span className="scr-tag alt">{f.structure}</span></div>
+            </div>
           </div>
           <button className="scr-x" onClick={onClose} aria-label="Close">×</button>
         </div>

@@ -25,6 +25,8 @@ import Footer from '@/components/Footer';
 import { PMSCompareBar, PMSCompareModal } from './PMSCompare';
 import { getPmsDataMonths } from '@/lib/pmsDate';
 import { PMS_FAQ } from '@/lib/pmsFaq';
+import ProviderAvatar from '@/components/ProviderAvatar';
+import { getPMSLogo } from '@/lib/providerLogos';
 import './pms-screener.css';
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -773,7 +775,12 @@ function PMSScreenerInner() {
                                             </td>
                                             <td>
                                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                                                    <div className="pms-avatar">{initials(fund.portfolioManager)}</div>
+                                                    <ProviderAvatar
+                                                        name={fund.portfolioManager}
+                                                        logoPath={getPMSLogo(fund.portfolioManager)}
+                                                        size={32}
+                                                        radius={8}
+                                                    />
                                                     <div>
                                                         <span className="pms-strat-name">
                                                             {fund.strategyName}
@@ -836,7 +843,12 @@ function PMSScreenerInner() {
                             {paginated.map(fund => (
                                 <div key={fund.id} className="pms-grid-card" onClick={() => setSelected(fund)}>
                                     <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '14px' }}>
-                                        <div className="pms-avatar">{initials(fund.portfolioManager)}</div>
+                                        <ProviderAvatar
+                                            name={fund.portfolioManager}
+                                            logoPath={getPMSLogo(fund.portfolioManager)}
+                                            size={32}
+                                            radius={8}
+                                        />
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div className="gc-name">
                                                 {fund.strategyName}
@@ -944,7 +956,13 @@ function PMSScreenerInner() {
                         <div className="pd-header">
                             <button className="pd-close" onClick={() => setSelected(null)}>×</button>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                                <div className="pd-avatar-lg">{initials(selected.portfolioManager)}</div>
+                                <ProviderAvatar
+                                    name={selected.portfolioManager}
+                                    logoPath={getPMSLogo(selected.portfolioManager)}
+                                    size={44}
+                                    radius={12}
+                                    className="pd-avatar-logo"
+                                />
                                 <img src="/logo-navbar.png" alt="Abundance" className="pd-logo" style={{ marginBottom: 0 }} />
                             </div>
                             <div className="pd-provider">{selected.portfolioManager}</div>

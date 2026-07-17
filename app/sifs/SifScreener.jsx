@@ -11,6 +11,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import ProviderAvatar from '@/components/ProviderAvatar';
+import { getSIFLogo } from '@/lib/providerLogos';
 
 // ── Category label map — short names for the long AMFI strings ──────────────
 const STRATEGY_LABELS = {
@@ -80,9 +82,17 @@ function SifCard({ scheme, watched, onToggleWatch, onViewHistory }) {
 
   return (
     <div className="sif-card" tabIndex={0}>
-      {/* Header row: SIF name + star */}
+      {/* Header row: SIF logo + name + star */}
       <div className="sif-card-head">
-        <span className="sif-house-badge">{scheme.sif_name}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+          <ProviderAvatar
+            name={scheme.sif_name}
+            logoPath={getSIFLogo(scheme.sif_name)}
+            size={28}
+            radius={7}
+          />
+          <span className="sif-house-badge" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{scheme.sif_name}</span>
+        </div>
         <button
           className={`sif-star${watched ? ' active' : ''}`}
           onClick={() => onToggleWatch(scheme.scheme_id)}
@@ -133,10 +143,20 @@ function SifRow({ scheme, watched, onToggleWatch, idx, onViewHistory }) {
   const fStyle = FAMILY_STYLE[family] || FAMILY_STYLE.Equity;
   return (
     <tr className="sif-tr">
-      <td className="sif-td sif-td-num mono">{String(idx + 1).padStart(2, '0')}</td>
+      <td className="sif-td sif-td-num mono">{String(idx + 1).padStart(2, '00')}</td>
       <td className="sif-td sif-td-name">
-        <div className="sif-row-name">{scheme.nav_name}</div>
-        <div className="sif-row-house">{scheme.sif_name} · {scheme.scheme_id}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ProviderAvatar
+            name={scheme.sif_name}
+            logoPath={getSIFLogo(scheme.sif_name)}
+            size={26}
+            radius={6}
+          />
+          <div>
+            <div className="sif-row-name">{scheme.nav_name}</div>
+            <div className="sif-row-house">{scheme.sif_name} · {scheme.scheme_id}</div>
+          </div>
+        </div>
       </td>
       <td className="sif-td">
         <span className="sif-strat-badge sif-strat-sm"

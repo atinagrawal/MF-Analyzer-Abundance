@@ -6,6 +6,8 @@ import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows, combinedXirr } from '@/lib/xirr';
+import ProviderAvatar from '@/components/ProviderAvatar';
+import { getSIFLogo, getMFLogoFromSchemeName } from '@/lib/providerLogos';
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const CACHE_PREFIX = 'cas_parse_v2_';
@@ -1907,7 +1909,21 @@ function CasTrackerInner() {
                     return (
                       <div key={idx} className="fund-card">
                         <div>
-                          <div className="fund-name">{fund.name}</div>
+                          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 6 }}>
+                            <ProviderAvatar
+                              name={fund.name.split(' - ')[0] || fund.name}
+                              logoPath={
+                                fund.fund_type === 'SIF'
+                                  ? getSIFLogo(fund.name.split(' - ')[0] || fund.name)
+                                  : getMFLogoFromSchemeName(fund.name)
+                              }
+                              size={32}
+                              radius={8}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="fund-name" style={{ marginBottom: 0 }}>{fund.name}</div>
+                            </div>
+                          </div>
 
                           {/* Type + source badges */}
                           <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
