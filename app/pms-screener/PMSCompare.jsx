@@ -8,6 +8,8 @@
  *  Passed from page.jsx: <PMSCompareModal dataLabel={pmsDate.label} ... />
  */
 import { useMemo, useState, useEffect } from 'react';
+import ProviderAvatar from '@/components/ProviderAvatar';
+import { getPMSLogo } from '@/lib/providerLogos';
 import './pms-compare.css';
 
 const MAX_COMPARE = 3;
@@ -245,9 +247,12 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
             {funds.map((f, i) => (
               <div key={f.id} className="cmp-cell cmp-strat-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 6 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--g-xlight)', border: '1.5px solid var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '.6rem', fontWeight: 800, color: 'var(--g1)', flexShrink: 0 }}>
-                    {initials(f.portfolioManager)}
-                  </div>
+                  <ProviderAvatar
+                    name={f.portfolioManager}
+                    logoPath={getPMSLogo(f.portfolioManager)}
+                    size={34}
+                    radius={8}
+                  />
                   <div>
                     <div className="cmp-strat-name">{f.strategyName}</div>
                     <div className="cmp-strat-mgr">{f.portfolioManager}</div>
