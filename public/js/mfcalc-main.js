@@ -294,6 +294,66 @@ let navChart=null,currentTab="nav";
 let searchAbortCtrl=null;
 const searchCache=new Map();
 
+// ── SIF list cache — shared across Fund Comparison, SIP Backtest, SWP Backtest.
+// /api/sif-nav has no query param (unlike /api/mf?q=), so we fetch the small
+// full list once and filter client-side.
+let _sifListPromise=null;
+function getSIFList(){
+  if(!_sifListPromise){
+    _sifListPromise=fetch('/api/sif-nav')
+      .then(r=>r.ok?r.json():{schemes:[]})
+      .then(j=>j.schemes||[])
+      .catch(()=>[]);
+  }
+  return _sifListPromise;
+}
+function searchSIFList(schemes,q){
+  const ql=q.toLowerCase();
+  return schemes.filter(s=>s.nav_name.toLowerCase().includes(ql)||s.sif_name.toLowerCase().includes(ql));
+}
+// Normalises /api/sif-history's {date:'YYYY-MM-DD',nav} records into the same
+// {date:'DD-MM-YYYY',nav} shape /api/mf?code= returns, so every downstream
+// calc function (calcMetrics, calcPeriodReturn, calcRiskMetrics…) needs no
+// SIF-specific branch — it already only ever consumes rawData arrays.
+async function fetchSIFHistory(schemeId){
+  const today=new Date();
+  // 3 years comfortably covers any SIF's full history (SEBI's SIF framework
+  // only launched in 2025) — verified live that a much wider "from" window
+  // (e.g. 15 years back) makes the underlying AMFI endpoint 502.
+  const from=new Date(today); from.setFullYear(from.getFullYear()-3);
+  const fmt=d=>d.toISOString().slice(0,10);
+  const r=await fetch(`/api/sif-history?sd_id=${encodeURIComponent(schemeId)}&from=${fmt(from)}&to=${fmt(today)}`);
+  if(!r.ok) throw new Error('no_data');
+  const j=await r.json();
+  const records=j.records||[];
+  if(!records.length) throw new Error('no_data');
+  return records
+    .filter(d=>{const v=parseFloat(d.nav);return!isNaN(v)&&v>0;})
+    .map(d=>{
+      const [y,m,dd]=d.date.split('-');
+      return {date:`${dd}-${m}-${y}`, nav:d.nav};
+    })
+    .sort((a,b)=>parseNAVDate(a.date)-parseNAVDate(b.date));
+}
+
+// Builds {YYYY-MM: nav} keeping the chronologically LATEST record in each
+// calendar month — used by the SIP/SWP Backtest tools' monthly grid. Order-
+// independent (works whether records is newest-first, like /api/mf, or
+// oldest-first, like /api/sif-history), so both fund types share one path.
+function buildMonthlyNavMap(records){
+  const navMap={}, latestTsForKey={};
+  records.forEach(d=>{
+    const [dd,mm,yyyy]=d.date.split('-');
+    const key=yyyy+'-'+mm;
+    const t=parseNAVDate(d.date).getTime();
+    if(latestTsForKey[key]===undefined||t>latestTsForKey[key]){
+      latestTsForKey[key]=t;
+      navMap[key]=parseFloat(d.nav);
+    }
+  });
+  return navMap;
+}
+
 function onSearch(){
   const q=document.getElementById("mfInput").value.trim(),dd=document.getElementById("dropdown");
   clearTimeout(searchTimeout);
@@ -338,12 +398,14 @@ function fundRank(f){
   const n=f.schemeName.toLowerCase();
   return /(^|\W)(plan|option)(\W|$)/.test(n)?0:1;
 }
-function renderSearchResults(q,data,dd){
-    if(!data.length){dd.innerHTML='<div class="dropdown-loading">No results found</div>';return;}
+function renderSearchResults(q,data,dd,sifData){
+    sifData=sifData||[];
+    if(!data.length&&!sifData.length){dd.innerHTML='<div class="dropdown-loading">No results found</div>';return;}
     const hideDeadAMC=!deadAMCQueried(q);
     const filtered=data.filter(f=>!/direct/i.test(f.schemeName)&&!/institutional/i.test(f.schemeName)&&(!hideDeadAMC||!isDeadAMC(f.schemeName)));
     const ranked=filtered.slice().sort((a,b)=>fundRank(a)-fundRank(b));
-    const results=ranked.slice(0,25);
+    const mfResults=ranked.slice(0,25);
+    const sifResults=sifData.slice(0,10);
     const ql=q.toLowerCase();
     // Highlight matched portion in fund name
     function highlight(name){
@@ -351,12 +413,17 @@ function renderSearchResults(q,data,dd){
       if(i<0) return name;
       return name.slice(0,i)+'<mark style="background:rgba(67,160,71,.18);color:var(--g1);border-radius:2px;padding:0 1px">'+name.slice(i,i+q.length)+'</mark>'+name.slice(i+q.length);
     }
-    dd.innerHTML=
-      `<div class="dd-count">${results.length} of ${filtered.length} results</div>`+
-      results.map(f=>`<div class="dropdown-item" onclick="addFund(${f.schemeCode})">
+    const mfHTML=mfResults.map(f=>`<div class="dropdown-item" onclick="addFund(${f.schemeCode},'mf')">
         <span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${highlight(f.schemeName)}</span>
         <span class="di-code">${f.schemeCode}</span>
       </div>`).join("");
+    const sifHTML=sifResults.map(s=>`<div class="dropdown-item" onclick="addFund('${s.scheme_id}','sif')">
+        <span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${highlight(escHtml(s.nav_name))}</span>
+        <span class="di-code" style="background:#e0f2f1;color:#00695c">SIF</span>
+      </div>`).join("");
+    dd.innerHTML=
+      `<div class="dd-count">${mfResults.length+sifResults.length} of ${filtered.length+sifData.length} results</div>`+
+      mfHTML+sifHTML;
 }
 
 async function doSearch(q){
@@ -366,37 +433,51 @@ async function doSearch(q){
   searchAbortCtrl=new AbortController();
   const signal=searchAbortCtrl.signal;
   try{
-    if(searchCache.has(q)){renderSearchResults(q,searchCache.get(q),dd);return;}
-    const r=await fetch(`/api/mf?q=${encodeURIComponent(q)}`,{signal});
-    const data=await r.json();
-    searchCache.set(q,data);
-    renderSearchResults(q,data,dd);
-
+    const sifListP=getSIFList();
+    let data;
+    if(searchCache.has(q)){
+      data=searchCache.get(q);
+    }else{
+      const r=await fetch(`/api/mf?q=${encodeURIComponent(q)}`,{signal});
+      data=await r.json();
+      searchCache.set(q,data);
+    }
+    const sifList=await sifListP;
+    const sifData=searchSIFList(sifList,q);
+    renderSearchResults(q,data,dd,sifData);
   }catch(e){if(e.name!=='AbortError')dd.innerHTML='<div class="dropdown-loading">⚠️ Search failed. Check connection.</div>';}
 }
 document.addEventListener("click",e=>{if(!e.target.closest(".search-wrap"))document.getElementById("dropdown").classList.remove("open");});
 
-async function addFund(code){
+async function addFund(code,kind){
+  kind=kind||'mf';
   if(selectedFunds.length>=5){alert("Max 5 funds.");return;}
   if(selectedFunds.find(f=>f.code===code)){alert("Already added.");return;}
   document.getElementById("dropdown").classList.remove("open");
   document.getElementById("mfInput").value="";
   setLoading(true);
   try{
-    const r=await fetch(`/api/mf?code=${code}`);
-    const res=await r.json();
-    if(!res.data||!res.data.length)throw new Error();
-    // Clean: remove zero/invalid NAVs, then sort ascending by date
-    // (AMFI data is not always perfectly ordered for some fund houses like SBI)
-    const cleaned=res.data
-      .filter(d=>{const v=parseFloat(d.nav);return!isNaN(v)&&v>0;})
-      .sort((a,b)=>parseNAVDate(a.date)-parseNAVDate(b.date));
-    if(!cleaned.length)throw new Error('no_data');
-    selectedFunds.push({code,name:res.meta.scheme_name,rawData:cleaned});
+    if(kind==='sif'){
+      const sifList=await getSIFList();
+      const meta=sifList.find(s=>s.scheme_id===code);
+      const cleaned=await fetchSIFHistory(code);
+      selectedFunds.push({code,name:meta?meta.nav_name:code,house:meta?meta.sif_name:null,rawData:cleaned,kind:'sif'});
+    }else{
+      const r=await fetch(`/api/mf?code=${code}`);
+      const res=await r.json();
+      if(!res.data||!res.data.length)throw new Error();
+      // Clean: remove zero/invalid NAVs, then sort ascending by date
+      // (AMFI data is not always perfectly ordered for some fund houses like SBI)
+      const cleaned=res.data
+        .filter(d=>{const v=parseFloat(d.nav);return!isNaN(v)&&v>0;})
+        .sort((a,b)=>parseNAVDate(a.date)-parseNAVDate(b.date));
+      if(!cleaned.length)throw new Error('no_data');
+      selectedFunds.push({code,name:res.meta.scheme_name,rawData:cleaned,kind:'mf'});
+    }
     renderChips();renderAll();
   }catch(e){
     const msg=e.message==='no_data'
-      ?'This scheme appears discontinued or merged.\nTry searching for the \'Regular Plan\' version.'
+      ?(kind==='sif'?'No NAV history available yet for this SIF strategy.':'This scheme appears discontinued or merged.\nTry searching for the \'Regular Plan\' version.')
       :'Failed to load fund data. Please try again.';
     alert(msg);
   }
@@ -404,19 +485,26 @@ async function addFund(code){
 }
 function removeFund(code){selectedFunds=selectedFunds.filter(f=>f.code!==code);renderChips();renderAll();}
 function escHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
-// Shows/hides a single-fund <img class="chip-logo"> for the backtest tools' selected-fund chip
-function setFundLogo(imgId, schemeName){
+// Shows/hides a single-fund <img class="chip-logo"> for the backtest tools' selected-fund chip.
+// For SIF entries, pass the SIF house name (e.g. "Altiva SIF") — SIF_OVERRIDES is keyed by
+// house, not by the (much longer) individual scheme/strategy name.
+function setFundLogo(imgId, nameOrHouse, kind){
   const img=document.getElementById(imgId);
   if(!img) return;
-  const logoPath=window.LogoResolver&&schemeName?window.LogoResolver.getMFLogoFromSchemeName(schemeName):null;
+  const logoPath=!window.LogoResolver||!nameOrHouse?null
+    :kind==='sif'?window.LogoResolver.getSIFLogo(nameOrHouse)
+    :window.LogoResolver.getMFLogoFromSchemeName(nameOrHouse);
   if(logoPath){ img.src=logoPath; img.style.display=""; } else { img.removeAttribute('src'); img.style.display="none"; }
 }
 function renderChips(){
   document.getElementById("chips").innerHTML=selectedFunds.map((f,i)=>{
-    const logoPath=window.LogoResolver?window.LogoResolver.getMFLogoFromSchemeName(f.name):null;
+    const logoPath=!window.LogoResolver?null
+      :f.kind==='sif'?window.LogoResolver.getSIFLogo(f.house)
+      :window.LogoResolver.getMFLogoFromSchemeName(f.name);
     const logoImg=logoPath?`<img class="chip-logo" src="${logoPath}" alt="" onerror="this.style.display='none'">`:"";
     const name=escHtml(f.name);
-    return `<div class="chip chip-${i}">${logoImg}<span class="chip-name" title="${name}">${name}</span><button class="chip-remove" onclick="removeFund(${f.code})">✕</button></div>`;
+    const sifTag=f.kind==='sif'?'<span style="font-size:.55rem;font-weight:800;color:#00695c;margin-right:2px">SIF</span>':"";
+    return `<div class="chip chip-${i}">${logoImg}${sifTag}<span class="chip-name" title="${name}">${name}</span><button class="chip-remove" onclick="removeFund(${JSON.stringify(f.code)})">✕</button></div>`;
   }).join("");
 }
 function setPeriod(key,btn){
@@ -2282,12 +2370,16 @@ async function btDoSearch(q){
   if(btSearchAbort){ btSearchAbort.abort(); }
   btSearchAbort = new AbortController();
   try{
-    const res = await fetch('/api/mf?q='+encodeURIComponent(q), {signal:btSearchAbort.signal});
+    const [res, sifList] = await Promise.all([
+      fetch('/api/mf?q='+encodeURIComponent(q), {signal:btSearchAbort.signal}),
+      getSIFList(),
+    ]);
     const data = await res.json();
-    if(!data || !data.length){ dd.innerHTML='<div class="dropdown-loading">No results found</div>'; return; }
+    const sifs = searchSIFList(sifList, q).slice(0, 10);
+    if((!data || !data.length) && !sifs.length){ dd.innerHTML='<div class="dropdown-loading">No results found</div>'; return; }
     // Same filter + rank as Fund Comparison renderSearchResults
     const hideDeadAMC = !deadAMCQueried(q);
-    const filtered = data.filter(f=>!/direct/i.test(f.schemeName)&&(!hideDeadAMC||!isDeadAMC(f.schemeName)));
+    const filtered = (data||[]).filter(f=>!/direct/i.test(f.schemeName)&&(!hideDeadAMC||!isDeadAMC(f.schemeName)));
     const ranked   = filtered.slice().sort((a,b)=>fundRank(a)-fundRank(b));
     const results  = ranked.slice(0,25);
     const ql = q.toLowerCase();
@@ -2296,9 +2388,10 @@ async function btDoSearch(q){
       if(i<0) return name;
       return name.slice(0,i)+'<mark style="background:rgba(67,160,71,.18);color:var(--g1);border-radius:2px;padding:0 1px">'+name.slice(i,i+q.length)+'</mark>'+name.slice(i+q.length);
     }
-    if(!results.length){ dd.innerHTML='<div class="dropdown-loading">No results (try without "Regular")</div>'; return; }
-    dd.innerHTML = '<div class="dd-count">'+results.length+' of '+filtered.length+' results</div>'+
-      results.map(f=>`<div class="dropdown-item" onclick="btSelectFund(${f.schemeCode},'${f.schemeName.replace(/'/g,"\'")}')"><span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${btHighlight(f.schemeName)}</span><span class="di-code">${f.schemeCode}</span></div>`).join('');
+    if(!results.length && !sifs.length){ dd.innerHTML='<div class="dropdown-loading">No results (try without "Regular")</div>'; return; }
+    const mfHTML = results.map(f=>`<div class="dropdown-item" onclick="btSelectFund(${f.schemeCode},${JSON.stringify(f.schemeName)},'mf')"><span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${btHighlight(f.schemeName)}</span><span class="di-code">${f.schemeCode}</span></div>`).join('');
+    const sifHTML = sifs.map(s=>`<div class="dropdown-item" onclick="btSelectFund(${JSON.stringify(s.scheme_id)},${JSON.stringify(s.nav_name)},'sif',${JSON.stringify(s.sif_name)})"><span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${btHighlight(escHtml(s.nav_name))}</span><span class="di-code" style="background:#e0f2f1;color:#00695c">SIF</span></div>`).join('');
+    dd.innerHTML = '<div class="dd-count">'+(results.length+sifs.length)+' of '+(filtered.length+sifs.length)+' results</div>'+mfHTML+sifHTML;
   }catch(e){
     if(e.name!=='AbortError') dd.innerHTML='<div class="dropdown-loading">⚠️ Search failed. Check connection.</div>';
   }
@@ -2310,11 +2403,12 @@ document.addEventListener('click', e=>{
     document.getElementById('sipBTDropdown')?.classList.remove('open');
 });
 
-async function btSelectFund(code, name){
+async function btSelectFund(code, name, kind, house){
+  kind = kind || 'mf';
   document.getElementById('btDropdown').classList.remove('open');
   document.getElementById('btFundInput').value = '';
   document.getElementById('btFundName').textContent = name;
-  setFundLogo('btFundLogo', name);
+  setFundLogo('btFundLogo', kind==='sif' ? house : name, kind);
   document.getElementById('btFundChipWrap').style.display = 'block';
   document.getElementById('btEmpty').textContent = 'Loading NAV data…';
   document.getElementById('btEmpty').style.display = 'block';
@@ -2322,24 +2416,18 @@ async function btSelectFund(code, name){
 
   try{
     const _mySeq = ++_btFetchSeq;
-    const res = await fetch('/api/mf?code='+code);
-    const json = await res.json();
+    const records = kind === 'sif'
+      ? await fetchSIFHistory(code)
+      : await fetch('/api/mf?code='+code).then(r=>r.json()).then(json=>json.data||[]);
     if (_mySeq !== _btFetchSeq) return; // newer fund request superseded this one
-    const navRaw = json.data; // [{date:'DD-MM-YYYY', nav:'123.45'}, ...]
-    // Build navMap: YYYY-MM → last NAV of that month
-    const navMap = {};
-    navRaw.forEach(d=>{
-      const [dd,mm,yyyy] = d.date.split('-');
-      const key = yyyy+'-'+mm;
-      // mfapi returns newest first; we want last available NAV per month
-      // Since it's newest-first, first occurrence of each month is the last trading day
-      if(!navMap[key]) navMap[key] = parseFloat(d.nav);
-    });
-    btFundData = {code, name, navMap};
+    const navMap = buildMonthlyNavMap(records);
+    btFundData = {code, name, navMap, kind, house};
     btBuildDateDropdowns();
     btRun();
   }catch(e){
-    document.getElementById('btEmpty').textContent = 'Failed to load NAV data. Try again.';
+    document.getElementById('btEmpty').textContent = kind === 'sif'
+      ? 'No NAV history available yet for this SIF strategy.'
+      : 'Failed to load NAV data. Try again.';
   }
 }
 
@@ -3058,52 +3146,62 @@ function sipBTDoSearch(q) {
   const dd = document.getElementById('sipBTDropdown');
   dd.innerHTML = '<div class="dropdown-loading">Searching…</div>';
   dd.classList.add('open');
-  fetch('/api/mf?q=' + encodeURIComponent(q), { signal: _sipBTSearchCtrl.signal })
-    .then(r => r.json())
-    .then(data => {
+  Promise.all([
+    fetch('/api/mf?q=' + encodeURIComponent(q), { signal: _sipBTSearchCtrl.signal }).then(r => r.json()),
+    getSIFList(),
+  ])
+    .then(([data, sifList]) => {
       const funds = (data || [])
         .filter(f => !/direct/i.test(f.schemeName) && !/institutional/i.test(f.schemeName) && !isDeadAMC(f.schemeName))
         .sort((a,b) => fundRank(a) - fundRank(b))
         .slice(0, 25);
-      if (!funds.length) { dd.innerHTML = '<div class="dropdown-loading">No results</div>'; return; }
-      const q2 = q.toLowerCase();
-      dd.innerHTML = `<div class="dd-count">${funds.length} fund${funds.length!==1?'s':''}</div>` +
-        funds.map(f => {
-          const hi = f.schemeName.replace(new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'), '<strong>$1</strong>');
-          return `<div class="dropdown-item" onclick="sipBTSelectFund('${f.schemeCode}','${f.schemeName.replace(/'/g,"\'")}')">
-            <div>${hi}</div><span class="di-code">${f.schemeCode}</span>
-          </div>`;
-        }).join('');
+      const sifs = searchSIFList(sifList, q).slice(0, 10);
+      if (!funds.length && !sifs.length) { dd.innerHTML = '<div class="dropdown-loading">No results</div>'; return; }
+      const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      const mfHTML = funds.map(f => {
+        const hi = f.schemeName.replace(new RegExp('('+esc(q)+')','gi'), '<strong>$1</strong>');
+        return `<div class="dropdown-item" onclick="sipBTSelectFund(${f.schemeCode},${JSON.stringify(f.schemeName)},'mf')">
+          <div>${hi}</div><span class="di-code">${f.schemeCode}</span>
+        </div>`;
+      }).join('');
+      const sifHTML = sifs.map(s => {
+        const hi = escHtml(s.nav_name).replace(new RegExp('('+esc(q)+')','gi'), '<strong>$1</strong>');
+        return `<div class="dropdown-item" onclick="sipBTSelectFund(${JSON.stringify(s.scheme_id)},${JSON.stringify(s.nav_name)},'sif',${JSON.stringify(s.sif_name)})">
+          <div>${hi}</div><span class="di-code" style="background:#e0f2f1;color:#00695c">SIF</span>
+        </div>`;
+      }).join('');
+      dd.innerHTML = `<div class="dd-count">${funds.length+sifs.length} result${(funds.length+sifs.length)!==1?'s':''}</div>` + mfHTML + sifHTML;
       dd.classList.add('open');
     })
     .catch(() => {});
 }
 
-function sipBTSelectFund(code, name) {
+function sipBTSelectFund(code, name, kind, house) {
+  kind = kind || 'mf';
   document.getElementById('sipBTDropdown').classList.remove('open');
   document.getElementById('sipBTFundInput').value = '';
   document.getElementById('sipBTFundName').textContent = name;
-  setFundLogo('sipBTFundLogo', name);
+  setFundLogo('sipBTFundLogo', kind==='sif' ? house : name, kind);
   document.getElementById('sipBTFundChipWrap').style.display = 'block';
   document.getElementById('sipBTEmpty').textContent = 'Loading NAV data…';
   document.getElementById('sipBTEmpty').style.display = 'block';
   document.getElementById('sipBTResults').style.display = 'none';
 
-  fetch('/api/mf?code=' + code)
-    .then(r => r.json())
-    .then(json => {
-      const navMap = {};
-      (json.data || []).forEach(d => {
-        const [dd,mm,yyyy] = d.date.split('-');
-        const key = yyyy + '-' + mm;
-        if (!navMap[key]) navMap[key] = parseFloat(d.nav);
-      });
-      sipBTFundData = { code, name, navMap };
+  const dataPromise = kind === 'sif'
+    ? fetchSIFHistory(code)
+    : fetch('/api/mf?code=' + code).then(r => r.json()).then(json => json.data || []);
+
+  dataPromise
+    .then(records => {
+      const navMap = buildMonthlyNavMap(records);
+      sipBTFundData = { code, name, navMap, kind, house };
       sipBTBuildDateDropdowns();
       sipBTRun();
     })
     .catch(() => {
-      document.getElementById('sipBTEmpty').textContent = 'Failed to load fund data. Try again.';
+      document.getElementById('sipBTEmpty').textContent = kind === 'sif'
+        ? 'No NAV history available yet for this SIF strategy.'
+        : 'Failed to load fund data. Try again.';
     });
 }
 
