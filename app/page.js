@@ -508,6 +508,7 @@ const MAIN_HTML = `
         <div class="dropdown" id="sipBTDropdown" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:2000"></div>
         <div id="sipBTFundChipWrap" style="display:none;margin-top:10px">
           <span class="chip chip-0">
+            <img id="sipBTFundLogo" class="chip-logo" style="display:none" alt="" onerror="this.style.display='none'">
             <span class="chip-name" id="sipBTFundName"></span>
             <button class="chip-remove" onclick="sipBTClearFund()" aria-label="Remove fund">✕</button>
           </span>
@@ -925,7 +926,8 @@ const MAIN_HTML = `
             <div id="btDropdown" class="dropdown" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:2000"></div>
           </div>
           <div class="sip-field" style="grid-column:1/-1;display:none" id="btFundChipWrap">
-            <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--g-xlight);border:1.5px solid var(--g-light);border-radius:20px;font-size:.72rem;font-weight:700;color:var(--g2)">
+            <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;background:var(--g-xlight);border:1.5px solid var(--g-light);border-radius:20px;font-size:.72rem;font-weight:700;color:var(--g2)">
+              <img id="btFundLogo" class="chip-logo" style="display:none" alt="" onerror="this.style.display='none'">
               <span id="btFundName">—</span>
               <span onclick="btClearFund()" style="cursor:pointer;color:var(--muted);font-size:.85rem;line-height:1">✕</span>
             </div>

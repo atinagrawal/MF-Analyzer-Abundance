@@ -404,6 +404,13 @@ async function addFund(code){
 }
 function removeFund(code){selectedFunds=selectedFunds.filter(f=>f.code!==code);renderChips();renderAll();}
 function escHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+// Shows/hides a single-fund <img class="chip-logo"> for the backtest tools' selected-fund chip
+function setFundLogo(imgId, schemeName){
+  const img=document.getElementById(imgId);
+  if(!img) return;
+  const logoPath=window.LogoResolver&&schemeName?window.LogoResolver.getMFLogoFromSchemeName(schemeName):null;
+  if(logoPath){ img.src=logoPath; img.style.display=""; } else { img.removeAttribute('src'); img.style.display="none"; }
+}
 function renderChips(){
   document.getElementById("chips").innerHTML=selectedFunds.map((f,i)=>{
     const logoPath=window.LogoResolver?window.LogoResolver.getMFLogoFromSchemeName(f.name):null;
@@ -1192,225 +1199,14 @@ async function _doPrintGoal(){
   if(btn){btn.disabled=false;btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Save PDF';}
 }
 
-// ════════════════════════════════════════
-//  SWP CALCULATOR PDF
-// ════════════════════════════════════════
-function printSWP(){_loadJsPDF(_doPrintSWP);}
-async function _doPrintSWP(){
-  const btn=document.querySelector('[onclick="printSWP()"]');
-  if(btn){btn.disabled=true;btn.textContent='Building PDF…';}
-  try{
-    const logoDataUrl=await _fetchLogoDataURL();
-    const b=_makePDF();
-    const {doc,ML,MR,PH,CW,SRF,BRD,TXT,MUT,WHT,POS,NEG,GMD,GDK,S,fmtINR_}=b;
-    const dateStr=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
-    const timeStr=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+// Note: the SWP calculator's print export lives further down (function printSWP(){...},
+// a popup-window report) — it covers Runway/Insights sections this jsPDF one never grew,
+// so it's kept as the one live implementation instead of duplicating jsPDF support for it.
 
-    // Collect params from DOM
-    const corpus=parseFloat(document.getElementById('swpCorpus')?.value||0);
-    const monthly=parseFloat(document.getElementById('swpMonthly')?.value||0);
-    const rate=document.getElementById('swpRate')?.value||'10';
-    const dur=document.getElementById('swpDuration')?.value||'20';
-    const durUnit=document.getElementById('swpDurationUnit')?.value||'years';
-    const inflation=parseFloat(document.getElementById('swpInflation')?.value||0);
-
-    // Read results from DOM
-    const fuelEls=document.querySelectorAll('#swpFuel .sip-sum-item');
-    const statEls=document.querySelectorAll('#swpStatGrid .swp-stat');
-
-    b.newPage();
-    let y=b.pageHeader('SWP — Systematic Withdrawal Plan','How long your corpus lasts with regular withdrawals  ·  For illustrative purposes only',dateStr,timeStr,logoDataUrl);
-
-    // Params
-    const paramItems=[
-      ['Starting Corpus','₹'+fmtINR_(corpus)],
-      ['Monthly Withdrawal','₹'+fmtINR_(monthly)],
-      ['Expected Return',rate+'% p.a.'],
-      ['Duration',dur+' '+durUnit],
-      inflation>0?['Inflation Adj.',inflation+'% p.a.']:null,
-    ].filter(Boolean);
-    y=b.paramsBox(paramItems,y);
-    y+=2;
-
-    // Key summary from fuel strip
-    if(fuelEls.length){
-      y=b.secTitle('Summary',y);
-      const items=[...fuelEls].map(el=>{
-        const lbl=el.querySelector('.sip-sum-label')?.textContent||'';
-        const val=el.querySelector('.sip-sum-val')?.textContent||'';
-        return[lbl,val,TXT];
-      });
-      y=b.metricsGrid(items,y,Math.min(items.length,4));
-    }
-
-    // Stat grid
-    if(statEls.length){
-      y=b.secTitle('Key Statistics',y);
-      const items=[...statEls].map(el=>{
-        const lbl=el.querySelector('.swp-stat-label')?.textContent||el.querySelector('[class*=label]')?.textContent||'';
-        const val=el.querySelector('.swp-stat-val')?.textContent||el.querySelector('[class*=val]')?.textContent||'';
-        return[lbl,val,TXT];
-      });
-      y=b.metricsGrid(items,y,Math.min(items.length,4));
-    }
-
-    // Chart
-    y=b.secTitle('Corpus Depletion Chart',y);
-    y=b.addChartImg(document.getElementById('swpChart'),y,85);
-
-    // Result cards
-    const cardEls=document.querySelectorAll('#swpResultCards .sip-result-card');
-    if(cardEls.length){
-      y=b.secTitle('Withdrawal Scenarios',y);
-      const ccw=(CW-(cardEls.length-1)*2)/Math.min(cardEls.length,3);
-      [...cardEls].slice(0,3).forEach((card,i)=>{
-        const cx=ML+i*(ccw+2);
-        const title=card.querySelector('.src-name')?.textContent||'Scenario '+(i+1);
-        const corpus2=card.querySelector('.src-corpus')?.textContent||'—';
-        doc.setFillColor(255,255,255);doc.setDrawColor(...BRD);doc.setLineWidth(0.3);
-        doc.roundedRect(cx,y,ccw,38,2,2,'FD');
-        const accentColor=[[21,101,192],[46,125,50],[230,81,0]][i]||[46,125,50];
-        doc.setFillColor(...accentColor);doc.rect(cx,y,ccw,3,'F');
-        doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(...TXT);
-        doc.text(title.slice(0,28),cx+ccw/2,y+9,{align:'center'});
-        doc.setFontSize(11);doc.setTextColor(...GDK);
-        doc.text(S(corpus2),cx+ccw/2,y+18,{align:'center'});
-        doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-        doc.text('Remaining Corpus',cx+ccw/2,y+23,{align:'center'});
-        const rows=card.querySelectorAll('.src-row');
-        let ry=y+27;
-        [...rows].slice(0,2).forEach(row=>{
-          const k=row.querySelector('.src-key')?.textContent||'';
-          const v=row.querySelector('.src-val')?.textContent||'';
-          if(!k||!v) return;
-          doc.setFontSize(6);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
-          doc.text(k.slice(0,18),cx+3,ry);
-          doc.setFont('helvetica','bold');doc.setTextColor(...TXT);
-          doc.text(v.slice(0,14),cx+ccw-3,ry,{align:'right'});
-          ry+=5;
-        });
-      });
-      y+=42;
-    }
-
-    y=b.disclaimerBox(y+2);
-    b.complianceBar(y+4);
-    b.footer(dateStr);
-    doc.save('Abundance-SWP-Plan_'+new Date().toISOString().slice(0,10)+'.pdf');
-  }catch(e){console.error(e);alert('PDF export failed: '+e.message);}
-  if(btn){btn.disabled=false;btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Save PDF';}
-}
-
-// ════════════════════════════════════════
-//  EMI CALCULATOR PDF
-// ════════════════════════════════════════
-function printEMI(){_loadJsPDF(_doPrintEMI);}
-async function _doPrintEMI(){
-  const btn=document.querySelector('[onclick="printEMI()"]');
-  if(btn){btn.disabled=true;btn.textContent='Building PDF…';}
-  try{
-    const logoDataUrl=await _fetchLogoDataURL();
-    const b=_makePDF();
-    const {doc,ML,MR,PH,CW,SRF,BRD,TXT,MUT,WHT,POS,NEG,GMD,GDK,S,fmtINR_}=b;
-    const dateStr=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
-    const timeStr=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
-
-    // Collect params
-    const p=getEMIParams();
-    const emiAmt=(emiMode==='emi'||emiMode==='tenure')?calcEMIValue(p.loan,p.rate,p.tenure)
-                :parseFloat(document.getElementById('emiAmount')?.value)||0;
-    const totalPay=emiAmt*p.tenure;
-    const totalInt=totalPay-p.loan;
-    const intPct=p.loan>0?(totalInt/p.loan*100).toFixed(1):'0';
-
-    const presetLabels={home:'Home Loan',car:'Car Loan',personal:'Personal Loan',education:'Education Loan',custom:'Custom Loan'};
-    const loanType=presetLabels[document.querySelector('.emi-preset-btn.active')?.dataset?.preset||'custom']||'Loan';
-
-    b.newPage();
-    let y=b.pageHeader('EMI Calculator — '+loanType,'Loan repayment schedule and total cost analysis  ·  For illustrative purposes only',dateStr,timeStr,logoDataUrl);
-
-    // Big EMI box
-    y=b.bigResultBox('Monthly EMI','₹'+fmtINR_(emiAmt),'for '+p.tenure+' months at '+p.rate+'% p.a.',[30,94,32],y);
-    y+=4;
-
-    // Params
-    y=b.paramsBox([
-      ['Loan Amount','₹'+fmtINR_(p.loan)],
-      ['Interest Rate',p.rate+'% p.a.'],
-      ['Tenure',p.tenure+' months'],
-      ['Loan Type',loanType],
-    ],y);
-    y+=4;
-
-    // Key metrics
-    y=b.secTitle('Loan Summary',y);
-    y=b.metricsGrid([
-      ['Monthly EMI','₹'+fmtINR_(emiAmt),TXT],
-      ['Total Payment','₹'+fmtINR_(totalPay),TXT],
-      ['Total Interest','₹'+fmtINR_(totalInt),NEG],
-      ['Principal','₹'+fmtINR_(p.loan),TXT],
-      ['Interest %',intPct+'% of principal',NEG],
-      ['Tenure',p.tenure+' months / '+Math.round(p.tenure/12*10)/10+' yrs',TXT],
-    ],y,3);
-
-    // Chart
-    y=b.secTitle('Payment Breakdown Chart',y);
-    y=b.addChartImg(document.getElementById('emiChart'),y,80);
-
-    // Amortisation table (first 12 months)
-    const tableEl=document.getElementById('emiTableInner');
-    if(tableEl){
-      y=b.secTitle('Amortisation Schedule (First Year)',y);
-      const rows=tableEl.querySelectorAll('tr');
-      const headerRow=rows[0];
-      if(headerRow){
-        // Draw table header
-        const ths=[...headerRow.querySelectorAll('th,td')].map(el=>el.textContent.trim());
-        const colW=CW/Math.min(ths.length,6);
-        doc.setFillColor(...GDK);doc.rect(ML,y,CW,6.5,'F');
-        doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
-        ths.slice(0,6).forEach((h,ci)=>doc.text(h.slice(0,14),ML+ci*colW+2,y+4.3));
-        y+=6.5;
-        // Data rows (first 12)
-        [...rows].slice(1,13).forEach((row,ri)=>{
-          const tds=[...row.querySelectorAll('td')].map(el=>el.textContent.trim());
-          doc.setFillColor(...(ri%2===0?[255,255,255]:[237,246,237]));
-          doc.rect(ML,y,CW,6,'F');
-          doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(...TXT);
-          tds.slice(0,6).forEach((v,ci)=>doc.text(v.slice(0,14),ML+ci*colW+2,y+4));
-          doc.setDrawColor(...BRD);doc.setLineWidth(0.1);doc.line(ML,y+6,ML+CW,y+6);
-          y+=6;
-        });
-        if(rows.length>13){
-          doc.setFontSize(6.5);doc.setFont('helvetica','italic');doc.setTextColor(...MUT);
-          doc.text('… and '+(rows.length-13)+' more months. Full schedule available in the app.',ML,y+4);
-          y+=7;
-        }
-      }
-    }
-
-    // Prepayment insight
-    const insightEl=document.getElementById('emiSIPInsight');
-    if(insightEl&&insightEl.style.display!=='none'){
-      y+=2;
-      doc.setFillColor(232,245,233);doc.setDrawColor(...BRD);doc.setLineWidth(0.3);
-      doc.roundedRect(ML,y,CW,16,2,2,'FD');
-      doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(...GDK);
-      doc.text('💡 SIP vs EMI Insight',ML+4,y+6);
-      doc.setFontSize(6.8);doc.setFont('helvetica','normal');doc.setTextColor(...TXT);
-      const insightText=insightEl.textContent.replace(/\s+/g,' ').trim().slice(0,200);
-      const iLines=doc.splitTextToSize(insightText,CW-8);
-      doc.text(iLines.slice(0,2),ML+4,y+11);
-      y+=19;
-    }
-
-    y=b.disclaimerBox(y+2);
-    b.complianceBar(y+4);
-    b.footer(dateStr);
-    doc.save('Abundance-EMI-Calculator_'+loanType.replace(/\s/g,'-')+'_'+new Date().toISOString().slice(0,10)+'.pdf');
-  }catch(e){console.error(e);alert('PDF export failed: '+e.message);}
-  if(btn){btn.disabled=false;btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Save PDF';}
-}
+// Note: the EMI calculator's print export lives further down (function printEMI(){...},
+// a popup-window report) — it covers the Balance Transfer comparison and full prepayment
+// results this jsPDF one never grew, so it's kept as the one live implementation instead
+// of duplicating jsPDF support for it.
 
 
 /* ════════════════════════════════════════
@@ -1963,62 +1759,6 @@ function drawGoalChart(p, sipOnly, lumpOnly, hybridLump, hybridSIP){
         ticks:{font:{family:'JetBrains Mono',size:10},color:'#5e8a5e',callback:v=>'₹'+fmtINR(v)}}
     }
   }});
-}
-
-function printGoalPlan(){
-  const p = getGoalParams();
-  const bannerHTML = document.getElementById('goalSummaryBanner').outerHTML;
-  const cardsHTML  = document.getElementById('goalPlanCards').outerHTML;
-  const tlHTML     = document.getElementById('goalTimeline').outerHTML;
-  const chartImg   = document.getElementById('goalChart') ? document.getElementById('goalChart').toDataURL('image/png') : '';
-  const win = window.open('','_blank','width=900,height=700');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-<title>SIP &amp; SWP NAV Backtester, MF Comparison, Goal Planner &amp; EMI | Abundance</title>
-<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:32px 40px}
-  .print-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:2px solid #2e7d32;margin-bottom:24px}
-  .print-logo{height:48px;object-fit:contain;mix-blend-mode:multiply}
-  .print-title{font-size:1.1rem;font-weight:800;color:#2e7d32}
-  .print-arn{font-size:.62rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:3px}
-  .sec{font-size:.58rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#5e8a5e;margin:16px 0 8px;display:flex;align-items:center;gap:8px}
-  .sec::after{content:"";flex:1;height:1px;background:#c2dfc2}
-  #goalPlanCards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
-  .gp-card{background:#edf6ed;border:1.5px solid #c2dfc2;border-radius:10px;padding:14px;position:relative;overflow:hidden}
-  .gp-card-accent{position:absolute;top:0;left:0;right:0;height:3px}
-  .gp-card-type{font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#5e8a5e;margin-bottom:8px;display:flex;align-items:center;gap:5px}
-  .gp-card-icon{font-size:.9rem}
-  .gp-highlight-box{background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:7px;padding:8px 12px;margin:7px 0;text-align:center}
-  .gp-main-val{font-family:"JetBrains Mono",monospace;font-size:1rem;font-weight:800;color:#1b5e20;line-height:1.2}
-  .gp-main-label{font-size:.57rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:2px}
-  .gp-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #c2dfc2;font-size:.66rem}
-  .gp-row:last-child{border-bottom:none}
-  .gp-key{color:#2e4d2e}.gp-val{font-family:"JetBrains Mono",monospace;font-weight:600}
-  .gp-badge{display:inline-flex;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:6px}
-  .timeline-bar{background:#edf6ed;border:1.5px solid #c2dfc2;border-radius:8px;padding:12px 16px;margin-bottom:14px}
-  .tl-track{height:6px;background:#c2dfc2;border-radius:4px;margin:7px 0;overflow:hidden}
-  .tl-fill{height:100%;background:linear-gradient(90deg,#2e7d32,#66bb6a);border-radius:4px;width:100%}
-  .tl-milestones{display:flex;justify-content:space-between}
-  .tl-m{font-size:.58rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;text-align:center;flex:1}
-  .chart-section img{width:100%;border-radius:8px;border:1px solid #c2dfc2;margin-bottom:14px}
-  .disclaimer{padding:10px 14px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.62rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:16px}
-  @media print{body{padding:18px 22px}@page{margin:1cm;size:A4 portrait}}
-</style></head><body>
-<div class="print-header">
-  <div><div class="print-title">Investment Goal Planner — ${p.goalName}</div>
-  <div class="print-arn">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds Distributor &amp; SIF Distributor</div></div>
-  <img class="print-logo" src="/logo-og.png" onerror="this.style.display='none'">
-</div>
-<div class="sec">Goal Summary</div>${bannerHTML}
-<div class="sec">Investment Plans</div>${cardsHTML}
-<div class="sec">Progress Milestones</div>${tlHTML}
-${chartImg?`<div class="sec">Growth Projection</div><div class="chart-section"><img src="${chartImg}"></div>`:''}
-<div class="disclaimer">⚠️ <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. These projections are for illustrative purposes only and do not constitute financial advice. Consult your financial advisor before investing. | ARN-251838 | Abundance Financial Services</div>
-</body></html>`);
-  win.document.close();
-  win.onload = ()=>setTimeout(()=>{win.focus();win.print();},600);
-  setTimeout(()=>{try{win.focus();win.print();}catch(e){}},1200);
 }
 
 // calcGoal();  // lazy-init via tab
@@ -2574,6 +2314,7 @@ async function btSelectFund(code, name){
   document.getElementById('btDropdown').classList.remove('open');
   document.getElementById('btFundInput').value = '';
   document.getElementById('btFundName').textContent = name;
+  setFundLogo('btFundLogo', name);
   document.getElementById('btFundChipWrap').style.display = 'block';
   document.getElementById('btEmpty').textContent = 'Loading NAV data…';
   document.getElementById('btEmpty').style.display = 'block';
@@ -2606,6 +2347,7 @@ function btClearFund(){
   btFundData = null;
   document.getElementById('btFundChipWrap').style.display = 'none';
   document.getElementById('btFundName').textContent = '—';
+  setFundLogo('btFundLogo', null);
   document.getElementById('btEmpty').textContent = 'Search and select a fund to run the backtest';
   document.getElementById('btEmpty').style.display = 'block';
   document.getElementById('btWhatIfWrap').style.display = 'none';
@@ -3341,6 +3083,7 @@ function sipBTSelectFund(code, name) {
   document.getElementById('sipBTDropdown').classList.remove('open');
   document.getElementById('sipBTFundInput').value = '';
   document.getElementById('sipBTFundName').textContent = name;
+  setFundLogo('sipBTFundLogo', name);
   document.getElementById('sipBTFundChipWrap').style.display = 'block';
   document.getElementById('sipBTEmpty').textContent = 'Loading NAV data…';
   document.getElementById('sipBTEmpty').style.display = 'block';
@@ -3367,6 +3110,7 @@ function sipBTSelectFund(code, name) {
 function sipBTClearFund() {
   sipBTFundData = null;
   document.getElementById('sipBTFundChipWrap').style.display = 'none';
+  setFundLogo('sipBTFundLogo', null);
   document.getElementById('sipBTFundInput').value = '';
   document.getElementById('sipBTResults').style.display = 'none';
   document.getElementById('sipBTEmpty').textContent = 'Search for a fund to begin the SIP backtest';
@@ -4665,7 +4409,7 @@ function readURLParams() {
       loan:'emiLoanAmt', rate:'emiRate', tenure:'emiTenure',
       sip:'sipAmount', years:'sipDuration', ret:'sipRate',
       goal:'goalTarget', gyears:'goalYears',
-      corpus:'swpCorpus', withdraw:'swpMonthly'
+      corpus:'swpCorpus', withdraw:'swpWithdrawal'
     };
     let any = false;
     Object.entries(map).forEach(([param, id]) => {
@@ -4809,7 +4553,7 @@ function writeURLParams() {
       const _swpTabs = document.querySelectorAll('.swp-mode-tab');
       if (_swpTabs[2] && _swpTabs[2].classList.contains('active')) return;
       p.set('corpus', getVal('swpCorpus'));
-      p.set('withdraw', getVal('swpMonthly'));
+      p.set('withdraw', getVal('swpWithdrawal'));
     }
     const newURL = window.location.pathname + '?' + p.toString();
     window.history.replaceState(null, '', newURL);
