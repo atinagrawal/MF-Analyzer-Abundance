@@ -498,7 +498,15 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
                         gap: 10, padding: '11px 14px 9px', background: 'var(--s2)',
                         borderBottom: '1px solid var(--border)' }}>
-                        <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ minWidth: 0, flex: 1, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                          <ProviderAvatar
+                            name={row.name}
+                            logoPath={getMFLogoFromSchemeName(row.name)}
+                            size={22}
+                            radius={5}
+                            style={{ marginTop: 1 }}
+                          />
+                          <div style={{ minWidth: 0, flex: 1 }}>
                           <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '.72rem',
                             lineHeight: 1.4, wordBreak: 'break-word' }}>
                             {row.name}
@@ -513,6 +521,7 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
                             </span>
                             {row.isELSS      && <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: '#fff8e1', color: '#f57f17', border: '1px solid #ffe082', fontFamily: "'JetBrains Mono', monospace" }}>ELSS</span>}
                             {row.hasSynthetic && <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)', fontFamily: "'JetBrains Mono', monospace" }}>SUM CAS</span>}
+                          </div>
                           </div>
                         </div>
 

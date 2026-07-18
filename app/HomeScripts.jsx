@@ -21,10 +21,16 @@ export default function HomeScripts() {
       src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"
       strategy="afterInteractive"
       onLoad={() => {
-        const s = document.createElement('script');
-        s.src = '/js/mfcalc-main.js';
-        s.defer = true;
-        document.head.appendChild(s);
+        const logoScript = document.createElement('script');
+        logoScript.src = '/js/logo-resolver.js';
+        logoScript.defer = true;
+        logoScript.onload = () => {
+          const s = document.createElement('script');
+          s.src = '/js/mfcalc-main.js';
+          s.defer = true;
+          document.head.appendChild(s);
+        };
+        document.head.appendChild(logoScript);
       }}
     />
   );

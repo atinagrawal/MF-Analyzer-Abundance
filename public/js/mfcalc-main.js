@@ -403,10 +403,14 @@ async function addFund(code){
   setLoading(false);
 }
 function removeFund(code){selectedFunds=selectedFunds.filter(f=>f.code!==code);renderChips();renderAll();}
+function escHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function renderChips(){
-  document.getElementById("chips").innerHTML=selectedFunds.map((f,i)=>
-    `<div class="chip chip-${i}"><span class="chip-name" title="${f.name}">${f.name}</span><button class="chip-remove" onclick="removeFund(${f.code})">✕</button></div>`
-  ).join("");
+  document.getElementById("chips").innerHTML=selectedFunds.map((f,i)=>{
+    const logoPath=window.LogoResolver?window.LogoResolver.getMFLogoFromSchemeName(f.name):null;
+    const logoImg=logoPath?`<img class="chip-logo" src="${logoPath}" alt="" onerror="this.style.display='none'">`:"";
+    const name=escHtml(f.name);
+    return `<div class="chip chip-${i}">${logoImg}<span class="chip-name" title="${name}">${name}</span><button class="chip-remove" onclick="removeFund(${f.code})">✕</button></div>`;
+  }).join("");
 }
 function setPeriod(key,btn){
   currentPeriod=key;
@@ -757,6 +761,9 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 /* Fund chips */
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px}
 .fund-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:20px;border:1.5px solid #c2dfc2;background:#edf6ed;font-size:.68rem;font-weight:700}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:5px 12px 5px 8px;border-radius:20px;border:1.5px solid #c2dfc2;background:#edf6ed;font-size:.68rem;font-weight:700;max-width:none}
+.chip-logo{flex-shrink:0;width:16px;height:16px;border-radius:4px;object-fit:contain;background:#fff;border:1px solid rgba(0,0,0,.1)}
+.chip-remove{display:none}
 /* Banner / at-a-glance */
 .banner-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px}
 .banner-cell{background:#edf6ed;border:1.5px solid #c2dfc2;border-radius:8px;padding:10px 12px;text-align:center}
@@ -3194,7 +3201,8 @@ function btPrint(){
   const CSS = `*{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px 36px}
 .ph{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:2.5px solid #00695c;margin-bottom:18px}
-.pt{font-size:1.05rem;font-weight:800;color:#00695c}
+.pt{font-size:1.05rem;font-weight:800;color:#00695c;display:flex;align-items:center;gap:8px}
+.pt-logo{flex-shrink:0;width:22px;height:22px;border-radius:5px;object-fit:contain;background:#fff;border:1px solid rgba(0,0,0,.1)}
 .pa{font-size:.6rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:2px}
 .logo{height:44px;object-fit:contain;mix-blend-mode:multiply}
 .sec{font-size:.56rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#5e8a5e;margin:14px 0 7px;display:flex;align-items:center;gap:7px}
@@ -3238,7 +3246,9 @@ td{padding:6px 10px;border-bottom:1px solid #e0f2f1;font-family:"JetBrains Mono"
 tr:nth-child(even) td{background:#f5faf5}
 @media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}`;
 
-  const body = '<div class="ph"><div><div class="pt">SWP Backtester \u2014 ' + btFundData.name + '</div>'
+  const btLogoPath = window.LogoResolver ? window.LogoResolver.getMFLogoFromSchemeName(btFundData.name) : null;
+  const btLogoImg  = btLogoPath ? '<img class="pt-logo" src="' + btLogoPath + '" alt="" onerror="this.style.display=\'none\'">' : '';
+  const body = '<div class="ph"><div><div class="pt">' + btLogoImg + 'SWP Backtester \u2014 ' + escHtml(btFundData.name) + '</div>'
     + '<div class="pa">Abundance Financial Services\u00ae \u00b7 ARN-251838 \u00b7 AMFI Registered Mutual Funds Distributor</div></div>'
     + '<img class="logo" src="/logo-og.png" onerror="this.style.display=\'none\'"></div>'
     + '<div class="sec">Corpus Health</div>' + fuelHTML
@@ -3751,6 +3761,8 @@ function sipBTReadURL() {
 // ── Print/PDF ──
 function sipBTPrint() {
   if (!sipBTFundData) { alert('Run a backtest first'); return; }
+  const btLogoPath = window.LogoResolver ? window.LogoResolver.getMFLogoFromSchemeName(sipBTFundData.name) : null;
+  const btLogoImg  = btLogoPath ? `<img class="pt-logo" src="${btLogoPath}" alt="" onerror="this.style.display='none'">` : '';
   const statHTML  = document.getElementById('sipBTStatGrid').outerHTML;
   const cardsHTML = document.getElementById('sipBTResultCards').outerHTML;
   const whatifEl  = document.getElementById('sipBTWhatIfWrap');
@@ -3766,7 +3778,9 @@ function sipBTPrint() {
 <style>
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px 36px}
 .ph{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:2.5px solid #2e7d32;margin-bottom:18px}
-.pt{font-size:1.05rem;font-weight:800;color:#2e7d32}.pa{font-size:.6rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:2px}
+.pt{font-size:1.05rem;font-weight:800;color:#2e7d32;display:flex;align-items:center;gap:8px}
+.pt-logo{flex-shrink:0;width:22px;height:22px;border-radius:5px;object-fit:contain;background:#fff;border:1px solid rgba(0,0,0,.1)}
+.pa{font-size:.6rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:2px}
 .logo{height:44px;object-fit:contain}
 .sec{font-size:.56rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#5e8a5e;margin:14px 0 7px;display:flex;align-items:center;gap:7px}
 .sec::after{content:"";flex:1;height:1px;background:#a5d6a7}
@@ -3793,7 +3807,7 @@ tr:nth-child(even) td{background:#f5faf5}
 .dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:14px}
 @media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}
 </style></head><body>
-<div class="ph"><div><div class="pt">SIP Backtester — ${sipBTFundData.name}</div>
+<div class="ph"><div><div class="pt">${btLogoImg}SIP Backtester — ${escHtml(sipBTFundData.name)}</div>
 <div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds Distributor</div></div>
 <img class="logo" src="/logo-og.png" onerror="this.style.display='none'"></div>
 <div class="sec">Statistics</div>${statHTML}

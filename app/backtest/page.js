@@ -836,7 +836,15 @@ function doExport(r, rows, sipDay) {
   const dateStr = new Date(r.generatedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
   const kpi = (l, v) => `<div class="banner-cell"><div class="banner-lbl">${l}</div><div class="banner-val">${v}</div></div>`;
   const banner = [kpi("Invested", inr(r.invested)), kpi("Final Value", inr(r.finalVal)), kpi("Gain", (r.gain >= 0 ? "+" : "−") + inr(Math.abs(r.gain)).slice(1)), kpi("Abs Return", (r.absRet * 100).toFixed(1) + "%"), kpi("XIRR p.a.", pct(r.xirr))].join("");
-  const rowsHTML = rows.map((h) => `<tr><td>${esc(h.name)} <span style="font-size:.55rem;color:#5e8a5e">[${h.kind === "mf" ? "MF" : "SIF"}]</span></td><td style="text-align:left">${esc(strategyLabel(h))}</td><td style="text-align:left">${fmtMon(h.start)}</td><td>${inrShort(h.invested)}</td><td>${inrShort(h.value)}</td><td class="${h.xirr >= 0 ? "pos" : "neg"}">${pct(h.xirr)}</td></tr>`).join("");
+  const rowsHTML = rows.map((h) => {
+    const logoPath = h.kind === "sif"
+      ? getSIFLogo(h.name.split(" -")[0] || h.name)
+      : getMFLogo(h.name.split(" -")[0] || h.name) || getMFLogoFromSchemeName(h.name);
+    const logoImg = logoPath
+      ? `<img src="${logoPath}" alt="" style="width:15px;height:15px;object-fit:contain;vertical-align:middle;margin-right:6px;border-radius:3px;border:1px solid #d7e7d8;" onerror="this.style.display='none'">`
+      : "";
+    return `<tr><td>${logoImg}${esc(h.name)} <span style="font-size:.55rem;color:#5e8a5e">[${h.kind === "mf" ? "MF" : "SIF"}]</span></td><td style="text-align:left">${esc(strategyLabel(h))}</td><td style="text-align:left">${fmtMon(h.start)}</td><td>${inrShort(h.invested)}</td><td>${inrShort(h.value)}</td><td class="${h.xirr >= 0 ? "pos" : "neg"}">${pct(h.xirr)}</td></tr>`;
+  }).join("");
   const benchHTML = r.bench ? `<div class="sec">Benchmark Comparison</div><table class="risk-table"><thead><tr><th style="text-align:left">Strategy</th><th>Final Value</th><th>XIRR</th></tr></thead><tbody><tr><td style="text-align:left">Your portfolio</td><td>${inr(r.finalVal)}</td><td class="${r.xirr >= 0 ? "pos" : "neg"}">${pct(r.xirr)}</td></tr><tr><td style="text-align:left">${esc(r.bench.name)} (benchmark)</td><td>${inr(r.bench.value)}</td><td class="${r.bench.xirr >= 0 ? "pos" : "neg"}">${pct(r.bench.xirr)}</td></tr></tbody></table>` : "";
   const stitchHTML = r.stitched && r.stitched.length
     ? `<div class="meta" style="margin-top:8px">&#8617; Pre-merger history return-linked: ${r.stitched.map((s) => esc(s.name) + " &larr; " + esc(s.fromName) + " (from " + fmtDate(s.from) + ")").join("; ")}.</div>`
