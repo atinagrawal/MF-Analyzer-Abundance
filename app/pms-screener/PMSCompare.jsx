@@ -42,9 +42,13 @@ function fmtAum(v) {
   if (v >= 10000) return '₹' + (v / 1000).toFixed(1) + 'K Cr';
   return '₹' + v.toLocaleString('en-IN') + ' Cr';
 }
-function fmtWealth(ret1Y) {
-  if (ret1Y === null || ret1Y === undefined) return { value: '—', gain: '—', isPos: true };
-  const val = INVESTMENT * (1 + ret1Y / 100);
+// `ret` is an ANNUALIZED (CAGR) rate — APMI's TWRR for periods beyond 1 year
+// is per-year, not a one-time total — so growth must compound over `years`,
+// not just apply the percentage once. (For years=1 this is identical to a
+// flat multiply, which is why a 1-year-only bug here would look "correct.")
+function fmtWealth(ret, years = 1) {
+  if (ret === null || ret === undefined) return { value: '—', gain: '—', isPos: true };
+  const val = INVESTMENT * Math.pow(1 + ret / 100, years);
   const gain = val - INVESTMENT;
   return {
     value: '₹' + Math.round(val).toLocaleString('en-IN'),
@@ -111,22 +115,22 @@ const PERIOD_WEIGHTS = {
 // (not 7Y/10Y): these three are already on every fund via the bulk
 // /api/pms-data scrape, so the simulation never needs the quartile fetch.
 const WEALTH_STOPS = [
-  { key: 'ret1Y', label: '1Y' },
-  { key: 'ret3Y', label: '3Y' },
-  { key: 'ret5Y', label: '5Y' },
+  { key: 'ret1Y', label: '1Y', years: 1 },
+  { key: 'ret3Y', label: '3Y', years: 3 },
+  { key: 'ret5Y', label: '5Y', years: 5 },
 ];
 
 /** Picks the longest available wealth-simulation period (5Y > 3Y > 1Y) for the verdict banner's one-line summary. */
 function bestWealthMention(fund) {
   const candidates = [
-    { key: 'ret5Y', years: '5 years' },
-    { key: 'ret3Y', years: '3 years' },
-    { key: 'ret1Y', years: '1 year' },
+    { key: 'ret5Y', years: 5, label: '5 years' },
+    { key: 'ret3Y', years: 3, label: '3 years' },
+    { key: 'ret1Y', years: 1, label: '1 year' },
   ];
   const found = candidates.find(c => fund[c.key] !== null && fund[c.key] !== undefined);
   if (!found) return { text: '' };
-  const w = fmtWealth(fund[found.key]);
-  return { text: `${w.gain} gain on a ₹50L basis over ${found.years}.` };
+  const w = fmtWealth(fund[found.key], found.years);
+  return { text: `${w.gain} gain on a ₹50L basis over ${found.label}.` };
 }
 
 // ── Compare Bar ───────────────────────────────────────────────────────────
@@ -526,8 +530,8 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
               {funds.map((f, i) => (
                 <div key={f.id} className="cmp-cell">
                   <div className="cmp-wealth-strip">
-                    {WEALTH_STOPS.map(({ key, label }, idx) => {
-                      const w = fmtWealth(f[key]);
+                    {WEALTH_STOPS.map(({ key, label, years }, idx) => {
+                      const w = fmtWealth(f[key], years);
                       const isBest = n > 1 && winners[key]?.[i] === i;
                       return (
                         <div key={key} style={{ display: 'contents' }}>

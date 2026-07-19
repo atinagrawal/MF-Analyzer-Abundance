@@ -53,9 +53,9 @@ const OPTIONAL_RETURN_COLUMNS = RETURN_COLUMNS.filter(c => c.optional);
 // Wealth Creation Simulation's three "stops" — 1Y/3Y/5Y are already on every
 // fund via the bulk /api/pms-data scrape, so this needs no extra fetch.
 const WEALTH_STOPS = [
-    { key: 'ret1Y', label: '1Y' },
-    { key: 'ret3Y', label: '3Y' },
-    { key: 'ret5Y', label: '5Y' },
+    { key: 'ret1Y', label: '1Y', years: 1 },
+    { key: 'ret3Y', label: '3Y', years: 3 },
+    { key: 'ret5Y', label: '5Y', years: 5 },
 ];
 
 // Broad-market TRI benchmarks shown for reference (live from /api/index-dashboard).
@@ -83,9 +83,13 @@ function fmtAum(v) {
     if (v >= 10000) return '₹' + (v / 1000).toFixed(1) + 'K Cr';
     return '₹' + v.toLocaleString('en-IN') + ' Cr';
 }
-function fmtWealth(ret) {
+// `ret` is an ANNUALIZED (CAGR) rate — APMI's TWRR for periods beyond 1 year
+// is per-year, not a one-time total — so growth must compound over `years`,
+// not just apply the percentage once. (For years=1 this is identical to a
+// flat multiply, which is why a 1-year-only bug here would look "correct.")
+function fmtWealth(ret, years = 1) {
     if (ret === null || ret === undefined) return { value: '—', gain: '—', isPos: true };
-    const val = 5000000 * (1 + ret / 100);
+    const val = 5000000 * Math.pow(1 + ret / 100, years);
     const gain = val - 5000000;
     return {
         value: '₹' + Math.round(val).toLocaleString('en-IN'),
@@ -1074,8 +1078,8 @@ function PMSScreenerInner() {
                                     <div className="sim-card">
                                         <div className="sim-label">₹50,00,000 invested — growth over time:</div>
                                         <div className="sim-strip">
-                                            {WEALTH_STOPS.map(({ key, label }, idx) => {
-                                                const w = fmtWealth(selected[key]);
+                                            {WEALTH_STOPS.map(({ key, label, years }, idx) => {
+                                                const w = fmtWealth(selected[key], years);
                                                 return (
                                                     <div key={key} style={{ display: 'contents' }}>
                                                         <div className="sim-stop">
