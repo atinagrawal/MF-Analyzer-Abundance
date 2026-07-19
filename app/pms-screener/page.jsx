@@ -1068,7 +1068,7 @@ function PMSScreenerInner() {
                                 ))}
                             </div>
 
-                            {(selected.ret1Y !== null || selected.ret3Y !== null || selected.ret5Y !== null) && (
+                            {(selected.ret1Y != null || selected.ret3Y != null || selected.ret5Y != null) && (
                                 <>
                                     <div className="pd-section-head">Wealth Creation Simulation · ₹50 Lakh</div>
                                     <div className="sim-card">
