@@ -107,6 +107,28 @@ const PERIOD_WEIGHTS = {
   ret2Y: 2, ret3Y: 2.5, ret5Y: 3, ret7Y: 3.5, ret10Y: 4, retInception: 2,
 };
 
+// Wealth Creation Simulation's three "stops" — deliberately just 1Y/3Y/5Y
+// (not 7Y/10Y): these three are already on every fund via the bulk
+// /api/pms-data scrape, so the simulation never needs the quartile fetch.
+const WEALTH_STOPS = [
+  { key: 'ret1Y', label: '1Y' },
+  { key: 'ret3Y', label: '3Y' },
+  { key: 'ret5Y', label: '5Y' },
+];
+
+/** Picks the longest available wealth-simulation period (5Y > 3Y > 1Y) for the verdict banner's one-line summary. */
+function bestWealthMention(fund) {
+  const candidates = [
+    { key: 'ret5Y', years: '5 years' },
+    { key: 'ret3Y', years: '3 years' },
+    { key: 'ret1Y', years: '1 year' },
+  ];
+  const found = candidates.find(c => fund[c.key] !== null && fund[c.key] !== undefined);
+  if (!found) return { text: '' };
+  const w = fmtWealth(fund[found.key]);
+  return { text: `${w.gain} gain on a ₹50L basis over ${found.years}.` };
+}
+
 // ── Compare Bar ───────────────────────────────────────────────────────────
 export function PMSCompareBar({ selected, onRemove, onClear, onCompare }) {
   const vis = selected.length > 0;
@@ -495,23 +517,32 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
               })()}
             </div>
 
-            {/* Wealth simulation */}
+            {/* Wealth simulation — Growth Journey Strip: 1Y -> 3Y -> 5Y */}
             <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
-              💰 Wealth Creation Simulation · ₹50 Lakh Invested 1 Year Ago
+              💰 Wealth Creation Simulation · ₹50 Lakh Invested
             </div>
             <div className="cmp-row">
-              <div className="cmp-cell" style={{ fontWeight: 700 }}>Value Today</div>
-              {funds.map((f, i) => {
-                const w = fmtWealth(f.ret1Y);
-                const isBest = winners['ret1Y']?.[i] === i; // wealth is just ret1Y framed in rupees
-                return (
-                  <div key={f.id} className={`cmp-cell${isBest ? ' cmp-ret-best' : ''}`}>
-                    <div className="cmp-wealth-num" style={{ color: w.isPos ? 'var(--g2)' : 'var(--neg)' }}>{w.value}</div>
-                    <div className="cmp-wealth-gain" style={{ color: w.isPos ? 'var(--g3)' : 'var(--neg)' }}>{w.gain}</div>
-                    {isBest && n > 1 && <div style={{ fontSize: '.55rem', color: 'var(--g3)', marginTop: 2 }}>↑ best outcome</div>}
+              <div className="cmp-cell" style={{ fontWeight: 700 }}>Growth Journey</div>
+              {funds.map((f, i) => (
+                <div key={f.id} className="cmp-cell">
+                  <div className="cmp-wealth-strip">
+                    {WEALTH_STOPS.map(({ key, label }, idx) => {
+                      const w = fmtWealth(f[key]);
+                      const isBest = n > 1 && winners[key]?.[i] === i;
+                      return (
+                        <div key={key} style={{ display: 'contents' }}>
+                          <div className={`cmp-wealth-stop${isBest ? ' cmp-wealth-stop-best' : ''}`}>
+                            <div className="cmp-wealth-stop-period">{label}</div>
+                            <div className="cmp-wealth-stop-val" style={{ color: w.isPos ? 'var(--g2)' : 'var(--neg)' }}>{w.value}</div>
+                            <div className="cmp-wealth-stop-gain" style={{ color: w.isPos ? 'var(--g3)' : 'var(--neg)' }}>{w.gain}</div>
+                          </div>
+                          {idx < WEALTH_STOPS.length - 1 && <div className="cmp-wealth-arrow">→</div>}
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
 
             {/* AUM */}
@@ -533,28 +564,31 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
           </div>{/* /cmp-grid */}
 
           {/* Verdict banner */}
-          {n > 1 && overallWinner.fund && (
-            <div className="cmp-verdict">
-              <div className="cmp-verdict-icon">🏆</div>
-              <div>
-                <div className="cmp-verdict-title">Overall Leader: {overallWinner.fund.strategyName}</div>
-                <div className="cmp-verdict-body">
-                  <strong>{overallWinner.fund.strategyName}</strong> by{' '}
-                  <strong>{overallWinner.fund.portfolioManager}</strong> ranks highest across time horizons —
-                  winning {winCount[overallWinner.idx]} of {PERIODS.length} return periods outright, weighted
-                  toward long-term consistency (5Y/7Y/10Y count most, 1M/3M count least; AUM isn't a factor) —
-                  including a {fmtWealth(overallWinner.fund.ret1Y).gain} gain on a ₹50L basis over 1 year.{' '}
-                  {overallWinner.fund.apmiLink && (
-                    <a href={overallWinner.fund.apmiLink.startsWith('http') ? overallWinner.fund.apmiLink : `https://www.apmiindia.org${overallWinner.fund.apmiLink}`}
-                      target="_blank" rel="noopener noreferrer"
-                      style={{ color: 'var(--g2)', fontWeight: 700, textDecoration: 'none' }}>
-                      View on APMI ↗
-                    </a>
-                  )}
+          {n > 1 && overallWinner.fund && (() => {
+            const wealthMention = bestWealthMention(overallWinner.fund);
+            return (
+              <div className="cmp-verdict">
+                <div className="cmp-verdict-icon">🏆</div>
+                <div>
+                  <div className="cmp-verdict-title">Overall Leader: {overallWinner.fund.strategyName}</div>
+                  <div className="cmp-verdict-body">
+                    <strong>{overallWinner.fund.strategyName}</strong> by{' '}
+                    <strong>{overallWinner.fund.portfolioManager}</strong> ranks highest across time horizons —
+                    winning {winCount[overallWinner.idx]} of {PERIODS.length} return periods outright, weighted
+                    toward long-term consistency (5Y/7Y/10Y count most, 1M/3M count least; AUM isn't a factor)
+                    {wealthMention.text && <>{' '}— including a {wealthMention.text}</>}{' '}
+                    {overallWinner.fund.apmiLink && (
+                      <a href={overallWinner.fund.apmiLink.startsWith('http') ? overallWinner.fund.apmiLink : `https://www.apmiindia.org${overallWinner.fund.apmiLink}`}
+                        target="_blank" rel="noopener noreferrer"
+                        style={{ color: 'var(--g2)', fontWeight: 700, textDecoration: 'none' }}>
+                        View on APMI ↗
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div className="cmp-disclaimer">
             <strong>Important Disclosure:</strong> This comparison is for informational and educational purposes only and does not constitute investment advice.

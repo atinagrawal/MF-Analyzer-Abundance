@@ -308,16 +308,82 @@
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Wealth sim row */
-.cmp-wealth-num {
-  font-size: 1rem;
+/* Wealth sim — Growth Journey Strip (1Y -> 3Y -> 5Y) */
+.cmp-wealth-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+.cmp-wealth-stop {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding: 8px 4px;
+  background: var(--s2);
+  border-radius: 7px;
+  border: 1.5px solid transparent;
+}
+.cmp-wealth-stop-best {
+  border-color: var(--g3);
+  background: var(--g-xlight);
+}
+.cmp-wealth-stop-period {
+  font-size: .58rem;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+.cmp-wealth-stop-val {
+  font-size: .78rem;
   font-weight: 800;
   font-family: 'JetBrains Mono', monospace;
+  margin: 3px 0 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.cmp-wealth-gain {
-  font-size: .7rem;
+.cmp-wealth-stop-gain {
+  font-size: .6rem;
+  font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
-  margin-top: 2px;
+}
+.cmp-wealth-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--g3);
+  font-size: .8rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .cmp-wealth-strip {
+    flex-direction: column;
+    gap: 5px;
+  }
+  .cmp-wealth-arrow {
+    display: none;
+  }
+  .cmp-wealth-stop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    padding: 6px 9px;
+  }
+  .cmp-wealth-stop-period {
+    width: 28px;
+    flex-shrink: 0;
+  }
+  .cmp-wealth-stop-val {
+    margin: 0;
+    flex: 1;
+    text-align: left;
+    padding-left: 8px;
+  }
+  .cmp-wealth-stop-gain {
+    flex-shrink: 0;
+  }
 }
 
 /* Verdict banner */
