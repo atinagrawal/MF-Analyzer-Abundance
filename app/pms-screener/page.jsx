@@ -942,6 +942,8 @@ function PMSScreenerInner() {
                 <PMSCompareModal
                     funds={compareList}
                     dataLabel={dataMonths.latest.label}
+                    dataMonths={dataMonths}
+                    strategy={strategy}
                     onClose={() => setShowCompare(false)}
                     onRemove={id => { removeFromCompare(id); if (compareList.length <= 2) setShowCompare(false); }}
                 />

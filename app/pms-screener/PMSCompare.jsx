@@ -60,6 +60,28 @@ function rc(v) {
   return v > 0 ? 'pos' : v < 0 ? 'neg' : 'neu';
 }
 
+/** Extracts the numeric APMI `IAID` from a fund's apmiLink, or null if absent/malformed. */
+function extractIaid(apmiLink) {
+  try {
+    return apmiLink ? new URL(apmiLink).searchParams.get('IAID') : null;
+  } catch {
+    return null;
+  }
+}
+
+const QUARTILE_PERIODS = ['1Y', '2Y', '3Y', '5Y', '7Y', '10Y'];
+const QUARTILE_LABELS = { '1Y': '1 Year', '2Y': '2 Years', '3Y': '3 Years', '5Y': '5 Years', '7Y': '7 Years', '10Y': '10 Years' };
+
+/** Maps an APMI quartile label to a short CSS-friendly class suffix. */
+function quartileClass(q) {
+  if (!q) return 'na';
+  if (q.startsWith('First')) return 'q1';
+  if (q.startsWith('Second')) return 'q2';
+  if (q.startsWith('Third')) return 'q3';
+  if (q.startsWith('Fourth')) return 'q4';
+  return 'na';
+}
+
 const PERIODS = [
   { label: '1 Month', key: 'ret1M' },
   { label: '3 Months', key: 'ret3M' },
@@ -114,10 +136,12 @@ export function PMSCompareBar({ selected, onRemove, onClear, onCompare }) {
  * @param {Object}   props
  * @param {Array}    props.funds      - Up to 3 strategy objects
  * @param {string}   props.dataLabel  - e.g. "March 2026" — passed from page.jsx
+ * @param {Object}   props.dataMonths - {latest, prev} month info from lib/pmsDate.js, passed from page.jsx
+ * @param {string}   props.strategy   - Active strategy (Equity/Debt/Hybrid/Multi Asset), passed from page.jsx
  * @param {Function} props.onClose
  * @param {Function} props.onRemove
  */
-export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
+export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClose, onRemove }) {
   const n = funds.length;
 
   // ── Real per-fund benchmarks ─────────────────────────────────────────
@@ -137,12 +161,51 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
   const [nseLoading, setNseLoading] = useState(true);
   const [bseReturns, setBseReturns] = useState({});
 
+  // ── APMI Quartile Ranking — independent, SEBI/APMI-sourced peer ranking ──
+  // Distinct from the benchmark fetch above: this hits WSIAConsolidateReport
+  // (a different APMI report entirely) and needs both the fund's IAID *and*
+  // its numeric PMS-provider ID, which /api/pms-quartile resolves server-side
+  // from the plain provider name we already have (f.portfolioManager). Each
+  // fund's own reporting month can differ (f.dataMonth is 'latest' or 'prev',
+  // set when page.jsx merges the two APMI data-month responses), so we look
+  // up month/year per-fund via dataMonths rather than assuming one date for all.
+  const [quartileData, setQuartileData] = useState({});
+  const [quartileLoading, setQuartileLoading] = useState(true);
+
+  useEffect(() => {
+    if (!dataMonths) { setQuartileLoading(false); return; }
+    let cancelled = false;
+    setQuartileLoading(true);
+    Promise.all(funds.map(f => {
+      const iaid = extractIaid(f.apmiLink);
+      if (!iaid || !f.portfolioManager) return Promise.resolve({ id: f.id, data: null });
+      const monthInfo = f.dataMonth === 'prev' ? dataMonths.prev : dataMonths.latest;
+      const params = new URLSearchParams({
+        iaid,
+        provider: f.portfolioManager,
+        strategy: strategy || 'Equity',
+        year: String(monthInfo.year),
+        month: String(monthInfo.month),
+      });
+      return fetch(`/api/pms-quartile?${params}`)
+        .then(r => r.json())
+        .then(j => ({ id: f.id, data: j.status === 'success' ? j.data : null }))
+        .catch(() => ({ id: f.id, data: null }));
+    })).then(results => {
+      if (cancelled) return;
+      const map = {};
+      results.forEach(r => { map[r.id] = r.data; });
+      setQuartileData(map);
+      setQuartileLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [funds, dataMonths, strategy]);
+
   useEffect(() => {
     let cancelled = false;
     setBenchLoading(true);
     Promise.all(funds.map(f => {
-      let iaid = null;
-      try { iaid = f.apmiLink ? new URL(f.apmiLink).searchParams.get('IAID') : null; } catch { /* ignore */ }
+      const iaid = extractIaid(f.apmiLink);
       if (!iaid) return Promise.resolve({ id: f.id, name: null });
       return fetch(`/api/pms-benchmark?iaid=${encodeURIComponent(iaid)}`)
         .then(r => r.json())
@@ -332,6 +395,46 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
                 </div>
               );
             })}
+
+            {/* APMI Quartile Ranking — independent peer-relative ranking */}
+            {!quartileLoading && funds.some(f => quartileData[f.id]?.length) && (
+              <>
+                <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
+                  🏅 APMI Quartile Ranking · Peer-Relative, Not Self-Calculated
+                </div>
+                {QUARTILE_PERIODS.map(period => {
+                  const anyData = funds.some(f => quartileData[f.id]?.find(r => r.period === period));
+                  if (!anyData) return null;
+                  return (
+                    <div key={period} className="cmp-row">
+                      <div className="cmp-cell" style={{ fontWeight: 700 }}>{QUARTILE_LABELS[period]}</div>
+                      {funds.map(f => {
+                        const row = quartileData[f.id]?.find(r => r.period === period);
+                        if (!row) {
+                          return <div key={f.id} className="cmp-cell"><span className="cmp-ret neu">—</span></div>;
+                        }
+                        return (
+                          <div key={f.id} className="cmp-cell">
+                            <span className={`cmp-quartile-badge cmp-quartile-${quartileClass(row.quartile)}`}>
+                              {row.quartile || 'NA'}
+                            </span>
+                            {row.peers != null && (
+                              <div className="cmp-quartile-peers">of {row.peers} peers</div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+                <div
+                  className="cmp-quartile-footnote"
+                  style={{ gridColumn: `1 / span ${n + 1}` }}
+                >
+                  Source: APMI India · WSIAConsolidateReport · Quartile = performance rank vs. all peer Investment Approaches in the same strategy for that period.
+                </div>
+              </>
+            )}
 
             {/* Alpha vs each fund's OWN declared benchmark (real data, not a
                 single generic Nifty 50 guess) — see the useEffects above */}

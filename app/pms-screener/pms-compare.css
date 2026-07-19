@@ -267,6 +267,34 @@
   color: var(--g1) !important;
 }
 
+/* APMI Quartile Ranking badges */
+.cmp-quartile-badge {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: .68rem;
+  padding: 3px 9px;
+  border-radius: 20px;
+  letter-spacing: .3px;
+}
+.cmp-quartile-q1 { background: var(--g-xlight); color: var(--g1); border: 1.5px solid var(--g3); }
+.cmp-quartile-q2 { background: color-mix(in srgb, var(--g3) 15%, transparent); color: var(--g2); border: 1.5px solid var(--g3); }
+.cmp-quartile-q3 { background: rgba(200, 140, 40, .12); color: #a8681a; border: 1.5px solid rgba(200, 140, 40, .4); }
+.cmp-quartile-q4 { background: rgba(200, 60, 60, .1); color: var(--neg); border: 1.5px solid rgba(200, 60, 60, .35); }
+.cmp-quartile-na { background: var(--s2); color: var(--muted); border: 1.5px solid var(--border); }
+.cmp-quartile-peers {
+  font-size: .58rem;
+  color: var(--muted);
+  margin-top: 3px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.cmp-quartile-footnote {
+  padding: 8px 18px 16px;
+  font-size: .62rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
 /* Win indicator dots under each column header */
 .cmp-win-badge {
   display: inline-block;
