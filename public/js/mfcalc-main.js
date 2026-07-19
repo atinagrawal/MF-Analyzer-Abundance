@@ -417,7 +417,7 @@ function renderSearchResults(q,data,dd,sifData){
         <span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${highlight(f.schemeName)}</span>
         <span class="di-code">${f.schemeCode}</span>
       </div>`).join("");
-    const sifHTML=sifResults.map(s=>`<div class="dropdown-item" onclick="addFund('${s.scheme_id}','sif')">
+    const sifHTML=sifResults.map(s=>`<div class="dropdown-item" onclick="addFund(${safeAttr(s.scheme_id)},'sif')">
         <span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${highlight(escHtml(s.nav_name))}</span>
         <span class="di-code" style="background:#e0f2f1;color:#00695c">SIF</span>
       </div>`).join("");
@@ -485,6 +485,16 @@ async function addFund(code,kind){
 }
 function removeFund(code){selectedFunds=selectedFunds.filter(f=>f.code!==code);renderChips();renderAll();}
 function escHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+// Safely embeds a JS value as an inline onclick="..." argument. JSON.stringify
+// alone is NOT enough here: the HTML attribute parser reads up to the next
+// literal '"' with no concept of JS's backslash-escaping, so a raw quote
+// inside JSON.stringify's output (e.g. from a fund/scheme name containing a
+// literal ") terminates the attribute early — a real HTML-injection path,
+// since that data ultimately comes from an external API, not code we control.
+// HTML-escaping the JSON text turns those quotes into &quot;, which the
+// browser correctly decodes back to " before treating the attribute as JS
+// source, so the handler still receives the exact original string.
+function safeAttr(value){return escHtml(JSON.stringify(value));}
 // Shows/hides a single-fund <img class="chip-logo"> for the backtest tools' selected-fund chip.
 // For SIF entries, pass the SIF house name (e.g. "Altiva SIF") — SIF_OVERRIDES is keyed by
 // house, not by the (much longer) individual scheme/strategy name.
@@ -504,7 +514,7 @@ function renderChips(){
     const logoImg=logoPath?`<img class="chip-logo" src="${logoPath}" alt="" onerror="this.style.display='none'">`:"";
     const name=escHtml(f.name);
     const sifTag=f.kind==='sif'?'<span style="font-size:.55rem;font-weight:800;color:#00695c;margin-right:2px">SIF</span>':"";
-    return `<div class="chip chip-${i}">${logoImg}${sifTag}<span class="chip-name" title="${name}">${name}</span><button class="chip-remove" onclick="removeFund(${JSON.stringify(f.code)})">✕</button></div>`;
+    return `<div class="chip chip-${i}">${logoImg}${sifTag}<span class="chip-name" title="${name}">${name}</span><button class="chip-remove" onclick="removeFund(${safeAttr(f.code)})">✕</button></div>`;
   }).join("");
 }
 function setPeriod(key,btn){
@@ -2389,8 +2399,8 @@ async function btDoSearch(q){
       return name.slice(0,i)+'<mark style="background:rgba(67,160,71,.18);color:var(--g1);border-radius:2px;padding:0 1px">'+name.slice(i,i+q.length)+'</mark>'+name.slice(i+q.length);
     }
     if(!results.length && !sifs.length){ dd.innerHTML='<div class="dropdown-loading">No results (try without "Regular")</div>'; return; }
-    const mfHTML = results.map(f=>`<div class="dropdown-item" onclick="btSelectFund(${f.schemeCode},${JSON.stringify(f.schemeName)},'mf')"><span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${btHighlight(f.schemeName)}</span><span class="di-code">${f.schemeCode}</span></div>`).join('');
-    const sifHTML = sifs.map(s=>`<div class="dropdown-item" onclick="btSelectFund(${JSON.stringify(s.scheme_id)},${JSON.stringify(s.nav_name)},'sif',${JSON.stringify(s.sif_name)})"><span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${btHighlight(escHtml(s.nav_name))}</span><span class="di-code" style="background:#e0f2f1;color:#00695c">SIF</span></div>`).join('');
+    const mfHTML = results.map(f=>`<div class="dropdown-item" onclick="btSelectFund(${f.schemeCode},${safeAttr(f.schemeName)},'mf')"><span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${btHighlight(f.schemeName)}</span><span class="di-code">${f.schemeCode}</span></div>`).join('');
+    const sifHTML = sifs.map(s=>`<div class="dropdown-item" onclick="btSelectFund(${safeAttr(s.scheme_id)},${safeAttr(s.nav_name)},'sif',${safeAttr(s.sif_name)})"><span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${btHighlight(escHtml(s.nav_name))}</span><span class="di-code" style="background:#e0f2f1;color:#00695c">SIF</span></div>`).join('');
     dd.innerHTML = '<div class="dd-count">'+(results.length+sifs.length)+' of '+(filtered.length+sifs.length)+' results</div>'+mfHTML+sifHTML;
   }catch(e){
     if(e.name!=='AbortError') dd.innerHTML='<div class="dropdown-loading">⚠️ Search failed. Check connection.</div>';
@@ -3160,13 +3170,13 @@ function sipBTDoSearch(q) {
       const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
       const mfHTML = funds.map(f => {
         const hi = f.schemeName.replace(new RegExp('('+esc(q)+')','gi'), '<strong>$1</strong>');
-        return `<div class="dropdown-item" onclick="sipBTSelectFund(${f.schemeCode},${JSON.stringify(f.schemeName)},'mf')">
+        return `<div class="dropdown-item" onclick="sipBTSelectFund(${f.schemeCode},${safeAttr(f.schemeName)},'mf')">
           <div>${hi}</div><span class="di-code">${f.schemeCode}</span>
         </div>`;
       }).join('');
       const sifHTML = sifs.map(s => {
         const hi = escHtml(s.nav_name).replace(new RegExp('('+esc(q)+')','gi'), '<strong>$1</strong>');
-        return `<div class="dropdown-item" onclick="sipBTSelectFund(${JSON.stringify(s.scheme_id)},${JSON.stringify(s.nav_name)},'sif',${JSON.stringify(s.sif_name)})">
+        return `<div class="dropdown-item" onclick="sipBTSelectFund(${safeAttr(s.scheme_id)},${safeAttr(s.nav_name)},'sif',${safeAttr(s.sif_name)})">
           <div>${hi}</div><span class="di-code" style="background:#e0f2f1;color:#00695c">SIF</span>
         </div>`;
       }).join('');
