@@ -50,6 +50,14 @@ const RETURN_COLUMNS = [
 ];
 const OPTIONAL_RETURN_COLUMNS = RETURN_COLUMNS.filter(c => c.optional);
 
+// Wealth Creation Simulation's three "stops" — 1Y/3Y/5Y are already on every
+// fund via the bulk /api/pms-data scrape, so this needs no extra fetch.
+const WEALTH_STOPS = [
+    { key: 'ret1Y', label: '1Y' },
+    { key: 'ret3Y', label: '3Y' },
+    { key: 'ret5Y', label: '5Y' },
+];
+
 // Broad-market TRI benchmarks shown for reference (live from /api/index-dashboard).
 // APMI doesn't attribute one "correct" benchmark per PMS category, so these are
 // shown as general reference points rather than a pass/fail comparison.
@@ -74,6 +82,16 @@ function fmtAum(v) {
     if (v === null || v === undefined) return '—';
     if (v >= 10000) return '₹' + (v / 1000).toFixed(1) + 'K Cr';
     return '₹' + v.toLocaleString('en-IN') + ' Cr';
+}
+function fmtWealth(ret) {
+    if (ret === null || ret === undefined) return { value: '—', gain: '—', isPos: true };
+    const val = 5000000 * (1 + ret / 100);
+    const gain = val - 5000000;
+    return {
+        value: '₹' + Math.round(val).toLocaleString('en-IN'),
+        gain: (gain >= 0 ? '+' : '') + '₹' + Math.abs(Math.round(gain)).toLocaleString('en-IN'),
+        isPos: gain >= 0,
+    };
 }
 function initials(name) {
     return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -173,6 +191,7 @@ function PMSScreenerInner() {
     const [extraCols, setExtraCols] = useState(() => new Set());
     const [benchmarks, setBenchmarks] = useState(null);
     const [drawerBenchmark, setDrawerBenchmark] = useState({ loading: false, value: null });
+    const [drawerQuartile, setDrawerQuartile] = useState({ loading: false, ret7Y: null, ret10Y: null });
 
     function toggleExtraCol(key) {
         setExtraCols(prev => {
@@ -320,6 +339,47 @@ function PMSScreenerInner() {
         return () => { cancelled = true; };
     }, [selected]);
 
+    // 7Y/10Y aren't on `selected` (the bulk /api/pms-data scrape only goes to
+    // 5Y + Inception) — fetch them from the same quartile endpoint the
+    // Compare modal uses, lazily, only when a fund's drawer is open. Mirrors
+    // the drawerBenchmark effect above: fetch-on-select, not fetch-for-every-row.
+    useEffect(() => {
+        if (!selected?.apmiLink || !selected?.portfolioManager) {
+            setDrawerQuartile({ loading: false, ret7Y: null, ret10Y: null });
+            return;
+        }
+        let iaid;
+        try {
+            iaid = new URL(selected.apmiLink).searchParams.get('IAID');
+        } catch {
+            iaid = null;
+        }
+        if (!iaid) {
+            setDrawerQuartile({ loading: false, ret7Y: null, ret10Y: null });
+            return;
+        }
+        let cancelled = false;
+        setDrawerQuartile({ loading: true, ret7Y: null, ret10Y: null });
+        const monthInfo = selected.dataMonth === 'prev' ? dataMonths.prev : dataMonths.latest;
+        const params = new URLSearchParams({
+            iaid,
+            provider: selected.portfolioManager,
+            strategy,
+            year: String(monthInfo.year),
+            month: String(monthInfo.month),
+        });
+        fetch(`/api/pms-quartile?${params}`)
+            .then(r => r.json())
+            .then(json => {
+                if (cancelled) return;
+                const rows = json.status === 'success' ? json.data : null;
+                const find = (period) => rows?.find(r => r.period === period)?.iaTwrr ?? null;
+                setDrawerQuartile({ loading: false, ret7Y: find('7Y'), ret10Y: find('10Y') });
+            })
+            .catch(() => { if (!cancelled) setDrawerQuartile({ loading: false, ret7Y: null, ret10Y: null }); });
+        return () => { cancelled = true; };
+    }, [selected, dataMonths, strategy]);
+
     // ── Sort ──────────────────────────────────────────────────────────────
     function handleSort(col) {
         if (sortCol === col) setSortDir(d => d * -1);
@@ -440,6 +500,8 @@ function PMSScreenerInner() {
         { label: '2 Years', val: selected.ret2Y },
         { label: '3 Years', val: selected.ret3Y },
         { label: '5 Years', val: selected.ret5Y },
+        { label: '7 Years', val: drawerQuartile.ret7Y },
+        { label: '10 Years', val: drawerQuartile.ret10Y },
         { label: 'Inception', val: selected.retInception },
     // Use != null (loose) to also exclude undefined coming from missing API fields
     ].filter(r => r.val != null) : [];
@@ -1006,14 +1068,25 @@ function PMSScreenerInner() {
                                 ))}
                             </div>
 
-                            {selected.ret1Y !== null && (
+                            {(selected.ret1Y !== null || selected.ret3Y !== null || selected.ret5Y !== null) && (
                                 <>
                                     <div className="pd-section-head">Wealth Creation Simulation · ₹50 Lakh</div>
                                     <div className="sim-card">
-                                        <div className="sim-label">₹50,00,000 invested 1 year ago is today worth:</div>
-                                        <div className="sim-result">₹{(5000000 * (1 + selected.ret1Y / 100)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                                        <div className={`sim-gain${selected.ret1Y < 0 ? ' neg' : ''}`}>
-                                            {selected.ret1Y >= 0 ? '+' : ''}₹{Math.abs(Math.round(5000000 * selected.ret1Y / 100)).toLocaleString('en-IN')} gain
+                                        <div className="sim-label">₹50,00,000 invested — growth over time:</div>
+                                        <div className="sim-strip">
+                                            {WEALTH_STOPS.map(({ key, label }, idx) => {
+                                                const w = fmtWealth(selected[key]);
+                                                return (
+                                                    <div key={key} style={{ display: 'contents' }}>
+                                                        <div className="sim-stop">
+                                                            <div className="sim-stop-period">{label}</div>
+                                                            <div className="sim-stop-val" style={{ color: w.isPos ? 'var(--g1)' : 'var(--neg)' }}>{w.value}</div>
+                                                            <div className={`sim-stop-gain${w.isPos ? '' : ' neg'}`}>{w.gain}</div>
+                                                        </div>
+                                                        {idx < WEALTH_STOPS.length - 1 && <div className="sim-arrow">→</div>}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 </>

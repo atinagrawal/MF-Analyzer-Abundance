@@ -1038,7 +1038,7 @@
   text-align: right;
 }
 
-/* Wealth simulation card in drawer */
+/* Wealth simulation card in drawer — Growth Journey Strip (1Y -> 3Y -> 5Y) */
 .sim-card {
   background: var(--g-xlight);
   border: 1.5px solid var(--border2);
@@ -1051,28 +1051,88 @@
 .sim-label {
   font-size: .72rem;
   color: var(--pms-muted);
-  margin-bottom: 6px;
+  margin-bottom: 10px;
   line-height: 1.5;
   font-family: var(--pms-sans);
 }
 
-.sim-result {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--g1);
-  margin-bottom: 4px;
+.sim-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
 }
 
-.sim-gain {
+.sim-stop {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding: 10px 6px;
+  background: var(--s3);
+  border-radius: 8px;
+}
+
+.sim-stop-period {
+  font-size: .62rem;
+  font-weight: 700;
+  color: var(--pms-muted);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+.sim-stop-val {
   font-family: 'JetBrains Mono', monospace;
-  font-size: .8rem;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 4px 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sim-stop-gain {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .68rem;
+  font-weight: 700;
   color: var(--g2);
-  font-weight: 700;
 }
 
-.sim-gain.neg {
+.sim-stop-gain.neg {
   color: var(--neg);
+}
+
+.sim-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--g3);
+  font-size: .95rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .sim-strip {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sim-arrow {
+    display: none;
+  }
+  .sim-stop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    padding: 8px 12px;
+  }
+  .sim-stop-period {
+    width: 30px;
+    flex-shrink: 0;
+  }
+  .sim-stop-val {
+    margin: 0;
+    flex: 1;
+    text-align: left;
+    padding-left: 10px;
+  }
 }
 
 /* Source line */
