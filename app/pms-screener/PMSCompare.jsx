@@ -90,6 +90,8 @@ const PERIODS = [
   { label: '2 Years', key: 'ret2Y' },
   { label: '3 Years', key: 'ret3Y' },
   { label: '5 Years', key: 'ret5Y' },
+  { label: '7 Years', key: 'ret7Y' },
+  { label: '10 Years', key: 'ret10Y' },
   { label: 'Inception', key: 'retInception' },
 ];
 
@@ -98,10 +100,11 @@ const PERIODS = [
 // sustained skill than short-term noise. Inception sits below 5Y despite
 // being "full history" because it isn't a fixed, comparable length across
 // funds of different ages (a 1-year-old fund's inception return isn't
-// measuring the same thing as a 10-year-old fund's).
+// measuring the same thing as a 10-year-old fund's). 7Y/10Y continue the
+// same +0.5-per-step progression already established from 3Y (2.5) to 5Y (3).
 const PERIOD_WEIGHTS = {
   ret1M: 0.5, ret3M: 0.75, ret6M: 1, ret1Y: 1.5,
-  ret2Y: 2, ret3Y: 2.5, ret5Y: 3, retInception: 2,
+  ret2Y: 2, ret3Y: 2.5, ret5Y: 3, ret7Y: 3.5, ret10Y: 4, retInception: 2,
 };
 
 // ── Compare Bar ───────────────────────────────────────────────────────────
@@ -261,6 +264,19 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
     // eslint-disable-next-line react-hooks/exhaustive-deps -- benchNames/funds identity changes every render; gate on benchLoading/nseLoading instead
   }, [benchLoading, nseLoading]);
 
+  // 7Y/10Y come from the quartile fetch above (quartileData), not the bulk
+  // /api/pms-data scrape that populates every other field on `funds` — merge
+  // them onto a derived array so the Returns section, winners, and scores
+  // below can treat ret7Y/ret10Y exactly like any other period field. Only
+  // these two fields differ from `funds`; everything else passes through
+  // unchanged, so this array is safe to use anywhere `funds` was used for
+  // period-driven computation.
+  const enrichedFunds = useMemo(() => funds.map(f => {
+    const rows = quartileData[f.id];
+    const find = (period) => rows?.find(r => r.period === period)?.iaTwrr ?? null;
+    return { ...f, ret7Y: find('7Y'), ret10Y: find('10Y') };
+  }), [funds, quartileData]);
+
   // Per-period "best cell" index, for highlighting the table — kept as a
   // simple raw max, separate from the weighted verdict score below. `aum`
   // is included here purely to highlight the biggest AUM cell in its own
@@ -268,15 +284,15 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
   const winners = useMemo(() => {
     const w = {};
     PERIODS.forEach(({ key }) => {
-      const vals = funds.map(f => f[key] ?? -Infinity);
+      const vals = enrichedFunds.map(f => f[key] ?? -Infinity);
       const maxV = Math.max(...vals);
       w[key] = vals.map((v, i) => v === maxV && v !== -Infinity ? i : -1);
     });
-    const aumVals = funds.map(f => f.aum ?? 0);
+    const aumVals = enrichedFunds.map(f => f.aum ?? 0);
     const maxAum = Math.max(...aumVals);
     w['aum'] = aumVals.map((v, i) => v === maxAum ? i : -1);
     return w;
-  }, [funds]);
+  }, [enrichedFunds]);
 
   // Raw "Best in N periods" count for the per-card badge — real return
   // periods only (no AUM, no duplicate ret1Y-as-"wealth" slot).
@@ -301,7 +317,7 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
     const weightSums = Array(n).fill(0);
     PERIODS.forEach(({ key }) => {
       const weight = PERIOD_WEIGHTS[key];
-      const participants = funds
+      const participants = enrichedFunds
         .map((f, i) => ({ i, v: f[key] }))
         .filter(p => p.v !== null && p.v !== undefined);
       if (participants.length < 2) return;
@@ -314,13 +330,13 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
       });
     });
     return totals.map((t, i) => (weightSums[i] > 0 ? t / weightSums[i] : 0));
-  }, [funds, n]);
+  }, [enrichedFunds, n]);
 
   const overallWinner = useMemo(() => {
     const maxScore = Math.max(...scores);
     const idx = scores.indexOf(maxScore);
-    return { idx, score: maxScore, fund: funds[idx] };
-  }, [scores, funds]);
+    return { idx, score: maxScore, fund: enrichedFunds[idx] };
+  }, [scores, enrichedFunds]);
 
   if (!funds.length) return null;
 
@@ -376,13 +392,13 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
               📊 Returns Across All Time Horizons
             </div>
             {PERIODS.map(({ label, key }) => {
-              const vals = funds.map(f => f[key]);
+              const vals = enrichedFunds.map(f => f[key]);
               const allNull = vals.every(v => v === null || v === undefined);
               if (allNull) return null;
               return (
                 <div key={key} className="cmp-row">
                   <div className="cmp-cell" style={{ fontWeight: 700 }}>{label}</div>
-                  {funds.map((f, i) => {
+                  {enrichedFunds.map((f, i) => {
                     const v = f[key];
                     const isBest = winners[key]?.[i] === i;
                     return (
@@ -526,7 +542,7 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
                   <strong>{overallWinner.fund.strategyName}</strong> by{' '}
                   <strong>{overallWinner.fund.portfolioManager}</strong> ranks highest across time horizons —
                   winning {winCount[overallWinner.idx]} of {PERIODS.length} return periods outright, weighted
-                  toward long-term consistency (3Y/5Y count most, 1M/3M count least; AUM isn't a factor) —
+                  toward long-term consistency (5Y/7Y/10Y count most, 1M/3M count least; AUM isn't a factor) —
                   including a {fmtWealth(overallWinner.fund.ret1Y).gain} gain on a ₹50L basis over 1 year.{' '}
                   {overallWinner.fund.apmiLink && (
                     <a href={overallWinner.fund.apmiLink.startsWith('http') ? overallWinner.fund.apmiLink : `https://www.apmiindia.org${overallWinner.fund.apmiLink}`}
