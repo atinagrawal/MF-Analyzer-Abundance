@@ -71,6 +71,17 @@ const PERIODS = [
   { label: 'Inception', key: 'retInception' },
 ];
 
+// How much each period counts toward the "Overall Leader" verdict — longer,
+// more established horizons carry more weight since they say more about
+// sustained skill than short-term noise. Inception sits below 5Y despite
+// being "full history" because it isn't a fixed, comparable length across
+// funds of different ages (a 1-year-old fund's inception return isn't
+// measuring the same thing as a 10-year-old fund's).
+const PERIOD_WEIGHTS = {
+  ret1M: 0.5, ret3M: 0.75, ret6M: 1, ret1Y: 1.5,
+  ret2Y: 2, ret3Y: 2.5, ret5Y: 3, retInception: 2,
+};
+
 // ── Compare Bar ───────────────────────────────────────────────────────────
 export function PMSCompareBar({ selected, onRemove, onClear, onCompare }) {
   const vis = selected.length > 0;
@@ -187,6 +198,10 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- benchNames/funds identity changes every render; gate on benchLoading/nseLoading instead
   }, [benchLoading, nseLoading]);
 
+  // Per-period "best cell" index, for highlighting the table — kept as a
+  // simple raw max, separate from the weighted verdict score below. `aum`
+  // is included here purely to highlight the biggest AUM cell in its own
+  // row; it does NOT feed the verdict (size isn't a performance metric).
   const winners = useMemo(() => {
     const w = {};
     PERIODS.forEach(({ key }) => {
@@ -197,25 +212,52 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
     const aumVals = funds.map(f => f.aum ?? 0);
     const maxAum = Math.max(...aumVals);
     w['aum'] = aumVals.map((v, i) => v === maxAum ? i : -1);
-    const wVals = funds.map(f => f.ret1Y ?? -Infinity);
-    const maxW = Math.max(...wVals);
-    w['wealth'] = wVals.map((v, i) => v === maxW && v !== -Infinity ? i : -1);
     return w;
   }, [funds]);
 
+  // Raw "Best in N periods" count for the per-card badge — real return
+  // periods only (no AUM, no duplicate ret1Y-as-"wealth" slot).
   const winCount = useMemo(() => {
     const counts = Array(n).fill(0);
-    Object.values(winners).forEach(arr => {
-      arr.forEach((wi, i) => { if (wi === i) counts[i]++; });
+    PERIODS.forEach(({ key }) => {
+      winners[key].forEach((wi, i) => { if (wi === i) counts[i]++; });
     });
     return counts;
   }, [winners, n]);
 
+  // Weighted, margin-aware score that actually decides the "Overall Leader"
+  // verdict. For each period: rank only the funds that have data for it
+  // (skip the period entirely if fewer than 2 funds have data — nothing
+  // to compare), give the top rank the period's full weight and lower
+  // ranks a proportional share, then average each fund's total by the sum
+  // of weights it was actually scored on. That average-not-sum step matters:
+  // a younger fund with no 5Y/Inception figures is judged on the periods it
+  // does have, instead of being penalized simply for not existing that long.
+  const scores = useMemo(() => {
+    const totals = Array(n).fill(0);
+    const weightSums = Array(n).fill(0);
+    PERIODS.forEach(({ key }) => {
+      const weight = PERIOD_WEIGHTS[key];
+      const participants = funds
+        .map((f, i) => ({ i, v: f[key] }))
+        .filter(p => p.v !== null && p.v !== undefined);
+      if (participants.length < 2) return;
+      const ranked = [...participants].sort((a, b) => b.v - a.v);
+      const m = ranked.length;
+      ranked.forEach((p, rankIdx) => {
+        const share = (m - rankIdx) / m; // 1st place = full weight, last place = weight/m
+        totals[p.i] += weight * share;
+        weightSums[p.i] += weight;
+      });
+    });
+    return totals.map((t, i) => (weightSums[i] > 0 ? t / weightSums[i] : 0));
+  }, [funds, n]);
+
   const overallWinner = useMemo(() => {
-    const maxWins = Math.max(...winCount);
-    const idx = winCount.indexOf(maxWins);
-    return { idx, wins: maxWins, fund: funds[idx] };
-  }, [winCount, funds]);
+    const maxScore = Math.max(...scores);
+    const idx = scores.indexOf(maxScore);
+    return { idx, score: maxScore, fund: funds[idx] };
+  }, [scores, funds]);
 
   if (!funds.length) return null;
 
@@ -342,7 +384,7 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
               <div className="cmp-cell" style={{ fontWeight: 700 }}>Value Today</div>
               {funds.map((f, i) => {
                 const w = fmtWealth(f.ret1Y);
-                const isBest = winners['wealth']?.[i] === i;
+                const isBest = winners['ret1Y']?.[i] === i; // wealth is just ret1Y framed in rupees
                 return (
                   <div key={f.id} className={`cmp-cell${isBest ? ' cmp-ret-best' : ''}`}>
                     <div className="cmp-wealth-num" style={{ color: w.isPos ? 'var(--g2)' : 'var(--neg)' }}>{w.value}</div>
@@ -379,8 +421,9 @@ export function PMSCompareModal({ funds, dataLabel, onClose, onRemove }) {
                 <div className="cmp-verdict-title">Overall Leader: {overallWinner.fund.strategyName}</div>
                 <div className="cmp-verdict-body">
                   <strong>{overallWinner.fund.strategyName}</strong> by{' '}
-                  <strong>{overallWinner.fund.portfolioManager}</strong> leads on{' '}
-                  <strong>{overallWinner.wins} out of {Object.keys(winners).length}</strong> metrics —
+                  <strong>{overallWinner.fund.portfolioManager}</strong> ranks highest across time horizons —
+                  winning {winCount[overallWinner.idx]} of {PERIODS.length} return periods outright, weighted
+                  toward long-term consistency (3Y/5Y count most, 1M/3M count least; AUM isn't a factor) —
                   including a {fmtWealth(overallWinner.fund.ret1Y).gain} gain on a ₹50L basis over 1 year.{' '}
                   {overallWinner.fund.apmiLink && (
                     <a href={overallWinner.fund.apmiLink.startsWith('http') ? overallWinner.fund.apmiLink : `https://www.apmiindia.org${overallWinner.fund.apmiLink}`}
