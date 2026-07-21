@@ -31,6 +31,13 @@ const STRATEGY_FAMILY = cat =>
 
 const STRATEGY_SHORT = cat => STRATEGY_LABELS[cat] || cat?.split(' - ')[1] || cat || '—';
 
+// AMFI's SIF nav_name always spells out either "Growth" or an IDCW variant
+// (abbreviated "IDCW", or occasionally the full "Income Distribution Cum
+// Capital Withdrawal") — never both, verified against a live AMFI pull of
+// all 105 SIF schemes. No dedicated plan-type field exists, so this is
+// name-based, same as AMFI's own scheme-naming convention.
+const isIdcwPlan = navName => /idcw|income distribution/i.test(navName || '');
+
 // ── Colour per strategy family ────────────────────────────────────────────────
 const FAMILY_STYLE = {
   Equity: { bg: 'rgba(27,94,32,.12)',  fg: 'var(--g1)' },
@@ -536,6 +543,7 @@ export default function SifScreener({ initialData }) {
   const [view,       setView]       = useState('grid'); // 'grid' | 'list'
   const [watchlist,  setWatchlist]  = useState(new Set());
   const [showWatchOnly, setShowWatchOnly] = useState(false);
+  const [growthOnly, setGrowthOnly] = useState(true); // default ON — hides IDCW/dividend plans
   const [historyScheme, setHistoryScheme] = useState(null); // scheme for history modal
 
   // Back button: push a hash when modal opens so browser back closes it, not navigates away
@@ -605,6 +613,7 @@ export default function SifScreener({ initialData }) {
   // Filtered + sorted list
   const filtered = useMemo(() => {
     let list = schemes;
+    if (growthOnly)            list = list.filter(s => !isIdcwPlan(s.nav_name));
     if (showWatchOnly)         list = list.filter(s => watchlist.has(s.scheme_id));
     if (query.trim())          list = list.filter(s =>
       s.nav_name.toLowerCase().includes(query.toLowerCase()) ||
@@ -623,7 +632,7 @@ export default function SifScreener({ initialData }) {
       if (sortBy === 'name_desc') return b.nav_name.localeCompare(a.nav_name);
       return 0;
     });
-  }, [schemes, query, filterType, filterFam, filterSif, filterCat, sortBy, watchlist, showWatchOnly]);
+  }, [schemes, query, filterType, filterFam, filterSif, filterCat, sortBy, watchlist, showWatchOnly, growthOnly]);
 
   return (
     <>
@@ -721,6 +730,15 @@ export default function SifScreener({ initialData }) {
               {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
 
+            {/* Growth-only toggle — on by default, hides IDCW/dividend plans */}
+            <button
+              className={`sif-filter-btn${growthOnly ? ' active' : ''}`}
+              onClick={() => setGrowthOnly(p => !p)}
+              title={growthOnly ? 'Also show IDCW plans' : 'Hide IDCW plans, show Growth only'}
+            >
+              🌱 Growth Only
+            </button>
+
             {/* Watchlist toggle */}
             <button
               className={`sif-filter-btn${showWatchOnly ? ' active' : ''}`}
@@ -755,9 +773,9 @@ export default function SifScreener({ initialData }) {
             <span>
               {loading ? 'Loading…' : `${filtered.length} of ${schemes.length} funds`}
             </span>
-            {(query || filterType !== 'all' || filterFam !== 'all' || filterSif !== 'all' || filterCat !== 'all' || showWatchOnly) && !loading && (
+            {(query || filterType !== 'all' || filterFam !== 'all' || filterSif !== 'all' || filterCat !== 'all' || showWatchOnly || !growthOnly) && !loading && (
               <button className="sif-clear-filters"
-                onClick={() => { setQuery(''); setFilterType('all'); setFilterFam('all'); setFilterSif('all'); setFilterCat('all'); setShowWatchOnly(false); }}>
+                onClick={() => { setQuery(''); setFilterType('all'); setFilterFam('all'); setFilterSif('all'); setFilterCat('all'); setShowWatchOnly(false); setGrowthOnly(true); }}>
                 Clear filters
               </button>
             )}

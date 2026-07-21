@@ -5520,27 +5520,23 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   padding-bottom: 40px;
 }
 
-/* Decorative mesh overlay */
+/* Decorative mesh overlay + grid texture, merged into one ::before (was
+   ::before + ::after). See .sif-hero::before above for why: a z-index on
+   .pf-hero .container to lift content above ::after traps the Navbar's
+   fixed-position mobile menu panel inside that stacking context, letting
+   later siblings (e.g. .pf-stat-row, previously fixed by removing ITS
+   z-index as a workaround) out-stack the menu. Removing the need for
+   z-index here at the source fixes the whole bug class, not just one
+   downstream symptom. */
 .pf-hero::before {
   content: '';
   position: absolute;
   inset: 0;
   background-image:
     radial-gradient(ellipse 60% 80% at 80% 50%, rgba(100,221,100,.07) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 60% at 10% 80%, rgba(46,125,50,.15) 0%, transparent 50%);
-  pointer-events: none;
-}
-
-/* Subtle grid texture */
-.pf-hero::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: repeating-linear-gradient(
-    0deg, transparent, transparent 39px, rgba(255,255,255,.02) 40px
-  ), repeating-linear-gradient(
-    90deg, transparent, transparent 39px, rgba(255,255,255,.02) 40px
-  );
+    radial-gradient(ellipse 40% 60% at 10% 80%, rgba(46,125,50,.15) 0%, transparent 50%),
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,.02) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,.02) 40px);
   pointer-events: none;
 }
 
@@ -5558,7 +5554,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   align-items: center;
 }
 
-.pf-hero .container { position: relative; z-index: 1; }
+.pf-hero .container { position: relative; }
 .pf-hero .navbar    { border-bottom-color: rgba(255,255,255,.12); }
 .pf-hero .nav-link  { color: rgba(255,255,255,.85); background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.15); }
 .pf-hero .nav-link:hover { background: rgba(255,255,255,.14); }
@@ -6821,23 +6817,28 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   overflow: hidden;
   padding-bottom: 48px;
 }
+/* Both decorative layers merged into one ::before (was ::before + ::after).
+   A z-index on .sif-hero .container was previously used to lift real content
+   above ::after, but position+z-index on an ancestor of the Navbar traps its
+   fixed-position mobile menu panel (z-index:9998) inside that local stacking
+   context — so a LATER sibling like .sif-controls-bar (position:sticky,
+   z-index:2) could out-stack the "trapped" menu despite its much higher
+   nominal z-index (same bug class already hit once before, see the
+   .pf-stat-row comment above). Merging both gradients into ::before means
+   real content never needs to out-rank anything via z-index, so .container
+   no longer needs one — the menu panel's z-index now resolves at the true
+   root stacking context instead of getting capped inside the hero. */
 .sif-hero::before {
   content: '';
   position: absolute; inset: 0;
   background:
     radial-gradient(ellipse 60% 80% at 80% 40%, rgba(100,221,100,.07) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 60% at 5%  80%, rgba(46,125,50,.12)  0%, transparent 50%);
-  pointer-events: none;
-}
-.sif-hero::after {
-  content: '';
-  position: absolute; inset: 0;
-  background-image:
+    radial-gradient(ellipse 40% 60% at 5%  80%, rgba(46,125,50,.12)  0%, transparent 50%),
     repeating-linear-gradient(0deg,  transparent, transparent 39px, rgba(255,255,255,.018) 40px),
     repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,.018) 40px);
   pointer-events: none;
 }
-.sif-hero .container { position: relative; z-index: 1; }
+.sif-hero .container { position: relative; }
 .sif-hero .navbar    { border-bottom-color: rgba(255,255,255,.12); background: transparent; }
 .sif-hero .nav-link  { color: rgba(255,255,255,.85); background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.15); }
 .sif-hero .nav-link:hover { background: rgba(255,255,255,.14); }
