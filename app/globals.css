@@ -7286,6 +7286,98 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   line-height: 1.65;
 }
 
+/* ── FAQ (visible accordion matching the FAQPage JSON-LD, see lib/sifFaq.js) ── */
+.sif-faq {
+  margin: 48px 0 32px;
+  padding-top: 40px;
+  border-top: 1.5px solid var(--border);
+}
+.sif-faq-header { margin-bottom: 24px; }
+.sif-faq-title {
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: -.4px;
+  margin: 0 0 6px;
+}
+.sif-faq-sub {
+  font-size: .78rem;
+  color: var(--muted);
+  margin: 0;
+}
+.sif-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sif-faq-item {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.sif-faq-item.open,
+.sif-faq-item:hover { border-color: var(--border2); }
+.sif-faq-q {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.45;
+  transition: color .15s, background .15s;
+}
+.sif-faq-q:hover { background: var(--s2); color: var(--g1); }
+.sif-faq-item.open .sif-faq-q {
+  color: var(--g1);
+  background: var(--g-xlight);
+  border-bottom: 1px solid var(--border);
+}
+.sif-faq-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--s3);
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.sif-faq-item.open .sif-faq-icon {
+  background: var(--g2);
+  border-color: var(--g2);
+  color: white;
+}
+.sif-faq-a { padding: 16px 20px 20px; }
+.sif-faq-a[hidden] { display: none; }
+.sif-faq-a p {
+  margin: 0;
+  font-size: .82rem;
+  color: var(--muted);
+  line-height: 1.7;
+}
+@media (max-width: 680px) {
+  .sif-faq { margin: 32px 0 24px; padding-top: 28px; }
+  .sif-faq-q { font-size: .8rem; padding: 14px 16px; }
+  .sif-faq-a { padding: 12px 16px 16px; }
+  .sif-faq-a p { font-size: .78rem; }
+}
+
 /* ── Disclaimer ──────────────────────────────────────────────────────────── */
 .sif-disclaimer {
   background: var(--g-xlight);

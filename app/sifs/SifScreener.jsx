@@ -13,6 +13,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getSIFLogo } from '@/lib/providerLogos';
+import { getSifFaq } from '@/lib/sifFaq';
 
 // ── Category label map — short names for the long AMFI strings ──────────────
 const STRATEGY_LABELS = {
@@ -64,6 +65,26 @@ function getWatchlist() {
 }
 function saveWatchlist(set) {
   try { localStorage.setItem('sif_watchlist', JSON.stringify([...set])); } catch {}
+}
+
+// ── Collapsible FAQ item ───────────────────────────────────────────────────
+function SifFaqItem({ question, answer }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`sif-faq-item${open ? ' open' : ''}`}>
+      <button
+        className="sif-faq-q"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+      >
+        {question}
+        <span className="sif-faq-icon" aria-hidden="true">{open ? '−' : '+'}</span>
+      </button>
+      <div className="sif-faq-a" hidden={!open}>
+        <p>{answer}</p>
+      </div>
+    </div>
+  );
 }
 
 // ── Skeleton ─────────────────────────────────────────────────────────────────
@@ -610,6 +631,11 @@ export default function SifScreener({ initialData }) {
     return [{ value: 'all', label: 'All Strategies' }, ...[...seen.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([value, label]) => ({ value, label }))];
   }, [schemes]);
 
+  // FAQ content — same lib/sifFaq.js source the server component uses for
+  // the FAQPage JSON-LD, so the visible accordion always matches the
+  // structured data (Google requires this for rich-snippet eligibility).
+  const faq = useMemo(() => getSifFaq(schemes, navDate), [schemes, navDate]);
+
   // Filtered + sorted list
   const filtered = useMemo(() => {
     let list = schemes;
@@ -891,6 +917,25 @@ export default function SifScreener({ initialData }) {
             ))}
           </div>
         </div>
+
+        {/* ══════════════════════════════════════════════════════════════════
+            FAQ Section
+            — Rendered HTML matching the FAQPage JSON-LD built in page.js
+              from the same lib/sifFaq.js source (getSifFaq).
+            — Google requires actual visible HTML content to award rich
+              snippet eligibility for a FAQPage schema.
+        ════════════════════════════════════════════════════════════════════ */}
+        <section className="sif-faq" id="sif-faq" aria-labelledby="sif-faq-heading">
+          <div className="sif-faq-header">
+            <h2 className="sif-faq-title" id="sif-faq-heading">Frequently Asked Questions</h2>
+            <p className="sif-faq-sub">Everything you need to know about Specialised Investment Funds in India</p>
+          </div>
+          <div className="sif-faq-list">
+            {faq.map((item, i) => (
+              <SifFaqItem key={i} question={item.q} answer={item.a} />
+            ))}
+          </div>
+        </section>
 
         {/* ── AMFI Regulatory Disclaimer ─────────────────────────────────── */}
         <div className="sif-disclaimer">

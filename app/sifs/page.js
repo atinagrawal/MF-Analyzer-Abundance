@@ -7,6 +7,7 @@
 
 import Script from 'next/script';
 import SifScreener from './SifScreener';
+import { getSifFaq } from '@/lib/sifFaq';
 
 export const revalidate = 14400; // 4 hours — matches sif-nav Blob TTL
 
@@ -125,42 +126,15 @@ function buildJsonLd(data) {
     })),
   } : null;
 
-  // ── 4. FAQPage ───────────────────────────────────────────────────────────
+  // ── 4. FAQPage — sourced from lib/sifFaq.js (same data as HTML accordion) ─
   const faq = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: 'What is a Specialised Investment Fund (SIF)?',
-        acceptedAnswer: { '@type': 'Answer', text: 'A Specialised Investment Fund (SIF) is a new SEBI-regulated investment category launched in 2024, designed for sophisticated investors. SIFs can use long-short strategies, derivatives, and alternative approaches unavailable in standard mutual funds. The minimum investment is ₹10 lakh.' },
-      },
-      {
-        '@type': 'Question',
-        name: 'What is the minimum investment for a SIF?',
-        acceptedAnswer: { '@type': 'Answer', text: 'The minimum investment in a Specialised Investment Fund (SIF) is ₹10,00,000 (Ten Lakh Rupees), making it suitable for High Net Worth Individuals (HNIs) and accredited investors.' },
-      },
-      {
-        '@type': 'Question',
-        name: 'What are the different types of SIF strategies?',
-        acceptedAnswer: { '@type': 'Answer', text: 'SIFs currently offer four SEBI-approved strategies: Equity Long-Short Fund, Equity Ex-Top 100 Long-Short Fund, Hybrid Long-Short Fund, and Active Asset Allocator Long-Short Fund. Each strategy has different risk-return profiles and can use long and short positions.' },
-      },
-      {
-        '@type': 'Question',
-        name: 'How are SIF NAVs different from mutual fund NAVs?',
-        acceptedAnswer: { '@type': 'Answer', text: 'SIF NAVs are published daily by AMFI, the same as mutual funds. However, SIF NAVs are not listed in the standard AMFI NAV file (NAVAll.txt) — they are published through a dedicated SIF NAV endpoint. Starting NAVs are typically ₹10 per unit.' },
-      },
-      {
-        '@type': 'Question',
-        name: 'Which AMCs offer Specialised Investment Funds?',
-        acceptedAnswer: { '@type': 'Answer', text: `As of ${navDate}, the following fund houses offer SIFs in India: ${[...new Set(schemes.map(s => s.sif_name))].join(', ')}. New SIF launches are expected as SEBI has approved the framework for all registered mutual fund houses.` },
-      },
-      {
-        '@type': 'Question',
-        name: 'Is SIF better than a PMS or AIF?',
-        acceptedAnswer: { '@type': 'Answer', text: 'SIFs occupy a middle ground between mutual funds and Portfolio Management Services (PMS). Like mutual funds, SIFs have daily NAVs, SEBI regulation, and AMFI listing. Unlike PMS (minimum ₹50 lakh), SIFs start at ₹10 lakh. Unlike Category III AIFs, SIFs are regulated by the mutual fund framework, offering more investor protection.' },
-      },
-    ],
+    mainEntity: getSifFaq(schemes, navDate).map(item => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
   };
 
   return [webPage, breadcrumb, itemList, faq].filter(Boolean);
