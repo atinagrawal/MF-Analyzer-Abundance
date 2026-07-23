@@ -214,16 +214,23 @@ function fundScore(holding, strategy, today) {
 }
 
 // ── PortfolioRedemptionPlanner ────────────────────────────────────────────────
-function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
+// `mode` toggle: 'target' = today's original behaviour (one ₹ figure, auto
+// strategy picks funds/lots). 'selected' = user hand-picked specific funds
+// (via dashboard checkboxes) and each one redeems its own amount
+// independently — no shared "remaining target" counter across funds.
+function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorName, initialMode = 'target', onClose }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  const [mode,            setMode]            = useState(initialMode); // 'target' | 'selected'
   const [targetAmt,       setTargetAmt]       = useState('');
   const [strategy,        setStrategy]        = useState('tax');
   const [slabPct,         setSlabPct]         = useState(30);
   const [skipLocked,      setSkipLocked]      = useState(true);
   const [exitLoadOverrides,  setExitLoadOverrides]  = useState({}); // fund.name → rate (0-1)
   const [exitLoadInputs,     setExitLoadInputs]     = useState({}); // raw strings while typing
+  // Per-fund redemption spec for 'selected' mode: fund.name → { mode: 'full'|'custom', unit: 'units'|'amount', value: string }
+  const [selectedRedeemSpec, setSelectedRedeemSpec] = useState({});
 
   const fmt     = n => '₹' + Math.round(Math.abs(n)).toLocaleString('en-IN');
   const fmtD    = n => parseFloat(n).toFixed(4);
@@ -346,6 +353,114 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
     return { rows, totalProceeds, totalExitLoad, totalSTCG, totalLTCG, totalTax, totalNet, shortfall };
   }, [target, strategy, slabPct, skipLocked, holdings, today, exitLoadOverrides]);
 
+  // 'selected' mode: each hand-picked fund redeems its own amount
+  // independently (Full = all currently-redeemable units, respecting
+  // skipLocked exactly like Target Amount mode; or a custom units/₹ amount
+  // capped at that fund's redeemable units) — no shared running target.
+  const planSelected = useMemo(() => {
+    if (!selectedHoldings.length) return null;
+
+    const rows = [];
+    let totalProceeds = 0, totalExitLoad = 0, totalSTCG = 0, totalLTCG = 0;
+    let totalTax = 0, totalNet = 0;
+
+    for (const fund of selectedHoldings) {
+      const lots = fund.buyLots || [];
+      if (!lots.length) continue; // no cost data — nothing to plan for this fund
+
+      const cat = inferCategory(fund.name);
+      const currentNav = fund.liveNav;
+      const isELSS = fund.isELSS;
+
+      const isRedeemable = (lot) => {
+        if (!(skipLocked && isELSS && !lot.synthetic)) return true;
+        const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
+        const elssUnlockDate = new Date(buyDate);
+        elssUnlockDate.setFullYear(elssUnlockDate.getFullYear() + 3);
+        return today >= elssUnlockDate;
+      };
+
+      const maxRedeemable = lots.reduce((sum, lot) => sum + (isRedeemable(lot) ? lot.units : 0), 0);
+
+      const spec = selectedRedeemSpec[fund.name] || { mode: 'full' };
+      let unitsToRedeem;
+      if (spec.mode === 'custom') {
+        const raw = parseFloat(spec.value) || 0;
+        const asUnits = spec.unit === 'amount' ? raw / currentNav : raw;
+        unitsToRedeem = Math.min(Math.max(asUnits, 0), maxRedeemable);
+      } else {
+        unitsToRedeem = maxRedeemable; // 'full'
+      }
+
+      if (unitsToRedeem < 0.0001) {
+        rows.push({
+          name: fund.name, category: cat, isELSS, units: 0, maxRedeemable,
+          proceeds: 0, exitLoad: 0, exitLoadRate: 0, stcg: 0, ltcg: 0, tax: 0, net: 0,
+          lotBreakdown: [], hasSynthetic: lots.some(l => l.synthetic),
+          locked: maxRedeemable < 0.0001,
+        });
+        continue;
+      }
+
+      let remaining = unitsToRedeem;
+      let fundUnits = 0, fundProceeds = 0, fundExitLoad = 0, fundSTCG = 0, fundLTCG = 0;
+      const lotBreakdown = [];
+
+      for (const lot of lots) {
+        if (remaining <= 0) break;
+        if (!isRedeemable(lot)) continue;
+
+        const take = Math.min(lot.units, remaining);
+        if (take < 0.0001) continue;
+
+        const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
+        const saleVal = take * currentNav;
+        const elRate  = calcExitLoad(lot, today, fund.name,
+                          exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : undefined);
+        const exitLoad = elRate * saleVal;
+        const heldMs   = lot.synthetic ? Infinity : (today - buyDate);
+        const isLTCG   = heldMs >= ltcgMs;
+        const gain     = take * (currentNav - lot.nav);
+
+        fundUnits    += take;
+        fundProceeds += saleVal;
+        fundExitLoad += exitLoad;
+        if (isLTCG) fundLTCG += gain; else fundSTCG += gain;
+        remaining    -= take;
+        lotBreakdown.push({ lot, take, saleVal, exitLoad, isLTCG, gain, heldDays: lot.synthetic ? null : Math.floor(heldMs / (24*3600*1000)) });
+      }
+
+      let fundTax = 0;
+      if (cat === 'equity' || cat === 'hybrid') {
+        fundTax  = fundSTCG * TAX.equity.stcg;
+        const taxableLTCG = Math.max(0, fundLTCG - TAX.equity.exemption);
+        fundTax += taxableLTCG * TAX.equity.ltcg;
+      } else {
+        fundTax = (fundSTCG + fundLTCG) * (slabPct / 100);
+      }
+      const fundNet = fundProceeds - fundExitLoad - fundTax;
+
+      rows.push({
+        name: fund.name, category: cat, isELSS, units: fundUnits, maxRedeemable,
+        proceeds: fundProceeds, exitLoad: fundExitLoad,
+        exitLoadRate: exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : getExitLoadRate(fund.name)[0]?.rate ?? 0,
+        stcg: fundSTCG, ltcg: fundLTCG, tax: fundTax, net: fundNet,
+        lotBreakdown, hasSynthetic: lots.some(l => l.synthetic), locked: false,
+      });
+
+      totalProceeds += fundProceeds;
+      totalExitLoad += fundExitLoad;
+      totalSTCG     += fundSTCG;
+      totalLTCG     += fundLTCG;
+      totalTax      += fundTax;
+      totalNet      += fundNet;
+    }
+
+    return { rows, totalProceeds, totalExitLoad, totalSTCG, totalLTCG, totalTax, totalNet, shortfall: false };
+  }, [selectedHoldings, skipLocked, slabPct, exitLoadOverrides, selectedRedeemSpec, today]);
+
+  const activePlan = mode === 'target' ? plan : planSelected;
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}
       onClick={onClose}>
@@ -398,28 +513,47 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
           </div>
         </div>
 
+        {/* Mode toggle */}
+        <div style={{ display: 'flex', gap: 0, padding: '0 20px', borderBottom: '1.5px solid var(--border)', background: 'var(--s2)' }}>
+          {[['target', '🎯 Target Amount'], ['selected', `☑ Selected Funds${selectedHoldings.length ? ` (${selectedHoldings.length})` : ''}`]].map(([m, label]) => (
+            <button key={m} className="no-print" onClick={() => setMode(m)}
+              style={{
+                padding: '12px 16px', border: 'none', borderBottom: mode === m ? '2.5px solid var(--g1)' : '2.5px solid transparent',
+                background: 'none', cursor: 'pointer',
+                fontFamily: 'Raleway, sans-serif', fontSize: '.75rem', fontWeight: 800,
+                color: mode === m ? 'var(--g1)' : 'var(--muted)', marginBottom: -1.5,
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Controls */}
         <div style={{ padding: '16px 20px', borderBottom: '1.5px solid var(--border)', background: 'var(--s2)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 12 }}>
 
-            <div>
-              <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 5 }}>Target Amount (₹)</div>
-              <input type="number" min="0" step="1000" value={targetAmt}
-                onChange={e => setTargetAmt(e.target.value)}
-                placeholder="e.g. 500000"
-                style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--border2)', borderRadius: 9, fontFamily: "'JetBrains Mono', monospace", fontSize: '.82rem', background: 'var(--surface)', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
+            {mode === 'target' && (
+              <>
+                <div>
+                  <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 5 }}>Target Amount (₹)</div>
+                  <input type="number" min="0" step="1000" value={targetAmt}
+                    onChange={e => setTargetAmt(e.target.value)}
+                    placeholder="e.g. 500000"
+                    style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--border2)', borderRadius: 9, fontFamily: "'JetBrains Mono', monospace", fontSize: '.82rem', background: 'var(--surface)', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
 
-            <div>
-              <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 5 }}>Strategy</div>
-              <select value={strategy} onChange={e => setStrategy(e.target.value)}
-                style={{ width: '100%', padding: '9px 10px', border: '1.5px solid var(--border2)', borderRadius: 9, fontFamily: 'Raleway, sans-serif', fontSize: '.75rem', fontWeight: 700, background: 'var(--surface)', color: 'var(--text)', outline: 'none' }}>
-                <option value="tax">Tax-Efficient (Losses → LTCG → STCG)</option>
-                <option value="exitload">Least Exit Load (Oldest lots first)</option>
-                <option value="largest">Largest Fund First</option>
-              </select>
-            </div>
+                <div>
+                  <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 5 }}>Strategy</div>
+                  <select value={strategy} onChange={e => setStrategy(e.target.value)}
+                    style={{ width: '100%', padding: '9px 10px', border: '1.5px solid var(--border2)', borderRadius: 9, fontFamily: 'Raleway, sans-serif', fontSize: '.75rem', fontWeight: 700, background: 'var(--surface)', color: 'var(--text)', outline: 'none' }}>
+                    <option value="tax">Tax-Efficient (Losses → LTCG → STCG)</option>
+                    <option value="exitload">Least Exit Load (Oldest lots first)</option>
+                    <option value="largest">Largest Fund First</option>
+                  </select>
+                </div>
+              </>
+            )}
 
             <div>
               <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 5 }}>Slab (for Debt)</div>
@@ -442,33 +576,39 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
         {/* Results */}
         <div style={{ padding: '20px 28px', flex: 1 }}>
 
-          {!plan && (
+          {mode === 'selected' && selectedHoldings.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--muted)', fontSize: '.78rem' }}>
+              No funds selected yet. Close this planner, check the funds you want to redeem on the dashboard, then reopen from the floating selection bar.
+            </div>
+          )}
+
+          {!activePlan && mode === 'target' && (
             <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--muted)', fontSize: '.78rem' }}>
               Enter a target amount above to see which funds to redeem and the estimated tax impact.
             </div>
           )}
 
-          {plan && plan.shortfall && (
+          {activePlan && activePlan.shortfall && (
             <div style={{ padding: '10px 14px', background: '#fff8e1', border: '1.5px solid #ffe082', borderRadius: 10, marginBottom: 16, fontSize: '.72rem', color: '#795548', fontWeight: 600 }}>
               ⚠ Portfolio value is insufficient to meet the full target after exit loads. Showing maximum redeemable.
             </div>
           )}
 
-          {plan && plan.rows.length === 0 && (
+          {activePlan && activePlan.rows.length === 0 && (
             <div style={{ padding: '10px 14px', background: 'var(--neg-bg)', border: '1.5px solid #ffcdd2', borderRadius: 10, fontSize: '.72rem', color: 'var(--neg)', fontWeight: 600 }}>
               No redeemable holdings found. All units may be ELSS-locked or have no cost data.
             </div>
           )}
 
-          {plan && plan.rows.length > 0 && (
+          {activePlan && activePlan.rows.length > 0 && (
             <>
               {/* Summary cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 20 }}>
                 {[
-                  ['Gross Proceeds', plan.totalProceeds, 'var(--text)'],
-                  ['Exit Load',      plan.totalExitLoad, 'var(--neg)'],
-                  ['Est. Tax',       plan.totalTax,      'var(--neg)'],
-                  ['Net in Hand',    plan.totalNet,       'var(--g1)'],
+                  ['Gross Proceeds', activePlan.totalProceeds, 'var(--text)'],
+                  ['Exit Load',      activePlan.totalExitLoad, 'var(--neg)'],
+                  ['Est. Tax',       activePlan.totalTax,      'var(--neg)'],
+                  ['Net in Hand',    activePlan.totalNet,       'var(--g1)'],
                 ].map(([label, val, color]) => (
                   <div key={label} style={{ background: 'var(--s2)', border: '1.5px solid var(--border)', borderRadius: 12, padding: '12px 14px' }}>
                     <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 5 }}>{label}</div>
@@ -486,7 +626,7 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {plan.rows.map((row, i) => {
+                {activePlan.rows.map((row, i) => {
                   const ikey = row.name;
                   const rawStr = exitLoadInputs[ikey];
                   const dispVal = rawStr != null
@@ -558,6 +698,56 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
                         </div>
                       </div>
 
+                      {/* Selected-Funds mode: per-fund Redeem Full/Custom control */}
+                      {mode === 'selected' && (
+                        <div style={{ padding: '9px 14px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+                          {row.locked ? (
+                            <span style={{ fontSize: '.68rem', fontWeight: 700, color: '#795548' }}>
+                              🔒 Fully ELSS-locked — nothing currently redeemable. Uncheck "Skip ELSS locked units" above to override.
+                            </span>
+                          ) : (
+                            (() => {
+                              const spec    = selectedRedeemSpec[row.name] || { mode: 'full', unit: 'units', value: '' };
+                              const isFull  = (spec.mode || 'full') === 'full';
+                              const setSpec = (patch) => setSelectedRedeemSpec(prev => ({
+                                ...prev, [row.name]: { mode: 'full', unit: 'units', value: '', ...prev[row.name], ...patch },
+                              }));
+                              return (
+                                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                                  {['full', 'custom'].map(m => (
+                                    <button key={m} className="no-print" onClick={() => setSpec({ mode: m })}
+                                      style={{
+                                        padding: '5px 11px', borderRadius: 7, cursor: 'pointer',
+                                        border: '1.5px solid var(--border2)',
+                                        fontFamily: 'Raleway, sans-serif', fontSize: '.68rem', fontWeight: 700,
+                                        background: (spec.mode || 'full') === m ? 'var(--g1)' : 'var(--s2)',
+                                        color:      (spec.mode || 'full') === m ? '#fff' : 'var(--muted)',
+                                      }}>
+                                      {m === 'full' ? `Redeem: Full (${fmtD(row.maxRedeemable)} units)` : 'Custom'}
+                                    </button>
+                                  ))}
+                                  {!isFull && (
+                                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                      <select className="no-print" value={spec.unit || 'units'} onChange={e => setSpec({ unit: e.target.value })}
+                                        style={{ padding: '5px 6px', borderRadius: 7, border: '1.5px solid var(--border2)', fontFamily: 'Raleway, sans-serif', fontSize: '.66rem', fontWeight: 700, background: 'var(--surface)', color: 'var(--text)' }}>
+                                        <option value="units">Units</option>
+                                        <option value="amount">₹</option>
+                                      </select>
+                                      <input type="number" min="0" step="any" className="no-print"
+                                        value={spec.value || ''}
+                                        onChange={e => setSpec({ value: e.target.value })}
+                                        placeholder={spec.unit === 'amount' ? 'Amount' : 'Units'}
+                                        style={{ width: 90, padding: '5px 8px', borderRadius: 7, border: '1.5px solid var(--border2)', fontFamily: "'JetBrains Mono', monospace", fontSize: '.72rem', background: 'var(--surface)', color: 'var(--text)', outline: 'none' }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()
+                          )}
+                        </div>
+                      )}
+
                       {/* Row B: financial metrics — wraps on narrow screens */}
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
                         gap: 0, padding: '10px 14px 6px' }}>
@@ -605,10 +795,10 @@ function PortfolioRedemptionPlanner({ holdings, investorName, onClose }) {
                     fontFamily: "'JetBrains Mono', monospace", marginBottom: 10 }}>Total</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 0 }}>
                     {[
-                      ['Gross',      fmt(plan.totalProceeds),                                           'var(--text)'],
-                      ['Exit Load',  plan.totalExitLoad > 0 ? '−' + fmt(plan.totalExitLoad) : '—',     plan.totalExitLoad > 0 ? 'var(--neg)' : 'var(--muted)'],
-                      ['Total Tax',  plan.totalTax > 0 ? '−' + fmt(plan.totalTax) : '—',               plan.totalTax > 0 ? 'var(--neg)' : 'var(--muted)'],
-                      ['Net in Hand',fmt(plan.totalNet),                                                'var(--g1)'],
+                      ['Gross',      fmt(activePlan.totalProceeds),                                           'var(--text)'],
+                      ['Exit Load',  activePlan.totalExitLoad > 0 ? '−' + fmt(activePlan.totalExitLoad) : '—',     activePlan.totalExitLoad > 0 ? 'var(--neg)' : 'var(--muted)'],
+                      ['Total Tax',  activePlan.totalTax > 0 ? '−' + fmt(activePlan.totalTax) : '—',               activePlan.totalTax > 0 ? 'var(--neg)' : 'var(--muted)'],
+                      ['Net in Hand',fmt(activePlan.totalNet),                                                'var(--g1)'],
                     ].map(([lbl, val, col]) => (
                       <div key={lbl} style={{ paddingRight: 10 }}>
                         <div style={{ fontSize: '.52rem', fontWeight: 800, letterSpacing: '.5px', textTransform: 'uppercase',
@@ -1089,6 +1279,8 @@ function CasTrackerInner() {
   const [viewedUserId,   setViewedUserId]   = useState('');   // client userId when admin viewing
   const [planFund,       setPlanFund]       = useState(null);  // holding object for per-fund planner
   const [planPortfolio,  setPlanPortfolio]  = useState(false); // portfolio-level redemption planner
+  const [plannerMode,    setPlannerMode]    = useState('target'); // initial tab when planPortfolio opens
+  const [redeemSelection, setRedeemSelection] = useState({}); // fund.id → fund object, checked via dashboard checkboxes
 
   // Auto-load via ?load=blobKey (admin CAS view) or ?userId= (manual-only client)
   useEffect(() => {
@@ -1446,6 +1638,21 @@ function CasTrackerInner() {
     setSelectedIsXlsx(false);
   }
 
+  // Redemption-selection checkboxes are scoped to whichever PAN is active —
+  // clear them whenever the active PAN changes (new upload, switching tabs,
+  // loading a saved portfolio) so a stale fund from a different investor's
+  // PAN can never leak into a redemption plan.
+  useEffect(() => { setRedeemSelection({}); }, [activePan]);
+
+  function toggleRedeemSelection(fund) {
+    setRedeemSelection(prev => {
+      const next = { ...prev };
+      if (next[fund.id]) delete next[fund.id];
+      else next[fund.id] = fund;
+      return next;
+    });
+  }
+
   async function loadSavedPortfolio(blobKey) {
     setUploadState('loading');
     setLoadingText('Loading saved portfolio…');
@@ -1728,7 +1935,7 @@ function CasTrackerInner() {
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <button
-                  onClick={() => setPlanPortfolio(true)}
+                  onClick={() => { setPlannerMode('target'); setPlanPortfolio(true); }}
                   style={{
                     padding: '8px 16px', borderRadius: 9,
                     border: '1.5px solid var(--g2)',
@@ -1934,6 +2141,16 @@ function CasTrackerInner() {
                       <div key={fund.id || idx} className="fund-card">
                         <div>
                           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 6 }}>
+                            {!isManual && (
+                              <input
+                                type="checkbox"
+                                checked={!!redeemSelection[fund.id]}
+                                onChange={() => toggleRedeemSelection(fund)}
+                                aria-label={`Select ${fund.name} for redemption planning`}
+                                title="Select for multi-fund redemption planning"
+                                style={{ width: 16, height: 16, marginTop: 8, accentColor: 'var(--g1)', cursor: 'pointer', flexShrink: 0 }}
+                              />
+                            )}
                             <ProviderAvatar
                               name={fund.name.split(' - ')[0] || fund.name}
                               logoPath={
@@ -2096,11 +2313,48 @@ function CasTrackerInner() {
         )}
       </div>
 
+      {/* ── Floating redemption-selection bar — mirrors PMSCompareBar's pattern ── */}
+      {uploadState === 'success' && Object.keys(redeemSelection).length > 0 && (
+        <div style={{
+          position: 'fixed', left: '50%', bottom: 20, transform: 'translateX(-50%)', zIndex: 9500,
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '10px 12px 10px 18px', borderRadius: 14,
+          background: 'var(--g1)', boxShadow: '0 8px 28px rgba(0,0,0,.25)',
+          maxWidth: 'calc(100vw - 24px)',
+        }}>
+          <span style={{ color: '#fff', fontSize: '.78rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+            {Object.keys(redeemSelection).length} fund{Object.keys(redeemSelection).length > 1 ? 's' : ''} selected
+          </span>
+          <button
+            onClick={() => { setPlannerMode('selected'); setPlanPortfolio(true); }}
+            style={{
+              padding: '8px 16px', borderRadius: 9, border: 'none', cursor: 'pointer',
+              background: '#fff', color: 'var(--g1)',
+              fontFamily: 'Raleway, sans-serif', fontSize: '.72rem', fontWeight: 800,
+              whiteSpace: 'nowrap',
+            }}>
+            📊 Plan Redemption
+          </button>
+          <button
+            onClick={() => setRedeemSelection({})}
+            style={{
+              padding: '8px 12px', borderRadius: 9, border: '1.5px solid rgba(255,255,255,.4)', cursor: 'pointer',
+              background: 'none', color: '#fff',
+              fontFamily: 'Raleway, sans-serif', fontSize: '.72rem', fontWeight: 700,
+              whiteSpace: 'nowrap',
+            }}>
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* ── FIFO Redemption Planner overlays ─────────────────────────────── */}
       {planFund && <RedemptionPlanner fund={planFund} onClose={() => setPlanFund(null)} />}
       {planPortfolio && (
         <PortfolioRedemptionPlanner
           holdings={currentInfo.holdings || []}
+          selectedHoldings={Object.values(redeemSelection)}
+          initialMode={plannerMode}
           investorName={currentInfo.investorName}
           onClose={() => setPlanPortfolio(false)}
         />
