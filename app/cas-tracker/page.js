@@ -1346,18 +1346,31 @@ function CasTrackerInner() {
   async function saveToBlobIfSignedIn(data, fileName, panCount) {
     if (!isSignedIn) return;
     setSaveStatus('saving');
+    // Admin viewing an existing client (via Users tab → ?userId=) must save
+    // under THAT client's account, not the admin's own — otherwise the CAS
+    // parses and renders fine (client-side, always works) but silently
+    // attaches to the admin's own blob storage, so it never shows up when
+    // that client's account is checked afterwards.
+    const targetUserId = (isAdmin && viewedUserId) ? viewedUserId : undefined;
     try {
       const res = await fetch('/api/cas/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ parsedData: data, fileName, panCount }),
+        body: JSON.stringify({ parsedData: data, fileName, panCount, targetUserId }),
       });
       if (res.ok) {
         const saved = await res.json();
-        setSavedPortfolios(prev => [
-          { id: saved.id, file_name: fileName, pan_count: panCount, uploaded_at: saved.uploadedAt, blob_key: saved.blobKey },
-          ...prev,
-        ]);
+        // savedPortfolios tracks the SIGNED-IN user's own uploads (fetched via
+        // /api/cas/list with no userId). When saving on behalf of a viewed
+        // client, this entry belongs to their account, not the admin's — so
+        // don't inject it into this local list, or it'd show an upload here
+        // that doesn't actually exist under the admin's own account.
+        if (!targetUserId) {
+          setSavedPortfolios(prev => [
+            { id: saved.id, file_name: fileName, pan_count: panCount, uploaded_at: saved.uploadedAt, blob_key: saved.blobKey },
+            ...prev,
+          ]);
+        }
         setSaveStatus('saved');
       } else {
         setSaveStatus('error');
