@@ -14,6 +14,19 @@ CREATE TABLE IF NOT EXISTS verification_token (
   PRIMARY KEY (identifier, token)
 );
 
+-- ── Email OTP attempt limiter ────────────────────────────────────────────────
+-- Tracks failed 6-digit code verification attempts per email. Read/written by
+-- app/api/auth/verify-otp/route.js. attempts resets to 1 (not incremented)
+-- once updated_at is more than 15 minutes old, so a lockout is always bounded
+-- by the same 15-minute window the code itself expires within — never
+-- effectively permanent. Only a SUCCESSFUL verification deletes the row;
+-- merely requesting a new code does not reset it.
+CREATE TABLE IF NOT EXISTS otp_attempts (
+  identifier TEXT        PRIMARY KEY,
+  attempts   INT         NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS accounts (
   id                  TEXT        NOT NULL DEFAULT gen_random_uuid()::text PRIMARY KEY,
   "userId"            TEXT        NOT NULL,

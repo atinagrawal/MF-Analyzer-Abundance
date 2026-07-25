@@ -3,7 +3,11 @@
  *
  * Sign-in methods:
  *   1. Google OAuth  — for users with Google/Gmail accounts
- *   2. Email magic link (Resend) — for all other users
+ *   2. Email code or link (Resend) — one email contains both a 6-digit code
+ *      and a magic link, sharing one secret. See app/api/auth/verify-otp/
+ *      route.js for the code-entry flow (attempt-limited) and
+ *      app/login/page.jsx for the UI. Design rationale:
+ *      docs/superpowers/specs/2026-07-25-email-otp-signin-design.md
  *
  * Resend setup (one-time):
  *   1. Create account at resend.com
@@ -13,8 +17,9 @@
  *        RESEND_KEY = re_xxxxxxxxxxxx  (the API key)
  *   No other env vars needed for email.
  *
- * Required DB table (already created):
+ * Required DB tables (already created):
  *   verification_token — already confirmed EXISTS
+ *   otp_attempts        — added for the code attempt-limiter, see scripts/schema.sql
  *
  * Role values: 'client' | 'distributor' | 'admin'
  */
@@ -24,10 +29,11 @@ import Google          from 'next-auth/providers/google';
 import Resend          from 'next-auth/providers/resend';
 import PostgresAdapter from '@auth/pg-adapter';
 import pool            from '@/lib/db';
+import { randomInt }   from 'crypto';
 
 // ── Branded HTML email ────────────────────────────────────────────────────────
 
-function buildEmail({ url, host }) {
+export function buildEmail({ url, host, code }) {
   const brand = '#1a7a4a';
   const muted = '#64748b';
   return {
@@ -42,8 +48,11 @@ function buildEmail({ url, host }) {
     <div style="font-size:12px;color:${muted};margin-top:4px;font-family:'Courier New',monospace;">ARN-251838 · Haldwani, Uttarakhand</div>
   </td></tr>
   <tr><td style="background:#fff;border-radius:12px;border:1.5px solid #e2e8f0;border-top:4px solid ${brand};padding:36px 32px;box-shadow:0 4px 20px rgba(0,0,0,.06);">
-    <h1 style="margin:0 0 8px;font-size:20px;font-weight:800;color:#1e293b;letter-spacing:-.4px;">Your sign-in link</h1>
-    <p style="margin:0 0 28px;font-size:14px;color:${muted};line-height:1.6;">Click the button below to sign in to your Abundance account. This link expires in <strong>24 hours</strong> and can only be used once.</p>
+    <h1 style="margin:0 0 8px;font-size:20px;font-weight:800;color:#1e293b;letter-spacing:-.4px;">Your sign-in code</h1>
+    <p style="margin:0 0 20px;font-size:14px;color:${muted};line-height:1.6;">Enter this code on the sign-in page, or click the button below — either works. Expires in <strong>15 minutes</strong> and can only be used once.</p>
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding-bottom:24px;">
+      <div style="display:inline-block;padding:16px 28px;background:#f8fafb;border:1.5px solid #e2e8f0;border-radius:10px;font-size:32px;font-weight:900;letter-spacing:8px;color:${brand};font-family:'Courier New',monospace;">${code}</div>
+    </td></tr></table>
     <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
       <a href="${url}" style="display:inline-block;padding:14px 32px;background:${brand};color:#fff;font-size:15px;font-weight:700;border-radius:10px;text-decoration:none;letter-spacing:-.2px;">Sign in to Abundance →</a>
     </td></tr></table>
@@ -56,7 +65,7 @@ function buildEmail({ url, host }) {
   </td></tr>
 </table></td></tr></table>
 </body></html>`,
-    text: `Sign in to Abundance\n\n${url}\n\nThis link expires in 24 hours.\n\nAbundance Financial Services · ARN-251838`,
+    text: `Sign in to Abundance\n\nYour code: ${code}\n\nOr click: ${url}\n\nExpires in 15 minutes.\n\nAbundance Financial Services · ARN-251838`,
   };
 }
 
@@ -72,15 +81,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
 
-    // 2. Email magic link via Resend
+    // 2. Email sign-in via Resend — sends BOTH a 6-digit code and a magic
+    // link in one email, sharing one secret (see docs/superpowers/specs/
+    // 2026-07-25-email-otp-signin-design.md for why: generateVerificationToken
+    // takes no per-request arguments, so there is no way to know in advance
+    // whether this particular request wants a link or a code).
     Resend({
-      apiKey: process.env.RESEND_KEY,
-      from:   'Abundance Financial Services <noreply@getabundance.in>',
+      apiKey:  process.env.RESEND_KEY,
+      from:    'Abundance Financial Services <noreply@getabundance.in>',
+      maxAge:  15 * 60, // 15 minutes — was 24 hours; a 6-digit code can't stay valid that long
 
-      // Branded email template
-      async sendVerificationRequest({ identifier: email, url, provider }) {
+      // 6-digit numeric code instead of NextAuth's default long random token.
+      generateVerificationToken: () => randomInt(100000, 1000000).toString(),
+
+      // Branded email template — shows the code AND the link
+      async sendVerificationRequest({ identifier: email, url, token, provider }) {
         const host = new URL(url).host;
-        const { subject, html, text } = buildEmail({ url, host });
+        const { subject, html, text } = buildEmail({ url, host, code: token });
 
         const res = await fetch('https://api.resend.com/emails', {
           method:  'POST',
