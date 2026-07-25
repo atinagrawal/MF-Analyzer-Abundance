@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows, combinedXirr } from '@/lib/xirr';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getSIFLogo, getMFLogoFromSchemeName } from '@/lib/providerLogos';
+import isinSchemeMaster from '@/data/isin-scheme-master.json';
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const CACHE_PREFIX = 'cas_parse_v2_';
@@ -142,33 +143,45 @@ function calculateFifoCost(scheme, currentNav) {
 //                  Index funds/ETFs often 0% — detected by name
 //
 // For accurate planning: use the per-fund override in the UI.
-function inferExitLoadCategory(fundName) {
-  const n = (fundName || '').toUpperCase();
-  if (/LIQUID|OVERNIGHT|MONEY.?MARKET/.test(n)) return 'liquid';
-  if (/ULTRA.?SHORT|LOW.?DURA/.test(n)) return 'ultrashort';
-  if (/GILT|BANKING.?PSU|CORP.?BOND|CREDIT.?RISK|FMP|FIXED.?MATURITY|ARBITRAGE|CONSERVATIVE.?HYBRID/.test(n)) return 'debt';
-  if (/SHORT.?DURA|MEDIUM.?DURA|LONG.?DURA/.test(n)) return 'debt';
-  if (/INDEX|ETF|NIFTY|SENSEX/.test(n)) return 'index'; // many index funds have 0%
-  return 'equity_hybrid'; // default — equity and most hybrid
-}
+// Returns detailed exit load info including auto-detected status label and schedule
+function getExitLoadInfo(fundName, isin) {
+  const masterEntry = isin && isinSchemeMaster[isin];
+  if (masterEntry) {
+    if (masterEntry.isLocked) {
+      return { isLocked: true, hasExitLoad: false, schedule: [], label: 'Auto: 0% (ELSS Locked)' };
+    }
+    if (!masterEntry.hasExitLoad) {
+      return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Auto: 0% (No Load)' };
+    }
+    if (masterEntry.tiers && masterEntry.tiers.length > 0) {
+      const tierStr = masterEntry.tiers.map(t => `${(t.rate * 100).toFixed(0)}% (<${Math.round(t.days / 365)}y)`).join(' / ');
+      const label = masterEntry.freePercent ? `Auto: 0% (10% free), ${tierStr}` : `Auto: ${tierStr}`;
+      return { isLocked: false, hasExitLoad: true, schedule: masterEntry.tiers, freePercent: masterEntry.freePercent || 0, label };
+    }
+  }
 
-function getExitLoadRate(fundName) {
   const cat = inferExitLoadCategory(fundName);
-  // Rate per period: [rate, days] — rate applied if held < days
   switch (cat) {
-    case 'liquid':       return [];                      // 0% always
-    case 'ultrashort':   return [];                      // 0% (conservative)
-    case 'debt':         return [];                      // 0% for most debt
-    case 'index':        return [];                      // 0% for most index/ETF
-    case 'equity_hybrid':return [{ rate: 0.01, days: 365 }]; // 1% within 1yr
-    default:             return [{ rate: 0.01, days: 365 }];
+    case 'liquid':       return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Auto: 0% (Liquid/Overnight)' };
+    case 'ultrashort':   return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Auto: 0% (Ultra Short)' };
+    case 'debt':         return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Auto: 0% (Debt/Gilt)' };
+    case 'index':        return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Auto: 0% (Index/ETF)' };
+    case 'equity_hybrid':
+    default:
+      if (/ELSS|TAX.?SAVER/i.test(fundName || '')) {
+        return { isLocked: true, hasExitLoad: false, schedule: [], label: 'Auto: 0% (ELSS Locked)' };
+      }
+      return { isLocked: false, hasExitLoad: true, schedule: [{ rate: 0.01, days: 365 }], label: 'Auto: 1% (< 365 days)' };
   }
 }
 
+function getExitLoadRate(fundName, isin) {
+  return getExitLoadInfo(fundName, isin).schedule;
+}
+
 // Compute actual exit load rate for a specific lot
-function calcExitLoad(lot, redeemDate, fundName, overrideRate) {
+function calcExitLoad(lot, redeemDate, fundName, overrideRate, isin) {
   if (overrideRate != null) {
-    // User-specified override — still apply holding-period logic
     if (lot.synthetic) return 0;
     const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
     const heldDays = Math.floor((redeemDate - buyDate) / (24 * 3600 * 1000));
@@ -177,8 +190,10 @@ function calcExitLoad(lot, redeemDate, fundName, overrideRate) {
   if (lot.synthetic) return 0; // unknown purchase date
   const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
   const heldDays = Math.floor((redeemDate - buyDate) / (24 * 3600 * 1000));
-  const schedule = getExitLoadRate(fundName);
-  for (const { rate, days } of schedule) {
+  const info = getExitLoadInfo(fundName, isin);
+  if (!info.hasExitLoad || info.isLocked) return 0;
+
+  for (const { rate, days } of info.schedule) {
     if (heldDays < days) return rate;
   }
   return 0;
@@ -291,7 +306,8 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
 
         const saleVal   = take * currentNav;
         const elRate    = calcExitLoad(lot, today, fund.name,
-                            exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : undefined);
+                            exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : undefined,
+                            fund.isin);
         const exitLoad  = elRate * saleVal;
         const netSale   = saleVal - exitLoad;
         const heldMs    = lot.synthetic ? Infinity : (today - buyDate);
@@ -422,7 +438,8 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
         const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
         const saleVal = take * currentNav;
         const elRate  = calcExitLoad(lot, today, fund.name,
-                          exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : undefined);
+                          exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : undefined,
+                          fund.isin);
         const exitLoad = elRate * saleVal;
         const heldMs   = lot.synthetic ? Infinity : (today - buyDate);
         const isLTCG   = heldMs >= ltcgMs;
@@ -677,7 +694,9 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
 
                         {/* Exit load % — text input avoids toFixed fighting typing */}
                         <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                          <div style={{ fontSize: '.52rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 3 }}>Exit Load %</div>
+                          <div style={{ fontSize: '.52rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 3 }}>
+                            {getExitLoadInfo(row.name, row.isin).label}
+                          </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                             <input type="text" inputMode="decimal"
                               value={dispVal}
@@ -1476,9 +1495,10 @@ function CasTrackerInner() {
           value: 0,
           invested: 0,
           avgPurchaseNav: 0,
-          isELSS: /ELSS|TAX.?SAVER/i.test(scheme.scheme),
+          isELSS: /ELSS|TAX.?SAVER/i.test(scheme.scheme) || (isinSchemeMaster[scheme.isin || scheme.isin_reinvest || scheme.isin_payout || '']?.isLocked || false),
           lockedValue: 0,
-          name: scheme.scheme
+          name: scheme.scheme,
+          isin: scheme.isin || scheme.isin_reinvest || scheme.isin_payout || ''
         });
       });
     });

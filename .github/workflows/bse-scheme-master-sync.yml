@@ -1,0 +1,37 @@
+name: Monthly BSE Scheme Master Sync
+
+on:
+  schedule:
+    # Run on the 1st of every month at 02:00 UTC
+    - cron: '0 2 1 * *'
+  workflow_dispatch:
+
+jobs:
+  sync-bse-master:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run BSE Scheme Master Sync
+        run: node scripts/sync_bse_scheme_master.js
+
+      - name: Commit and push changes if updated
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/isin-scheme-master.json
+          if git diff --staged --quiet; then
+            echo "No changes to BSE Scheme Master data."
+          else
+            git commit -m "chore: monthly update of BSE StAR scheme master data"
+            git push
+          fi
