@@ -5,16 +5,40 @@
  * and generates data/isin-scheme-master.json for precise exit load and lock-in
  * determination in the CAS Redemption Planner.
  *
- * Date Fallback Logic:
- * - Attempts to fetch live report from BSE StAR MF.
- * - If BSE StAR is unavailable, offline, or returns 404/error (e.g., weekends),
- *   it falls back to reading local desktop files if present, or preserves the
- *   existing data/isin-scheme-master.json cache.
+ * Fallback logic:
+ * - Attempts to fetch the live report from BSE StAR MF.
+ * - If BSE StAR is unavailable, offline, or returns an error for ALL three
+ *   report types (e.g. weekends, an outage, or a scrape breaking because BSE
+ *   changed its ASP.NET viewstate/markup), the existing
+ *   data/isin-scheme-master.json is left untouched rather than being
+ *   overwritten with an empty result — this workflow runs on GitHub Actions
+ *   (ubuntu-latest, scheduled monthly), so any fallback must work there, not
+ *   just on one developer's machine.
  */
 
 const fs = require('fs');
 const path = require('path');
-const readline = require('readline');
+
+// Expected header labels at the column indices parseReportStream reads —
+// verified against a real BSE SCHEMEMASTER export. If BSE ever reorders or
+// adds columns, this fires a loud warning instead of silently reading the
+// wrong field into isin/exitFlag/lockFlag.
+const EXPECTED_HEADERS = { 4: 'isin', 37: 'exit load flag', 39: 'lock-in period flag' };
+
+function validateHeader(content, reportLabel) {
+  const headerLine = (content.split('\n')[0] || '');
+  const cols = headerLine.split('|').map(c => c.trim().toLowerCase());
+  for (const [idx, expected] of Object.entries(EXPECTED_HEADERS)) {
+    const actual = cols[idx] || '';
+    if (!actual.includes(expected)) {
+      console.error(
+        `[BSE Sync] WARNING: ${reportLabel} column ${idx} header is "${cols[idx] ?? '(missing)'}", ` +
+        `expected to contain "${expected}". BSE may have changed the report layout — ` +
+        `parseReportStream's column indices likely need updating.`
+      );
+    }
+  }
+}
 
 // Special Tiered Schemes Overrides (e.g. Parag Parikh Flexi Cap: 2% < 1y, 1% < 2y, 10% free)
 const KNOWN_TIERED_SCHEMES = {
@@ -116,22 +140,14 @@ async function run() {
   console.log('=== Syncing BSE StAR Scheme Master Database ===');
   const isinMap = new Map();
 
-  const options = [
-    { opt: 'SCHEMEMASTERPHYSICAL', localFallback: 'C:/Users/Atin/Desktop/SCHMSTRPHY_25072026.txt' },
-    { opt: 'SCHEMEMASTERDEMAT',    localFallback: 'C:/Users/Atin/Desktop/SCHMSTRDMAT_25072026.txt' },
-    { opt: 'SCHEMEMASTER',         localFallback: 'C:/Users/Atin/Desktop/SCHMSTRDET_25072026.txt' }
-  ];
+  const options = ['SCHEMEMASTERPHYSICAL', 'SCHEMEMASTERDEMAT', 'SCHEMEMASTER'];
 
-  for (const { opt, localFallback } of options) {
+  for (const opt of options) {
     console.log(`[BSE Sync] Fetching ${opt}...`);
-    let content = await fetchBseReport(opt);
-
-    if (!content && fs.existsSync(localFallback)) {
-      console.log(`[BSE Sync] Live fetch unavailable for ${opt}. Using local fallback: ${localFallback}`);
-      content = fs.readFileSync(localFallback, 'utf-8');
-    }
+    const content = await fetchBseReport(opt);
 
     if (content) {
+      validateHeader(content, opt);
       parseReportStream(content, isinMap);
       console.log(`[BSE Sync] Successfully parsed ${opt}. Total unique ISINs accumulated: ${isinMap.size}`);
     } else {

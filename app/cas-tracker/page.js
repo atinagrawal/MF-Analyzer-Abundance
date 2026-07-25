@@ -143,35 +143,55 @@ function calculateFifoCost(scheme, currentNav) {
 //                  Index funds/ETFs often 0% — detected by name
 //
 // For accurate planning: use the per-fund override in the UI.
-// Returns detailed exit load info including auto-detected status label and schedule
+// Returns detailed exit load info including auto-detected status label and schedule.
+//
+// Labels are deliberately prefixed "BSE:" (sourced from the synced scheme
+// master, data/isin-scheme-master.json) vs "Guess:" (this file's own
+// name-regex heuristic, used only when no BSE record exists for the ISIN) —
+// so the UI never implies name-guessed and BSE-confirmed numbers carry the
+// same confidence.
 function getExitLoadInfo(fundName, isin) {
   const masterEntry = isin && isinSchemeMaster[isin];
   if (masterEntry) {
     if (masterEntry.isLocked) {
-      return { isLocked: true, hasExitLoad: false, schedule: [], label: 'Auto: 0% (ELSS Locked)' };
+      return { isLocked: true, hasExitLoad: false, schedule: [], label: 'BSE: ELSS Locked' };
     }
     if (!masterEntry.hasExitLoad) {
-      return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Auto: 0% (No Load)' };
+      return { isLocked: false, hasExitLoad: false, schedule: [], label: 'BSE: No Exit Load' };
     }
     if (masterEntry.tiers && masterEntry.tiers.length > 0) {
       const tierStr = masterEntry.tiers.map(t => `${(t.rate * 100).toFixed(0)}% (<${Math.round(t.days / 365)}y)`).join(' / ');
-      const label = masterEntry.freePercent ? `Auto: 0% (10% free), ${tierStr}` : `Auto: ${tierStr}`;
+      const label = masterEntry.freePercent ? `BSE: 0% (${masterEntry.freePercent}% free), ${tierStr}` : `BSE: ${tierStr}`;
       return { isLocked: false, hasExitLoad: true, schedule: masterEntry.tiers, freePercent: masterEntry.freePercent || 0, label };
     }
+    // BSE confirms this ISIN HAS an exit load (its "Exit Load Flag" is Y),
+    // but doesn't give us the actual tiered schedule — the report's own
+    // "Exit Load" value column is always 0 regardless of the flag, verified
+    // against a live sync (26,277 ISINs; only 4 have a real schedule, via
+    // KNOWN_TIERED_SCHEMES in scripts/sync_bse_scheme_master.js). Falling
+    // through to the name-based guess below used to silently discard this
+    // confirmed signal — for 524 real funds (debt/gilt/arbitrage schemes
+    // misclassified by name) it produced a flatly wrong "0%" despite BSE
+    // saying otherwise. Assume the standard 1%/365-day structure instead,
+    // labelled so it's clear this is BSE-confirmed-but-estimated, not a
+    // pure guess and not a BSE-confirmed exact rate.
+    return { isLocked: false, hasExitLoad: true, schedule: [{ rate: 0.01, days: 365 }], label: 'BSE: load confirmed, ~1% (<365d) assumed' };
   }
 
+  // No BSE master record for this ISIN (not yet synced, or a manual holding
+  // with no ISIN) — fall back to the pre-existing name-based guess.
   const cat = inferExitLoadCategory(fundName);
   switch (cat) {
-    case 'liquid':       return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Auto: 0% (Liquid/Overnight)' };
-    case 'ultrashort':   return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Auto: 0% (Ultra Short)' };
-    case 'debt':         return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Auto: 0% (Debt/Gilt)' };
-    case 'index':        return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Auto: 0% (Index/ETF)' };
+    case 'liquid':       return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Guess: 0% (Liquid/Overnight)' };
+    case 'ultrashort':   return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Guess: 0% (Ultra Short)' };
+    case 'debt':         return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Guess: 0% (Debt/Gilt)' };
+    case 'index':        return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Guess: 0% (Index/ETF)' };
     case 'equity_hybrid':
     default:
       if (/ELSS|TAX.?SAVER/i.test(fundName || '')) {
-        return { isLocked: true, hasExitLoad: false, schedule: [], label: 'Auto: 0% (ELSS Locked)' };
+        return { isLocked: true, hasExitLoad: false, schedule: [], label: 'Guess: ELSS Locked' };
       }
-      return { isLocked: false, hasExitLoad: true, schedule: [{ rate: 0.01, days: 365 }], label: 'Auto: 1% (< 365 days)' };
+      return { isLocked: false, hasExitLoad: true, schedule: [{ rate: 0.01, days: 365 }], label: 'Guess: 1% (< 365 days)' };
   }
 }
 
@@ -1495,10 +1515,14 @@ function CasTrackerInner() {
           value: 0,
           invested: 0,
           avgPurchaseNav: 0,
-          isELSS: /ELSS|TAX.?SAVER/i.test(scheme.scheme) || (isinSchemeMaster[scheme.isin || scheme.isin_reinvest || scheme.isin_payout || '']?.isLocked || false),
+          // casparser's Scheme model exposes a single `isin` field (verified
+          // against its actual source — no isin_reinvest/isin_payout exist;
+          // each Growth/IDCW/Reinvest variant is its own separate Scheme
+          // entry, each with its own single isin).
+          isELSS: /ELSS|TAX.?SAVER/i.test(scheme.scheme) || (isinSchemeMaster[scheme.isin || '']?.isLocked || false),
           lockedValue: 0,
           name: scheme.scheme,
-          isin: scheme.isin || scheme.isin_reinvest || scheme.isin_payout || ''
+          isin: scheme.isin || ''
         });
       });
     });
