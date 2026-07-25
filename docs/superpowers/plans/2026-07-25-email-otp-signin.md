@@ -2,24 +2,29 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a 6-digit email code as a second sign-in option alongside the existing magic link, sharing one underlying token/secret, with a server-side attempt limiter protecting the now-shorter (6-digit) secret space.
+> **Revision note (2026-07-26):** Task 1 as originally written (and already committed at this point) made the 6-digit code itself BE NextAuth's verification token — a background security review correctly flagged this as critical, since that token is checked by NextAuth's own always-public `/api/auth/callback/resend` endpoint, completely independent of any attempt limiter this app builds. That endpoint would accept direct brute-force guesses of all 1,000,000 six-digit values within the 15-minute window, bypassing `/api/auth/verify-otp` entirely. **Task 1B** below fixes this by decoupling the two secrets. Task 2 (not yet executed when the flaw was caught) is written below already reflecting the fix.
 
-**Architecture:** `auth.js`'s Resend provider generates a 6-digit code (instead of NextAuth's default long random token) with a 15-minute expiry, and sends both the code and a clickable link (embedding that same code) in one email. A new `/api/auth/verify-otp` route accepts a typed-in code, checks a Postgres-backed attempt counter, and — rather than reimplementing NextAuth's internal token verification — proxies a server-to-server request to NextAuth's own existing `/api/auth/callback/resend` endpoint, forwarding its session cookie on success. The login page gains a second button and a code-input confirmation screen.
+**Goal:** Add a 6-digit email code as a second sign-in option alongside the existing magic link, sharing one email but NOT one secret — NextAuth's own high-entropy token still gates the actual sign-in; a separate, app-owned 6-digit code is mapped to that real token and is the only thing ever checked by this app's own attempt-limited route.
+
+**Architecture:** `auth.js`'s Resend provider keeps NextAuth's default high-entropy token generation untouched, but shortens `maxAge` to 15 minutes. `sendVerificationRequest` additionally generates an independent 6-digit code, stores `(email, code) → real token` in a new `otp_codes` table, and sends both the code and the real magic link in one email. A new `/api/auth/verify-otp` route accepts a typed-in code, checks a Postgres-backed attempt counter, looks up the real token via `otp_codes`, and — rather than reimplementing NextAuth's internal token verification — proxies a server-to-server request to NextAuth's own existing `/api/auth/callback/resend` endpoint using that REAL token, forwarding its session cookie on success. Guessing the code can therefore only ever be attempted through the attempt-limited route; NextAuth's own endpoint never accepts a bare 6-digit value at all. The login page gains a second button and a code-input confirmation screen.
 
 **Tech Stack:** NextAuth v5 (`next-auth`, `@auth/pg-adapter`), Postgres (`pg` via `lib/db.js`), Node's built-in `crypto.randomInt`, Next.js App Router Route Handlers.
 
 ## Global Constraints
 
-- Token/code expiry: **15 minutes** (`maxAge: 15 * 60`), replacing today's 24 hours — applies to both the code and the link, since they share one secret.
+- The 6-digit code and NextAuth's real verification token are **separate secrets**. The code is never usable directly against `/api/auth/callback/resend` — only via `/api/auth/verify-otp`, which translates code → real token first.
+- Token expiry: **15 minutes** (`maxAge: 15 * 60`), replacing today's 24 hours — applies to the real token; the `otp_codes` mapping's own `expires` column matches this same 15-minute window.
 - Attempt limit: **5 wrong verifications** blocks further attempts on that email until the failed-attempt window (also 15 minutes) has elapsed since the last failure — matches the code's own natural expiry so a lockout is never effectively permanent.
 - The attempt counter resets to zero only on a **successful** sign-in — never on merely requesting a new code (closes the "just request a fresh code to reset your guess budget" bypass).
-- No new external service/dependency — reuses the existing Resend account and the existing `verification_token` table; only one new small table (`otp_attempts`) is added.
+- No new external service/dependency — reuses the existing Resend account and the existing `verification_token` table; two new small tables (`otp_codes`, `otp_attempts`) are added.
 - No test runner is configured in this repo (established convention). Verification is `npm run build` for a clean compile, plus a standalone script exercising any pure logic (token format, attempt-limiter SQL translated to an equivalent JS check), plus a manual end-to-end walkthrough once deployed to a environment with a live Postgres connection.
 - Google OAuth sign-in must be completely unaffected by every change in this plan.
 
 ---
 
 ### Task 1: Token generation, expiry, and email template
+
+> **Superseded in part by Task 1B below.** This task's `generateVerificationToken` override and the `code: token` wiring in `sendVerificationRequest` are the flawed design the security review caught — kept here unmodified for an accurate historical record of what was actually committed, since Task 1 already executed before the flaw was found. Do not use Step 2's `Resend({...})` block as final — Task 1B replaces it.
 
 **Files:**
 - Modify: `auth.js`
@@ -331,13 +336,213 @@ git commit -m "feat(auth): generate 6-digit codes with 15-minute expiry, send co
 
 ---
 
+### Task 1B: Security fix — decouple the OTP code from NextAuth's real token
+
+**Files:**
+- Modify: `auth.js`
+- Modify: `scripts/schema.sql`
+
+**Interfaces:**
+- Produces (schema): `otp_codes` table — `identifier TEXT NOT NULL, code TEXT NOT NULL, token TEXT NOT NULL, expires TIMESTAMPTZ NOT NULL, PRIMARY KEY (identifier, code)`. Task 2's `/api/auth/verify-otp` route reads this table by exact name and column names to translate a submitted code into the real NextAuth token.
+- Consumes: nothing from Task 1 changes in shape — `otp_attempts` (already added in Task 1) is untouched by this task.
+
+- [ ] **Step 1: Add the `otp_codes` table to `scripts/schema.sql`**
+
+Find the `otp_attempts` table Task 1 already added:
+
+```sql
+CREATE TABLE IF NOT EXISTS otp_attempts (
+  identifier TEXT        PRIMARY KEY,
+  attempts   INT         NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+Immediately after it, add:
+
+```sql
+
+-- ── Email OTP code-to-token mapping ──────────────────────────────────────────
+-- Maps a short-lived, independently-generated 6-digit code to the REAL
+-- high-entropy NextAuth verification token for the same sign-in request.
+-- Read/written by auth.js (insert) and app/api/auth/verify-otp/route.js
+-- (lookup + delete on success). The code is NEVER itself usable as a
+-- NextAuth token — /api/auth/verify-otp always translates code -> token
+-- via this table before calling NextAuth's own callback endpoint, so
+-- guessing the code only ever goes through that attempt-limited route.
+-- token is stored in retrievable (plaintext) form deliberately: verification
+-- must reconstruct the real callback call from a submitted code, which a
+-- one-way hash would prevent. Same trust boundary as this database's other
+-- plaintext secrets (e.g. accounts.access_token above).
+CREATE TABLE IF NOT EXISTS otp_codes (
+  identifier TEXT        NOT NULL,
+  code       TEXT        NOT NULL,
+  token      TEXT        NOT NULL,
+  expires    TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (identifier, code)
+);
+```
+
+- [ ] **Step 2: Revert the `generateVerificationToken` override and rewire `sendVerificationRequest` in `auth.js`**
+
+Find the `Resend({...})` provider block (as Task 1 left it):
+
+```js
+    // 2. Email sign-in via Resend — sends BOTH a 6-digit code and a magic
+    // link in one email, sharing one secret (see docs/superpowers/specs/
+    // 2026-07-25-email-otp-signin-design.md for why: generateVerificationToken
+    // takes no per-request arguments, so there is no way to know in advance
+    // whether this particular request wants a link or a code).
+    Resend({
+      apiKey:  process.env.RESEND_KEY,
+      from:    'Abundance Financial Services <noreply@getabundance.in>',
+      maxAge:  15 * 60, // 15 minutes — was 24 hours; a 6-digit code can't stay valid that long
+
+      // 6-digit numeric code instead of NextAuth's default long random token.
+      generateVerificationToken: () => randomInt(100000, 1000000).toString(),
+
+      // Branded email template — shows the code AND the link
+      async sendVerificationRequest({ identifier: email, url, token, provider }) {
+        const host = new URL(url).host;
+        const { subject, html, text } = buildEmail({ url, host, code: token });
+
+        const res = await fetch('https://api.resend.com/emails', {
+          method:  'POST',
+          headers: {
+            'Authorization': `Bearer ${provider.apiKey}`,
+            'Content-Type':  'application/json',
+          },
+          body: JSON.stringify({ from: provider.from, to: email, subject, html, text }),
+        });
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(`Resend error ${res.status}: ${JSON.stringify(error)}`);
+        }
+      },
+    }),
+```
+
+Replace with:
+
+```js
+    // 2. Email sign-in via Resend — sends BOTH a 6-digit code and a magic
+    // link in one email, but they are SEPARATE secrets. NextAuth's own
+    // `token` (full entropy, unmodified default generator) still gates
+    // /api/auth/callback/resend — exactly as secure as before this feature
+    // existed. The 6-digit `code` below is this app's own creation, mapped
+    // to that real token in otp_codes, and is ONLY ever checked by this
+    // app's own attempt-limited /api/auth/verify-otp route. A security
+    // review caught an earlier version of this file using the code AS the
+    // token directly — see docs/superpowers/specs/
+    // 2026-07-25-email-otp-signin-design.md's revision note for why that
+    // was a critical bypass of the attempt limiter via NextAuth's own
+    // public callback endpoint.
+    Resend({
+      apiKey:  process.env.RESEND_KEY,
+      from:    'Abundance Financial Services <noreply@getabundance.in>',
+      maxAge:  15 * 60, // 15 minutes — was 24 hours
+
+      // Branded email template — shows an independent code AND the real link
+      async sendVerificationRequest({ identifier: email, url, token, provider }) {
+        const host = new URL(url).host;
+        const code = randomInt(100000, 1000000).toString();
+        const expires = new Date(Date.now() + 15 * 60 * 1000);
+
+        await pool.query(
+          `INSERT INTO otp_codes (identifier, code, token, expires) VALUES ($1, $2, $3, $4)`,
+          [email, code, token, expires]
+        );
+
+        const { subject, html, text } = buildEmail({ url, host, code });
+
+        const res = await fetch('https://api.resend.com/emails', {
+          method:  'POST',
+          headers: {
+            'Authorization': `Bearer ${provider.apiKey}`,
+            'Content-Type':  'application/json',
+          },
+          body: JSON.stringify({ from: provider.from, to: email, subject, html, text }),
+        });
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(`Resend error ${res.status}: ${JSON.stringify(error)}`);
+        }
+      },
+    }),
+```
+
+Note `generateVerificationToken` is gone entirely — NextAuth generates its own default high-entropy token, unmodified. `pool` is already imported at the top of `auth.js` (used by `PostgresAdapter(pool)`), so no new import is needed for the `pool.query` call above.
+
+Also update the top-of-file doc comment. Find (as Task 1 left it):
+
+```js
+ * Required DB tables (already created):
+ *   verification_token — already confirmed EXISTS
+ *   otp_attempts        — added for the code attempt-limiter, see scripts/schema.sql
+ *
+ * Role values: 'client' | 'distributor' | 'admin'
+ */
+```
+
+Replace with:
+
+```js
+ * Required DB tables (already created):
+ *   verification_token — already confirmed EXISTS
+ *   otp_attempts        — code attempt-limiter, see scripts/schema.sql
+ *   otp_codes           — maps a 6-digit code to NextAuth's real token per
+ *                          request; the code is a SEPARATE secret from the
+ *                          real token, never usable directly against
+ *                          NextAuth's own callback endpoint. See
+ *                          scripts/schema.sql and
+ *                          docs/superpowers/specs/2026-07-25-email-otp-signin-design.md
+ *
+ * Role values: 'client' | 'distributor' | 'admin'
+ */
+```
+
+- [ ] **Step 3: Verify `otp_codes` insert parameters are well-formed**
+
+This can't be exercised without a live Postgres connection, but the shape of what gets inserted (a 6-digit numeric string, a token string, and a valid future Date) can be checked in isolation:
+
+```bash
+node -e "
+const { randomInt } = require('crypto');
+const code = randomInt(100000, 1000000).toString();
+const expires = new Date(Date.now() + 15 * 60 * 1000);
+if (!/^\d{6}$/.test(code)) throw new Error('BAD CODE: ' + code);
+if (!(expires instanceof Date) || isNaN(expires.getTime())) throw new Error('BAD EXPIRES');
+if (expires.getTime() - Date.now() < 14 * 60 * 1000) throw new Error('EXPIRES TOO SOON');
+console.log('code:', code, 'expires:', expires.toISOString());
+console.log('OTP_CODES INSERT SHAPE OK');
+"
+```
+
+Expected output ends with: `OTP_CODES INSERT SHAPE OK`
+
+- [ ] **Step 4: Run the Next.js build**
+
+Run: `npm run build`
+Expected: build succeeds, no errors.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add auth.js scripts/schema.sql
+git commit -m "fix(auth): decouple OTP code from NextAuth's real token (security review fix)"
+```
+
+---
+
 ### Task 2: `/api/auth/verify-otp` route — attempt limiter + proxy to NextAuth's callback
 
 **Files:**
 - Create: `app/api/auth/verify-otp/route.js`
 
 **Interfaces:**
-- Consumes: the `otp_attempts` table from Task 1 (exact columns: `identifier`, `attempts`, `updated_at`); `pool` default export from `@/lib/db`.
+- Consumes: the `otp_attempts` table from Task 1 (exact columns: `identifier`, `attempts`, `updated_at`); the `otp_codes` table from Task 1B (exact columns: `identifier`, `code`, `token`, `expires`); `pool` default export from `@/lib/db`.
 - Produces: `POST /api/auth/verify-otp` — request body `{ email: string, code: string, callbackUrl: string }`, response `{ ok: true }` (200, with a forwarded `Set-Cookie` session header) or `{ ok: false, error: 'invalid_email' | 'invalid_code_format' | 'too_many_attempts' | 'wrong_code' }` (400). Consumed by Task 3's login page.
 
 - [ ] **Step 1: Write `app/api/auth/verify-otp/route.js`**
@@ -349,8 +554,10 @@ git commit -m "feat(auth): generate 6-digit codes with 15-minute expiry, send co
  * POST /api/auth/verify-otp
  * Body: { email, code, callbackUrl }
  *
- * Verifies a 6-digit sign-in code (generated by auth.js's Resend provider,
- * see generateVerificationToken there) against an attempt limiter, then
+ * Verifies a 6-digit sign-in code against an attempt limiter, translates it
+ * to the REAL NextAuth verification token via the otp_codes table (the code
+ * and the real token are separate secrets — see auth.js and
+ * docs/superpowers/specs/2026-07-25-email-otp-signin-design.md), then
  * completes sign-in by proxying to NextAuth's OWN existing
  * /api/auth/callback/resend endpoint rather than reimplementing its
  * token-hashing/session-issuing logic — that logic lives in @auth/core's
@@ -364,6 +571,9 @@ git commit -m "feat(auth): generate 6-digit codes with 15-minute expiry, send co
  *   - Only a SUCCESSFUL verification clears the row. Requesting a new code
  *     does NOT reset it (closes the "just get a fresh code for a fresh
  *     guess budget" bypass).
+ *   - Because the code is NEVER itself sent to NextAuth's callback endpoint
+ *     (only the real token, looked up here, is), this limiter is the ONLY
+ *     path through which the code can be guessed at all.
  *
  * Design: docs/superpowers/specs/2026-07-25-email-otp-signin-design.md
  */
@@ -408,6 +618,25 @@ async function clearAttempts(email) {
   await pool.query(`DELETE FROM otp_attempts WHERE identifier = $1`, [email]);
 }
 
+// Looks up the REAL NextAuth token for a submitted (email, code) pair.
+// Returns null if no matching, unexpired row exists — the caller must treat
+// that identically to a wrong code (do not leak whether the code format was
+// merely "not found" vs "expired").
+async function resolveRealToken(email, code) {
+  const { rows } = await pool.query(
+    `SELECT token, expires FROM otp_codes WHERE identifier = $1 AND code = $2`,
+    [email, code]
+  );
+  if (!rows.length) return null;
+  const { token, expires } = rows[0];
+  if (new Date(expires).getTime() < Date.now()) return null;
+  return token;
+}
+
+async function clearCode(email, code) {
+  await pool.query(`DELETE FROM otp_codes WHERE identifier = $1 AND code = $2`, [email, code]);
+}
+
 export async function POST(request) {
   let body;
   try {
@@ -431,9 +660,15 @@ export async function POST(request) {
     return Response.json({ ok: false, error: 'too_many_attempts' }, { status: 400 });
   }
 
+  const realToken = await resolveRealToken(email, code);
+  if (!realToken) {
+    await recordFailedAttempt(email);
+    return Response.json({ ok: false, error: 'wrong_code' }, { status: 400 });
+  }
+
   const origin = new URL(request.url).origin;
   const target = `${origin}/api/auth/callback/resend?${new URLSearchParams({
-    token: code,
+    token: realToken,
     email,
     callbackUrl,
   })}`;
@@ -450,13 +685,17 @@ export async function POST(request) {
   // NextAuth's callback throws (no cookie ever set) before reaching the
   // session-issuing code on any invalid/expired/mismatched token — verified
   // directly against @auth/core's source. Presence of a session cookie is
-  // therefore a reliable, name-agnostic success signal.
+  // therefore a reliable, name-agnostic success signal. Reaching here with
+  // no cookie means the REAL token itself was somehow invalid/already
+  // consumed (e.g. the user clicked the link first) — an edge case, but
+  // still handled as a plain wrong-code failure so it never leaks that
+  // distinction back to the client.
   if (setCookie.length === 0) {
     await recordFailedAttempt(email);
     return Response.json({ ok: false, error: 'wrong_code' }, { status: 400 });
   }
 
-  await clearAttempts(email);
+  await Promise.all([clearAttempts(email), clearCode(email, code)]);
 
   const response = Response.json({ ok: true });
   for (const cookie of setCookie) {
@@ -523,12 +762,13 @@ Expected: build succeeds, `/api/auth/verify-otp` listed among the built routes, 
 - [ ] **Step 4: Manual end-to-end verification (requires a live Postgres connection and a real Resend send)**
 
 This step cannot be scripted without live infrastructure — perform it once deployed (or against a local dev server pointed at the real database):
-1. Ensure Task 1's `otp_attempts` table has been created on the actual database (run the `CREATE TABLE` statement from `scripts/schema.sql` in the Vercel Postgres query tab if not already applied).
+1. Ensure both `otp_attempts` (Task 1) and `otp_codes` (Task 1B) tables have been created on the actual database (run both `CREATE TABLE` statements from `scripts/schema.sql` in the Vercel Postgres query tab if not already applied).
 2. Trigger a sign-in request for a real test email (via the existing `signIn('resend', ...)` call — Task 3 will wire the UI, but this can be triggered from the browser console or the existing login form before Task 3 lands, since the request-a-code path is unchanged).
 3. Confirm the received email contains a 6-digit code.
 4. `curl -i -X POST http://localhost:3000/api/auth/verify-otp -H "Content-Type: application/json" -d '{"email":"YOUR_TEST_EMAIL","code":"000000","callbackUrl":"/"}'` (deliberately wrong code) — expect `{"ok":false,"error":"wrong_code"}`, no `Set-Cookie` header.
 5. Repeat step 4 five times total with a wrong code — the 5th (or a 6th) attempt should return `{"ok":false,"error":"too_many_attempts"}`.
 6. Trigger a fresh sign-in request (new code), then `curl` with the CORRECT code from the new email — expect `{"ok":true}` with a `Set-Cookie: authjs.session-token=...` (or `__Secure-authjs.session-token=...` in production) header present in the response.
+7. Separately, confirm the fix actually closes the gap: take that same correct code and `curl` it directly against NextAuth's own endpoint instead — `curl -i "http://localhost:3000/api/auth/callback/resend?token=CODE&email=YOUR_TEST_EMAIL"` (using the 6-digit CODE, not the real token) — expect this to fail/redirect to an error page, never sign in, since NextAuth's endpoint only ever accepts the real high-entropy token.
 
 - [ ] **Step 5: Commit**
 
