@@ -314,15 +314,19 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
 
       if (fundUnits < 0.0001) continue;
 
-      // Tax for this fund
-      let fundTax = 0;
+      // Tax for this fund — kept as separate STCG/LTCG figures (not just a
+      // blended total) so the UI can show which rate produced how much tax,
+      // instead of one combined number next to two separate gain figures.
+      let fundStcgTax = 0, fundLtcgTax = 0;
       if (cat === 'equity' || cat === 'hybrid') {
-        fundTax  = fundSTCG * TAX.equity.stcg;
+        fundStcgTax = fundSTCG * TAX.equity.stcg;
         const taxableLTCG = Math.max(0, fundLTCG - TAX.equity.exemption);
-        fundTax += taxableLTCG * TAX.equity.ltcg;
+        fundLtcgTax = taxableLTCG * TAX.equity.ltcg;
       } else {
-        fundTax = (fundSTCG + fundLTCG) * (slabPct / 100);
+        fundStcgTax = fundSTCG * (slabPct / 100);
+        fundLtcgTax = fundLTCG * (slabPct / 100);
       }
+      const fundTax = fundStcgTax + fundLtcgTax;
       const fundNet = fundProceeds - fundExitLoad - fundTax;
 
       rows.push({
@@ -335,6 +339,8 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
         exitLoadRate: fund.exitLoadRate ?? 0,  // ← was missing; caused NaN display
         stcg:         fundSTCG,
         ltcg:         fundLTCG,
+        stcgTax:      fundStcgTax,
+        ltcgTax:      fundLtcgTax,
         tax:          fundTax,
         net:          fundNet,
         lotBreakdown,
@@ -430,21 +436,25 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
         lotBreakdown.push({ lot, take, saleVal, exitLoad, isLTCG, gain, heldDays: lot.synthetic ? null : Math.floor(heldMs / (24*3600*1000)) });
       }
 
-      let fundTax = 0;
+      // Kept as separate STCG/LTCG tax figures (not just a blended total) so
+      // the UI can pair each gain with its own tax rate, same as `plan` above.
+      let fundStcgTax = 0, fundLtcgTax = 0;
       if (cat === 'equity' || cat === 'hybrid') {
-        fundTax  = fundSTCG * TAX.equity.stcg;
+        fundStcgTax = fundSTCG * TAX.equity.stcg;
         const taxableLTCG = Math.max(0, fundLTCG - TAX.equity.exemption);
-        fundTax += taxableLTCG * TAX.equity.ltcg;
+        fundLtcgTax = taxableLTCG * TAX.equity.ltcg;
       } else {
-        fundTax = (fundSTCG + fundLTCG) * (slabPct / 100);
+        fundStcgTax = fundSTCG * (slabPct / 100);
+        fundLtcgTax = fundLTCG * (slabPct / 100);
       }
+      const fundTax = fundStcgTax + fundLtcgTax;
       const fundNet = fundProceeds - fundExitLoad - fundTax;
 
       rows.push({
         name: fund.name, category: cat, isELSS, units: fundUnits, maxRedeemable,
         proceeds: fundProceeds, exitLoad: fundExitLoad,
         exitLoadRate: exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : getExitLoadRate(fund.name)[0]?.rate ?? 0,
-        stcg: fundSTCG, ltcg: fundLTCG, tax: fundTax, net: fundNet,
+        stcg: fundSTCG, ltcg: fundLTCG, stcgTax: fundStcgTax, ltcgTax: fundLtcgTax, tax: fundTax, net: fundNet,
         lotBreakdown, hasSynthetic: lots.some(l => l.synthetic), locked: false,
       });
 
@@ -767,20 +777,37 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
                         ))}
                       </div>
 
-                      {/* Row C: STCG / LTCG (only when non-zero) */}
+                      {/* Row C: STCG / LTCG gain, each paired with its own tax so the two
+                          never read as one blended figure. Debt has no rate split (same
+                          slab either way), so show one honest combined line instead of a
+                          fake STCG/LTCG divide. */}
                       {(row.stcg !== 0 || row.ltcg !== 0) && (
                         <div style={{ display: 'flex', gap: 20, padding: '0 14px 10px', flexWrap: 'wrap' }}>
-                          {[['STCG', row.stcg], ['LTCG', row.ltcg]].filter(([, v]) => v !== 0).map(([lbl, val]) => (
-                            <div key={lbl}>
+                          {row.category === 'debt' ? (
+                            <div>
                               <div style={{ fontSize: '.5rem', fontWeight: 800, letterSpacing: '.5px', textTransform: 'uppercase',
-                                color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 1 }}>{lbl}</div>
+                                color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 1 }}>Gains</div>
                               <div style={{ fontSize: '.7rem', fontWeight: 700,
-                                color: val < 0 ? 'var(--neg)' : 'var(--text)',
+                                color: (row.stcg + row.ltcg) < 0 ? 'var(--neg)' : 'var(--text)',
                                 fontFamily: "'JetBrains Mono', monospace" }}>
-                                {val < 0 ? '−' : '+'}{fmt(val)}
+                                {(row.stcg + row.ltcg) < 0 ? '−' : '+'}{fmt(row.stcg + row.ltcg)}
+                                <span style={{ color: 'var(--muted)', fontWeight: 600 }}> · tax {fmt(row.tax)} (slab)</span>
                               </div>
                             </div>
-                          ))}
+                          ) : (
+                            [['STCG', row.stcg, row.stcgTax], ['LTCG', row.ltcg, row.ltcgTax]].filter(([, v]) => v !== 0).map(([lbl, val, taxVal]) => (
+                              <div key={lbl}>
+                                <div style={{ fontSize: '.5rem', fontWeight: 800, letterSpacing: '.5px', textTransform: 'uppercase',
+                                  color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 1 }}>{lbl}</div>
+                                <div style={{ fontSize: '.7rem', fontWeight: 700,
+                                  color: val < 0 ? 'var(--neg)' : 'var(--text)',
+                                  fontFamily: "'JetBrains Mono', monospace" }}>
+                                  {val < 0 ? '−' : '+'}{fmt(val)}
+                                  <span style={{ color: 'var(--muted)', fontWeight: 600 }}> · tax {fmt(taxVal)}</span>
+                                </div>
+                              </div>
+                            ))
+                          )}
                         </div>
                       )}
                     </div>
@@ -1153,14 +1180,23 @@ function RedemptionPlanner({ fund, onClose }) {
               <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 12 }}>Tax Summary</div>
               {[
                 ['Gross Proceeds', result.proceeds, 'var(--text)'],
-                ['STCG Gains', result.stcgGain, result.stcgGain >= 0 ? 'var(--pos)' : 'var(--neg)'],
-                ...(category !== 'debt' ? [['LTCG Gains', result.ltcgGain, result.ltcgGain >= 0 ? 'var(--pos)' : 'var(--neg)']] : []),
-                ['Est. Tax', -result.totalTax, 'var(--neg)'],
+                // Debt has no rate difference between STCG/LTCG (both taxed at slab) — an
+                // "STCG Gains"-only line used to silently hide long-held debt gains from
+                // view entirely. Show one honest combined figure instead of a fake split.
+                ...(category === 'debt'
+                  ? [['Total Gains', result.stcgGain + result.ltcgGain, (result.stcgGain + result.ltcgGain) >= 0 ? 'var(--pos)' : 'var(--neg)']]
+                  : [
+                      ['STCG Gains', result.stcgGain, result.stcgGain >= 0 ? 'var(--pos)' : 'var(--neg)'],
+                      ['STCG Tax (20%)', -result.stcgTax, 'var(--neg)'],
+                      ['LTCG Gains', result.ltcgGain, result.ltcgGain >= 0 ? 'var(--pos)' : 'var(--neg)'],
+                      ['LTCG Tax (12.5%)', -result.ltcgTax, 'var(--neg)'],
+                    ]),
+                ['Total Tax', -result.totalTax, 'var(--neg)'],
                 ['Post-Tax Proceeds', result.postTax, 'var(--g1)'],
               ].map(([label, val, color]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: label === 'Est. Tax' ? '1px solid var(--border)' : 'none', marginBottom: label === 'Est. Tax' ? 4 : 0 }}>
-                  <span style={{ fontSize: '.72rem', color: 'var(--muted)', fontWeight: label === 'Post-Tax Proceeds' ? 800 : 600 }}>{label}</span>
-                  <span style={{ fontSize: label === 'Post-Tax Proceeds' ? '.85rem' : '.75rem', fontWeight: 800, color, fontFamily: "'JetBrains Mono', monospace" }}>
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: label === 'Total Tax' ? '1px solid var(--border)' : 'none', marginBottom: label === 'Total Tax' ? 4 : 0 }}>
+                  <span style={{ fontSize: '.72rem', color: 'var(--muted)', fontWeight: label === 'Post-Tax Proceeds' ? 800 : 600, paddingLeft: label.includes('Tax (') ? 10 : 0 }}>{label}</span>
+                  <span style={{ fontSize: label === 'Post-Tax Proceeds' ? '.85rem' : '.75rem', fontWeight: label.includes('Tax (') ? 700 : 800, color, fontFamily: "'JetBrains Mono', monospace" }}>
                     {val >= 0 ? '' : '−'}{fmt(Math.abs(val))}
                   </span>
                 </div>
