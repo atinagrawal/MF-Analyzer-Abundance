@@ -17,8 +17,12 @@
  *        RESEND_KEY = re_xxxxxxxxxxxx  (the API key)
  *   No other env vars needed for email.
  *
- * Required DB tables (already created):
- *   verification_token — already confirmed EXISTS
+ * Required DB tables — verification_token already exists; otp_attempts and
+ * otp_codes are NEW as of this feature and MUST be created on the live
+ * database (run the CREATE TABLE statements in scripts/schema.sql via the
+ * Vercel Postgres query tab) before deploying, or every sign-in request —
+ * code OR link — will throw at the otp_codes INSERT and return a 500:
+ *   verification_token — pre-existing, already confirmed EXISTS
  *   otp_attempts        — code attempt-limiter, see scripts/schema.sql
  *   otp_codes           — maps a 6-digit code to NextAuth's real token per
  *                          request; the code is a SEPARATE secret from the
@@ -109,6 +113,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const host = new URL(url).host;
         const code = randomInt(100000, 1000000).toString();
         const expires = new Date(Date.now() + 15 * 60 * 1000);
+
+        // Invalidate any prior outstanding code for this email BEFORE inserting
+        // the new one. Without this, repeated code requests within the same
+        // 15-minute window would leave multiple valid codes simultaneously
+        // outstanding for one email — each an independent 1-in-1,000,000
+        // target, so the combined odds of a random guess hitting SOME valid
+        // code scale up with however many are outstanding. Only the newest
+        // code should ever be valid. This also keeps the table from
+        // accumulating old rows from repeat requesters.
+        await pool.query(`DELETE FROM otp_codes WHERE identifier = $1`, [email]);
 
         await pool.query(
           `INSERT INTO otp_codes (identifier, code, token, expires) VALUES ($1, $2, $3, $4)`,
