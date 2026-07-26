@@ -19,7 +19,13 @@
  *
  * Required DB tables (already created):
  *   verification_token — already confirmed EXISTS
- *   otp_attempts        — added for the code attempt-limiter, see scripts/schema.sql
+ *   otp_attempts        — code attempt-limiter, see scripts/schema.sql
+ *   otp_codes           — maps a 6-digit code to NextAuth's real token per
+ *                          request; the code is a SEPARATE secret from the
+ *                          real token, never usable directly against
+ *                          NextAuth's own callback endpoint. See
+ *                          scripts/schema.sql and
+ *                          docs/superpowers/specs/2026-07-25-email-otp-signin-design.md
  *
  * Role values: 'client' | 'distributor' | 'admin'
  */
@@ -82,22 +88,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
 
     // 2. Email sign-in via Resend — sends BOTH a 6-digit code and a magic
-    // link in one email, sharing one secret (see docs/superpowers/specs/
-    // 2026-07-25-email-otp-signin-design.md for why: generateVerificationToken
-    // takes no per-request arguments, so there is no way to know in advance
-    // whether this particular request wants a link or a code).
+    // link in one email, but they are SEPARATE secrets. NextAuth's own
+    // `token` (full entropy, unmodified default generator) still gates
+    // /api/auth/callback/resend — exactly as secure as before this feature
+    // existed. The 6-digit `code` below is this app's own creation, mapped
+    // to that real token in otp_codes, and is ONLY ever checked by this
+    // app's own attempt-limited /api/auth/verify-otp route. A security
+    // review caught an earlier version of this file using the code AS the
+    // token directly — see docs/superpowers/specs/
+    // 2026-07-25-email-otp-signin-design.md's revision note for why that
+    // was a critical bypass of the attempt limiter via NextAuth's own
+    // public callback endpoint.
     Resend({
       apiKey:  process.env.RESEND_KEY,
       from:    'Abundance Financial Services <noreply@getabundance.in>',
-      maxAge:  15 * 60, // 15 minutes — was 24 hours; a 6-digit code can't stay valid that long
+      maxAge:  15 * 60, // 15 minutes — was 24 hours
 
-      // 6-digit numeric code instead of NextAuth's default long random token.
-      generateVerificationToken: () => randomInt(100000, 1000000).toString(),
-
-      // Branded email template — shows the code AND the link
+      // Branded email template — shows an independent code AND the real link
       async sendVerificationRequest({ identifier: email, url, token, provider }) {
         const host = new URL(url).host;
-        const { subject, html, text } = buildEmail({ url, host, code: token });
+        const code = randomInt(100000, 1000000).toString();
+        const expires = new Date(Date.now() + 15 * 60 * 1000);
+
+        await pool.query(
+          `INSERT INTO otp_codes (identifier, code, token, expires) VALUES ($1, $2, $3, $4)`,
+          [email, code, token, expires]
+        );
+
+        const { subject, html, text } = buildEmail({ url, host, code });
 
         const res = await fetch('https://api.resend.com/emails', {
           method:  'POST',

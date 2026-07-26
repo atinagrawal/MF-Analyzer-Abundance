@@ -27,6 +27,26 @@ CREATE TABLE IF NOT EXISTS otp_attempts (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ── Email OTP code-to-token mapping ──────────────────────────────────────────
+-- Maps a short-lived, independently-generated 6-digit code to the REAL
+-- high-entropy NextAuth verification token for the same sign-in request.
+-- Read/written by auth.js (insert) and app/api/auth/verify-otp/route.js
+-- (lookup + delete on success). The code is NEVER itself usable as a
+-- NextAuth token — /api/auth/verify-otp always translates code -> token
+-- via this table before calling NextAuth's own callback endpoint, so
+-- guessing the code only ever goes through that attempt-limited route.
+-- token is stored in retrievable (plaintext) form deliberately: verification
+-- must reconstruct the real callback call from a submitted code, which a
+-- one-way hash would prevent. Same trust boundary as this database's other
+-- plaintext secrets (e.g. accounts.access_token above).
+CREATE TABLE IF NOT EXISTS otp_codes (
+  identifier TEXT        NOT NULL,
+  code       TEXT        NOT NULL,
+  token      TEXT        NOT NULL,
+  expires    TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (identifier, code)
+);
+
 CREATE TABLE IF NOT EXISTS accounts (
   id                  TEXT        NOT NULL DEFAULT gen_random_uuid()::text PRIMARY KEY,
   "userId"            TEXT        NOT NULL,
