@@ -70,6 +70,15 @@ function LoginContent() {
   const [sentTo,    setSentTo]    = useState('');
   const [errMsg,    setErrMsg]    = useState('');
 
+  // Which button the user picked — controls the confirmation screen shown
+  // after the email is sent. Both buttons trigger the exact same
+  // signIn('resend', ...) call; only the underlying secret is shared,
+  // never a separate code/link mechanism.
+  const [deliveryMode, setDeliveryMode] = useState('link'); // 'link' | 'code'
+  const [code,         setCode]         = useState('');
+  const [verifying,    setVerifying]    = useState(false);
+  const [verifyError,  setVerifyError]  = useState('');
+
   useEffect(() => {
     if (status === 'authenticated') router.replace(from);
   }, [status, router, from]);
@@ -82,12 +91,15 @@ function LoginContent() {
     );
   }
 
-  const handleEmailSubmit = async (e) => {
+  const handleEmailSubmit = async (e, mode) => {
     e.preventDefault();
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
+    setDeliveryMode(mode);
     setEmailStep('sending');
     setErrMsg('');
+    setVerifyError('');
+    setCode('');
     try {
       const res = await signIn('resend', { email: trimmed, callbackUrl: from, redirect: false });
       if (res?.error) {
@@ -105,7 +117,50 @@ function LoginContent() {
     }
   };
 
-  const reset = () => { setEmailStep('idle'); setEmail(''); setSentTo(''); setErrMsg(''); };
+  const handleResend = (e) => handleEmailSubmit(e, deliveryMode);
+
+  const handleVerifyCode = async (e) => {
+    e.preventDefault();
+    const trimmedCode = code.trim();
+    if (!/^\d{6}$/.test(trimmedCode)) {
+      setVerifyError('Enter the 6-digit code from your email.');
+      return;
+    }
+    setVerifying(true);
+    setVerifyError('');
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: sentTo || email, code: trimmedCode, callbackUrl: from }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        // Hard navigate so the freshly-set session cookie is picked up
+        // cleanly — matches how clicking the magic link already causes a
+        // full navigation, rather than relying on the client-side session
+        // hook to notice a cookie it didn't set itself.
+        window.location.href = from;
+        return;
+      }
+      const messages = {
+        invalid_code_format: 'Enter the 6-digit code from your email.',
+        too_many_attempts:   'Too many wrong attempts. Request a new code and try again.',
+        wrong_code:          'That code is incorrect or has expired.',
+        invalid_email:       'Something went wrong. Please start over.',
+      };
+      setVerifyError(messages[data.error] || 'Something went wrong. Please try again.');
+    } catch {
+      setVerifyError('Something went wrong. Please try again.');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const reset = () => {
+    setEmailStep('idle'); setEmail(''); setSentTo(''); setErrMsg('');
+    setCode(''); setVerifyError(''); setDeliveryMode('link');
+  };
 
   return (
     <>
@@ -131,8 +186,8 @@ function LoginContent() {
               </p>
             )}
 
-            {/* ── Sent state ── */}
-            {emailStep === 'sent' && (
+            {/* ── Sent state: link mode ── */}
+            {emailStep === 'sent' && deliveryMode === 'link' && (
               <div style={{ padding: '20px 16px', background: 'var(--g-xlight)', border: '1.5px solid var(--g-light)', borderRadius: 12, marginBottom: 20, textAlign: 'left' }}>
                 <div style={{ fontSize: '1.6rem', marginBottom: 10 }}>📬</div>
                 <div style={{ fontSize: '.85rem', fontWeight: 800, color: 'var(--g1)', marginBottom: 6 }}>Check your email</div>
@@ -142,7 +197,49 @@ function LoginContent() {
                   Click the link in that email to sign in.
                 </div>
                 <div style={{ fontSize: '.68rem', color: 'var(--muted)', marginTop: 10, lineHeight: 1.5 }}>
-                  The link expires in 24 hours. Check your spam folder if you don't see it.
+                  The link expires in 15 minutes. Check your spam folder if you don't see it.
+                </div>
+              </div>
+            )}
+
+            {/* ── Sent state: code mode ── */}
+            {emailStep === 'sent' && deliveryMode === 'code' && (
+              <div style={{ padding: '20px 16px', background: 'var(--g-xlight)', border: '1.5px solid var(--g-light)', borderRadius: 12, marginBottom: 20, textAlign: 'left' }}>
+                <div style={{ fontSize: '1.6rem', marginBottom: 10 }}>🔢</div>
+                <div style={{ fontSize: '.85rem', fontWeight: 800, color: 'var(--g1)', marginBottom: 6 }}>Enter your code</div>
+                <div style={{ fontSize: '.78rem', color: 'var(--text)', lineHeight: 1.6, marginBottom: 14 }}>
+                  A 6-digit code was sent to{' '}
+                  <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>{sentTo || email}</strong>.
+                  Enter it below to sign in.
+                </div>
+                <form onSubmit={handleVerifyCode}>
+                  <input type="text" inputMode="numeric" pattern="\d{6}" maxLength={6} required
+                    value={code}
+                    onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
+                    style={{ ...S.input, marginBottom: 10, textAlign: 'center', fontSize: '1.3rem', fontWeight: 800, letterSpacing: '6px', fontFamily: "'JetBrains Mono', monospace" }}
+                    disabled={verifying}
+                    autoFocus
+                  />
+                  {verifyError && (
+                    <div style={{ padding: '10px 12px', background: 'var(--neg-bg)', border: '1.5px solid #ffcdd2', borderRadius: 9, marginBottom: 10, fontSize: '.72rem', color: 'var(--neg)', textAlign: 'left' }}>
+                      ⚠ {verifyError}
+                    </div>
+                  )}
+                  <button type="submit"
+                    style={{ ...S.btnGreen, opacity: verifying ? .65 : 1, cursor: verifying ? 'not-allowed' : 'pointer' }}
+                    disabled={verifying}
+                    onMouseEnter={e => { if (!verifying) e.currentTarget.style.background = 'var(--g2)'; }}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
+                  >
+                    {verifying ? 'Verifying…' : 'Verify & sign in'}
+                  </button>
+                </form>
+                <button onClick={handleResend} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '.72rem', color: 'var(--g2)', fontWeight: 700, fontFamily: 'Raleway, sans-serif', marginTop: 10, padding: '4px 0' }}>
+                  Resend code
+                </button>
+                <div style={{ fontSize: '.68rem', color: 'var(--muted)', marginTop: 6, lineHeight: 1.5 }}>
+                  The code expires in 15 minutes. Check your spam folder if you don't see it.
                 </div>
               </div>
             )}
@@ -156,7 +253,7 @@ function LoginContent() {
 
             {/* ── Email form ── */}
             {emailStep !== 'sent' && (
-              <form onSubmit={handleEmailSubmit} style={{ marginBottom: 16 }}>
+              <form style={{ marginBottom: 16 }}>
                 <input type="email" required value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="your@email.com"
@@ -165,14 +262,22 @@ function LoginContent() {
                   onBlur={e  => e.target.style.borderColor = 'var(--border)'}
                   disabled={emailStep === 'sending'}
                 />
-                <button type="submit"
-                  style={{ ...S.btnGreen, opacity: emailStep === 'sending' ? .65 : 1, cursor: emailStep === 'sending' ? 'not-allowed' : 'pointer' }}
-                  disabled={emailStep === 'sending'}
-                  onMouseEnter={e => { if (emailStep !== 'sending') e.currentTarget.style.background = 'var(--g2)'; }}
-                  onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
-                >
-                  {emailStep === 'sending' ? 'Sending…' : '✉ Send sign-in link'}
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="submit" onClick={e => handleEmailSubmit(e, 'link')}
+                    style={{ ...S.btnGreen, flex: 1, opacity: emailStep === 'sending' ? .65 : 1, cursor: emailStep === 'sending' ? 'not-allowed' : 'pointer' }}
+                    disabled={emailStep === 'sending'}
+                    onMouseEnter={e => { if (emailStep !== 'sending') e.currentTarget.style.background = 'var(--g2)'; }}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
+                  >
+                    {emailStep === 'sending' && deliveryMode === 'link' ? 'Sending…' : '✉ Email me a link'}
+                  </button>
+                  <button type="submit" onClick={e => handleEmailSubmit(e, 'code')}
+                    style={{ ...S.btnGreen, flex: 1, background: 'var(--surface)', color: 'var(--g1)', border: '1.5px solid var(--g1)', opacity: emailStep === 'sending' ? .65 : 1, cursor: emailStep === 'sending' ? 'not-allowed' : 'pointer' }}
+                    disabled={emailStep === 'sending'}
+                  >
+                    {emailStep === 'sending' && deliveryMode === 'code' ? 'Sending…' : '🔢 Email me a code'}
+                  </button>
+                </div>
               </form>
             )}
 
