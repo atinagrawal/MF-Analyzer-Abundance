@@ -26,6 +26,10 @@
  *     path through which the code can be guessed at all.
  *
  * Design: docs/superpowers/specs/2026-07-25-email-otp-signin-design.md
+ *
+ * Possible `error` values in the `{ ok: false, error: '...' }` response shape:
+ *   invalid_request | invalid_email | invalid_code_format | too_many_attempts |
+ *   wrong_code | server_error
  */
 
 import pool from '@/lib/db';
@@ -106,50 +110,55 @@ export async function POST(request) {
     return Response.json({ ok: false, error: 'invalid_code_format' }, { status: 400 });
   }
 
-  if (await isLockedOut(email)) {
-    return Response.json({ ok: false, error: 'too_many_attempts' }, { status: 400 });
+  try {
+    if (await isLockedOut(email)) {
+      return Response.json({ ok: false, error: 'too_many_attempts' }, { status: 400 });
+    }
+
+    const realToken = await resolveRealToken(email, code);
+    if (!realToken) {
+      await recordFailedAttempt(email);
+      return Response.json({ ok: false, error: 'wrong_code' }, { status: 400 });
+    }
+
+    const origin = new URL(request.url).origin;
+    const target = `${origin}/api/auth/callback/resend?${new URLSearchParams({
+      token: realToken,
+      email,
+      callbackUrl,
+    })}`;
+
+    const callbackRes = await fetch(target, {
+      method: 'GET',
+      redirect: 'manual',
+    });
+
+    const setCookie = callbackRes.headers.getSetCookie
+      ? callbackRes.headers.getSetCookie()
+      : (callbackRes.headers.get('set-cookie') ? [callbackRes.headers.get('set-cookie')] : []);
+
+    // NextAuth's callback throws (no cookie ever set) before reaching the
+    // session-issuing code on any invalid/expired/mismatched token — verified
+    // directly against @auth/core's source. Presence of a session cookie is
+    // therefore a reliable, name-agnostic success signal. Reaching here with
+    // no cookie means the REAL token itself was somehow invalid/already
+    // consumed (e.g. the user clicked the link first) — an edge case, but
+    // still handled as a plain wrong-code failure so it never leaks that
+    // distinction back to the client.
+    if (setCookie.length === 0) {
+      await recordFailedAttempt(email);
+      return Response.json({ ok: false, error: 'wrong_code' }, { status: 400 });
+    }
+
+    await Promise.all([clearAttempts(email), clearCode(email, code)]);
+
+    const response = Response.json({ ok: true });
+    for (const cookie of setCookie) {
+      response.headers.append('Set-Cookie', cookie);
+    }
+    return response;
+  } catch (err) {
+    console.error('[verify-otp]', err.name, err.message);
+    return Response.json({ ok: false, error: 'server_error' }, { status: 500 });
   }
-
-  const realToken = await resolveRealToken(email, code);
-  if (!realToken) {
-    await recordFailedAttempt(email);
-    return Response.json({ ok: false, error: 'wrong_code' }, { status: 400 });
-  }
-
-  const origin = new URL(request.url).origin;
-  const target = `${origin}/api/auth/callback/resend?${new URLSearchParams({
-    token: realToken,
-    email,
-    callbackUrl,
-  })}`;
-
-  const callbackRes = await fetch(target, {
-    method: 'GET',
-    redirect: 'manual',
-  });
-
-  const setCookie = callbackRes.headers.getSetCookie
-    ? callbackRes.headers.getSetCookie()
-    : (callbackRes.headers.get('set-cookie') ? [callbackRes.headers.get('set-cookie')] : []);
-
-  // NextAuth's callback throws (no cookie ever set) before reaching the
-  // session-issuing code on any invalid/expired/mismatched token — verified
-  // directly against @auth/core's source. Presence of a session cookie is
-  // therefore a reliable, name-agnostic success signal. Reaching here with
-  // no cookie means the REAL token itself was somehow invalid/already
-  // consumed (e.g. the user clicked the link first) — an edge case, but
-  // still handled as a plain wrong-code failure so it never leaks that
-  // distinction back to the client.
-  if (setCookie.length === 0) {
-    await recordFailedAttempt(email);
-    return Response.json({ ok: false, error: 'wrong_code' }, { status: 400 });
-  }
-
-  await Promise.all([clearAttempts(email), clearCode(email, code)]);
-
-  const response = Response.json({ ok: true });
-  for (const cookie of setCookie) {
-    response.headers.append('Set-Cookie', cookie);
-  }
-  return response;
 }
