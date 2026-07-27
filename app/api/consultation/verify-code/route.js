@@ -82,17 +82,17 @@ export async function POST(request) {
     return Response.json({ ok: false, error: 'invalid_request' }, { status: 400 });
   }
 
-  const email = (body?.email || '').trim().toLowerCase();
-  const code  = (body?.code  || '').trim();
-
-  if (!email || !EMAIL_REGEX.test(email)) {
-    return Response.json({ ok: false, error: 'invalid_email' }, { status: 400 });
-  }
-  if (!CODE_REGEX.test(code)) {
-    return Response.json({ ok: false, error: 'invalid_code_format' }, { status: 400 });
-  }
-
   try {
+    const email = (body?.email || '').trim().toLowerCase();
+    const code  = (body?.code  || '').trim();
+
+    if (!email || !EMAIL_REGEX.test(email)) {
+      return Response.json({ ok: false, error: 'invalid_email' }, { status: 400 });
+    }
+    if (!CODE_REGEX.test(code)) {
+      return Response.json({ ok: false, error: 'invalid_code_format' }, { status: 400 });
+    }
+
     if (await isLockedOut(email)) {
       return Response.json({ ok: false, error: 'too_many_attempts' }, { status: 400 });
     }

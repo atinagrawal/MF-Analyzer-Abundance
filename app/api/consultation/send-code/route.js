@@ -60,17 +60,17 @@ export async function POST(request) {
     return Response.json({ ok: false, error: 'invalid_request' }, { status: 400 });
   }
 
-  const name  = (body?.name  || '').trim();
-  const email = (body?.email || '').trim().toLowerCase();
-
-  if (!name) {
-    return Response.json({ ok: false, error: 'invalid_name' }, { status: 400 });
-  }
-  if (!email || !EMAIL_REGEX.test(email)) {
-    return Response.json({ ok: false, error: 'invalid_email' }, { status: 400 });
-  }
-
   try {
+    const name  = (body?.name  || '').trim();
+    const email = (body?.email || '').trim().toLowerCase();
+
+    if (!name) {
+      return Response.json({ ok: false, error: 'invalid_name' }, { status: 400 });
+    }
+    if (!email || !EMAIL_REGEX.test(email)) {
+      return Response.json({ ok: false, error: 'invalid_email' }, { status: 400 });
+    }
+
     const code    = randomInt(100000, 1000000).toString();
     const expires = new Date(Date.now() + 15 * 60 * 1000);
 
