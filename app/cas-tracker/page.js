@@ -1134,19 +1134,17 @@ function RedemptionPlanner({ fund, onClose }) {
       });
     }
 
-    let stcgTax = 0, ltcgTax = 0;
-    if (category === 'equity' || category === 'hybrid') {
-      stcgTax = stcgGain * TAX[category].stcg;
-      const taxableLTCG = Math.max(0, ltcgGain - TAX[category].exemption);
-      ltcgTax = taxableLTCG * TAX[category].ltcg;
-    } else {
-      stcgTax = stcgGain * (slabPct / 100);
-      ltcgTax = ltcgGain * (slabPct / 100);
-    }
-    const totalTax = stcgTax + ltcgTax;
-    const postTax  = proceeds - totalTax;
+    const rateConfig = (category === 'equity' || category === 'hybrid')
+      ? { stcgRate: TAX[category].stcg, ltcgRate: TAX[category].ltcg, exemption: TAX[category].exemption }
+      : { stcgRate: slabPct / 100, ltcgRate: slabPct / 100, exemption: 0 };
+    const offset = applyLossOffset({ stcg: stcgGain, ltcg: ltcgGain }, rateConfig);
+    const { stcgTax, ltcgTax, tax: totalTax } = offset;
+    const postTax = proceeds - totalTax;
+    const lossNote = (offset.offsetIntoLTCG || offset.stcgLossCarryForward || offset.ltcgLossCarryForward)
+      ? offset
+      : null;
 
-    return { lotRows, stcgGain, ltcgGain, stcgTax, ltcgTax, totalTax, proceeds, postTax, granApplied };
+    return { lotRows, stcgGain, ltcgGain, stcgTax, ltcgTax, totalTax, proceeds, postTax, granApplied, lossNote };
   }, [unitsToRedeem, category, slabPct, fund, currentNav, today, gran18Nav]);
 
   const fmt = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
@@ -1367,6 +1365,8 @@ function RedemptionPlanner({ fund, onClose }) {
               ))}
             </div>
           )}
+
+          {result?.lossNote && <LossAdjustmentPanel notes={[result.lossNote]} />}
 
           {/* Tax rule context */}
           <div style={{ fontSize: '.65rem', color: 'var(--muted)', lineHeight: 1.6, padding: '12px 14px', background: 'var(--s2)', borderRadius: 10, border: '1.5px solid var(--border)' }}>
