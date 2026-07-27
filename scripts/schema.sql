@@ -47,6 +47,27 @@ CREATE TABLE IF NOT EXISTS otp_codes (
   PRIMARY KEY (identifier, code)
 );
 
+-- ── Consultation-booking email verification ─────────────────────────────────
+-- Anti-spam gate for the public Book-a-Consultation page (app/book-consultation/
+-- page.jsx) — proves the visitor controls the email address before the Cal.com
+-- booking widget is revealed. Deliberately SEPARATE from otp_codes/otp_attempts
+-- above: those gate sign-in and must never share a lockout counter with this
+-- unrelated, unauthenticated flow (a spammer burning wrong consultation-page
+-- guesses must not also lock a real user out of signing in). No token/session
+-- is issued here — a match just flips the page to the booking step client-side.
+CREATE TABLE IF NOT EXISTS consultation_otp (
+  identifier TEXT        NOT NULL,   -- email
+  code       TEXT        NOT NULL,
+  expires    TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (identifier, code)
+);
+
+CREATE TABLE IF NOT EXISTS consultation_otp_attempts (
+  identifier TEXT        PRIMARY KEY,
+  attempts   INT         NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS accounts (
   id                  TEXT        NOT NULL DEFAULT gen_random_uuid()::text PRIMARY KEY,
   "userId"            TEXT        NOT NULL,
