@@ -132,9 +132,7 @@ export default function Footer({ variant = 'default', activePage, disclaimer }) 
                 Serving investors across India, online and remotely.
               </p>
               <a
-                href="https://www.getabundance.in/contact-us"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/book-consultation"
                 className="dfc-cta-btn"
               >
                 📅 Book a Consultation
