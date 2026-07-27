@@ -11,7 +11,7 @@
  * separate). No NextAuth token or session is involved.
  *
  * Possible `error` values in the `{ ok: false, error: '...' }` response shape:
- *   invalid_request | invalid_name | invalid_email | server_error
+ *   invalid_request | invalid_name | invalid_email | too_many_requests | server_error
  */
 
 import pool from '@/lib/db';
@@ -69,6 +69,20 @@ export async function POST(request) {
     }
     if (!email || !EMAIL_REGEX.test(email)) {
       return Response.json({ ok: false, error: 'invalid_email' }, { status: 400 });
+    }
+
+    const COOLDOWN_MS = 60 * 1000; // 60 seconds between code requests for the same email
+
+    const { rows: existing } = await pool.query(
+      `SELECT expires FROM consultation_otp WHERE identifier = $1`,
+      [email]
+    );
+    if (existing.length) {
+      const msRemainingOnExisting = new Date(existing[0].expires).getTime() - Date.now();
+      const msSinceCreated = (15 * 60 * 1000) - msRemainingOnExisting;
+      if (msSinceCreated < COOLDOWN_MS) {
+        return Response.json({ ok: false, error: 'too_many_requests' }, { status: 429 });
+      }
     }
 
     const code    = randomInt(100000, 1000000).toString();

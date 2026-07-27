@@ -35,9 +35,10 @@ const ERROR_MESSAGES = {
   invalid_name:        'Please enter your name.',
   invalid_email:       'Please enter a valid email address.',
   invalid_code_format: 'Enter the 6-digit code from your email.',
-  too_many_attempts:   'Too many wrong attempts. Request a new code and try again.',
+  too_many_attempts:   'Too many wrong attempts. Please wait about 15 minutes before trying again.',
   wrong_code:          'That code is incorrect or has expired.',
   server_error:        'Something went wrong. Please try again.',
+  too_many_requests:   'Please wait a moment before requesting another code.',
 };
 
 function errorMessage(code) {
