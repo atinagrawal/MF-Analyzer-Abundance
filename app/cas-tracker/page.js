@@ -303,7 +303,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
     let remaining = target;
     const rows = [];
     let totalProceeds = 0, totalExitLoad = 0, totalSTCG = 0, totalLTCG = 0;
-    let totalTax = 0, totalNet = 0;
+    let totalTax = 0, totalNet = 0, totalStcgTax = 0, totalLtcgTax = 0;
 
     for (const fund of eligible) {
       if (remaining <= 0) break;
@@ -398,11 +398,13 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
       totalSTCG     += fundSTCG;
       totalLTCG     += fundLTCG;
       totalTax      += fundTax;
+      totalStcgTax  += fundStcgTax;
+      totalLtcgTax  += fundLtcgTax;
       totalNet      += fundNet;
     }
 
     const shortfall = remaining > 0.5; // can't meet target
-    return { rows, totalProceeds, totalExitLoad, totalSTCG, totalLTCG, totalTax, totalNet, shortfall };
+    return { rows, totalProceeds, totalExitLoad, totalSTCG, totalLTCG, totalTax, totalStcgTax, totalLtcgTax, totalNet, shortfall };
   }, [target, strategy, slabPct, skipLocked, holdings, today, exitLoadOverrides]);
 
   // 'selected' mode: each hand-picked fund redeems its own amount
@@ -414,7 +416,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
 
     const rows = [];
     let totalProceeds = 0, totalExitLoad = 0, totalSTCG = 0, totalLTCG = 0;
-    let totalTax = 0, totalNet = 0;
+    let totalTax = 0, totalNet = 0, totalStcgTax = 0, totalLtcgTax = 0;
 
     for (const fund of selectedHoldings) {
       const lots = fund.buyLots || [];
@@ -510,10 +512,12 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
       totalSTCG     += fundSTCG;
       totalLTCG     += fundLTCG;
       totalTax      += fundTax;
+      totalStcgTax  += fundStcgTax;
+      totalLtcgTax  += fundLtcgTax;
       totalNet      += fundNet;
     }
 
-    return { rows, totalProceeds, totalExitLoad, totalSTCG, totalLTCG, totalTax, totalNet, shortfall: false };
+    return { rows, totalProceeds, totalExitLoad, totalSTCG, totalLTCG, totalTax, totalStcgTax, totalLtcgTax, totalNet, shortfall: false };
   }, [selectedHoldings, skipLocked, slabPct, exitLoadOverrides, selectedRedeemSpec, today]);
 
   const activePlan = mode === 'target' ? plan : planSelected;
@@ -873,6 +877,8 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
                     {[
                       ['Gross',      fmt(activePlan.totalProceeds),                                           'var(--text)'],
                       ['Exit Load',  activePlan.totalExitLoad > 0 ? '−' + fmt(activePlan.totalExitLoad) : '—',     activePlan.totalExitLoad > 0 ? 'var(--neg)' : 'var(--muted)'],
+                      ['STCG Tax',   activePlan.totalStcgTax > 0 ? '−' + fmt(activePlan.totalStcgTax) : '—',       activePlan.totalStcgTax > 0 ? 'var(--neg)' : 'var(--muted)'],
+                      ['LTCG Tax',   activePlan.totalLtcgTax > 0 ? '−' + fmt(activePlan.totalLtcgTax) : '—',       activePlan.totalLtcgTax > 0 ? 'var(--neg)' : 'var(--muted)'],
                       ['Total Tax',  activePlan.totalTax > 0 ? '−' + fmt(activePlan.totalTax) : '—',               activePlan.totalTax > 0 ? 'var(--neg)' : 'var(--muted)'],
                       ['Net in Hand',fmt(activePlan.totalNet),                                                'var(--g1)'],
                     ].map(([lbl, val, col]) => (
