@@ -36,6 +36,14 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
+  // 0. Only GET requests are ever cacheable — Cache.put() throws
+  // "Request method 'X' is unsupported" for POST/PUT/DELETE/etc, and
+  // caching a mutating request's response would never make sense anyway.
+  // Let the browser handle these directly, untouched.
+  if (e.request.method !== 'GET') {
+    return;
+  }
+
   // 1. Never cache API calls — always go to network
   if (url.pathname.startsWith('/api/')) {
     return; // browser default (network)
@@ -54,7 +62,7 @@ self.addEventListener('fetch', e => {
         .then(res => {
           // Update cache in background
           const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+          caches.open(CACHE_NAME).then(c => c.put(e.request, clone)).catch(() => {});
           return res;
         })
         .catch(() => caches.match(e.request).then(r => r || caches.match('/')))
@@ -70,7 +78,7 @@ self.addEventListener('fetch', e => {
         // Only cache successful opaque/same-origin responses for static assets
         if (res && (res.status === 200 || res.type === 'opaque')) {
           const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+          caches.open(CACHE_NAME).then(c => c.put(e.request, clone)).catch(() => {});
         }
         return res;
       });
