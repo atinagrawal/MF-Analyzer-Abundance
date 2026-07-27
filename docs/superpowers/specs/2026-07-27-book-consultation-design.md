@@ -59,12 +59,13 @@ Client component, three sequential states:
   import Cal, { getCalApi } from '@calcom/embed-react';
   // ...
   <Cal
-    calLink="YOUR_CAL_USERNAME/consultation"
+    calLink="abundance/consultation"
+    calOrigin="https://cal.eu"
     config={{ name, email, theme: 'light' }}
     style={{ width: '100%', height: '100%', minHeight: '700px' }}
   />
   ```
-  `calLink` (your actual Cal.com username/event-slug) is a one-time config value filled in during implementation once the Cal.com account/event type exists — not a placeholder left for later, just a value only you can supply (your chosen Cal.com handle). Embed themed via Cal.com's own `ui` config to match the site's forest-green palette (`--g1: #1b5e20`) as closely as Cal.com's theming API allows.
+  Confirmed live event type: `cal.eu/abundance/consultation` — "Free consultation," 30 min, Cal Video, synced to the business's Google Calendar. `@calcom/embed-react` defaults its embed script origin to `app.cal.com`; since this account lives on Cal.com's EU data-residency domain (`cal.eu`) instead, the embed must be pointed at `calOrigin="https://cal.eu"` explicitly (and `getCalApi({ namespace, origin: "https://cal.eu" })` for the JS API calls that configure theming) — verify this against `@calcom/embed-react`'s current docs at implementation time, since the exact prop name/behavior for a non-default origin is the one part of this integration not yet hand-tested. Embed themed via Cal.com's own `ui` config to match the site's forest-green palette (`--g1: #1b5e20`) as closely as Cal.com's theming API allows.
 
 Name/email are prefilled into the embed via the `config` prop; this is a convenience and the anti-spam mechanism (the verification gate itself), not a hard lock on Cal.com's own form — a visitor could still in principle edit the email field inside Cal.com's iframe before submitting. That's an accepted, minor gap: the goal is stopping drive-by spam/typo'd emails at the gate, not cryptographically binding the eventual Cal.com booking record to the verified address.
 
