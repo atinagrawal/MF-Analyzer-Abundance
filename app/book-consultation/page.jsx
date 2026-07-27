@@ -10,6 +10,7 @@
  */
 
 import { useState } from 'react';
+import Cal from '@calcom/embed-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
@@ -189,13 +190,23 @@ export default function BookConsultationPage() {
             )}
 
             {step === 'booking' && (
-              <div style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderTop: '4px solid var(--g1)', borderRadius: 'var(--r)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-                <div style={{ padding: 40, textAlign: 'center' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: 12 }}>✅</div>
-                  <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--g1)' }}>Email verified</div>
-                  <div style={{ fontSize: '.8rem', color: 'var(--muted)', marginTop: 6 }}>Loading your calendar…</div>
+              <>
+                <div style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderTop: '4px solid var(--g1)', borderRadius: 'var(--r)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
+                  <Cal
+                    calLink={`abundance/consultation?name=${encodeURIComponent(name.trim())}&email=${encodeURIComponent(email.trim().toLowerCase())}`}
+                    calOrigin="https://cal.eu"
+                    embedJsUrl="https://cal.eu/embed/embed.js"
+                    config={{ theme: 'light' }}
+                    style={{ width: '100%', height: '100%', minHeight: '700px' }}
+                  />
                 </div>
-              </div>
+                <p style={{ fontSize: '.72rem', color: 'var(--muted)', textAlign: 'center', marginTop: 14 }}>
+                  Having trouble loading the calendar? Call{' '}
+                  <a href="tel:+919808105923" style={{ color: 'var(--g2)', fontWeight: 700 }}>+91 98081 05923</a>
+                  {' '}or{' '}
+                  <a href="https://wa.me/919808105923" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--g2)', fontWeight: 700 }}>WhatsApp us</a>.
+                </p>
+              </>
             )}
           </div>
         </main>
