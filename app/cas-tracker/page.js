@@ -302,8 +302,11 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
 
     let remaining = target;
     const rows = [];
-    let totalProceeds = 0, totalExitLoad = 0, totalSTCG = 0, totalLTCG = 0;
-    let totalTax = 0, totalNet = 0, totalStcgTax = 0, totalLtcgTax = 0;
+    let totalProceeds = 0, totalExitLoad = 0, totalSTCG = 0, totalLTCG = 0, totalNet = 0;
+    // Pooled by tax-rate group — equity/hybrid (special rates) vs debt/other
+    // (slab rate) — losses only offset gains within the same pool. See
+    // docs/superpowers/specs/2026-07-28-capital-loss-offset-design.md.
+    let eqSTCG = 0, eqLTCG = 0, otherSTCG = 0, otherLTCG = 0;
 
     for (const fund of eligible) {
       if (remaining <= 0) break;
@@ -360,20 +363,17 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
 
       if (fundUnits < 0.0001) continue;
 
-      // Tax for this fund — kept as separate STCG/LTCG figures (not just a
-      // blended total) so the UI can show which rate produced how much tax,
-      // instead of one combined number next to two separate gain figures.
-      let fundStcgTax = 0, fundLtcgTax = 0;
-      if (cat === 'equity' || cat === 'hybrid') {
-        fundStcgTax = fundSTCG * TAX.equity.stcg;
-        const taxableLTCG = Math.max(0, fundLTCG - TAX.equity.exemption);
-        fundLtcgTax = taxableLTCG * TAX.equity.ltcg;
-      } else {
-        fundStcgTax = fundSTCG * (slabPct / 100);
-        fundLtcgTax = fundLTCG * (slabPct / 100);
-      }
-      const fundTax = fundStcgTax + fundLtcgTax;
-      const fundNet = fundProceeds - fundExitLoad - fundTax;
+      // Per-fund tax uses the same offset rule as the aggregate below (a
+      // single fund can independently have an STC loss on some lots and an
+      // LTC gain on others) — never shows a negative "tax" for a loss.
+      const rateConfig = (cat === 'equity' || cat === 'hybrid')
+        ? { stcgRate: TAX.equity.stcg, ltcgRate: TAX.equity.ltcg, exemption: TAX.equity.exemption }
+        : { stcgRate: slabPct / 100, ltcgRate: slabPct / 100, exemption: 0 };
+      const fundOffset  = applyLossOffset({ stcg: fundSTCG, ltcg: fundLTCG }, rateConfig);
+      const fundStcgTax = fundOffset.stcgTax;
+      const fundLtcgTax = fundOffset.ltcgTax;
+      const fundTax     = fundOffset.tax;
+      const fundNet     = fundProceeds - fundExitLoad - fundTax;
 
       rows.push({
         name:         fund.name,
@@ -397,14 +397,27 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
       totalExitLoad += fundExitLoad;
       totalSTCG     += fundSTCG;
       totalLTCG     += fundLTCG;
-      totalTax      += fundTax;
-      totalStcgTax  += fundStcgTax;
-      totalLtcgTax  += fundLtcgTax;
       totalNet      += fundNet;
+      if (cat === 'equity' || cat === 'hybrid') { eqSTCG += fundSTCG; eqLTCG += fundLTCG; }
+      else                                       { otherSTCG += fundSTCG; otherLTCG += fundLTCG; }
     }
 
+    // Aggregate tax comes from the POOLED raw gains (not from summing each
+    // fund's own already-offset tax) — a loss in one fund can offset a gain
+    // in a DIFFERENT fund of the same rate-group. See
+    // docs/superpowers/specs/2026-07-28-capital-loss-offset-design.md.
+    const eqOffset    = applyLossOffset({ stcg: eqSTCG, ltcg: eqLTCG }, { stcgRate: TAX.equity.stcg, ltcgRate: TAX.equity.ltcg, exemption: TAX.equity.exemption });
+    const otherOffset = applyLossOffset({ stcg: otherSTCG, ltcg: otherLTCG }, { stcgRate: slabPct / 100, ltcgRate: slabPct / 100, exemption: 0 });
+    const totalStcgTax = eqOffset.stcgTax + otherOffset.stcgTax;
+    const totalLtcgTax = eqOffset.ltcgTax + otherOffset.ltcgTax;
+    const totalTax      = totalStcgTax + totalLtcgTax;
+    const lossNotes = [
+      (eqOffset.offsetIntoLTCG || eqOffset.stcgLossCarryForward || eqOffset.ltcgLossCarryForward) ? { poolLabel: 'Equity/Hybrid', ...eqOffset } : null,
+      (otherOffset.offsetIntoLTCG || otherOffset.stcgLossCarryForward || otherOffset.ltcgLossCarryForward) ? { poolLabel: 'Debt/Other', ...otherOffset } : null,
+    ].filter(Boolean);
+
     const shortfall = remaining > 0.5; // can't meet target
-    return { rows, totalProceeds, totalExitLoad, totalSTCG, totalLTCG, totalTax, totalStcgTax, totalLtcgTax, totalNet, shortfall };
+    return { rows, totalProceeds, totalExitLoad, totalSTCG, totalLTCG, totalTax, totalStcgTax, totalLtcgTax, totalNet, lossNotes, shortfall };
   }, [target, strategy, slabPct, skipLocked, holdings, today, exitLoadOverrides]);
 
   // 'selected' mode: each hand-picked fund redeems its own amount
@@ -415,8 +428,8 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
     if (!selectedHoldings.length) return null;
 
     const rows = [];
-    let totalProceeds = 0, totalExitLoad = 0, totalSTCG = 0, totalLTCG = 0;
-    let totalTax = 0, totalNet = 0, totalStcgTax = 0, totalLtcgTax = 0;
+    let totalProceeds = 0, totalExitLoad = 0, totalSTCG = 0, totalLTCG = 0, totalNet = 0;
+    let eqSTCG = 0, eqLTCG = 0, otherSTCG = 0, otherLTCG = 0;
 
     for (const fund of selectedHoldings) {
       const lots = fund.buyLots || [];
@@ -485,19 +498,14 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
         lotBreakdown.push({ lot, take, saleVal, exitLoad, isLTCG, gain, heldDays: lot.synthetic ? null : Math.floor(heldMs / (24*3600*1000)) });
       }
 
-      // Kept as separate STCG/LTCG tax figures (not just a blended total) so
-      // the UI can pair each gain with its own tax rate, same as `plan` above.
-      let fundStcgTax = 0, fundLtcgTax = 0;
-      if (cat === 'equity' || cat === 'hybrid') {
-        fundStcgTax = fundSTCG * TAX.equity.stcg;
-        const taxableLTCG = Math.max(0, fundLTCG - TAX.equity.exemption);
-        fundLtcgTax = taxableLTCG * TAX.equity.ltcg;
-      } else {
-        fundStcgTax = fundSTCG * (slabPct / 100);
-        fundLtcgTax = fundLTCG * (slabPct / 100);
-      }
-      const fundTax = fundStcgTax + fundLtcgTax;
-      const fundNet = fundProceeds - fundExitLoad - fundTax;
+      const rateConfig = (cat === 'equity' || cat === 'hybrid')
+        ? { stcgRate: TAX.equity.stcg, ltcgRate: TAX.equity.ltcg, exemption: TAX.equity.exemption }
+        : { stcgRate: slabPct / 100, ltcgRate: slabPct / 100, exemption: 0 };
+      const fundOffset  = applyLossOffset({ stcg: fundSTCG, ltcg: fundLTCG }, rateConfig);
+      const fundStcgTax = fundOffset.stcgTax;
+      const fundLtcgTax = fundOffset.ltcgTax;
+      const fundTax     = fundOffset.tax;
+      const fundNet     = fundProceeds - fundExitLoad - fundTax;
 
       rows.push({
         name: fund.name, category: cat, isELSS, units: fundUnits, maxRedeemable,
@@ -511,13 +519,22 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
       totalExitLoad += fundExitLoad;
       totalSTCG     += fundSTCG;
       totalLTCG     += fundLTCG;
-      totalTax      += fundTax;
-      totalStcgTax  += fundStcgTax;
-      totalLtcgTax  += fundLtcgTax;
       totalNet      += fundNet;
+      if (cat === 'equity' || cat === 'hybrid') { eqSTCG += fundSTCG; eqLTCG += fundLTCG; }
+      else                                       { otherSTCG += fundSTCG; otherLTCG += fundLTCG; }
     }
 
-    return { rows, totalProceeds, totalExitLoad, totalSTCG, totalLTCG, totalTax, totalStcgTax, totalLtcgTax, totalNet, shortfall: false };
+    const eqOffset    = applyLossOffset({ stcg: eqSTCG, ltcg: eqLTCG }, { stcgRate: TAX.equity.stcg, ltcgRate: TAX.equity.ltcg, exemption: TAX.equity.exemption });
+    const otherOffset = applyLossOffset({ stcg: otherSTCG, ltcg: otherLTCG }, { stcgRate: slabPct / 100, ltcgRate: slabPct / 100, exemption: 0 });
+    const totalStcgTax = eqOffset.stcgTax + otherOffset.stcgTax;
+    const totalLtcgTax = eqOffset.ltcgTax + otherOffset.ltcgTax;
+    const totalTax      = totalStcgTax + totalLtcgTax;
+    const lossNotes = [
+      (eqOffset.offsetIntoLTCG || eqOffset.stcgLossCarryForward || eqOffset.ltcgLossCarryForward) ? { poolLabel: 'Equity/Hybrid', ...eqOffset } : null,
+      (otherOffset.offsetIntoLTCG || otherOffset.stcgLossCarryForward || otherOffset.ltcgLossCarryForward) ? { poolLabel: 'Debt/Other', ...otherOffset } : null,
+    ].filter(Boolean);
+
+    return { rows, totalProceeds, totalExitLoad, totalSTCG, totalLTCG, totalTax, totalStcgTax, totalLtcgTax, totalNet, lossNotes, shortfall: false };
   }, [selectedHoldings, skipLocked, slabPct, exitLoadOverrides, selectedRedeemSpec, today]);
 
   const activePlan = mode === 'target' ? plan : planSelected;
