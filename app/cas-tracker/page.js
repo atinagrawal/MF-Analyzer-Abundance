@@ -150,6 +150,16 @@ function calculateFifoCost(scheme, currentNav) {
 // name-regex heuristic, used only when no BSE record exists for the ISIN) —
 // so the UI never implies name-guessed and BSE-confirmed numbers carry the
 // same confidence.
+function inferExitLoadCategory(fundName) {
+  const n = (fundName || '').toUpperCase();
+  if (/LIQUID|OVERNIGHT|MONEY.?MARKET/.test(n)) return 'liquid';
+  if (/ULTRA.?SHORT|LOW.?DURA/.test(n)) return 'ultrashort';
+  if (/GILT|BANKING.?PSU|CORP.?BOND|CREDIT.?RISK|FMP|FIXED.?MATURITY|ARBITRAGE|CONSERVATIVE.?HYBRID/.test(n)) return 'debt';
+  if (/SHORT.?DURA|MEDIUM.?DURA|LONG.?DURA/.test(n)) return 'debt';
+  if (/INDEX|ETF|NIFTY|SENSEX/.test(n)) return 'index'; // many index funds have 0%
+  return 'equity_hybrid'; // default — equity and most hybrid
+}
+
 function getExitLoadInfo(fundName, isin) {
   const masterEntry = isin && isinSchemeMaster[isin];
   if (masterEntry) {
