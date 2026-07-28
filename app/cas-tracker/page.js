@@ -99,13 +99,27 @@ function calculateFifoCost(scheme, currentNav) {
     }
   });
 
-  let finalInvested = fifoInvested;
-  if (directCost > 0 && (fifoInvested === 0 || fifoInvested < directCost * 0.5)) {
-    finalInvested = directCost;
+  // PARTIAL/TRUNCATED CAS: if sum of buy lots is less than current unit balance,
+  // the difference represents opening balance / older holdings before the CAS start date.
+  // Prepend as oldest synthetic lot (epoch date = LTCG, 0% exit load safe default).
+  const totalBuyUnits = buyLots.reduce((sum, l) => sum + l.units, 0);
+  if (units > totalBuyUnits + 0.001) {
+    const unaccountedUnits = units - totalBuyUnits;
+    const casCost = parseFloat(scheme.valuation?.cost || scheme.cost || 0);
+    const unaccountedCost = Math.max(0, casCost - fifoInvested);
+    const avgNav = unaccountedUnits > 0 ? (unaccountedCost / unaccountedUnits) : currentNav;
+
+    buyLots.unshift({
+      units: unaccountedUnits,
+      amount: unaccountedCost,
+      nav: avgNav,
+      date: new Date(0),  // epoch = old opening balance, safe LTCG & 0% exit load
+      synthetic: true,    // flag for UI notice
+    });
+    fifoInvested += unaccountedCost;
   }
 
-  // SUMMARY CAS: no transaction history → synthesise a single lot from CAS cost basis.
-  // Date set to epoch (Jan 1 1970) → always classified as LTCG, which is a safe default.
+  // SUMMARY CAS: no transaction history at all → single synthetic lot from CAS cost basis
   if (buyLots.length === 0 && units > 0) {
     const casCost = parseFloat(scheme.valuation?.cost || 0);
     if (casCost > 0) {
@@ -117,6 +131,11 @@ function calculateFifoCost(scheme, currentNav) {
         synthetic: true,    // flag for UI notice
       });
     }
+  }
+
+  let finalInvested = fifoInvested;
+  if (directCost > 0 && (fifoInvested === 0 || fifoInvested < directCost * 0.5)) {
+    finalInvested = directCost;
   }
 
   return {
