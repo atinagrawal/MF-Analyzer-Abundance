@@ -10,6 +10,21 @@ import ProviderAvatar from '@/components/ProviderAvatar';
 import { getSIFLogo, getMFLogoFromSchemeName } from '@/lib/providerLogos';
 import isinSchemeMaster from '@/data/isin-scheme-master.json';
 
+// Precomputed once: normalized fund name → scheme-master entry, used as a
+// fallback when no ISIN is available (e.g. manual holdings). Avoids an
+// O(26k) linear scan on every getExitLoadInfo call, which would otherwise
+// re-run per lot, per render, per override keystroke.
+const nameToSchemeEntry = (() => {
+  const map = {};
+  for (const entry of Object.values(isinSchemeMaster)) {
+    if (entry.name) {
+      const norm = entry.name.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (norm && !map[norm]) map[norm] = entry; // first-wins on rare name collisions
+    }
+  }
+  return map;
+})();
+
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const CACHE_PREFIX = 'cas_parse_v2_';
 
@@ -107,7 +122,13 @@ function calculateFifoCost(scheme, currentNav) {
     const unaccountedUnits = units - totalBuyUnits;
     const casCost = parseFloat(scheme.valuation?.cost || scheme.cost || 0);
     const unaccountedCost = Math.max(0, casCost - fifoInvested);
-    const avgNav = unaccountedUnits > 0 ? (unaccountedCost / unaccountedUnits) : currentNav;
+    // If the CAS didn't provide a cost basis at all (unaccountedCost is 0),
+    // default this synthetic lot's NAV to the CURRENT NAV — i.e. assume the
+    // old, unaccounted-for position broke even — rather than implicitly
+    // assuming its entire current value is a gain (nav=0), which would
+    // overstate LTCG and therefore tax for exactly the truncated-CAS case
+    // this lot exists to handle.
+    const avgNav = unaccountedCost > 0 ? (unaccountedCost / unaccountedUnits) : currentNav;
 
     buyLots.unshift({
       units: unaccountedUnits,
@@ -117,20 +138,6 @@ function calculateFifoCost(scheme, currentNav) {
       synthetic: true,    // flag for UI notice
     });
     fifoInvested += unaccountedCost;
-  }
-
-  // SUMMARY CAS: no transaction history at all → single synthetic lot from CAS cost basis
-  if (buyLots.length === 0 && units > 0) {
-    const casCost = parseFloat(scheme.valuation?.cost || 0);
-    if (casCost > 0) {
-      buyLots.push({
-        units,
-        amount: casCost,
-        nav: casCost / units,
-        date: new Date(0),  // epoch = very old, always LTCG
-        synthetic: true,    // flag for UI notice
-      });
-    }
   }
 
   let finalInvested = fifoInvested;
@@ -179,19 +186,20 @@ function inferExitLoadCategory(fundName) {
   return 'equity_hybrid'; // default — equity and most hybrid
 }
 
+// Formats a tier's day-count as a short period label — months for anything
+// under a year (so a 180-day tier reads "<6mo", not the misleading "<0y"
+// Math.round(180/365) would otherwise produce), years above that.
+function formatTierPeriod(days) {
+  if (days < 365) return `${Math.round(days / 30.44)}mo`;
+  return `${Math.round(days / 365)}y`;
+}
+
 function getExitLoadInfo(fundName, isin) {
   let masterEntry = isin && isinSchemeMaster[isin];
   if (!masterEntry && fundName) {
     // Name fallback if ISIN is not passed or empty
     const norm = (fundName || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (norm) {
-      for (const entry of Object.values(isinSchemeMaster)) {
-        if (entry.name && entry.name.toUpperCase().replace(/[^A-Z0-9]/g, '') === norm) {
-          masterEntry = entry;
-          break;
-        }
-      }
-    }
+    if (norm) masterEntry = nameToSchemeEntry[norm];
   }
 
   if (masterEntry) {
@@ -202,9 +210,14 @@ function getExitLoadInfo(fundName, isin) {
       return { isLocked: false, hasExitLoad: false, schedule: [], label: 'BSE: 0% (No Load)' };
     }
     if (masterEntry.tiers && masterEntry.tiers.length > 0) {
-      const tierStr = masterEntry.tiers.map(t => `${(t.rate * 100).toFixed(0)}% (<${Math.round(t.days / 365)}y)`).join(' / ');
+      // Sort ascending by days — calcLotExitLoad's tier loop assumes this
+      // order (first tier whose `days` exceeds the holding period wins), so
+      // enforce it here regardless of how upstream data happens to be
+      // ordered, rather than trusting every data source to already be sorted.
+      const sortedTiers = [...masterEntry.tiers].sort((a, b) => a.days - b.days);
+      const tierStr = sortedTiers.map(t => `${(t.rate * 100).toFixed(0)}% (<${formatTierPeriod(t.days)})`).join(' / ');
       const label = masterEntry.freePercent ? `BSE: 0% (${masterEntry.freePercent}% free), ${tierStr}` : `BSE: ${tierStr}`;
-      return { isLocked: false, hasExitLoad: true, schedule: masterEntry.tiers, freePercent: masterEntry.freePercent || 0, label };
+      return { isLocked: false, hasExitLoad: true, schedule: sortedTiers, freePercent: masterEntry.freePercent || 0, label };
     }
     return { isLocked: false, hasExitLoad: true, schedule: [{ rate: 0.01, days: 365 }], label: 'BSE: load confirmed (~1% <365d)' };
   }
@@ -226,11 +239,24 @@ function getExitLoadInfo(fundName, isin) {
   }
 }
 
+// Shared by both PortfolioRedemptionPlanner code paths (target-amount mode's
+// `eligible` list and selected-funds mode's row builder) so the "override if
+// present, else inferred BSE/name-guess rate" logic can't drift between them
+// (a prior version of one path omitted `fund.isin`, silently skipping the
+// ISIN-based BSE lookup for that path only).
+function getEffectiveExitLoadRate(fund, exitLoadOverrides) {
+  return exitLoadOverrides[fund.name] != null
+    ? exitLoadOverrides[fund.name]
+    : getExitLoadRate(fund.name, fund.isin)[0]?.rate ?? 0;
+}
+
 function getExitLoadRate(fundName, isin) {
   return getExitLoadInfo(fundName, isin).schedule;
 }
 
-// Calculates estimated bank credit calendar date skipping weekends
+// Calculates estimated bank credit calendar date skipping weekends.
+// Does NOT account for market/bank holidays — "Est." in the UI label
+// reflects that this is an approximation, not an exact settlement date.
 function getEstCreditDate(settlementStr) {
   const days = parseInt((settlementStr || 'T+2').replace(/[^0-9]/g, ''), 10) || 2;
   let d = new Date();
@@ -271,23 +297,35 @@ function calcLotExitLoad({
   const heldDays = Math.floor((redeemDate - buyDate) / (24 * 3600 * 1000));
   const info = getExitLoadInfo(fundName, isin);
 
+  // A user-entered override takes precedence over the auto-detected
+  // hasExitLoad classification — it exists specifically to correct funds
+  // the auto-detection got wrong (e.g. a fund shown as "0% No Load" that
+  // actually charges one). ELSS lock-in is still respected since that's a
+  // legal restriction, not a rate guess, and this bypasses the free-quota
+  // exemption logic below exactly as the pre-override code path already did.
+  if (overrideRate != null) {
+    if (info.isLocked) {
+      return { exitLoadAmt: 0, effectiveRate: 0 };
+    }
+    const maxDays = (info.schedule && info.schedule.length > 0)
+      ? Math.max(...info.schedule.map(s => s.days))
+      : 365;
+    const rawRate = heldDays < maxDays ? overrideRate : 0;
+    if (rawRate === 0) return { exitLoadAmt: 0, effectiveRate: 0 };
+    const exitLoadAmt = take * currentNav * rawRate;
+    return { exitLoadAmt, effectiveRate: rawRate };
+  }
+
   if (!info.hasExitLoad || info.isLocked) {
     return { exitLoadAmt: 0, effectiveRate: 0 };
   }
 
-  // Determine raw rate for this specific lot's holding period
+  // Determine raw rate for this specific lot's holding period (auto-detected path)
   let rawRate = 0;
-  if (overrideRate != null) {
-    const maxDays = (info.schedule && info.schedule.length > 0)
-      ? Math.max(...info.schedule.map(s => s.days))
-      : 365;
-    rawRate = heldDays < maxDays ? overrideRate : 0;
-  } else {
-    for (const { rate, days } of info.schedule) {
-      if (heldDays < days) {
-        rawRate = rate;
-        break;
-      }
+  for (const { rate, days } of info.schedule) {
+    if (heldDays < days) {
+      rawRate = rate;
+      break;
     }
   }
 
@@ -310,7 +348,8 @@ function calcLotExitLoad({
       const freeUnits = freeQuotaUnits - prevRedeemed;
       const taxableUnits = take - freeUnits;
       const exitLoadAmt = taxableUnits * currentNav * rawRate;
-      const effectiveRate = exitLoadAmt / (take * currentNav);
+      const denom = take * currentNav;
+      const effectiveRate = denom > 0 ? exitLoadAmt / denom : 0;
       return { exitLoadAmt, effectiveRate };
     }
   }
@@ -384,9 +423,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
       .map(h => ({
         ...h,
         category:     inferCategory(h.name),
-        exitLoadRate: exitLoadOverrides[h.name] != null
-          ? exitLoadOverrides[h.name]
-          : getExitLoadRate(h.name)[0]?.rate ?? 0, // inferred default
+        exitLoadRate: getEffectiveExitLoadRate(h, exitLoadOverrides), // inferred default (or override)
         score: fundScore(h, strategy, today),
       }))
       .sort((a, b) => a.score - b.score);
@@ -618,7 +655,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
       rows.push({
         name: fund.name, isin: fund.isin, category: cat, isELSS, units: fundUnits, maxRedeemable,
         proceeds: fundProceeds, exitLoad: fundExitLoad,
-        exitLoadRate: exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : getExitLoadRate(fund.name, fund.isin)[0]?.rate ?? 0,
+        exitLoadRate: getEffectiveExitLoadRate(fund, exitLoadOverrides),
         stcg: fundSTCG, ltcg: fundLTCG, stcgTax: fundStcgTax, ltcgTax: fundLtcgTax, tax: fundTax, net: fundNet,
         lotBreakdown, hasSynthetic: lots.some(l => l.synthetic), locked: false,
       });
