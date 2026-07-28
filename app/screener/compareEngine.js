@@ -134,7 +134,7 @@ export function sipWealth(series, end, years, monthly = 10000) {
     const y = cursor.getUTCFullYear(), m = cursor.getUTCMonth();
     const daysInMonth = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
     const t = Date.UTC(y, m, Math.min(day, daysInMonth));
-    if (t >= startMs && t <= end) dates.push(t);
+    if (t > startMs && t <= end) dates.push(t);
     if (t > end) break;
     cursor = new Date(Date.UTC(y, m + 1, 1));
   }
