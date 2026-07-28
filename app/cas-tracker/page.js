@@ -1030,7 +1030,7 @@ function describeLossOffset(note) {
   const lines = [];
   const label = note.poolLabel ? ` (${note.poolLabel})` : '';
 
-  if (note.offsetIntoLTCG > 0) {
+  if (note.offsetIntoLTCG > 0 && note.taxSaved > 0) {
     lines.push(`Your ${rupee(note.offsetIntoLTCG)} short-term loss${label} offset part of your long-term gain, saving you ≈${rupee(note.taxSaved)} in tax.`);
   }
   if (note.stcgLossCarryForward > 0) {
