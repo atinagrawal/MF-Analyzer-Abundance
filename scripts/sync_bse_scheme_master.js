@@ -156,7 +156,11 @@ function parseReportStream(content, isinMap) {
     if (isin && isin.startsWith('INF')) {
       const hasExitLoad = exitFlag === 'Y';
       const isLocked = lockFlag === 'Y';
-      const rta = rtaRaw ? (/KARVY|KFIN/i.test(rtaRaw) ? 'KFINTECH' : 'CAMS') : null;
+      const rta = rtaRaw
+        ? (/KARVY|KFIN/i.test(rtaRaw) ? 'KFINTECH'
+            : /CAMS/i.test(rtaRaw) ? 'CAMS'
+            : rtaRaw.trim() || null)
+        : null;
       const settlement = formatSettlement(settleRaw);
       const purchaseCutoff = formatTime12h(purCutoffRaw);
       const redeemCutoff = formatTime12h(redCutoffRaw);
@@ -181,6 +185,13 @@ function parseReportStream(content, isinMap) {
 
         if (KNOWN_TIERED_SCHEMES[isin]) {
           Object.assign(entry, KNOWN_TIERED_SCHEMES[isin]);
+          // Defense-in-depth: sort ascending by days here too, mirroring the
+          // runtime consumer-side sort in cas-tracker's getExitLoadInfo — so
+          // the written JSON is guaranteed-correct even if a future edit to
+          // KNOWN_TIERED_SCHEMES lists tiers out of order.
+          if (entry.tiers) {
+            entry.tiers = [...entry.tiers].sort((a, b) => a.days - b.days);
+          }
         }
         isinMap.set(isin, entry);
       } else {
