@@ -13,7 +13,6 @@
 import { xirr } from '@/lib/xirr';
 
 const DAY_MS = 86400000;
-const YEAR_MS = 365 * DAY_MS;
 
 // ── NAV series parsing ──────────────────────────────────────────────────────
 
@@ -60,7 +59,7 @@ export async function fetchNavSeries(fund) {
     }
     if (fund.type === 'sif') {
       const to = new Date();
-      const from = new Date(to.getTime() - 365 * DAY_MS);
+      const from = new Date(to.getTime() - 5 * 365 * DAY_MS); // 5 years — the longest period WEALTH_STOPS ever requests; harmless to ask for more than a young SIF actually has
       const toStr = to.toISOString().slice(0, 10);
       const fromStr = from.toISOString().slice(0, 10);
       const res = await fetch(`/api/sif-history?sd_id=${encodeURIComponent(fund.navFetchKey)}&from=${fromStr}&to=${toStr}`);
@@ -168,7 +167,7 @@ export function computeWealthSimulation(fund, navSeries, asOfMs = Date.now()) {
   return WEALTH_STOPS.map(({ key, label, years }) => {
     const cagrField = `ret_${key}`;
     const lumpsum = lumpsumWealth(fund[cagrField], years);
-    const sip = navSeries ? sipWealth(navSeries, asOfMs, years) : null;
+    const sip = sipWealth(navSeries, asOfMs, years);
     return { label, years, lumpsum, sip };
   });
 }
