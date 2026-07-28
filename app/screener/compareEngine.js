@@ -143,8 +143,9 @@ export function sipWealth(series, end, years, monthly = 10000) {
   let units = 0, invested = 0;
   const flows = [];
   for (const t of dates) {
+    if (t < series[0].t) continue; // fund didn't exist yet this far back — skip, don't fabricate
     const px = seriesForward(series, t);
-    if (!px) continue; // fund didn't exist yet this far back — skip, don't fabricate
+    if (!px) continue;
     units += monthly / px.nav;
     invested += monthly;
     flows.push({ t: px.t, amt: -monthly });
