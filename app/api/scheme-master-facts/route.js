@@ -28,7 +28,9 @@ function pickFacts(entry) {
   return out;
 }
 
-export async function GET() {
+// Built once at module load (mirrors cas-tracker's nameToSchemeEntry) so
+// even a cold/uncached hit is an O(1) return, not a fresh 26k-entry scan.
+const { byIsin, byNormName } = (() => {
   const byIsin = {};
   const byNormName = {};
   for (const [isin, entry] of Object.entries(isinSchemeMaster)) {
@@ -39,6 +41,10 @@ export async function GET() {
       if (norm && !byNormName[norm]) byNormName[norm] = facts;
     }
   }
+  return { byIsin, byNormName };
+})();
+
+export async function GET() {
   return Response.json(
     { byIsin, byNormName },
     { headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' } }
