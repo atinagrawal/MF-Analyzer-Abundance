@@ -23,7 +23,18 @@ const path = require('path');
 // verified against a real BSE SCHEMEMASTER export. If BSE ever reorders or
 // adds columns, this fires a loud warning instead of silently reading the
 // wrong field into isin/exitFlag/lockFlag.
-const EXPECTED_HEADERS = { 4: 'isin', 37: 'exit load flag', 39: 'lock-in period flag' };
+const EXPECTED_HEADERS = {
+  4: 'isin',
+  10: 'purchase amount minimum',
+  22: 'rta agent code',
+  24: 'purchase cutoff time',
+  25: 'redemption cutoff time',
+  26: 'settlement type',
+  37: 'exit load flag',
+  39: 'lock-in period flag',
+  40: 'sip flag',
+  42: 'swp flag'
+};
 
 function validateHeader(content, reportLabel) {
   const headerLine = (content.split('\n')[0] || '');
@@ -114,13 +125,13 @@ function formatTime12h(timeStr) {
 }
 
 function formatSettlement(settleStr) {
-  if (!settleStr) return 'T+2';
+  if (!settleStr) return '';
   const s = settleStr.trim().toUpperCase();
   if (s === 'T1' || s === 'L1') return 'T+1';
   if (s === 'T2') return 'T+2';
   if (s === 'T3') return 'T+3';
   if (s === 'T4') return 'T+4';
-  return s.startsWith('T') ? s.replace('T', 'T+') : 'T+2';
+  return s.startsWith('T') ? s.replace('T', 'T+') : s;
 }
 
 function parseReportStream(content, isinMap) {
@@ -134,7 +145,8 @@ function parseReportStream(content, isinMap) {
     const name = cols[8];
     const minPurRaw = parseFloat(cols[10]);
     const rtaRaw = cols[22];
-    const cutoffRaw = cols[24] || cols[25];
+    const purCutoffRaw = cols[24];
+    const redCutoffRaw = cols[25];
     const settleRaw = cols[26];
     const exitFlag = cols[37];
     const lockFlag = cols[39];
@@ -144,10 +156,11 @@ function parseReportStream(content, isinMap) {
     if (isin && isin.startsWith('INF')) {
       const hasExitLoad = exitFlag === 'Y';
       const isLocked = lockFlag === 'Y';
-      const rta = /KARVY|KFIN/i.test(rtaRaw || '') ? 'KFINTECH' : 'CAMS';
+      const rta = rtaRaw ? (/KARVY|KFIN/i.test(rtaRaw) ? 'KFINTECH' : 'CAMS') : null;
       const settlement = formatSettlement(settleRaw);
-      const cutoff = formatTime12h(cutoffRaw);
-      const minPurchase = !isNaN(minPurRaw) && minPurRaw > 0 ? Math.round(minPurRaw) : 500;
+      const purchaseCutoff = formatTime12h(purCutoffRaw);
+      const redeemCutoff = formatTime12h(redCutoffRaw);
+      const minPurchase = !isNaN(minPurRaw) && minPurRaw > 0 ? Math.round(minPurRaw) : null;
       const sip = sipFlag === 'Y';
       const swp = swpFlag === 'Y';
 
@@ -157,13 +170,15 @@ function parseReportStream(content, isinMap) {
           type,
           hasExitLoad,
           isLocked,
-          rta,
-          settlement,
-          cutoff,
-          minPurchase,
-          sip,
-          swp,
         };
+        if (rta) entry.rta = rta;
+        if (settlement) entry.settlement = settlement;
+        if (purchaseCutoff) entry.purchaseCutoff = purchaseCutoff;
+        if (redeemCutoff) entry.redeemCutoff = redeemCutoff;
+        if (minPurchase != null) entry.minPurchase = minPurchase;
+        if (sip) entry.sip = true;
+        if (swp) entry.swp = true;
+
         if (KNOWN_TIERED_SCHEMES[isin]) {
           Object.assign(entry, KNOWN_TIERED_SCHEMES[isin]);
         }
@@ -172,6 +187,13 @@ function parseReportStream(content, isinMap) {
         const existing = isinMap.get(isin);
         if (hasExitLoad) existing.hasExitLoad = true;
         if (isLocked) existing.isLocked = true;
+        if (!existing.rta && rta) existing.rta = rta;
+        if (!existing.settlement && settlement) existing.settlement = settlement;
+        if (!existing.purchaseCutoff && purchaseCutoff) existing.purchaseCutoff = purchaseCutoff;
+        if (!existing.redeemCutoff && redeemCutoff) existing.redeemCutoff = redeemCutoff;
+        if (!existing.minPurchase && minPurchase != null) existing.minPurchase = minPurchase;
+        if (sip) existing.sip = true;
+        if (swp) existing.swp = true;
       }
     }
   }
