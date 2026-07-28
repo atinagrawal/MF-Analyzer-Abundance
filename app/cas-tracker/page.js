@@ -211,24 +211,76 @@ function getExitLoadRate(fundName, isin) {
   return getExitLoadInfo(fundName, isin).schedule;
 }
 
-// Compute actual exit load rate for a specific lot
-function calcExitLoad(lot, redeemDate, fundName, overrideRate, isin) {
-  if (overrideRate != null) {
-    if (lot.synthetic) return 0;
-    const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
-    const heldDays = Math.floor((redeemDate - buyDate) / (24 * 3600 * 1000));
-    return heldDays < 365 ? overrideRate : 0;
-  }
-  if (lot.synthetic) return 0; // unknown purchase date
+// Compute exact exit load for a consumed portion (`take` units) of a transaction lot,
+// taking into account:
+// 1. Individual purchase transaction date (heldDays = redeemDate - buyDate)
+// 2. Exact tier schedule (e.g., 2% < 365d, 1% < 730d, 0% > 730d)
+// 3. Penalty-free exemption quota (e.g., 10% of total units free of exit load)
+// 4. User manual override rate per fund card
+function calcLotExitLoad({
+  lot,
+  take,
+  currentNav,
+  redeemDate,
+  fundName,
+  isin,
+  overrideRate,
+  totalFundUnits,
+  cumUnitsRedeemed
+}) {
+  if (lot.synthetic || take <= 0) return { exitLoadAmt: 0, effectiveRate: 0 };
+
   const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
   const heldDays = Math.floor((redeemDate - buyDate) / (24 * 3600 * 1000));
   const info = getExitLoadInfo(fundName, isin);
-  if (!info.hasExitLoad || info.isLocked) return 0;
 
-  for (const { rate, days } of info.schedule) {
-    if (heldDays < days) return rate;
+  if (!info.hasExitLoad || info.isLocked) {
+    return { exitLoadAmt: 0, effectiveRate: 0 };
   }
-  return 0;
+
+  // Determine raw rate for this specific lot's holding period
+  let rawRate = 0;
+  if (overrideRate != null) {
+    const maxDays = (info.schedule && info.schedule.length > 0)
+      ? Math.max(...info.schedule.map(s => s.days))
+      : 365;
+    rawRate = heldDays < maxDays ? overrideRate : 0;
+  } else {
+    for (const { rate, days } of info.schedule) {
+      if (heldDays < days) {
+        rawRate = rate;
+        break;
+      }
+    }
+  }
+
+  if (rawRate === 0) {
+    return { exitLoadAmt: 0, effectiveRate: 0 };
+  }
+
+  // Handle penalty-free unit exemption quota (e.g. 10% of total fund units)
+  const freePercent = info.freePercent || 0;
+  if (freePercent > 0 && totalFundUnits > 0 && overrideRate == null) {
+    const freeQuotaUnits = totalFundUnits * (freePercent / 100);
+    const prevRedeemed = cumUnitsRedeemed || 0;
+    const newRedeemed = prevRedeemed + take;
+
+    if (newRedeemed <= freeQuotaUnits) {
+      // Entire take portion is within penalty-free quota!
+      return { exitLoadAmt: 0, effectiveRate: 0 };
+    } else if (prevRedeemed < freeQuotaUnits) {
+      // Partial free: portion up to freeQuotaUnits is 0%, rest incurs rawRate
+      const freeUnits = freeQuotaUnits - prevRedeemed;
+      const taxableUnits = take - freeUnits;
+      const exitLoadAmt = taxableUnits * currentNav * rawRate;
+      const effectiveRate = exitLoadAmt / (take * currentNav);
+      return { exitLoadAmt, effectiveRate };
+    }
+  }
+
+  // All `take` units incur rawRate
+  const exitLoadAmt = take * currentNav * rawRate;
+  return { exitLoadAmt, effectiveRate: rawRate };
 }
 
 // ── Portfolio-level redemption scoring (for sort order) ──────────────────────
@@ -340,10 +392,18 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
         if (take < 0.0001) continue;
 
         const saleVal   = take * currentNav;
-        const elRate    = calcExitLoad(lot, today, fund.name,
-                            exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : undefined,
-                            fund.isin);
-        const exitLoad  = elRate * saleVal;
+        const totalFundUnits = fund.units || lots.reduce((s, l) => s + l.units, 0);
+        const { exitLoadAmt: exitLoad, effectiveRate: elRate } = calcLotExitLoad({
+          lot,
+          take,
+          currentNav,
+          redeemDate: today,
+          fundName: fund.name,
+          isin: fund.isin,
+          overrideRate: exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : undefined,
+          totalFundUnits,
+          cumUnitsRedeemed: fundUnits
+        });
         const netSale   = saleVal - exitLoad;
         const heldMs    = lot.synthetic ? Infinity : (today - buyDate);
         const isLTCG    = heldMs >= ltcgMs;
@@ -485,10 +545,18 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
 
         const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
         const saleVal = take * currentNav;
-        const elRate  = calcExitLoad(lot, today, fund.name,
-                          exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : undefined,
-                          fund.isin);
-        const exitLoad = elRate * saleVal;
+        const totalFundUnits = fund.units || lots.reduce((s, l) => s + l.units, 0);
+        const { exitLoadAmt: exitLoad, effectiveRate: elRate } = calcLotExitLoad({
+          lot,
+          take,
+          currentNav,
+          redeemDate: today,
+          fundName: fund.name,
+          isin: fund.isin,
+          overrideRate: exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : undefined,
+          totalFundUnits,
+          cumUnitsRedeemed: fundUnits
+        });
         const heldMs   = lot.synthetic ? Infinity : (today - buyDate);
         const isLTCG   = heldMs >= ltcgMs;
         const gain     = take * (currentNav - lot.nav);
