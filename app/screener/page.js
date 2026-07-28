@@ -5,7 +5,20 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
-import isinSchemeMaster from '@/data/isin-scheme-master.json';
+
+// Slim, server-fetched projection of data/isin-scheme-master.json (see
+// app/api/scheme-master-facts/route.js) — fetched once and cached across
+// every Detail drawer mount, rather than importing the full 5.6MB file into
+// this page's client bundle.
+let schemeMasterFactsPromise = null;
+function getSchemeMasterFacts() {
+  if (!schemeMasterFactsPromise) {
+    schemeMasterFactsPromise = fetch('/api/scheme-master-facts')
+      .then(r => r.ok ? r.json() : { byIsin: {}, byNormName: {} })
+      .catch(() => ({ byIsin: {}, byNormName: {} }));
+  }
+  return schemeMasterFactsPromise;
+}
 
 /* ---------- SIF helpers ---------- */
 const SIF_STRATEGY_LABELS = {
@@ -558,6 +571,12 @@ export default function ScreenerPage() {
 /* ---------- fund detail drawer (fetches NAV sparkline on open) ---------- */
 function Detail({ f, stress, onClose }) {
   const [nav, setNav] = useState(null);
+  const [schemeFacts, setSchemeFacts] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    getSchemeMasterFacts().then(facts => { if (alive) setSchemeFacts(facts); });
+    return () => { alive = false; };
+  }, []);
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -698,10 +717,10 @@ function Detail({ f, stress, onClose }) {
         </div>
 
         {(() => {
-          const masterRec = (f.isin && isinSchemeMaster[f.isin]) || (() => {
+          if (!schemeFacts) return null;
+          const masterRec = (f.isin && schemeFacts.byIsin[f.isin]) || (() => {
             const norm = (f.name || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-            if (!norm) return null;
-            return Object.values(isinSchemeMaster).find(e => e.name && e.name.toUpperCase().replace(/[^A-Z0-9]/g, '') === norm) || null;
+            return norm ? schemeFacts.byNormName[norm] : null;
           })();
 
           if (!masterRec) return null;
