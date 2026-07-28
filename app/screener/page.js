@@ -150,6 +150,18 @@ export default function ScreenerPage() {
   const [page, setPage] = useState(0);
   const [cols, setCols] = useState(DEFAULT_COLS);
 
+  // On wide desktop viewports, default to showing every column (all time
+  // frames incl. Inception, not just the curated 5) since there's room for
+  // more data at a glance. Runs once on mount, client-side only (avoids an
+  // SSR/hydration mismatch from reading window.innerWidth during render);
+  // no resize listener, so it never overrides a user's own column picks
+  // made after the page loads.
+  useEffect(() => {
+    if (window.innerWidth >= 1024) {
+      setCols(METRICS.map((m) => m.key));
+    }
+  }, []);
+
   // SIF state
   const [sifData, setSifData] = useState(null);
   const [sifLoading, setSifLoading] = useState(false);
