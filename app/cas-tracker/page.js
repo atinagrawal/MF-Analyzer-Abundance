@@ -161,31 +161,33 @@ function inferExitLoadCategory(fundName) {
 }
 
 function getExitLoadInfo(fundName, isin) {
-  const masterEntry = isin && isinSchemeMaster[isin];
+  let masterEntry = isin && isinSchemeMaster[isin];
+  if (!masterEntry && fundName) {
+    // Name fallback if ISIN is not passed or empty
+    const norm = (fundName || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (norm) {
+      for (const entry of Object.values(isinSchemeMaster)) {
+        if (entry.name && entry.name.toUpperCase().replace(/[^A-Z0-9]/g, '') === norm) {
+          masterEntry = entry;
+          break;
+        }
+      }
+    }
+  }
+
   if (masterEntry) {
     if (masterEntry.isLocked) {
       return { isLocked: true, hasExitLoad: false, schedule: [], label: 'BSE: ELSS Locked' };
     }
     if (!masterEntry.hasExitLoad) {
-      return { isLocked: false, hasExitLoad: false, schedule: [], label: 'BSE: No Exit Load' };
+      return { isLocked: false, hasExitLoad: false, schedule: [], label: 'BSE: 0% (No Load)' };
     }
     if (masterEntry.tiers && masterEntry.tiers.length > 0) {
       const tierStr = masterEntry.tiers.map(t => `${(t.rate * 100).toFixed(0)}% (<${Math.round(t.days / 365)}y)`).join(' / ');
       const label = masterEntry.freePercent ? `BSE: 0% (${masterEntry.freePercent}% free), ${tierStr}` : `BSE: ${tierStr}`;
       return { isLocked: false, hasExitLoad: true, schedule: masterEntry.tiers, freePercent: masterEntry.freePercent || 0, label };
     }
-    // BSE confirms this ISIN HAS an exit load (its "Exit Load Flag" is Y),
-    // but doesn't give us the actual tiered schedule — the report's own
-    // "Exit Load" value column is always 0 regardless of the flag, verified
-    // against a live sync (26,277 ISINs; only 4 have a real schedule, via
-    // KNOWN_TIERED_SCHEMES in scripts/sync_bse_scheme_master.js). Falling
-    // through to the name-based guess below used to silently discard this
-    // confirmed signal — for 524 real funds (debt/gilt/arbitrage schemes
-    // misclassified by name) it produced a flatly wrong "0%" despite BSE
-    // saying otherwise. Assume the standard 1%/365-day structure instead,
-    // labelled so it's clear this is BSE-confirmed-but-estimated, not a
-    // pure guess and not a BSE-confirmed exact rate.
-    return { isLocked: false, hasExitLoad: true, schedule: [{ rate: 0.01, days: 365 }], label: 'BSE: load confirmed, ~1% (<365d) assumed' };
+    return { isLocked: false, hasExitLoad: true, schedule: [{ rate: 0.01, days: 365 }], label: 'BSE: load confirmed (~1% <365d)' };
   }
 
   // No BSE master record for this ISIN (not yet synced, or a manual holding
@@ -377,6 +379,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
 
       rows.push({
         name:         fund.name,
+        isin:         fund.isin,
         category:     cat,
         isELSS:       fund.isELSS,
         units:        fundUnits,
@@ -461,7 +464,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
 
       if (unitsToRedeem < 0.0001) {
         rows.push({
-          name: fund.name, category: cat, isELSS, units: 0, maxRedeemable,
+          name: fund.name, isin: fund.isin, category: cat, isELSS, units: 0, maxRedeemable,
           proceeds: 0, exitLoad: 0, exitLoadRate: 0, stcg: 0, ltcg: 0, tax: 0, net: 0,
           lotBreakdown: [], hasSynthetic: lots.some(l => l.synthetic),
           locked: maxRedeemable < 0.0001,
@@ -508,9 +511,9 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
       const fundNet     = fundProceeds - fundExitLoad - fundTax;
 
       rows.push({
-        name: fund.name, category: cat, isELSS, units: fundUnits, maxRedeemable,
+        name: fund.name, isin: fund.isin, category: cat, isELSS, units: fundUnits, maxRedeemable,
         proceeds: fundProceeds, exitLoad: fundExitLoad,
-        exitLoadRate: exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : getExitLoadRate(fund.name)[0]?.rate ?? 0,
+        exitLoadRate: exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : getExitLoadRate(fund.name, fund.isin)[0]?.rate ?? 0,
         stcg: fundSTCG, ltcg: fundLTCG, stcgTax: fundStcgTax, ltcgTax: fundLtcgTax, tax: fundTax, net: fundNet,
         lotBreakdown, hasSynthetic: lots.some(l => l.synthetic), locked: false,
       });
