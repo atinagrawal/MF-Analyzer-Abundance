@@ -894,20 +894,44 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
                     {[
                       ['Gross',      fmt(activePlan.totalProceeds),                                           'var(--text)'],
                       ['Exit Load',  activePlan.totalExitLoad > 0 ? '−' + fmt(activePlan.totalExitLoad) : '—',     activePlan.totalExitLoad > 0 ? 'var(--neg)' : 'var(--muted)'],
-                      ['STCG Tax',   activePlan.totalStcgTax > 0 ? '−' + fmt(activePlan.totalStcgTax) : '—',       activePlan.totalStcgTax > 0 ? 'var(--neg)' : 'var(--muted)'],
-                      ['LTCG Tax',   activePlan.totalLtcgTax > 0 ? '−' + fmt(activePlan.totalLtcgTax) : '—',       activePlan.totalLtcgTax > 0 ? 'var(--neg)' : 'var(--muted)'],
-                      ['Total Tax',  activePlan.totalTax > 0 ? '−' + fmt(activePlan.totalTax) : '—',               activePlan.totalTax > 0 ? 'var(--neg)' : 'var(--muted)'],
-                      ['Net in Hand',fmt(activePlan.totalNet),                                                'var(--g1)'],
                     ].map(([lbl, val, col]) => (
                       <div key={lbl} style={{ paddingRight: 10 }}>
                         <div style={{ fontSize: '.52rem', fontWeight: 800, letterSpacing: '.5px', textTransform: 'uppercase',
                           color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 2 }}>{lbl}</div>
-                        <div style={{ fontSize: lbl === 'Net in Hand' ? '.9rem' : '.78rem',
-                          fontWeight: 900, color: col, fontFamily: "'JetBrains Mono', monospace",
-                          letterSpacing: '-.3px' }}>{val}</div>
+                        <div style={{ fontSize: '.78rem', fontWeight: 900, color: col, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '-.3px' }}>{val}</div>
+                      </div>
+                    ))}
+
+                    {/* STCG / LTCG — gain as the headline figure, tax as a sub-line,
+                        matching the per-fund row pairing (Row C above). */}
+                    {[
+                      ['STCG', activePlan.totalSTCG, activePlan.totalStcgTax],
+                      ['LTCG', activePlan.totalLTCG, activePlan.totalLtcgTax],
+                    ].map(([lbl, gainVal, taxVal]) => (
+                      <div key={lbl} style={{ paddingRight: 10 }}>
+                        <div style={{ fontSize: '.52rem', fontWeight: 800, letterSpacing: '.5px', textTransform: 'uppercase',
+                          color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 2 }}>{lbl}</div>
+                        <div style={{ fontSize: '.78rem', fontWeight: 900, color: gainVal >= 0 ? 'var(--text)' : 'var(--neg)', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '-.3px' }}>
+                          {gainVal >= 0 ? '+' : '−'}{fmt(gainVal)}
+                        </div>
+                        <div style={{ fontSize: '.62rem', fontWeight: 700, color: taxVal > 0 ? 'var(--neg)' : 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+                          tax {taxVal > 0 ? '−' + fmt(taxVal) : '—'}
+                        </div>
+                      </div>
+                    ))}
+
+                    {[
+                      ['Total Tax',   activePlan.totalTax > 0 ? '−' + fmt(activePlan.totalTax) : '—', activePlan.totalTax > 0 ? 'var(--neg)' : 'var(--muted)', false],
+                      ['Net in Hand', fmt(activePlan.totalNet),                                        'var(--g1)',                                              true],
+                    ].map(([lbl, val, col, big]) => (
+                      <div key={lbl} style={{ paddingRight: 10 }}>
+                        <div style={{ fontSize: '.52rem', fontWeight: 800, letterSpacing: '.5px', textTransform: 'uppercase',
+                          color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 2 }}>{lbl}</div>
+                        <div style={{ fontSize: big ? '.9rem' : '.78rem', fontWeight: 900, color: col, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '-.3px' }}>{val}</div>
                       </div>
                     ))}
                   </div>
+                  <LossAdjustmentPanel notes={activePlan.lossNotes} />
                 </div>
               </div>
 
