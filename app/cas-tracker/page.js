@@ -230,6 +230,24 @@ function getExitLoadRate(fundName, isin) {
   return getExitLoadInfo(fundName, isin).schedule;
 }
 
+// Calculates estimated bank credit calendar date skipping weekends
+function getEstCreditDate(settlementStr) {
+  const days = parseInt((settlementStr || 'T+2').replace(/[^0-9]/g, ''), 10) || 2;
+  let d = new Date();
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    const dayOfWeek = d.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip Sat/Sun
+      added++;
+    }
+  }
+  return {
+    dateStr: d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }),
+    daysLabel: `T+${days}`
+  };
+}
+
 // Compute exact exit load for a consumed portion (`take` units) of a transaction lot,
 // taking into account:
 // 1. Individual purchase transaction date (heldDays = redeemDate - buyDate)
@@ -819,7 +837,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
                             lineHeight: 1.4, wordBreak: 'break-word' }}>
                             {row.name}
                           </div>
-                          <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                             <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3,
                               border: '1px solid var(--border)',
                               background: row.category === 'debt' ? '#e3f2fd' : row.category === 'hybrid' ? '#f3e5f5' : 'var(--g-xlight)',
@@ -827,6 +845,30 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
                               fontFamily: "'JetBrains Mono', monospace" }}>
                               {row.category.toUpperCase()}
                             </span>
+                            {(() => {
+                              const masterRec = row.isin && isinSchemeMaster[row.isin];
+                              const rta = masterRec?.rta;
+                              const settlement = masterRec?.settlement || (row.category === 'debt' || row.category === 'liquid' ? 'T+1' : 'T+2');
+                              const creditInfo = getEstCreditDate(settlement);
+                              return (
+                                <>
+                                  {rta && (
+                                    <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3,
+                                      border: '1px solid var(--border)',
+                                      background: rta === 'CAMS' ? '#e3f2fd' : '#f3e5f5',
+                                      color:      rta === 'CAMS' ? '#1565c0' : '#6a1b9a',
+                                      fontFamily: "'JetBrains Mono', monospace" }}>
+                                      {rta}
+                                    </span>
+                                  )}
+                                  <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3,
+                                    border: '1px solid var(--border)', background: 'var(--s3)', color: 'var(--text)',
+                                    fontFamily: "'JetBrains Mono', monospace" }}>
+                                    ⚡ Est. Credit: {creditInfo.dateStr} ({creditInfo.daysLabel})
+                                  </span>
+                                </>
+                              );
+                            })()}
                             {row.isELSS      && <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: '#fff8e1', color: '#f57f17', border: '1px solid #ffe082', fontFamily: "'JetBrains Mono', monospace" }}>ELSS</span>}
                             {row.hasSynthetic && <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)', fontFamily: "'JetBrains Mono', monospace" }}>SUM CAS</span>}
                           </div>

@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
+import isinSchemeMaster from '@/data/isin-scheme-master.json';
 
 /* ---------- SIF helpers ---------- */
 const SIF_STRATEGY_LABELS = {
@@ -695,6 +696,45 @@ function Detail({ f, stress, onClose }) {
           <span>Age ~{f.age_years ?? '—'} yrs</span>
           <span>as of {f.asof}</span>
         </div>
+
+        {(() => {
+          const masterRec = (f.isin && isinSchemeMaster[f.isin]) || (() => {
+            const norm = (f.name || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (!norm) return null;
+            return Object.values(isinSchemeMaster).find(e => e.name && e.name.toUpperCase().replace(/[^A-Z0-9]/g, '') === norm) || null;
+          })();
+
+          return (
+            <div style={{ margin: '14px 0', padding: '14px 16px', background: 'var(--s2)', borderRadius: '12px', border: '1.5px solid var(--border)' }}>
+              <div style={{ fontSize: '.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--muted)', marginBottom: '10px', fontFamily: "'JetBrains Mono', monospace" }}>
+                📋 Key Operational Facts (BSE StAR)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '10px' }}>
+                <div>
+                  <div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🕒 Daily NAV Cutoff</div>
+                  <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)' }}>{masterRec?.cutoff || '3:00 PM'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🏦 Settlement Cycle</div>
+                  <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)' }}>{masterRec?.settlement || (f.category?.toLowerCase().includes('debt') ? 'T+1' : 'T+2')} Business Days</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>💰 Min Lumpsum</div>
+                  <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)' }}>₹{(masterRec?.minPurchase || 500).toLocaleString('en-IN')}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🏢 RTA Servicer</div>
+                  <div style={{ fontSize: '.78rem', fontWeight: 700, color: masterRec?.rta === 'CAMS' ? '#1565c0' : '#6a1b9a' }}>{masterRec?.rta || 'CAMS'}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {(masterRec?.swp ?? true) && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>SWP Eligible</span>}
+                {(masterRec?.sip ?? true) && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>SIP Available</span>}
+                <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>Demat &amp; SOA</span>
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="scr-drawer-cta">
           <a className="scr-btn primary" href={backtestLink(f)}>⚗ Backtest this fund</a>

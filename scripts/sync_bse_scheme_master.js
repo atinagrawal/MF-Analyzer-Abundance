@@ -100,6 +100,29 @@ async function fetchBseReport(option) {
   }
 }
 
+function formatTime12h(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') return '';
+  const parts = timeStr.trim().split(':');
+  if (parts.length < 2) return timeStr;
+  let h = parseInt(parts[0], 10);
+  const m = parts[1];
+  if (isNaN(h)) return timeStr;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${m} ${ampm}`;
+}
+
+function formatSettlement(settleStr) {
+  if (!settleStr) return 'T+2';
+  const s = settleStr.trim().toUpperCase();
+  if (s === 'T1' || s === 'L1') return 'T+1';
+  if (s === 'T2') return 'T+2';
+  if (s === 'T3') return 'T+3';
+  if (s === 'T4') return 'T+4';
+  return s.startsWith('T') ? s.replace('T', 'T+') : 'T+2';
+}
+
 function parseReportStream(content, isinMap) {
   const lines = content.split('\n');
   for (let i = 1; i < lines.length; i++) {
@@ -109,19 +132,37 @@ function parseReportStream(content, isinMap) {
     const isin = cols[4];
     const type = cols[6];
     const name = cols[8];
+    const minPurRaw = parseFloat(cols[10]);
+    const rtaRaw = cols[22];
+    const cutoffRaw = cols[24] || cols[25];
+    const settleRaw = cols[26];
     const exitFlag = cols[37];
     const lockFlag = cols[39];
+    const sipFlag = cols[40];
+    const swpFlag = cols[42];
 
     if (isin && isin.startsWith('INF')) {
       const hasExitLoad = exitFlag === 'Y';
       const isLocked = lockFlag === 'Y';
+      const rta = /KARVY|KFIN/i.test(rtaRaw || '') ? 'KFINTECH' : 'CAMS';
+      const settlement = formatSettlement(settleRaw);
+      const cutoff = formatTime12h(cutoffRaw);
+      const minPurchase = !isNaN(minPurRaw) && minPurRaw > 0 ? Math.round(minPurRaw) : 500;
+      const sip = sipFlag === 'Y';
+      const swp = swpFlag === 'Y';
 
       if (!isinMap.has(isin)) {
         const entry = {
           name,
           type,
           hasExitLoad,
-          isLocked
+          isLocked,
+          rta,
+          settlement,
+          cutoff,
+          minPurchase,
+          sip,
+          swp,
         };
         if (KNOWN_TIERED_SCHEMES[isin]) {
           Object.assign(entry, KNOWN_TIERED_SCHEMES[isin]);
