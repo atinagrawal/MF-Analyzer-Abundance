@@ -310,3 +310,73 @@ export function categoryPeerRank(normalizedFund, allMfFunds) {
   const rank = sorted.findIndex((f) => f.code === normalizedFund.navFetchKey) + 1;
   return rank > 0 ? { rank, of: sorted.length } : null;
 }
+
+// ── Weighted verdict scoring ────────────────────────────────────────────────
+// Same weighting philosophy as PMS comparison: longer, more established
+// return horizons count more; each fund's score only averages over the
+// periods/metrics it actually has data for, so a newer fund (a young SIF,
+// or an MF missing 10Y) isn't penalized for not existing that long.
+
+const PERIOD_WEIGHTS = {
+  ret_1m: 0.5, ret_3m: 0.75, ret_6m: 1, ret_1y: 1.5,
+  ret_3y: 2.5, ret_5y: 3, ret_7y: 3.5, ret_10y: 4, ret_inception: 2,
+};
+const RISK_WEIGHT = 2; // ret_per_risk contributes like a mid-length return period
+
+export function computeVerdictScores(normalizedFunds) {
+  const n = normalizedFunds.length;
+  const totals = Array(n).fill(0);
+  const weightSums = Array(n).fill(0);
+
+  for (const key of Object.keys(PERIOD_WEIGHTS)) {
+    const weight = PERIOD_WEIGHTS[key];
+    const participants = normalizedFunds
+      .map((f, i) => ({ i, v: f[key] }))
+      .filter((p) => p.v != null);
+    if (participants.length < 2) continue;
+    const ranked = [...participants].sort((a, b) => b.v - a.v);
+    const m = ranked.length;
+    ranked.forEach((p, rankIdx) => {
+      const share = (m - rankIdx) / m; // 1st place = full weight, last place = weight/m
+      totals[p.i] += weight * share;
+      weightSums[p.i] += weight;
+    });
+  }
+
+  const riskParticipants = normalizedFunds
+    .map((f, i) => ({ i, v: f.ret_per_risk }))
+    .filter((p) => p.v != null);
+  if (riskParticipants.length >= 2) {
+    const ranked = [...riskParticipants].sort((a, b) => b.v - a.v);
+    const m = ranked.length;
+    ranked.forEach((p, rankIdx) => {
+      const share = (m - rankIdx) / m;
+      totals[p.i] += RISK_WEIGHT * share;
+      weightSums[p.i] += RISK_WEIGHT;
+    });
+  }
+
+  return totals.map((t, i) => (weightSums[i] > 0 ? t / weightSums[i] : 0));
+}
+
+export function overallWinner(normalizedFunds, scores) {
+  if (!scores.length) return null;
+  const maxScore = Math.max(...scores);
+  const idx = scores.indexOf(maxScore);
+  return { idx, score: maxScore, fund: normalizedFunds[idx] };
+}
+
+// Raw "best in N metrics" count for the per-fund header badge.
+export function winCounts(normalizedFunds) {
+  const n = normalizedFunds.length;
+  const counts = Array(n).fill(0);
+  const keys = [...Object.keys(PERIOD_WEIGHTS), 'ret_per_risk'];
+  for (const key of keys) {
+    const vals = normalizedFunds.map((f) => f[key]);
+    const valid = vals.filter((v) => v != null);
+    if (valid.length < 2) continue;
+    const best = Math.max(...valid);
+    vals.forEach((v, i) => { if (v === best) counts[i]++; });
+  }
+  return counts;
+}
