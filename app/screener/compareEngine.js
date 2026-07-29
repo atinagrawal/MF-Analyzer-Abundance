@@ -71,12 +71,19 @@ export async function fetchNavSeries(fund) {
       // never leave a SIF with zero NAV data just because the wide window
       // overshot AMFI's (undocumented) range limit.
       const fetchWindow = async (daysBack) => {
-        const fromStr = new Date(to.getTime() - daysBack * DAY_MS).toISOString().slice(0, 10);
-        const res = await fetch(`/api/sif-history?sd_id=${encodeURIComponent(fund.navFetchKey)}&from=${fromStr}&to=${toStr}`);
-        if (!res.ok) return null;
-        const json = await res.json();
-        const series = normalizeSifSeries(json);
-        return series.length >= 2 ? series : null;
+        try {
+          const fromStr = new Date(to.getTime() - daysBack * DAY_MS).toISOString().slice(0, 10);
+          const res = await fetch(`/api/sif-history?sd_id=${encodeURIComponent(fund.navFetchKey)}&from=${fromStr}&to=${toStr}`);
+          if (!res.ok) return null;
+          const json = await res.json();
+          const series = normalizeSifSeries(json);
+          return series.length >= 2 ? series : null;
+        } catch {
+          // A thrown error (network drop, malformed JSON) on the wide
+          // attempt must not skip the narrow fallback below — only a
+          // clean null return does that.
+          return null;
+        }
       };
       return (await fetchWindow(5 * 365)) || (await fetchWindow(400));
     }
