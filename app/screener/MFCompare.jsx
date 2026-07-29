@@ -5,13 +5,46 @@
 // full comparison modal. Modeled directly on app/pms-screener/PMSCompare.jsx's
 // PMSCompareBar, extended with a small per-chip type badge (MF/SIF) since
 // this feature mixes both.
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
-import { normalizeFund, winCounts } from './compareEngine';
+import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank } from './compareEngine';
 import './mf-compare.css';
 
 const MAX_COMPARE = 3;
+
+const PERIODS = [
+  { label: '1 Month', key: 'ret_1m' },
+  { label: '3 Months', key: 'ret_3m' },
+  { label: '6 Months', key: 'ret_6m' },
+  { label: '1 Year', key: 'ret_1y' },
+  { label: '3 Years', key: 'ret_3y' },
+  { label: '5 Years', key: 'ret_5y' },
+  { label: '7 Years', key: 'ret_7y' },
+  { label: '10 Years', key: 'ret_10y' },
+  { label: 'Inception', key: 'ret_inception' },
+];
+const RISK_METRICS = [
+  { label: 'Volatility', key: 'vol', lowerIsBetter: true, suffix: '%' },
+  { label: 'Max Drawdown', key: 'max_dd', lowerIsBetter: true, suffix: '%' }, // less negative = better; see bestIndexFor
+  { label: 'Return/Risk', key: 'ret_per_risk', lowerIsBetter: false, suffix: '' },
+];
+
+function fmtRet(v) {
+  if (v == null) return '—';
+  return (v > 0 ? '+' : '') + v.toFixed(1) + '%';
+}
+function rc(v) {
+  if (v == null) return 'neu';
+  return v > 0 ? 'pos' : v < 0 ? 'neg' : 'neu';
+}
+function bestIndexFor(vals, lowerIsBetter) {
+  const valid = vals.map((v, i) => ({ v, i })).filter((p) => p.v != null);
+  if (valid.length < 2) return -1;
+  const best = lowerIsBetter ? Math.min(...valid.map((p) => p.v)) : Math.max(...valid.map((p) => p.v));
+  const match = valid.find((p) => p.v === best);
+  return match ? match.i : -1;
+}
 
 export function MFCompareBar({ selected, onRemove, onClear, onCompare }) {
   const vis = selected.length > 0;
@@ -49,7 +82,27 @@ export function MFCompareBar({ selected, onRemove, onClear, onCompare }) {
 export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
   const normalized = useMemo(() => funds.map(normalizeFund), [funds]);
   const n = normalized.length;
-  const counts = useMemo(() => winCounts(normalized), [normalized]);
+
+  // SIF funds start with null return/risk fields (normalizeFund) — fetch
+  // each SIF's real NAV history once on mount and derive its stats. MF
+  // funds are already fully populated, so this only ever touches SIF
+  // entries. Each fetch is independent; a failure leaves that one fund's
+  // fields null (rendered as "—"), never blocks the others.
+  const [derived, setDerived] = useState(normalized);
+  useEffect(() => {
+    setDerived(normalized);
+    let cancelled = false;
+    Promise.all(normalized.map(async (f) => {
+      if (f.type !== 'sif') return f;
+      const series = await fetchNavSeries(f);
+      return applyDerivedStats(f, series);
+    })).then((results) => {
+      if (!cancelled) setDerived(results);
+    });
+    return () => { cancelled = true; };
+  }, [normalized]);
+
+  const counts = useMemo(() => winCounts(derived), [derived]);
 
   if (!funds.length) return null;
 
@@ -92,6 +145,69 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
                 <button className="cmp-remove-btn" onClick={() => onRemove(f.id)}>✕ Remove</button>
               </div>
             ))}
+
+            {/* Returns */}
+            <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
+              📊 Returns Across All Time Horizons
+            </div>
+            {PERIODS.map(({ label, key }) => {
+              const vals = derived.map((f) => f[key]);
+              if (vals.every((v) => v == null)) return null;
+              const bestIdx = bestIndexFor(vals, false);
+              return (
+                <div key={key} className="cmp-row">
+                  <div className="cmp-cell" style={{ fontWeight: 700 }}>{label}</div>
+                  {derived.map((f, i) => (
+                    <div key={f.id} className={`cmp-cell${bestIdx === i ? ' cmp-ret-best' : ''}`}>
+                      <span className={`cmp-ret ${rc(f[key])}`}>{fmtRet(f[key])}</span>
+                      {bestIdx === i && n > 1 && <span style={{ fontSize: '.55rem', marginLeft: 4, color: 'var(--g3)' }}>↑ best</span>}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+
+            {/* Risk metrics */}
+            <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
+              📉 Risk Metrics
+            </div>
+            {RISK_METRICS.map(({ label, key, lowerIsBetter, suffix }) => {
+              const vals = derived.map((f) => f[key]);
+              if (vals.every((v) => v == null)) return null;
+              const bestIdx = bestIndexFor(vals, lowerIsBetter);
+              return (
+                <div key={key} className="cmp-row">
+                  <div className="cmp-cell" style={{ fontWeight: 700 }}>{label}</div>
+                  {derived.map((f, i) => (
+                    <div key={f.id} className={`cmp-cell${bestIdx === i ? ' cmp-ret-best' : ''}`}>
+                      <span className={`cmp-ret ${key === 'max_dd' ? 'neg' : 'neu'}`}>
+                        {f[key] == null ? '—' : (key === 'ret_per_risk' ? f[key].toFixed(2) : f[key].toFixed(1) + suffix)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+
+            {/* Category peer-rank (MF only — see categoryPeerRank's doc comment) */}
+            <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
+              🏅 Category Peer-Rank
+            </div>
+            <div className="cmp-row">
+              <div className="cmp-cell" style={{ fontWeight: 700 }}>Rank by 3Y Return</div>
+              {derived.map((f) => {
+                const rank = categoryPeerRank(f, allMfFunds);
+                return (
+                  <div key={f.id} className="cmp-cell">
+                    {rank ? (
+                      <span className="cmp-peer-rank">#{rank.rank} <span className="cmp-peer-rank-of">of {rank.of}</span></span>
+                    ) : (
+                      <span className="cmp-ret neu" title={f.type === 'sif' ? 'Not enough SIF peer data yet' : 'Not enough data for this category'}>—</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="cmp-disclaimer">
