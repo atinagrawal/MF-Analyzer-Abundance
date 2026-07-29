@@ -396,7 +396,7 @@ export default function ScreenerPage() {
 
         <div className="scr-meta">
           {err ? <span className="scr-neg">{err}</span> : isSIF
-            ? <>Showing <b>{sifRows.length}</b> SIF scheme{sifRows.length !== 1 ? 's' : ''}{sifData ? <> · NAV as of {sifData.nav_date}</> : ''}. Tap a fund for detail.</>
+            ? <>Showing <b>{sifRows.length}</b> SIF scheme{sifRows.length !== 1 ? 's' : ''}{sifData ? <> · NAV as of {sifData.asof}</> : ''}. Tap a fund for detail.</>
             : <>Showing <b>{rows.length.toLocaleString('en-IN')}</b> funds{data ? <> · as of {data.asof}</> : ''}. Tap a fund for detail.</>
           }
         </div>
@@ -886,7 +886,6 @@ function SifDetail({ s, onClose }) {
             <div className="scr-drawer-tags">
               <span className="scr-tag">{s.sif_name}</span>
               <span className={`scr-sif-badge scr-sif-badge-${fam.toLowerCase()}`} style={{fontSize:'10px',padding:'3px 8px'}}>{SIF_STRATEGY_LABELS[s.category] || sifStratShort(s.category)}</span>
-              <span className="scr-tag alt">{s.type}</span>
               <span className="scr-tag alt">{s.scheme_id}</span>
             </div>
           </div>
