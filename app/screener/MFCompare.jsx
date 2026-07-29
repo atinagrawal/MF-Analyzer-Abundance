@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
-import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank } from './compareEngine';
+import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank, computeWealthSimulation } from './compareEngine';
 import './mf-compare.css';
 
 const MAX_COMPARE = 3;
@@ -98,6 +98,21 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
       return applyDerivedStats(f, series);
     })).then((results) => {
       if (!cancelled) setDerived(results);
+    });
+    return () => { cancelled = true; };
+  }, [normalized]);
+
+  // Real NAV history per selected fund — used by both the Wealth Simulation
+  // (SIP calculation) and the interactive chart (Task 10). Fetched once per
+  // fund here so neither section re-fetches the same data independently.
+  const [navSeriesByFund, setNavSeriesByFund] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(normalized.map(async (f) => ({ id: f.id, series: await fetchNavSeries(f) }))).then((results) => {
+      if (cancelled) return;
+      const map = {};
+      results.forEach((r) => { map[r.id] = r.series; });
+      setNavSeriesByFund(map);
     });
     return () => { cancelled = true; };
   }, [normalized]);
@@ -208,6 +223,69 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
                 );
               })}
             </div>
+
+            {/* Wealth Simulation */}
+            <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
+              💰 Wealth Simulation
+            </div>
+            {(() => {
+              const sims = derived.map((f) => computeWealthSimulation(f, navSeriesByFund[f.id]));
+              const stopsOf = sims[0] || [];
+              return (
+                <>
+                  <div className="cmp-row">
+                    <div className="cmp-cell" style={{ fontWeight: 700 }}>
+                      <div className="cmp-wealth-subhead">₹1,00,000 Lumpsum</div>
+                    </div>
+                    {derived.map((f, i) => (
+                      <div key={f.id} className="cmp-cell">
+                        <div className="cmp-wealth-strip">
+                          {sims[i].map(({ label, lumpsum }, idx) => (
+                            <div key={label} style={{ display: 'contents' }}>
+                              <div className="cmp-wealth-stop">
+                                <div className="cmp-wealth-stop-period">{label}</div>
+                                <div className="cmp-wealth-stop-val" style={{ color: lumpsum && lumpsum.gain >= 0 ? 'var(--g2)' : 'var(--neg)' }}>
+                                  {lumpsum ? '₹' + Math.round(lumpsum.value).toLocaleString('en-IN') : '—'}
+                                </div>
+                                <div className="cmp-wealth-stop-gain" style={{ color: lumpsum && lumpsum.gain >= 0 ? 'var(--g3)' : 'var(--neg)' }}>
+                                  {lumpsum ? (lumpsum.gain >= 0 ? '+' : '') + '₹' + Math.abs(Math.round(lumpsum.gain)).toLocaleString('en-IN') : ''}
+                                </div>
+                              </div>
+                              {idx < sims[i].length - 1 && <div className="cmp-wealth-arrow">→</div>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="cmp-row">
+                    <div className="cmp-cell" style={{ fontWeight: 700 }}>
+                      <div className="cmp-wealth-subhead">₹10,000/mo SIP (Real)</div>
+                    </div>
+                    {derived.map((f, i) => (
+                      <div key={f.id} className="cmp-cell">
+                        <div className="cmp-wealth-strip">
+                          {sims[i].map(({ label, sip }, idx) => (
+                            <div key={label} style={{ display: 'contents' }}>
+                              <div className="cmp-wealth-stop">
+                                <div className="cmp-wealth-stop-period">{label}</div>
+                                <div className="cmp-wealth-stop-val" style={{ color: sip && sip.gain >= 0 ? 'var(--g2)' : 'var(--neg)' }}>
+                                  {sip ? '₹' + Math.round(sip.value).toLocaleString('en-IN') : '—'}
+                                </div>
+                                <div className="cmp-wealth-stop-gain" style={{ color: sip && sip.gain >= 0 ? 'var(--g3)' : 'var(--neg)' }}>
+                                  {sip ? `XIRR ${(sip.xirr * 100).toFixed(1)}%` : ''}
+                                </div>
+                              </div>
+                              {idx < sims[i].length - 1 && <div className="cmp-wealth-arrow">→</div>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           <div className="cmp-disclaimer">
