@@ -180,7 +180,11 @@ export default function ScreenerPage() {
       const already = prev.find((f) => f.id === id);
       if (already) return prev.filter((f) => f.id !== id);
       if (prev.length >= MAX_COMPARE) return prev;
-      return [...prev, { id, type, ...fund }];
+      // Spread `fund` FIRST, then override `id`/`type` -- a raw SIF row
+      // carries its own `.type` field (a strategy-type string, e.g. "Equity
+      // Long-Short"), which would otherwise silently clobber the intended
+      // 'mf'/'sif' tag if spread last.
+      return [...prev, { ...fund, id, type }];
     });
   }, []);
   const isComparing = useCallback((type, key) => {

@@ -47,18 +47,28 @@ function bestIndexFor(vals, lowerIsBetter) {
   return match ? match.i : -1;
 }
 
+// compareList entries are raw fund objects (pre-normalizeFund) -- an MF row
+// carries `.name`, but a raw SIF row has no `.name` field at all (its display
+// name is `.nav_name`), matching normalizeFund's own MF-vs-SIF field mapping.
+function displayName(f) {
+  return (f.type === 'mf' ? f.name : f.nav_name) || '';
+}
+
 export function MFCompareBar({ selected, onRemove, onClear, onCompare }) {
   const vis = selected.length > 0;
   return (
     <div className={`cmp-bar${vis ? ' visible' : ''}`} role="region" aria-label="Fund Compare basket">
       <div className="cmp-bar-chips">
-        {selected.map((f) => (
+        {selected.map((f) => {
+          const name = displayName(f);
+          return (
           <span key={f.id} className="cmp-chip">
             <span className="cmp-chip-type">{f.type}</span>
-            {f.name.length > 18 ? f.name.slice(0, 18) + '…' : f.name}
-            <span className="cmp-chip-x" role="button" onClick={() => onRemove(f.id)} aria-label={`Remove ${f.name} from compare`}>×</span>
+            {name.length > 18 ? name.slice(0, 18) + '…' : name}
+            <span className="cmp-chip-x" role="button" onClick={() => onRemove(f.id)} aria-label={`Remove ${name} from compare`}>×</span>
           </span>
-        ))}
+          );
+        })}
         {selected.length < MAX_COMPARE && (
           <span className="cmp-chip" style={{ opacity: 0.4, fontStyle: 'italic' }}>
             + {MAX_COMPARE - selected.length} more
