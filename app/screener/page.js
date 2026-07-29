@@ -239,7 +239,16 @@ export default function ScreenerPage() {
   const groups = ['All', 'Equity', 'Hybrid', 'Debt', 'Index / FoF', 'Other', 'SIF'];
 
   /* ---- SIF derived state ---- */
-  const sifSchemes = sifData?.schemes || [];
+  // Same exclusion MFs already get server-side (scripts/build-screener.mjs)
+  // -- IDCW/payout/reinvest/bonus/segregated plan variants are just a
+  // different distribution option on the same underlying scheme, not a
+  // distinct fund; showing both clutters the list with near-duplicates.
+  // SIF data is live-fetched (no build pipeline), so this filter runs
+  // client-side instead.
+  const sifSchemes = useMemo(
+    () => (sifData?.schemes || []).filter((s) => !/(idcw|payout|re-?invest|bonus|segregated)\b/i.test(s.nav_name)),
+    [sifData]
+  );
   const sifHouses = useMemo(() => [...new Set(sifSchemes.map((s) => s.sif_name))].sort(), [sifSchemes]);
   const sifCats = useMemo(() => [...new Set(sifSchemes.map((s) => s.category))].sort(), [sifSchemes]);
   const sifRows = useMemo(() => {
