@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
-import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank, computeWealthSimulation, seriesAsOf } from './compareEngine';
+import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank, computeWealthSimulation, seriesAsOf, computeVerdictScores, overallWinner } from './compareEngine';
 import CompareGrowthChart from './CompareGrowthChart';
 import './mf-compare.css';
 
@@ -341,6 +341,26 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
               );
             })()}
           </div>
+
+          {n > 1 && (() => {
+            const scores = computeVerdictScores(derived);
+            const winner = overallWinner(derived, scores);
+            if (!winner) return null;
+            return (
+              <div className="cmp-verdict">
+                <div className="cmp-verdict-icon">🏆</div>
+                <div>
+                  <div className="cmp-verdict-title">Overall Leader: {winner.fund.name}</div>
+                  <div className="cmp-verdict-body">
+                    <strong>{winner.fund.name}</strong> by <strong>{winner.fund.house}</strong> ranks highest across the
+                    metrics compared — weighted toward long-term consistency (5Y/7Y/10Y and Return/Risk count most,
+                    1M/3M count least), averaged only over the periods each fund actually has data for so a newer
+                    fund isn't penalized for not existing that long.
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="cmp-disclaimer">
             <strong>Important Disclosure:</strong> This comparison is for informational and educational purposes only and does not constitute investment advice.
