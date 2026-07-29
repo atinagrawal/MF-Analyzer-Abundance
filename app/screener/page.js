@@ -30,6 +30,26 @@ const SIF_STRATEGY_LABELS = {
 };
 const sifStratShort = (cat) => SIF_STRATEGY_LABELS[cat] || cat?.split(' - ')[1] || cat || '—';
 const sifFamily = (cat) => cat?.startsWith('Equity') ? 'Equity' : 'Hybrid';
+// Longest-duration-first list of periods leader cards will try per category
+// -- same list and "needs >=2 comparable funds" rule already used by the
+// comparison feature's category peer-rank (app/screener/compareEngine.js's
+// RANK_PERIOD_FALLBACK/pickCommonRankPeriod), applied here per-category
+// instead of per-comparison-set: a category with older funds might rank by
+// 1Y while an all-brand-new category ranks by 1M, shifting automatically
+// as SIFs age with no future code changes needed.
+const LEADER_PERIOD_FALLBACK = [
+  { key: 'ret_3y', label: '3Y' },
+  { key: 'ret_1y', label: '1Y' },
+  { key: 'ret_6m', label: '6M' },
+  { key: 'ret_3m', label: '3M' },
+  { key: 'ret_1m', label: '1M' },
+];
+function pickCategoryLeaderPeriod(categorySchemes) {
+  for (const period of LEADER_PERIOD_FALLBACK) {
+    if (categorySchemes.filter((s) => s[period.key] != null).length >= 2) return period;
+  }
+  return null;
+}
 
 function backtestSifLink(s) {
   try {
@@ -272,11 +292,14 @@ export default function ScreenerPage() {
   useEffect(() => { setSifPage(0); }, [sifFamily, sifCat, sifHouse, sifQ, sifSort, pageSize]);
   const sifLeaders = useMemo(() => {
     const uniq = [...new Set(sifSchemes.map((s) => s.category))];
-    return uniq.map((c) => ({
-      label: sifStratShort(c),
-      cat: c,
-      top: sifSchemes.filter((s) => s.category === c).sort((a, b) => b.nav - a.nav).slice(0, 3),
-    })).filter((c) => c.top.length > 0);
+    return uniq.map((c) => {
+      const inCat = sifSchemes.filter((s) => s.category === c);
+      const period = pickCategoryLeaderPeriod(inCat);
+      const top = period
+        ? [...inCat].filter((s) => s[period.key] != null).sort((a, b) => b[period.key] - a[period.key]).slice(0, 3)
+        : [...inCat].sort((a, b) => b.nav - a.nav).slice(0, 3); // no period has >=2 yet -- fall back to NAV, same as today
+      return { label: sifStratShort(c), cat: c, top, period };
+    }).filter((c) => c.top.length > 0);
   }, [sifSchemes]);
   const cats = useMemo(() => {
     const set = new Map();
@@ -408,7 +431,7 @@ export default function ScreenerPage() {
         {/* SIF leaders */}
         {isSIF && sifLeaders.length > 0 && (
           <section className="scr-leaders" aria-label="SIF strategy overview">
-            <div className="scr-leaders-h">SIF strategies <em>· top 3 by latest NAV per category</em></div>
+            <div className="scr-leaders-h">SIF strategies <em>· top 3 by best available return per category</em></div>
             <div className="scr-leaders-grid">
               {sifLeaders.map((c) => (
                 <div className="scr-lead-card" key={c.label}>
@@ -419,7 +442,11 @@ export default function ScreenerPage() {
                     <button className="scr-lead-row" key={s.scheme_id} onClick={() => setSifSel(s)}>
                       <span className="scr-lead-rank">{i + 1}</span>
                       <span className="scr-lead-name">{s.sif_name}</span>
-                      <span className="scr-lead-ret scr-muted">₹{s.nav.toFixed(2)}</span>
+                      {c.period ? (
+                        <span className="scr-lead-ret scr-pos">{s[c.period.key] > 0 ? '+' : ''}{s[c.period.key].toFixed(1)}% ({c.period.label})</span>
+                      ) : (
+                        <span className="scr-lead-ret scr-muted">₹{s.nav.toFixed(2)}</span>
+                      )}
                     </button>
                   ))}
                 </div>
