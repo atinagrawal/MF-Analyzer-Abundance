@@ -222,12 +222,15 @@ export function normalizeFund(entry) {
       ret_1m: entry.ret_1m ?? null, ret_3m: entry.ret_3m ?? null, ret_6m: entry.ret_6m ?? null,
       ret_1y: entry.ret_1y ?? null, ret_3y: entry.ret_3y ?? null, ret_5y: entry.ret_5y ?? null,
       ret_7y: entry.ret_7y ?? null, ret_10y: entry.ret_10y ?? null, ret_inception: entry.ret_inception ?? null,
-      // MF funds are virtually always well past 1 year old, so their
-      // precomputed ret_inception is CAGR-annualized — but derive this from
-      // the fund's own real age_years rather than assuming, so a genuinely
-      // brand-new MF (if one ever exists in this dataset) is still labeled
-      // correctly. See deriveReturnsFromSeries below for the SIF equivalent.
-      ret_inception_annualized: entry.age_years != null ? entry.age_years >= 1 : true,
+      // The server-side pipeline (scripts/build-screener.mjs) only ever
+      // computes MF's ret_inception via CAGR — its threshold is a fund
+      // being > 0.5 years old, with NO absolute-return branch at all
+      // (unlike the SIF client-side split below, which does have one for
+      // funds under 1 year). So whenever ret_inception is non-null, it is
+      // always CAGR — deriving this from age_years (assuming a 1-year
+      // split that doesn't exist server-side) would mislabel any real fund
+      // aged 6–12 months as "absolute" when it's actually CAGR.
+      ret_inception_annualized: entry.ret_inception != null ? true : null,
       vol: entry.vol ?? null, max_dd: entry.max_dd ?? null, ret_per_risk: entry.ret_per_risk ?? null,
     };
   }
