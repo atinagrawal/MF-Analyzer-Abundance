@@ -227,7 +227,7 @@ export default function ScreenerPage() {
   useEffect(() => {
     if (isSIF && !sifData && !sifLoading) {
       setSifLoading(true);
-      fetch('/api/sif-nav')
+      fetch('/api/sif-screener')
         .then((r) => r.json())
         .then((d) => { if (d.error) setErr(d.error); else setSifData(d); })
         .catch(() => setErr('Could not load SIF data.'))
@@ -239,16 +239,10 @@ export default function ScreenerPage() {
   const groups = ['All', 'Equity', 'Hybrid', 'Debt', 'Index / FoF', 'Other', 'SIF'];
 
   /* ---- SIF derived state ---- */
-  // Same exclusion MFs already get server-side (scripts/build-screener.mjs)
-  // -- IDCW/payout/reinvest/bonus/segregated plan variants are just a
-  // different distribution option on the same underlying scheme, not a
-  // distinct fund; showing both clutters the list with near-duplicates.
-  // SIF data is live-fetched (no build pipeline), so this filter runs
-  // client-side instead.
-  const sifSchemes = useMemo(
-    () => (sifData?.schemes || []).filter((s) => !/(idcw|payout|re-?invest|bonus|segregated)\b/i.test(s.nav_name)),
-    [sifData]
-  );
+  // IDCW/payout/reinvest/bonus/segregated variants are already excluded
+  // server-side by scripts/build-sif-screener.mjs (same regex MF's own
+  // build script applies) -- no client-side filtering needed.
+  const sifSchemes = sifData?.schemes || [];
   const sifHouses = useMemo(() => [...new Set(sifSchemes.map((s) => s.sif_name))].sort(), [sifSchemes]);
   const sifCats = useMemo(() => [...new Set(sifSchemes.map((s) => s.category))].sort(), [sifSchemes]);
   const sifRows = useMemo(() => {
@@ -346,7 +340,7 @@ export default function ScreenerPage() {
       <Navbar activePage="screener" />
       <div className="container">
         <div className="page-header">
-          <div className="page-eyebrow"><span className="live-dot" /><span className="page-eyebrow-text">{isSIF ? 'Live · from AMFI SIF NAV API' : 'Live · rebuilt daily from AMFI NAVs'}</span></div>
+          <div className="page-eyebrow"><span className="live-dot" /><span className="page-eyebrow-text">Live · rebuilt daily from AMFI NAVs</span></div>
           <h1 className="page-title">{isSIF ? <><span>SIF</span> Screener</> : 'Mutual Fund Screener'}</h1>
           <p className="page-subtitle">
             {isSIF
