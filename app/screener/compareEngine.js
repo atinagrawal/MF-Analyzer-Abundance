@@ -222,6 +222,12 @@ export function normalizeFund(entry) {
       ret_1m: entry.ret_1m ?? null, ret_3m: entry.ret_3m ?? null, ret_6m: entry.ret_6m ?? null,
       ret_1y: entry.ret_1y ?? null, ret_3y: entry.ret_3y ?? null, ret_5y: entry.ret_5y ?? null,
       ret_7y: entry.ret_7y ?? null, ret_10y: entry.ret_10y ?? null, ret_inception: entry.ret_inception ?? null,
+      // MF funds are virtually always well past 1 year old, so their
+      // precomputed ret_inception is CAGR-annualized — but derive this from
+      // the fund's own real age_years rather than assuming, so a genuinely
+      // brand-new MF (if one ever exists in this dataset) is still labeled
+      // correctly. See deriveReturnsFromSeries below for the SIF equivalent.
+      ret_inception_annualized: entry.age_years != null ? entry.age_years >= 1 : true,
       vol: entry.vol ?? null, max_dd: entry.max_dd ?? null, ret_per_risk: entry.ret_per_risk ?? null,
     };
   }
@@ -234,6 +240,7 @@ export function normalizeFund(entry) {
     navFetchKey: entry.scheme_id,
     ret_1m: null, ret_3m: null, ret_6m: null, ret_1y: null, ret_3y: null,
     ret_5y: null, ret_7y: null, ret_10y: null, ret_inception: null,
+    ret_inception_annualized: null, // unresolved until applyDerivedStats fills it in
     vol: null, max_dd: null, ret_per_risk: null,
   };
 }
@@ -278,6 +285,13 @@ export function deriveReturnsFromSeries(series, asOfMs) {
         ? +(((latest.nav - first.nav) / first.nav) * 100).toFixed(2)
         : +((Math.pow(latest.nav / first.nav, 1 / inceptionYears) - 1) * 100).toFixed(2))
     : null;
+  // Records WHICH method produced ret_inception (absolute vs CAGR) so the
+  // UI can label it — this is the one return figure whose methodology can
+  // legitimately differ fund-to-fund within the same comparison (every
+  // other period here has a fixed length, so it's the same method for
+  // every fund; a fund's actual age varies, so its inception figure might
+  // not use the same method as another fund's).
+  out.ret_inception_annualized = first.nav > 0 ? inceptionYears > 1 : null;
   return out;
 }
 
@@ -389,6 +403,20 @@ const PERIOD_WEIGHTS = {
 };
 const RISK_WEIGHT = 2; // ret_per_risk contributes like a mid-length return period
 
+// True if, among the funds that actually have a ret_inception value, their
+// methodology (absolute vs CAGR — see deriveReturnsFromSeries/normalizeFund)
+// doesn't universally agree. An annualized CAGR and a raw point-to-point
+// return aren't comparable numbers even though both are percentages, so
+// ret_inception must not be used for any "who's better" comparison
+// (verdict scoring, win-count badges, "best" highlighting) when mixed —
+// this is the one metric here whose method can legitimately differ
+// fund-to-fund in the same comparison, since every other period is a fixed
+// length for every fund but each fund's actual age varies.
+export function hasMixedInceptionMethod(funds) {
+  const methods = funds.filter((f) => f.ret_inception != null).map((f) => f.ret_inception_annualized);
+  return methods.length > 1 && !methods.every((m) => m === methods[0]);
+}
+
 // Assigns each participant a weighted share of `weight`, tie-aware: funds
 // tied on the same value get the SAME share (the average of the rank
 // positions their tied group spans), not whichever share their array
@@ -418,6 +446,7 @@ export function computeVerdictScores(normalizedFunds) {
   const weightSums = Array(n).fill(0);
 
   for (const key of Object.keys(PERIOD_WEIGHTS)) {
+    if (key === 'ret_inception' && hasMixedInceptionMethod(normalizedFunds)) continue;
     const weight = PERIOD_WEIGHTS[key];
     const participants = normalizedFunds
       .map((f, i) => ({ i, v: f[key] }))
@@ -460,6 +489,7 @@ export function winCounts(normalizedFunds) {
   const counts = Array(n).fill(0);
   const keys = [...Object.keys(PERIOD_WEIGHTS), 'ret_per_risk'];
   for (const key of keys) {
+    if (key === 'ret_inception' && hasMixedInceptionMethod(normalizedFunds)) continue;
     const vals = normalizedFunds.map((f) => f[key]);
     const valid = vals.filter((v) => v != null);
     if (valid.length < 2) continue;

@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
-import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank, pickCommonRankPeriod, computeWealthSimulation, seriesAsOf, computeVerdictScores, overallWinner } from './compareEngine';
+import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank, pickCommonRankPeriod, computeWealthSimulation, seriesAsOf, computeVerdictScores, overallWinner, hasMixedInceptionMethod } from './compareEngine';
 import CompareGrowthChart from './CompareGrowthChart';
 import './mf-compare.css';
 
@@ -241,13 +241,32 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
             {PERIODS.map(({ label, key }) => {
               const vals = derived.map((f) => f[key]);
               if (vals.every((v) => v == null)) return null;
-              const bestIdx = bestIndexFor(vals, false);
+              // "Since Inception" is the one period whose methodology
+              // (absolute vs CAGR) can legitimately differ fund-to-fund in
+              // the SAME comparison, since every other period is a fixed
+              // length for every fund but each fund's actual age varies.
+              // Only label it when the compared funds actually disagree on
+              // method (ignoring funds whose value hasn't resolved yet) --
+              // stays quiet for the common case (e.g. three established
+              // funds, all CAGR) and only speaks up when it matters (a
+              // 3-year fund compared against one a few weeks old). When
+              // methods are mixed, also suppress "best" highlighting for
+              // this row -- an annualized rate and a raw point-to-point
+              // return aren't comparable, so declaring one "best" would be
+              // its own kind of misleading claim.
+              const mixedInceptionMethod = key === 'ret_inception' && hasMixedInceptionMethod(derived);
+              const bestIdx = mixedInceptionMethod ? -1 : bestIndexFor(vals, false);
               return (
                 <div key={key} className="cmp-row">
                   <div className="cmp-cell" style={{ fontWeight: 700 }}>{label}</div>
                   {derived.map((f, i) => (
                     <div key={f.id} className={`cmp-cell${bestIdx === i ? ' cmp-ret-best' : ''}`}>
                       <span className={`cmp-ret ${rc(f[key])}`}>{fmtRet(f[key])}</span>
+                      {mixedInceptionMethod && f.ret_inception_annualized != null && (
+                        <span style={{ fontSize: '.55rem', marginLeft: 4, color: 'var(--muted)', fontWeight: 600 }}>
+                          {f.ret_inception_annualized ? '(CAGR)' : '(Absolute)'}
+                        </span>
+                      )}
                       {bestIdx === i && n > 1 && <span style={{ fontSize: '.55rem', marginLeft: 4, color: 'var(--g3)' }}>↑ best</span>}
                     </div>
                   ))}
