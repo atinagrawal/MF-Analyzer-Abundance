@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
+import { MFCompareBar } from './MFCompare';
 
 // Slim, server-fetched projection of data/isin-scheme-master.json (see
 // app/api/scheme-master-facts/route.js) — fetched once and cached across
@@ -161,6 +162,35 @@ export default function ScreenerPage() {
       setCols(METRICS.map((m) => m.key));
     }
   }, []);
+
+  // ── Compare helpers ────────────────────────────────────────────────────
+  // compareList holds up to 3 entries, each { type: 'mf'|'sif', ...rawFund },
+  // and persists across the MF/SIF tab switch (it's not reset by `group`).
+  const MAX_COMPARE = 3;
+  const [compareList, setCompareList] = useState([]);
+  const [showCompare, setShowCompare] = useState(false);
+
+  // Every entry stores its own `.id` up front (same 'mf-'+code / 'sif-'+
+  // scheme_id format normalizeFund uses later) so nothing downstream needs
+  // to recompute the id pattern — MFCompareBar's chip removal, in
+  // particular, just reads `f.id` directly (see Task 7).
+  const toggleCompare = useCallback((fund, type) => {
+    const id = type === 'mf' ? 'mf-' + fund.code : 'sif-' + fund.scheme_id;
+    setCompareList((prev) => {
+      const already = prev.find((f) => f.id === id);
+      if (already) return prev.filter((f) => f.id !== id);
+      if (prev.length >= MAX_COMPARE) return prev;
+      return [...prev, { id, type, ...fund }];
+    });
+  }, []);
+  const isComparing = useCallback((type, key) => {
+    const id = type === 'mf' ? 'mf-' + key : 'sif-' + key;
+    return compareList.some((f) => f.id === id);
+  }, [compareList]);
+  const removeFromCompare = useCallback((id) => {
+    setCompareList((prev) => prev.filter((f) => f.id !== id));
+  }, []);
+  const clearCompare = useCallback(() => setCompareList([]), []);
 
   // SIF state
   const [sifData, setSifData] = useState(null);
@@ -415,6 +445,7 @@ export default function ScreenerPage() {
               <table className="scr-table">
                 <thead>
                   <tr>
+                    <th style={{ width: 32, textAlign: 'center', color: 'var(--muted)', fontSize: '.65rem' }} title="Add to compare (max 3)">⚖</th>
                     <th className="scr-name-h">Fund</th>
                     <th className={`scr-sortable ${sifSort.key === 'category' ? 'active' : ''}`} style={{textAlign:'left'}} onClick={() => setSifSortKey('category')}>Strategy{sifSort.key === 'category' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
                     <th className={`scr-sortable ${sifSort.key === 'sif_name' ? 'active' : ''}`} style={{textAlign:'left'}} onClick={() => setSifSortKey('sif_name')}>Fund House{sifSort.key === 'sif_name' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
@@ -426,7 +457,18 @@ export default function ScreenerPage() {
                   {sifVisible.map((s) => {
                     const fam = s.category?.startsWith('Equity') ? 'Equity' : 'Hybrid';
                     return (
-                      <tr key={s.scheme_id} className="scr-row" onClick={() => setSifSel(s)}>
+                      <tr key={s.scheme_id} className={`scr-row${isComparing('sif', s.scheme_id) ? ' row-comparing' : ''}`} onClick={() => setSifSel(s)}>
+                        <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', paddingLeft: 8, paddingRight: 4 }}>
+                          <input
+                            type="checkbox"
+                            className="cmp-chk"
+                            checked={isComparing('sif', s.scheme_id)}
+                            onChange={() => toggleCompare(s, 'sif')}
+                            disabled={!isComparing('sif', s.scheme_id) && compareList.length >= MAX_COMPARE}
+                            title={isComparing('sif', s.scheme_id) ? 'Remove from compare' : compareList.length >= MAX_COMPARE ? 'Max 3 selected' : 'Add to compare'}
+                            aria-label={`Compare ${s.nav_name}`}
+                          />
+                        </td>
                         <td className="scr-name">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <ProviderAvatar
@@ -481,6 +523,7 @@ export default function ScreenerPage() {
               <table className="scr-table">
                 <thead>
                   <tr>
+                    <th style={{ width: 32, textAlign: 'center', color: 'var(--muted)', fontSize: '.65rem' }} title="Add to compare (max 3)">⚖</th>
                     <th className="scr-name-h">Fund</th>
                     {visibleCols.map((m) => (
                       <th key={m.key} className={`scr-sortable ${sort.key === m.key ? 'active' : ''}`} onClick={() => setSortKey(m.key)}>
@@ -500,7 +543,18 @@ export default function ScreenerPage() {
                       else badgeCls = 'scr-table-liq-green';
                     }
                     return (
-                      <tr key={f.code} className="scr-row" onClick={() => setSel(f)}>
+                      <tr key={f.code} className={`scr-row${isComparing('mf', f.code) ? ' row-comparing' : ''}`} onClick={() => setSel(f)}>
+                        <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', paddingLeft: 8, paddingRight: 4 }}>
+                          <input
+                            type="checkbox"
+                            className="cmp-chk"
+                            checked={isComparing('mf', f.code)}
+                            onChange={() => toggleCompare(f, 'mf')}
+                            disabled={!isComparing('mf', f.code) && compareList.length >= MAX_COMPARE}
+                            title={isComparing('mf', f.code) ? 'Remove from compare' : compareList.length >= MAX_COMPARE ? 'Max 3 selected' : 'Add to compare'}
+                            aria-label={`Compare ${f.name}`}
+                          />
+                        </td>
                         <td className="scr-name">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <ProviderAvatar
@@ -571,6 +625,14 @@ export default function ScreenerPage() {
           <b>Disclaimer.</b> Educational tool by <b>Atin Kumar Agrawal | Abundance Financial Services</b> · AMFI Registered Mutual Funds &amp; SIF Distributor (ARN-251838). Returns are point-to-point CAGR from AMFI NAVs; volatility and drawdown are month-end approximations. Mutual fund investments are subject to market risks; read all scheme-related documents carefully. Past performance is not indicative of future results. This is not investment advice.
         </div>
       </div>
+
+      <MFCompareBar
+        selected={compareList}
+        onRemove={removeFromCompare}
+        onClear={clearCompare}
+        onCompare={() => setShowCompare(true)}
+      />
+
       <Footer activePage="screener" />
 
       {sel && <Detail f={sel} stress={stressMap[sel.code]} onClose={() => setSel(null)} />}
@@ -917,6 +979,7 @@ const CSS = `
 .scr-table td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
 .scr-row{cursor:pointer;transition:background .12s ease}
 .scr-row:hover{background:var(--g-xlight)}
+.scr-row.row-comparing{background:var(--g-xlight)}
 .scr-name,.scr-name-h{text-align:left!important;position:sticky;left:0;background:var(--surface)}
 .scr-row:hover .scr-name{background:var(--g-xlight)}
 .scr-fundlink{display:flex;flex-direction:column;gap:2px;background:none;border:0;padding:0;text-align:left;cursor:pointer;max-width:230px}
