@@ -26,7 +26,7 @@ const PERIODS = [
 ];
 const RISK_METRICS = [
   { label: 'Volatility', key: 'vol', lowerIsBetter: true, suffix: '%' },
-  { label: 'Max Drawdown', key: 'max_dd', lowerIsBetter: true, suffix: '%' }, // less negative = better; see bestIndexFor
+  { label: 'Max Drawdown', key: 'max_dd', lowerIsBetter: false, suffix: '%' }, // values are <= 0; "best" = closest to zero = the MAX value, not the min
   { label: 'Return/Risk', key: 'ret_per_risk', lowerIsBetter: false, suffix: '' },
 ];
 
