@@ -121,3 +121,141 @@ export function deriveSifRisk(series) {
 
   return { vol, max_dd, ret_per_risk };
 }
+
+// ── 1. Scheme list (mirrors app/api/sif-nav/route.js's fetchFromAMFI) ──────
+async function fetchSchemeList() {
+  const res = await fetch(`${AMFI_BASE}/sif-latest-nav`, { headers: HEADERS, signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`AMFI SIF endpoint returned ${res.status}`);
+  const data = await res.json();
+
+  const schemes = [];
+  for (const typeGroup of data.data ?? []) {
+    for (const cat of typeGroup.categories ?? []) {
+      for (const grp of cat.groups ?? []) {
+        for (const s of grp.schemes ?? []) {
+          if (/direct/i.test(s.NavName)) continue;
+          schemes.push({
+            sif_name: s.SIFName, scheme_id: s.Sd_Id, nav_name: s.NavName,
+            category: s.category, nav: parseFloat(s.NetAssetValue), nav_date: s.Date,
+          });
+        }
+      }
+    }
+  }
+  return schemes;
+}
+
+// Same exclusion MF's build script already applies to its own scheme names
+// (scripts/build-screener.mjs) -- IDCW/payout/reinvest/bonus/segregated
+// plan variants are just a different distribution option on the same
+// underlying scheme, not a distinct fund.
+function excludeIdcw(schemes) {
+  return schemes.filter((s) => !/(idcw|payout|re-?invest|bonus|segregated)\b/i.test(s.nav_name));
+}
+
+// ── 2. NAV history, wide-window-first with narrow fallback ─────────────────
+// Same resilience pattern as compareEngine.js's fetchNavSeries: AMFI's
+// sif-nav-history endpoint rejects a full 5-year-back request outright but
+// accepts up to ~4.5 years -- try wide first (picks up a SIF's growing real
+// history automatically as it ages), fall back to a safely-within-range
+// window if AMFI rejects the wide one.
+async function fetchSifHistory(schemeId, daysBack, toStr) {
+  const fromStr = new Date(Date.now() - daysBack * DAY_MS).toISOString().slice(0, 10);
+  const url = `${AMFI_BASE}/sif-nav-history?query_type=historical_period&from_date=${fromStr}&to_date=${toStr}&sd_id=${schemeId}`;
+  const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(15000) });
+  if (!res.ok) return null;
+  const json = await res.json();
+  const series = parseSifHistoryResponse(json);
+  return series.length >= 2 ? series : null;
+}
+async function fetchSifHistoryWithFallback(schemeId) {
+  const toStr = new Date().toISOString().slice(0, 10);
+  try {
+    return (await fetchSifHistory(schemeId, 5 * 365, toStr)) || (await fetchSifHistory(schemeId, 400, toStr));
+  } catch {
+    try { return await fetchSifHistory(schemeId, 400, toStr); } catch { return null; }
+  }
+}
+
+// Bounded concurrency -- same helper style as build-screener.mjs, keeps this
+// polite to AMFI's endpoint even though the scheme count is small.
+async function runConcurrent(items, fn, limit = 8) {
+  const out = new Array(items.length);
+  let idx = 0;
+  async function worker() { while (idx < items.length) { const i = idx++; out[i] = await fn(items[i], i); } }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
+async function main() {
+  console.log('[sif-screener] fetching scheme list…');
+  const all = await fetchSchemeList();
+  const schemes = excludeIdcw(all);
+  console.log(`[sif-screener] ${schemes.length} schemes after excluding IDCW/payout/reinvest/bonus/segregated (${all.length} total)`);
+
+  console.log(`[sif-screener] fetching NAV history for ${schemes.length} schemes…`);
+  let done = 0;
+  const results = await runConcurrent(schemes, async (s) => {
+    const series = await fetchSifHistoryWithFallback(s.scheme_id);
+    process.stdout.write(`\r[sif-screener] history: ${++done}/${schemes.length}   `);
+    return { scheme: s, series };
+  }, 8);
+  process.stdout.write('\n');
+
+  const asOfMs = Date.now();
+  const rows = results.map(({ scheme: s, series }) => {
+    // Per-scheme isolation: a fetch/derivation failure for one scheme only
+    // nulls that scheme's return/risk columns, never blocks the others.
+    const returns = series ? deriveSifReturns(series, asOfMs) : {};
+    const risk = series ? deriveSifRisk(series) : { vol: null, max_dd: null, ret_per_risk: null };
+    return {
+      scheme_id: s.scheme_id, nav_name: s.nav_name, sif_name: s.sif_name, category: s.category,
+      nav: +s.nav.toFixed(4), nav_date: s.nav_date,
+      ret_1m: returns.ret_1m ?? null, ret_3m: returns.ret_3m ?? null, ret_6m: returns.ret_6m ?? null,
+      ret_1y: returns.ret_1y ?? null, ret_3y: returns.ret_3y ?? null, ret_5y: returns.ret_5y ?? null,
+      ret_7y: returns.ret_7y ?? null, ret_10y: returns.ret_10y ?? null,
+      vol: risk.vol, max_dd: risk.max_dd, ret_per_risk: risk.ret_per_risk,
+      age_years: returns.age_years ?? null, inception_date: returns.inception_date ?? null,
+      ret_inception: returns.ret_inception ?? null,
+      ret_inception_annualized: returns.ret_inception_annualized ?? null,
+      asof: new Date(asOfMs).toISOString().slice(0, 10),
+    };
+  });
+
+  if (!process.env.POSTGRES_URL) {
+    console.log(`[sif-screener] POSTGRES_URL not set, skipping DB write (${rows.length} rows computed)`);
+    return;
+  }
+
+  const c = new pg.Client({ connectionString: process.env.POSTGRES_URL, ssl: { rejectUnauthorized: false } });
+  await c.connect();
+
+  await c.query(`CREATE TABLE IF NOT EXISTS sif_screener (
+    scheme_id TEXT PRIMARY KEY, nav_name TEXT NOT NULL, sif_name TEXT, category TEXT,
+    nav NUMERIC, nav_date TEXT,
+    ret_1m NUMERIC, ret_3m NUMERIC, ret_6m NUMERIC,
+    ret_1y NUMERIC, ret_3y NUMERIC, ret_5y NUMERIC, ret_7y NUMERIC, ret_10y NUMERIC,
+    vol NUMERIC, max_dd NUMERIC, ret_per_risk NUMERIC, age_years NUMERIC,
+    inception_date TEXT, ret_inception NUMERIC, ret_inception_annualized BOOLEAN,
+    asof TEXT
+  )`);
+  await c.query(`CREATE INDEX IF NOT EXISTS idx_sif_screener_category ON sif_screener (category)`);
+
+  const COLS = ['scheme_id','nav_name','sif_name','category','nav','nav_date','ret_1m','ret_3m','ret_6m','ret_1y','ret_3y','ret_5y','ret_7y','ret_10y','vol','max_dd','ret_per_risk','age_years','inception_date','ret_inception','ret_inception_annualized','asof'];
+  const N = COLS.length;
+  await c.query('BEGIN');
+  await c.query('DELETE FROM sif_screener');
+  for (let i = 0; i < rows.length; i += 400) {
+    const chunk = rows.slice(i, i + 400);
+    const vals = [], ph = [];
+    chunk.forEach((r, j) => {
+      ph.push('(' + COLS.map((_, k) => `$${j * N + k + 1}`).join(',') + ')');
+      COLS.forEach((col) => vals.push(r[col] ?? null));
+    });
+    await c.query(`INSERT INTO sif_screener (${COLS.join(',')}) VALUES ${ph.join(',')}`, vals);
+  }
+  await c.query('COMMIT');
+  await c.end();
+  console.log(`[sif-screener] upserted ${rows.length} rows into Postgres`);
+}
+main().catch((e) => { console.error(e); process.exit(1); });
