@@ -9,6 +9,7 @@ import { useState, useEffect, useMemo } from 'react';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
 import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank, computeWealthSimulation } from './compareEngine';
+import CompareGrowthChart from './CompareGrowthChart';
 import './mf-compare.css';
 
 const MAX_COMPARE = 3;
@@ -134,6 +135,35 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
             </div>
             <button className="cmp-modal-close" onClick={onClose} aria-label="Close comparison">×</button>
           </div>
+
+          {(() => {
+            // Align every fund's series to the same start date — the LATEST
+            // "first available NAV" among the selected funds (i.e. governed
+            // by whichever fund has the shortest real history), so every
+            // plotted line has genuine data across the full visible range.
+            // Each series is then re-based to start at the same ₹1,00,000,
+            // so the lines show comparable growth, not raw NAV levels.
+            const seriesList = derived
+              .map((f) => ({ f, raw: navSeriesByFund[f.id] }))
+              .filter((x) => x.raw && x.raw.length >= 2);
+            if (seriesList.length < 2) return null;
+
+            const commonStartT = Math.max(...seriesList.map((x) => x.raw[0].t));
+            const colors = ['#1b5e20', '#e65100', '#1565c0'];
+            const chartSeries = seriesList.map(({ f, raw }, i) => {
+              const trimmed = raw.filter((p) => p.t >= commonStartT);
+              if (trimmed.length < 2) return null;
+              const baseNav = trimmed[0].nav;
+              return {
+                name: f.name.length > 24 ? f.name.slice(0, 24) + '…' : f.name,
+                color: colors[i % colors.length],
+                data: trimmed.map((p) => ({ t: p.t, v: (p.nav / baseNav) * 100000 })),
+              };
+            }).filter(Boolean);
+
+            if (chartSeries.length < 2) return null;
+            return <CompareGrowthChart series={chartSeries} />;
+          })()}
 
           <div className="cmp-grid" style={{ '--cols': n }}>
             <div className="cmp-cell cmp-strat-header">
