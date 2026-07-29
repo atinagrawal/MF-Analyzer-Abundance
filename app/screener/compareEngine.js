@@ -171,3 +171,142 @@ export function computeWealthSimulation(fund, navSeries, asOfMs = Date.now()) {
     return { label, years, lumpsum, sip };
   });
 }
+
+// ── Fund normalization ─────────────────────────────────────────────────────
+// Maps either an MF or SIF raw fund object (as passed into compareList —
+// see Task 6) into one common shape the comparison modal renders uniformly.
+// SIF entries start with null return/risk fields; applyDerivedStats below
+// fills them in once that fund's NAV history has resolved (see
+// fetchNavSeries in Task 1) — until then the modal shows "—" for those
+// cells, identically to how it already handles any fund missing a period.
+export function normalizeFund(entry) {
+  if (entry.type === 'mf') {
+    return {
+      id: 'mf-' + entry.code,
+      type: 'mf',
+      name: entry.name,
+      house: entry.amc,
+      category: entry.category,
+      navFetchKey: entry.code,
+      ret_1m: entry.ret_1m ?? null, ret_3m: entry.ret_3m ?? null, ret_6m: entry.ret_6m ?? null,
+      ret_1y: entry.ret_1y ?? null, ret_3y: entry.ret_3y ?? null, ret_5y: entry.ret_5y ?? null,
+      ret_7y: entry.ret_7y ?? null, ret_10y: entry.ret_10y ?? null, ret_inception: entry.ret_inception ?? null,
+      vol: entry.vol ?? null, max_dd: entry.max_dd ?? null, ret_per_risk: entry.ret_per_risk ?? null,
+    };
+  }
+  return {
+    id: 'sif-' + entry.scheme_id,
+    type: 'sif',
+    name: entry.nav_name,
+    house: entry.sif_name,
+    category: entry.category,
+    navFetchKey: entry.scheme_id,
+    ret_1m: null, ret_3m: null, ret_6m: null, ret_1y: null, ret_3y: null,
+    ret_5y: null, ret_7y: null, ret_10y: null, ret_inception: null,
+    vol: null, max_dd: null, ret_per_risk: null,
+  };
+}
+
+// ── SIF-derived stats (returns, vol, max drawdown, ret/risk) ───────────────
+// MF funds already carry these precomputed server-side; SIFs don't yet
+// (too new for a scheduled build pipeline), so this derives the same shape
+// from a fetched NAV series so both types render through the same table
+// rendering code.
+
+const YEAR_MS_2 = 365 * 86400000;
+const PERIOD_DAYS = {
+  ret_1m: 30, ret_3m: 91, ret_6m: 182,
+  ret_1y: 365, ret_3y: 365 * 3, ret_5y: 365 * 5, ret_7y: 365 * 7, ret_10y: 365 * 10,
+};
+
+export function deriveReturnsFromSeries(series, asOfMs) {
+  const out = {};
+  const latest = seriesAsOf(series, asOfMs);
+  if (!latest) return out;
+  const first = series[0];
+
+  for (const [key, days] of Object.entries(PERIOD_DAYS)) {
+    const targetT = asOfMs - days * 86400000;
+    if (targetT < first.t) { out[key] = null; continue; }
+    const past = seriesForward(series, targetT);
+    if (!past || past.nav <= 0) { out[key] = null; continue; }
+    const years = days / 365;
+    out[key] = years <= 1
+      ? +(((latest.nav - past.nav) / past.nav) * 100).toFixed(2) // sub-year: absolute change, matches MF's 'abs' kind for 1M/3M/6M
+      : +((Math.pow(latest.nav / past.nav, 1 / years) - 1) * 100).toFixed(2); // 1Y+: CAGR
+  }
+  out.ret_inception = first.nav > 0
+    ? +((Math.pow(latest.nav / first.nav, 1 / Math.max((latest.t - first.t) / YEAR_MS_2, 1 / 365)) - 1) * 100).toFixed(2)
+    : null;
+  return out;
+}
+
+// Annualized volatility (stdev of monthly returns x sqrt(12)) and max
+// drawdown (largest peak-to-trough %), both from the same series resampled
+// to one point per calendar month (last observation of each month).
+export function deriveRiskFromSeries(series) {
+  if (!series || series.length < 2) return { vol: null, max_dd: null, ret_per_risk: null };
+
+  const byMonth = new Map();
+  for (const p of series) {
+    const d = new Date(p.t);
+    const key = d.getUTCFullYear() * 12 + d.getUTCMonth();
+    byMonth.set(key, p); // later points overwrite earlier ones within the same month -> last wins
+  }
+  const monthly = [...byMonth.values()].sort((a, b) => a.t - b.t);
+
+  let vol = null;
+  if (monthly.length >= 3) {
+    const rets = [];
+    for (let i = 1; i < monthly.length; i++) rets.push((monthly[i].nav - monthly[i - 1].nav) / monthly[i - 1].nav);
+    const mean = rets.reduce((s, r) => s + r, 0) / rets.length;
+    const variance = rets.reduce((s, r) => s + (r - mean) ** 2, 0) / rets.length;
+    vol = +(Math.sqrt(variance) * Math.sqrt(12) * 100).toFixed(2);
+  }
+
+  let peak = series[0].nav, maxDd = 0;
+  for (const p of series) {
+    if (p.nav > peak) peak = p.nav;
+    const dd = ((p.nav - peak) / peak) * 100;
+    if (dd < maxDd) maxDd = dd;
+  }
+  const max_dd = +maxDd.toFixed(2);
+
+  // Ret/Risk uses since-inception CAGR over annualized volatility — a
+  // Sharpe-like "return per unit of volatility" figure. This is a disclosed,
+  // reasonable stand-in for SIFs specifically (MF's own precomputed
+  // ret_per_risk is built by a separate server-side pipeline this feature
+  // has no visibility into) — not a claim the two formulas are identical.
+  const inception = deriveReturnsFromSeries(series, series[series.length - 1].t).ret_inception;
+  const ret_per_risk = (inception != null && vol) ? +(inception / vol).toFixed(2) : null;
+
+  return { vol, max_dd, ret_per_risk };
+}
+
+// Merges derived stats onto a normalized SIF fund once its NAV series has
+// resolved. No-op for MF funds (their fields are already populated from
+// normalizeFund above).
+export function applyDerivedStats(normalized, series, asOfMs = Date.now()) {
+  if (normalized.type !== 'sif' || !series) return normalized;
+  return { ...normalized, ...deriveReturnsFromSeries(series, asOfMs), ...deriveRiskFromSeries(series) };
+}
+
+// ── Category peer-rank (MF only) ────────────────────────────────────────────
+// Ranks one MF fund within its own category by 3Y return, using the
+// already-loaded `allMfFunds` array (the screener's own `funds` state) — a
+// pure client-side computation, no new fetch.
+//
+// SIF peer-rank is explicitly OUT OF SCOPE for this plan: it would require
+// fetching + deriving 3Y returns for every OTHER SIF in the same category
+// (not just the funds being compared), which is materially more fetching
+// than this feature otherwise needs, for a ranking that isn't very
+// meaningful yet given how few SIFs exist per category today. Returns null
+// for SIF funds — rendered as "—", identically to any other unavailable stat.
+export function categoryPeerRank(normalizedFund, allMfFunds) {
+  if (normalizedFund.type !== 'mf') return null;
+  const peers = allMfFunds.filter((f) => f.category === normalizedFund.category && f.ret_3y != null);
+  if (peers.length < 2) return null;
+  const sorted = [...peers].sort((a, b) => b.ret_3y - a.ret_3y);
+  const rank = sorted.findIndex((f) => f.code === normalizedFund.navFetchKey) + 1;
+  return rank > 0 ? { rank, of: sorted.length } : null;
+}
