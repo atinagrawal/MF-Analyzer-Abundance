@@ -385,14 +385,12 @@ export default function ScreenerPage() {
           {!isSIF && <label className="scr-toggle"><input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} /><span>Open-ended only</span></label>}
         </div>
 
-        {!isSIF && (
-          <div className="scr-colbar">
-            <span className="scr-colbar-l">Columns:</span>
-            {METRICS.map((m) => (
-              <button key={m.key} className={`scr-colchip ${cols.includes(m.key) ? 'on' : ''}`} onClick={() => toggleCol(m.key)}>{m.label}</button>
-            ))}
-          </div>
-        )}
+        <div className="scr-colbar">
+          <span className="scr-colbar-l">Columns:</span>
+          {METRICS.map((m) => (
+            <button key={m.key} className={`scr-colchip ${cols.includes(m.key) ? 'on' : ''}`} onClick={() => toggleCol(m.key)}>{m.label}</button>
+          ))}
+        </div>
 
         <div className="scr-meta">
           {err ? <span className="scr-neg">{err}</span> : isSIF
@@ -456,8 +454,11 @@ export default function ScreenerPage() {
                     <th className="scr-name-h">Fund</th>
                     <th className={`scr-sortable ${sifSort.key === 'category' ? 'active' : ''}`} style={{textAlign:'left'}} onClick={() => setSifSortKey('category')}>Strategy{sifSort.key === 'category' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
                     <th className={`scr-sortable ${sifSort.key === 'sif_name' ? 'active' : ''}`} style={{textAlign:'left'}} onClick={() => setSifSortKey('sif_name')}>Fund House{sifSort.key === 'sif_name' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
-                    <th className={`scr-sortable ${sifSort.key === 'nav' ? 'active' : ''}`} onClick={() => setSifSortKey('nav')}>NAV{sifSort.key === 'nav' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
-                    <th>NAV Date</th>
+                    {visibleCols.map((m) => (
+                      <th key={m.key} className={`scr-sortable ${sifSort.key === m.key ? 'active' : ''}`} onClick={() => setSifSortKey(m.key)}>
+                        {m.label}{sifSort.key === m.key ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -494,8 +495,9 @@ export default function ScreenerPage() {
                           <span className={`scr-sif-badge scr-sif-badge-${fam.toLowerCase()}`}>{sifStratShort(s.category)}</span>
                         </td>
                         <td style={{textAlign:'left',color:'var(--text2)',fontSize:'12px',fontWeight:600}}>{s.sif_name}</td>
-                        <td><b>₹{s.nav.toFixed(4)}</b></td>
-                        <td className="scr-muted" style={{fontSize:'11px'}}>{s.nav_date}</td>
+                        {visibleCols.map((m) => (
+                          <td key={m.key} className={cellCls(m, s[m.key])}>{m.kind === 'ratio' ? <b>{fmtCell(m, s[m.key])}</b> : fmtCell(m, s[m.key])}</td>
+                        ))}
                       </tr>
                     );
                   })}
