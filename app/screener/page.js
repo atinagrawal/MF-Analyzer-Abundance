@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
-import { MFCompareBar } from './MFCompare';
+import { MFCompareBar, MFCompareModal } from './MFCompare';
 
 // Slim, server-fetched projection of data/isin-scheme-master.json (see
 // app/api/scheme-master-facts/route.js) — fetched once and cached across
@@ -632,6 +632,15 @@ export default function ScreenerPage() {
         onClear={clearCompare}
         onCompare={() => setShowCompare(true)}
       />
+
+      {showCompare && (
+        <MFCompareModal
+          funds={compareList}
+          allMfFunds={funds}
+          onClose={() => setShowCompare(false)}
+          onRemove={removeFromCompare}
+        />
+      )}
 
       <Footer activePage="screener" />
 
