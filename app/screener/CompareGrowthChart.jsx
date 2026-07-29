@@ -40,14 +40,18 @@ export default function CompareGrowthChart({ series }) {
   const [dragState, setDragState] = useState(null); // { startIdx, curIdx } while actively dragging
   const [selection, setSelection] = useState(null); // { lo, hi } once a range is committed
   const dragRef = useRef({ dragging: false, startIdx: null, moved: false });
+  const activeDragHandlersRef = useRef(null);
 
   useEffect(() => {
     return () => {
-      window.removeEventListener('mouseup', onUp);
-      window.removeEventListener('touchend', onUp);
-      window.removeEventListener('touchcancel', onCancelDrag);
+      const h = activeDragHandlersRef.current;
+      if (h) {
+        window.removeEventListener('mouseup', h.up);
+        window.removeEventListener('touchend', h.up);
+        window.removeEventListener('touchcancel', h.cancel);
+      }
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const n = series[0]?.data.length || 0;
   const { vMin, vMax } = useMemo(() => {
@@ -76,6 +80,7 @@ export default function CompareGrowthChart({ series }) {
 
   function onDown(e) {
     dragRef.current = { dragging: true, startIdx: idxFromEvent(e), moved: false };
+    activeDragHandlersRef.current = { up: onUp, cancel: onCancelDrag };
     window.addEventListener('mouseup', onUp);
     window.addEventListener('touchend', onUp);
     window.addEventListener('touchcancel', onCancelDrag);
@@ -109,6 +114,7 @@ export default function CompareGrowthChart({ series }) {
     window.removeEventListener('mouseup', onUp);
     window.removeEventListener('touchend', onUp);
     window.removeEventListener('touchcancel', onCancelDrag);
+    activeDragHandlersRef.current = null;
   }
   function onCancelDrag() {
     dragRef.current = { dragging: false, startIdx: null, moved: false };
@@ -116,6 +122,7 @@ export default function CompareGrowthChart({ series }) {
     window.removeEventListener('mouseup', onUp);
     window.removeEventListener('touchend', onUp);
     window.removeEventListener('touchcancel', onCancelDrag);
+    activeDragHandlersRef.current = null;
   }
   function onLeave() {
     if (!dragRef.current.dragging) setHoverIdx(null);
