@@ -93,6 +93,12 @@ const METRICS = [
   { key: 'ret_inception', label: 'Inception', kind: 'ret' },
 ];
 const DEFAULT_COLS = ['ret_1y', 'ret_3y', 'ret_5y', 'max_dd', 'ret_per_risk'];
+// Ascending-by-default columns for the SIF table's sort: text (A-Z) and
+// "lower is better" risk metrics. Everything else (nav, all return metrics,
+// ret/risk) defaults to descending -- matches MF's own setSortKey
+// convention exactly, so clicking a return column for the first time shows
+// best-first on both tables, not best-first on MF and worst-first on SIF.
+const SIF_ASC_DEFAULT = new Set(['category', 'sif_name', 'vol', 'max_dd']);
 const fmtCell = (m, v) => {
   if (v == null) return '—';
   if (m.kind === 'nav') return '₹' + v.toFixed(4);
@@ -262,7 +268,7 @@ export default function ScreenerPage() {
   const sifPageCount = Math.max(1, Math.ceil(sifRows.length / pageSize));
   const sifCur = Math.min(sifPage, sifPageCount - 1);
   const sifVisible = sifRows.slice(sifCur * pageSize, sifCur * pageSize + pageSize);
-  const setSifSortKey = (key) => setSifSort((s) => (s.key === key ? { key, dir: -s.dir } : { key, dir: key === 'nav' ? -1 : 1 }));
+  const setSifSortKey = (key) => setSifSort((s) => (s.key === key ? { key, dir: -s.dir } : { key, dir: SIF_ASC_DEFAULT.has(key) ? 1 : -1 }));
   useEffect(() => { setSifPage(0); }, [sifFamily, sifCat, sifHouse, sifQ, sifSort, pageSize]);
   const sifLeaders = useMemo(() => {
     const uniq = [...new Set(sifSchemes.map((s) => s.category))];
