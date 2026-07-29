@@ -370,11 +370,22 @@ export function computeVerdictScores(normalizedFunds) {
   return totals.map((t, i) => (weightSums[i] > 0 ? t / weightSums[i] : 0));
 }
 
+// Detects a genuine tie among the top-scoring funds (within a small
+// floating-point tolerance, not exact `===`, to avoid false negatives from
+// harmless floating-point noise) instead of silently picking whichever
+// tied fund happens to be first in `normalizedFunds` — array order can
+// change across sessions (adding/re-adding a fund appends it to the end),
+// so an exact tie must never depend on input order.
 export function overallWinner(normalizedFunds, scores) {
   if (!scores.length) return null;
   const maxScore = Math.max(...scores);
-  const idx = scores.indexOf(maxScore);
-  return { idx, score: maxScore, fund: normalizedFunds[idx] };
+  const EPSILON = 1e-9;
+  const tiedIndices = scores.map((s, i) => ({ s, i })).filter(({ s }) => Math.abs(s - maxScore) < EPSILON).map(({ i }) => i);
+  if (tiedIndices.length > 1) {
+    return { idx: null, tie: true, tiedIndices, score: maxScore, funds: tiedIndices.map((i) => normalizedFunds[i]) };
+  }
+  const idx = tiedIndices[0];
+  return { idx, tie: false, score: maxScore, fund: normalizedFunds[idx] };
 }
 
 // Raw "best in N metrics" count for the per-fund header badge.

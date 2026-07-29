@@ -90,15 +90,24 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
   // entries. Each fetch is independent; a failure leaves that one fund's
   // fields null (rendered as "—"), never blocks the others.
   const [derived, setDerived] = useState(normalized);
+  // Tracks whether the SIF-derivation fetch below is still in flight, so the
+  // verdict banner (and win-badges) never render a confident conclusion from
+  // a mix of "real" MF stats and still-null SIF stats — see the loading
+  // branch in the verdict banner section below.
+  const [derivedLoading, setDerivedLoading] = useState(true);
   useEffect(() => {
     setDerived(normalized);
+    setDerivedLoading(true);
     let cancelled = false;
     Promise.all(normalized.map(async (f) => {
       if (f.type !== 'sif') return f;
       const series = await fetchNavSeries(f);
       return applyDerivedStats(f, series);
     })).then((results) => {
-      if (!cancelled) setDerived(results);
+      if (!cancelled) {
+        setDerived(results);
+        setDerivedLoading(false);
+      }
     });
     return () => { cancelled = true; };
   }, [normalized]);
@@ -208,7 +217,7 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
                   </div>
                 </div>
                 <span className={`cmp-type-badge ${f.type}`}>{f.type === 'mf' ? 'Mutual Fund' : 'SIF'}</span>
-                {counts[i] > 0 && (
+                {!derivedLoading && counts[i] > 0 && (
                   <span className="cmp-win-badge">🏆 Best in {counts[i]} metric{counts[i] > 1 ? 's' : ''}</span>
                 )}
                 <button className="cmp-remove-btn" onClick={() => onRemove(f.id)}>✕ Remove</button>
@@ -343,9 +352,36 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
           </div>
 
           {n > 1 && (() => {
+            if (derivedLoading) {
+              return (
+                <div className="cmp-verdict">
+                  <div className="cmp-verdict-icon">⏳</div>
+                  <div>
+                    <div className="cmp-verdict-title">Calculating Overall Leader…</div>
+                    <div className="cmp-verdict-body">Waiting for all selected funds' data to finish loading before determining the overall leader.</div>
+                  </div>
+                </div>
+              );
+            }
             const scores = computeVerdictScores(derived);
             const winner = overallWinner(derived, scores);
             if (!winner) return null;
+            if (winner.tie) {
+              const names = winner.funds.map((f) => f.name).join(' and ');
+              return (
+                <div className="cmp-verdict">
+                  <div className="cmp-verdict-icon">🤝</div>
+                  <div>
+                    <div className="cmp-verdict-title">It's a Tie: {names}</div>
+                    <div className="cmp-verdict-body">
+                      <strong>{names}</strong> are evenly matched across the metrics compared — weighted toward long-term
+                      consistency (5Y/7Y/10Y and Return/Risk count most, 1M/3M count least), averaged only over the periods
+                      each fund actually has data for so a newer fund isn't penalized for not existing that long.
+                    </div>
+                  </div>
+                </div>
+              );
+            }
             return (
               <div className="cmp-verdict">
                 <div className="cmp-verdict-icon">🏆</div>
