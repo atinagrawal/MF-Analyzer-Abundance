@@ -12,7 +12,7 @@
 //
 // This exact interaction was prototyped and approved live during
 // brainstorming — see docs/superpowers/specs/2026-07-29-mf-sif-comparison-design.md.
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState, useMemo, useEffect } from 'react';
 
 const W = 760, H = 260, PAD_L = 44, PAD_R = 12, PAD_T = 10, PAD_B = 26;
 
@@ -41,6 +41,14 @@ export default function CompareGrowthChart({ series }) {
   const [selection, setSelection] = useState(null); // { lo, hi } once a range is committed
   const dragRef = useRef({ dragging: false, startIdx: null, moved: false });
 
+  useEffect(() => {
+    return () => {
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchend', onUp);
+      window.removeEventListener('touchcancel', onCancelDrag);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const n = series[0]?.data.length || 0;
   const { vMin, vMax } = useMemo(() => {
     const all = series.flatMap((s) => s.data.map((p) => p.v));
@@ -68,6 +76,9 @@ export default function CompareGrowthChart({ series }) {
 
   function onDown(e) {
     dragRef.current = { dragging: true, startIdx: idxFromEvent(e), moved: false };
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchend', onUp);
+    window.addEventListener('touchcancel', onCancelDrag);
   }
   function onMove(e) {
     const d = dragRef.current;
@@ -89,12 +100,22 @@ export default function CompareGrowthChart({ series }) {
       const endIdx = idxFromEvent(e);
       if (d.moved && Math.abs(endIdx - d.startIdx) > 2) {
         setSelection({ lo: Math.min(d.startIdx, endIdx), hi: Math.max(d.startIdx, endIdx) });
-      } else if (!d.moved) {
+      } else {
         setSelection(null);
       }
     }
     dragRef.current = { dragging: false, startIdx: null, moved: false };
     setDragState(null);
+    window.removeEventListener('mouseup', onUp);
+    window.removeEventListener('touchend', onUp);
+    window.removeEventListener('touchcancel', onCancelDrag);
+  }
+  function onCancelDrag() {
+    dragRef.current = { dragging: false, startIdx: null, moved: false };
+    setDragState(null);
+    window.removeEventListener('mouseup', onUp);
+    window.removeEventListener('touchend', onUp);
+    window.removeEventListener('touchcancel', onCancelDrag);
   }
   function onLeave() {
     if (!dragRef.current.dragging) setHoverIdx(null);
