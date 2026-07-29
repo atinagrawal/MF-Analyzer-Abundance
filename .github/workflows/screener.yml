@@ -34,6 +34,11 @@ jobs:
           MONTHS: "60"
         run: node scripts/build-screener.mjs
 
+      - name: Build + upsert SIF screener dataset
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: node scripts/build-sif-screener.mjs
+
       - name: Fetch + upsert monthly stress test data
         env:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
