@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
-import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank, computeWealthSimulation, seriesAsOf, computeVerdictScores, overallWinner } from './compareEngine';
+import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank, pickCommonRankPeriod, computeWealthSimulation, seriesAsOf, computeVerdictScores, overallWinner } from './compareEngine';
 import CompareGrowthChart from './CompareGrowthChart';
 import './mf-compare.css';
 
@@ -277,85 +277,121 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
               );
             })}
 
-            {/* Category peer-rank (MF only — see categoryPeerRank's doc comment) */}
-            <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
-              🏅 Category Peer-Rank
-            </div>
-            <div className="cmp-row">
-              <div className="cmp-cell" style={{ fontWeight: 700 }}>Rank by 3Y Return</div>
-              {derived.map((f) => {
-                const rank = categoryPeerRank(f, allMfFunds);
-                return (
-                  <div key={f.id} className="cmp-cell">
-                    {rank ? (
-                      <span className="cmp-peer-rank">#{rank.rank} <span className="cmp-peer-rank-of">of {rank.of}</span></span>
-                    ) : (
-                      <span className="cmp-ret neu" title={f.type === 'sif' ? 'Not enough SIF peer data yet' : 'Not enough data for this category'}>—</span>
-                    )}
+            {/* Category peer-rank (MF only — see categoryPeerRank's doc comment).
+                Uses the longest return period every compared MF fund actually
+                has (preferring 3Y), so the row shows one consistent period
+                across all funds instead of "3Y for one, dash for another" —
+                see pickCommonRankPeriod. Hidden entirely if no MF fund is
+                being compared, or none of the fallback periods is common to
+                all of them. */}
+            {(() => {
+              const rankPeriod = pickCommonRankPeriod(derived);
+              if (!rankPeriod) return null;
+              return (
+                <>
+                  <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
+                    🏅 Category Peer-Rank
                   </div>
-                );
-              })}
-            </div>
+                  <div className="cmp-row">
+                    <div className="cmp-cell" style={{ fontWeight: 700 }}>Rank by {rankPeriod.label} Return</div>
+                    {derived.map((f) => {
+                      const rank = categoryPeerRank(f, allMfFunds, rankPeriod.key);
+                      return (
+                        <div key={f.id} className="cmp-cell">
+                          {rank ? (
+                            <span className="cmp-peer-rank">#{rank.rank} <span className="cmp-peer-rank-of">of {rank.of}</span></span>
+                          ) : (
+                            <span className="cmp-ret neu" title={f.type === 'sif' ? 'Not enough SIF peer data yet' : 'Not enough data for this category'}>—</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
 
-            {/* Wealth Simulation */}
-            <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
-              💰 Wealth Simulation
-            </div>
+            {/* Wealth Simulation. Hides an individual stop (1Y/3Y/5Y) that
+                NO selected fund has data for, rather than showing "—" for
+                everyone in that column; hides the Lumpsum or SIP row
+                entirely if NO fund has any data for it at all (this is also
+                how an all-SIF comparison's SIP row disappears — SIFs never
+                produce sip data, see computeWealthSimulation); hides the
+                whole section if both rows end up empty. */}
             {(() => {
               const sims = derived.map((f) => computeWealthSimulation(f, navSeriesByFund[f.id]));
               const stopsOf = sims[0] || [];
+              const qualifyingStops = (field) =>
+                stopsOf.map((_, idx) => idx).filter((idx) => sims.some((s) => s[idx]?.[field] != null));
+              const lumpsumStops = qualifyingStops('lumpsum');
+              const sipStops = qualifyingStops('sip');
+              if (!lumpsumStops.length && !sipStops.length) return null;
+
               return (
                 <>
-                  <div className="cmp-row">
-                    <div className="cmp-cell" style={{ fontWeight: 700 }}>
-                      <div className="cmp-wealth-subhead">₹1,00,000 Lumpsum</div>
-                    </div>
-                    {derived.map((f, i) => (
-                      <div key={f.id} className="cmp-cell">
-                        <div className="cmp-wealth-strip">
-                          {sims[i].map(({ label, lumpsum }, idx) => (
-                            <div key={label} style={{ display: 'contents' }}>
-                              <div className="cmp-wealth-stop">
-                                <div className="cmp-wealth-stop-period">{label}</div>
-                                <div className="cmp-wealth-stop-val" style={{ color: lumpsum && lumpsum.gain >= 0 ? 'var(--g2)' : 'var(--neg)' }}>
-                                  {lumpsum ? '₹' + Math.round(lumpsum.value).toLocaleString('en-IN') : '—'}
-                                </div>
-                                <div className="cmp-wealth-stop-gain" style={{ color: lumpsum && lumpsum.gain >= 0 ? 'var(--g3)' : 'var(--neg)' }}>
-                                  {lumpsum ? (lumpsum.gain >= 0 ? '+' : '') + '₹' + Math.abs(Math.round(lumpsum.gain)).toLocaleString('en-IN') : ''}
-                                </div>
-                              </div>
-                              {idx < sims[i].length - 1 && <div className="cmp-wealth-arrow">→</div>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                  <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
+                    💰 Wealth Simulation
                   </div>
-                  <div className="cmp-row">
-                    <div className="cmp-cell" style={{ fontWeight: 700 }}>
-                      <div className="cmp-wealth-subhead">₹10,000/mo SIP (Real)</div>
-                    </div>
-                    {derived.map((f, i) => (
-                      <div key={f.id} className="cmp-cell">
-                        <div className="cmp-wealth-strip">
-                          {sims[i].map(({ label, sip }, idx) => (
-                            <div key={label} style={{ display: 'contents' }}>
-                              <div className="cmp-wealth-stop">
-                                <div className="cmp-wealth-stop-period">{label}</div>
-                                <div className="cmp-wealth-stop-val" style={{ color: sip && sip.gain >= 0 ? 'var(--g2)' : 'var(--neg)' }}>
-                                  {sip ? '₹' + Math.round(sip.value).toLocaleString('en-IN') : '—'}
-                                </div>
-                                <div className="cmp-wealth-stop-gain" style={{ color: sip && sip.gain >= 0 ? 'var(--g3)' : 'var(--neg)' }}>
-                                  {sip ? `XIRR ${(sip.xirr * 100).toFixed(1)}%` : ''}
-                                </div>
-                              </div>
-                              {idx < sims[i].length - 1 && <div className="cmp-wealth-arrow">→</div>}
-                            </div>
-                          ))}
-                        </div>
+                  {lumpsumStops.length > 0 && (
+                    <div className="cmp-row">
+                      <div className="cmp-cell" style={{ fontWeight: 700 }}>
+                        <div className="cmp-wealth-subhead">Lumpsum (₹1L MF · ₹10L SIF min.)</div>
                       </div>
-                    ))}
-                  </div>
+                      {derived.map((f, i) => (
+                        <div key={f.id} className="cmp-cell">
+                          <div className="cmp-wealth-strip">
+                            {lumpsumStops.map((stopIdx, pos) => {
+                              const { label, lumpsum } = sims[i][stopIdx];
+                              return (
+                                <div key={label} style={{ display: 'contents' }}>
+                                  <div className="cmp-wealth-stop">
+                                    <div className="cmp-wealth-stop-period">{label}</div>
+                                    <div className="cmp-wealth-stop-val" style={{ color: lumpsum && lumpsum.gain >= 0 ? 'var(--g2)' : 'var(--neg)' }}>
+                                      {lumpsum ? '₹' + Math.round(lumpsum.value).toLocaleString('en-IN') : '—'}
+                                    </div>
+                                    <div className="cmp-wealth-stop-gain" style={{ color: lumpsum && lumpsum.gain >= 0 ? 'var(--g3)' : 'var(--neg)' }}>
+                                      {lumpsum ? (lumpsum.gain >= 0 ? '+' : '') + '₹' + Math.abs(Math.round(lumpsum.gain)).toLocaleString('en-IN') : ''}
+                                    </div>
+                                  </div>
+                                  {pos < lumpsumStops.length - 1 && <div className="cmp-wealth-arrow">→</div>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {sipStops.length > 0 && (
+                    <div className="cmp-row">
+                      <div className="cmp-cell" style={{ fontWeight: 700 }}>
+                        <div className="cmp-wealth-subhead">₹10,000/mo SIP (Real, MF only)</div>
+                      </div>
+                      {derived.map((f, i) => (
+                        <div key={f.id} className="cmp-cell">
+                          <div className="cmp-wealth-strip">
+                            {sipStops.map((stopIdx, pos) => {
+                              const { label, sip } = sims[i][stopIdx];
+                              return (
+                                <div key={label} style={{ display: 'contents' }}>
+                                  <div className="cmp-wealth-stop">
+                                    <div className="cmp-wealth-stop-period">{label}</div>
+                                    <div className="cmp-wealth-stop-val" style={{ color: sip && sip.gain >= 0 ? 'var(--g2)' : 'var(--neg)' }}>
+                                      {sip ? '₹' + Math.round(sip.value).toLocaleString('en-IN') : '—'}
+                                    </div>
+                                    <div className="cmp-wealth-stop-gain" style={{ color: sip && sip.gain >= 0 ? 'var(--g3)' : 'var(--neg)' }}>
+                                      {sip ? `XIRR ${(sip.xirr * 100).toFixed(1)}%` : ''}
+                                    </div>
+                                  </div>
+                                  {pos < sipStops.length - 1 && <div className="cmp-wealth-arrow">→</div>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </>
               );
             })()}

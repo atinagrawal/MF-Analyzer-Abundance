@@ -178,15 +178,27 @@ export function sipWealth(series, end, years, monthly = 10000) {
   return { value, gain: value - invested, invested, xirr: xirrRate };
 }
 
+// SIFs have a SEBI-mandated ₹10L minimum investment ticket size — there's
+// no way to actually invest ₹1L lumpsum in one, so the lumpsum simulation
+// uses ₹10L for SIF funds instead of the MF default of ₹1L.
+export const SIF_LUMPSUM_PRINCIPAL = 1000000;
+export const MF_LUMPSUM_PRINCIPAL = 100000;
+
 // Computes both lumpsum and SIP wealth figures for every stop (1Y/3Y/5Y).
 // `fund` needs `ret_1y`/`ret_3y`/`ret_5y` (for lumpsum); `navSeries` (for
-// SIP) may be null independently of those fields — each stop's `lumpsum`/
-// `sip` keys are simply null when their required input is missing.
+// SIP) may be null independently of those fields — each stop's `lumpsum`
+// key is null when its required input is missing. `sip` is always null
+// for SIF funds: SIFs are a lumpsum-minimum-ticket-size product (see
+// SIF_LUMPSUM_PRINCIPAL above), not an open-ended SIP vehicle like an MF,
+// so a "₹10,000/mo SIP" figure would describe an investment path that
+// doesn't actually exist for a SIF — never compute or display one.
 export function computeWealthSimulation(fund, navSeries, asOfMs = Date.now()) {
+  const isSif = fund.type === 'sif';
+  const principal = isSif ? SIF_LUMPSUM_PRINCIPAL : MF_LUMPSUM_PRINCIPAL;
   return WEALTH_STOPS.map(({ key, label, years }) => {
     const cagrField = `ret_${key}`;
-    const lumpsum = lumpsumWealth(fund[cagrField], years);
-    const sip = sipWealth(navSeries, asOfMs, years);
+    const lumpsum = lumpsumWealth(fund[cagrField], years, principal);
+    const sip = isSif ? null : sipWealth(navSeries, asOfMs, years);
     return { label, years, lumpsum, sip };
   });
 }
@@ -311,23 +323,49 @@ export function applyDerivedStats(normalized, series, asOfMs = Date.now()) {
 }
 
 // ── Category peer-rank (MF only) ────────────────────────────────────────────
-// Ranks one MF fund within its own category by 3Y return, using the
-// already-loaded `allMfFunds` array (the screener's own `funds` state) — a
-// pure client-side computation, no new fetch.
+// Ranks one MF fund within its own category by a chosen return period,
+// using the already-loaded `allMfFunds` array (the screener's own `funds`
+// state) — a pure client-side computation, no new fetch.
 //
 // SIF peer-rank is explicitly OUT OF SCOPE for this plan: it would require
-// fetching + deriving 3Y returns for every OTHER SIF in the same category
+// fetching + deriving returns for every OTHER SIF in the same category
 // (not just the funds being compared), which is materially more fetching
 // than this feature otherwise needs, for a ranking that isn't very
 // meaningful yet given how few SIFs exist per category today. Returns null
 // for SIF funds — rendered as "—", identically to any other unavailable stat.
-export function categoryPeerRank(normalizedFund, allMfFunds) {
+export function categoryPeerRank(normalizedFund, allMfFunds, periodKey = 'ret_3y') {
   if (normalizedFund.type !== 'mf') return null;
-  const peers = allMfFunds.filter((f) => f.category === normalizedFund.category && f.ret_3y != null);
+  const peers = allMfFunds.filter((f) => f.category === normalizedFund.category && f[periodKey] != null);
   if (peers.length < 2) return null;
-  const sorted = [...peers].sort((a, b) => b.ret_3y - a.ret_3y);
+  const sorted = [...peers].sort((a, b) => b[periodKey] - a[periodKey]);
   const rank = sorted.findIndex((f) => f.code === normalizedFund.navFetchKey) + 1;
   return rank > 0 ? { rank, of: sorted.length } : null;
+}
+
+// Longest-duration-first list of periods peer-rank will try. 3Y is the
+// preferred default; if any MF fund actually being compared lacks it, this
+// falls back to the next-shorter period that EVERY compared MF fund has,
+// so the peer-rank row shows one consistent period across all of them
+// instead of "#3 of 47 (3Y)" for one fund and "—" for another.
+const RANK_PERIOD_FALLBACK = [
+  { key: 'ret_3y', label: '3Y' },
+  { key: 'ret_1y', label: '1Y' },
+  { key: 'ret_6m', label: '6M' },
+  { key: 'ret_3m', label: '3M' },
+  { key: 'ret_1m', label: '1M' },
+];
+
+// Picks the longest period common to every MF fund in the comparison set
+// (SIFs are excluded — peer-rank is MF-only). Returns null if there are no
+// MF funds being compared, or none of the fallback periods is available
+// for all of them — callers should hide the whole peer-rank row in that case.
+export function pickCommonRankPeriod(normalizedFunds) {
+  const mfFunds = normalizedFunds.filter((f) => f.type === 'mf');
+  if (!mfFunds.length) return null;
+  for (const period of RANK_PERIOD_FALLBACK) {
+    if (mfFunds.every((f) => f[period.key] != null)) return period;
+  }
+  return null;
 }
 
 // ── Weighted verdict scoring ────────────────────────────────────────────────
