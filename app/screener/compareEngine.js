@@ -266,8 +266,17 @@ export function deriveReturnsFromSeries(series, asOfMs) {
       ? +(((latest.nav - past.nav) / past.nav) * 100).toFixed(2) // sub-year: absolute change, matches MF's 'abs' kind for 1M/3M/6M
       : +((Math.pow(latest.nav / past.nav, 1 / years) - 1) * 100).toFixed(2); // 1Y+: CAGR
   }
+  // Same sub-year/1Y+ split as every other period above: annualizing a
+  // fund's total return over just a few weeks of real life produces a
+  // wildly inflated headline number (a modest real gain compounded as if
+  // it ran for a full year) — this was a real bug, not a design choice:
+  // ret_inception was the one period here that skipped the split and
+  // always annualized, regardless of the fund's actual age.
+  const inceptionYears = (latest.t - first.t) / YEAR_MS_2;
   out.ret_inception = first.nav > 0
-    ? +((Math.pow(latest.nav / first.nav, 1 / Math.max((latest.t - first.t) / YEAR_MS_2, 1 / 365)) - 1) * 100).toFixed(2)
+    ? (inceptionYears <= 1
+        ? +(((latest.nav - first.nav) / first.nav) * 100).toFixed(2)
+        : +((Math.pow(latest.nav / first.nav, 1 / inceptionYears) - 1) * 100).toFixed(2))
     : null;
   return out;
 }
