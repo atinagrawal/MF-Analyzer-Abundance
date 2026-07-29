@@ -323,6 +323,29 @@ const PERIOD_WEIGHTS = {
 };
 const RISK_WEIGHT = 2; // ret_per_risk contributes like a mid-length return period
 
+// Assigns each participant a weighted share of `weight`, tie-aware: funds
+// tied on the same value get the SAME share (the average of the rank
+// positions their tied group spans), not whichever share their array
+// position happens to land on — `.sort()` is stable, so without this,
+// identical values would silently score differently by input order alone.
+function assignRankShares(participants, weight, totals, weightSums) {
+  const ranked = [...participants].sort((a, b) => b.v - a.v);
+  const m = ranked.length;
+  let idx = 0;
+  while (idx < m) {
+    let end = idx;
+    while (end < m && ranked[end].v === ranked[idx].v) end++;
+    let shareSum = 0;
+    for (let k = idx; k < end; k++) shareSum += (m - k) / m;
+    const avgShare = shareSum / (end - idx);
+    for (let k = idx; k < end; k++) {
+      totals[ranked[k].i] += weight * avgShare;
+      weightSums[ranked[k].i] += weight;
+    }
+    idx = end;
+  }
+}
+
 export function computeVerdictScores(normalizedFunds) {
   const n = normalizedFunds.length;
   const totals = Array(n).fill(0);
@@ -334,26 +357,14 @@ export function computeVerdictScores(normalizedFunds) {
       .map((f, i) => ({ i, v: f[key] }))
       .filter((p) => p.v != null);
     if (participants.length < 2) continue;
-    const ranked = [...participants].sort((a, b) => b.v - a.v);
-    const m = ranked.length;
-    ranked.forEach((p, rankIdx) => {
-      const share = (m - rankIdx) / m; // 1st place = full weight, last place = weight/m
-      totals[p.i] += weight * share;
-      weightSums[p.i] += weight;
-    });
+    assignRankShares(participants, weight, totals, weightSums);
   }
 
   const riskParticipants = normalizedFunds
     .map((f, i) => ({ i, v: f.ret_per_risk }))
     .filter((p) => p.v != null);
   if (riskParticipants.length >= 2) {
-    const ranked = [...riskParticipants].sort((a, b) => b.v - a.v);
-    const m = ranked.length;
-    ranked.forEach((p, rankIdx) => {
-      const share = (m - rankIdx) / m;
-      totals[p.i] += RISK_WEIGHT * share;
-      weightSums[p.i] += RISK_WEIGHT;
-    });
+    assignRankShares(riskParticipants, RISK_WEIGHT, totals, weightSums);
   }
 
   return totals.map((t, i) => (weightSums[i] > 0 ? t / weightSums[i] : 0));
