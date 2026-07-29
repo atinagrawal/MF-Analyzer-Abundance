@@ -206,10 +206,13 @@ export default function ScreenerPage() {
       const already = prev.find((f) => f.id === id);
       if (already) return prev.filter((f) => f.id !== id);
       if (prev.length >= MAX_COMPARE) return prev;
-      // Spread `fund` FIRST, then override `id`/`type` -- a raw SIF row
-      // carries its own `.type` field (a strategy-type string, e.g. "Equity
-      // Long-Short"), which would otherwise silently clobber the intended
-      // 'mf'/'sif' tag if spread last.
+      // Spread `fund` FIRST, then override `id`/`type` -- defensive
+      // ordering so a raw fund object's own fields can never clobber the
+      // intended 'mf'/'sif' tag. (Raw SIF rows used to carry their own
+      // `.type` strategy-string field via /api/sif-nav's shape, which is
+      // exactly what this guarded against; the current /api/sif-screener
+      // shape no longer has one, but the defensive order costs nothing
+      // and protects against any future field collision too.)
       return [...prev, { ...fund, id, type }];
     });
   }, []);
@@ -927,7 +930,7 @@ function SifDetail({ s, onClose }) {
           <button className="scr-x" onClick={onClose} aria-label="Close">×</button>
         </div>
 
-        <div className="scr-sif-notice">ⓘ SIFs are a new asset class (launched 2024–25) with limited NAV history. Performance metrics are not yet available.</div>
+        <div className="scr-sif-notice">ⓘ SIFs are a new asset class (launched 2024–25) with limited NAV history — longer-horizon metrics (3Y+) will populate as funds mature. See the table for the return periods already available.</div>
 
         <Spark nav={pts} loadingMsg={histLoading ? 'Loading NAV history…' : null} emptyMsg="No NAV history available yet" />
 
