@@ -59,14 +59,26 @@ export async function fetchNavSeries(fund) {
     }
     if (fund.type === 'sif') {
       const to = new Date();
-      const from = new Date(to.getTime() - 5 * 365 * DAY_MS); // 5 years — the longest period WEALTH_STOPS ever requests; harmless to ask for more than a young SIF actually has
       const toStr = to.toISOString().slice(0, 10);
-      const fromStr = from.toISOString().slice(0, 10);
-      const res = await fetch(`/api/sif-history?sd_id=${encodeURIComponent(fund.navFetchKey)}&from=${fromStr}&to=${toStr}`);
-      if (!res.ok) return null;
-      const json = await res.json();
-      const series = normalizeSifSeries(json);
-      return series.length >= 2 ? series : null;
+      // AMFI's SIF history endpoint rejects overly-wide date ranges outright
+      // (HTTP 400) rather than gracefully truncating to what actually exists
+      // — confirmed empirically: a 5-year-back request fails, while ~4.5
+      // years back succeeds. Try the wide window first (5 years — the
+      // longest period WEALTH_STOPS ever requests — so a SIF's growing real
+      // history keeps getting picked up automatically as it ages, with no
+      // code change needed later), and fall back to a narrower, safely
+      // within-range window if AMFI rejects the wide request. This must
+      // never leave a SIF with zero NAV data just because the wide window
+      // overshot AMFI's (undocumented) range limit.
+      const fetchWindow = async (daysBack) => {
+        const fromStr = new Date(to.getTime() - daysBack * DAY_MS).toISOString().slice(0, 10);
+        const res = await fetch(`/api/sif-history?sd_id=${encodeURIComponent(fund.navFetchKey)}&from=${fromStr}&to=${toStr}`);
+        if (!res.ok) return null;
+        const json = await res.json();
+        const series = normalizeSifSeries(json);
+        return series.length >= 2 ? series : null;
+      };
+      return (await fetchWindow(5 * 365)) || (await fetchWindow(400));
     }
     return null;
   } catch {
