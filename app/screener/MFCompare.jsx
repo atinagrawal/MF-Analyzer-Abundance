@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
-import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank, computeWealthSimulation } from './compareEngine';
+import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank, computeWealthSimulation, seriesAsOf } from './compareEngine';
 import CompareGrowthChart from './CompareGrowthChart';
 import './mf-compare.css';
 
@@ -137,27 +137,51 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
           </div>
 
           {(() => {
-            // Align every fund's series to the same start date — the LATEST
+            // Align every fund's series to the same start date -- the LATEST
             // "first available NAV" among the selected funds (i.e. governed
-            // by whichever fund has the shortest real history), so every
-            // plotted line has genuine data across the full visible range.
-            // Each series is then re-based to start at the same ₹1,00,000,
-            // so the lines show comparable growth, not raw NAV levels.
+            // by whichever fund has the shortest real history) -- then build
+            // ONE SHARED date grid from whichever fund has the SPARSEST
+            // trimmed series (a sparse calendar's dates can't be fabricated
+            // for), and resample every OTHER fund onto those EXACT dates via
+            // seriesAsOf (last known NAV on/before that date). This
+            // guarantees every series ends up the SAME LENGTH and
+            // index-aligned by the SAME real date -- required because
+            // CompareGrowthChart's x-axis is purely index-based (see its own
+            // doc comment) and MF (/api/mf) vs SIF (/api/sif-history) NAV
+            // data come from different upstreams with no shared publishing
+            // calendar, so raw series can differ in length or (worse) match
+            // in length while covering different actual dates at the same
+            // index.
             const seriesList = derived
               .map((f) => ({ f, raw: navSeriesByFund[f.id] }))
               .filter((x) => x.raw && x.raw.length >= 2);
             if (seriesList.length < 2) return null;
 
             const commonStartT = Math.max(...seriesList.map((x) => x.raw[0].t));
+            const trimmedList = seriesList
+              .map((x) => ({ f: x.f, trimmed: x.raw.filter((p) => p.t >= commonStartT) }))
+              .filter((x) => x.trimmed.length >= 2);
+            if (trimmedList.length < 2) return null;
+
+            const sparsest = trimmedList.reduce((a, b) => (b.trimmed.length < a.trimmed.length ? b : a));
+            const commonStartT2 = Math.max(...trimmedList.map((x) => x.trimmed[0].t));
+            const gridDates = sparsest.trimmed.map((p) => p.t).filter((t) => t >= commonStartT2);
+            if (gridDates.length < 2) return null;
+
             const colors = ['#1b5e20', '#e65100', '#1565c0'];
-            const chartSeries = seriesList.map(({ f, raw }, i) => {
-              const trimmed = raw.filter((p) => p.t >= commonStartT);
-              if (trimmed.length < 2) return null;
-              const baseNav = trimmed[0].nav;
+            const chartSeries = trimmedList.map(({ f, trimmed }, i) => {
+              const basePx = seriesAsOf(trimmed, gridDates[0]);
+              if (!basePx) return null;
+              const baseNav = basePx.nav;
+              const aligned = gridDates.map((t) => {
+                const px = seriesAsOf(trimmed, t);
+                return px ? { t, v: (px.nav / baseNav) * 100000 } : null;
+              });
+              if (aligned.some((p) => p == null)) return null;
               return {
                 name: f.name.length > 24 ? f.name.slice(0, 24) + '…' : f.name,
                 color: colors[i % colors.length],
-                data: trimmed.map((p) => ({ t: p.t, v: (p.nav / baseNav) * 100000 })),
+                data: aligned,
               };
             }).filter(Boolean);
 
