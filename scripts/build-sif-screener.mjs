@@ -26,6 +26,7 @@
  *   POSTGRES_URL (optional) -> upsert into sif_screener
  */
 import pg from 'pg';
+import { fileURLToPath } from 'url';
 
 const DAY_MS = 86400000;
 const YEAR_MS = 365 * DAY_MS;
@@ -258,4 +259,15 @@ async function main() {
   await c.end();
   console.log(`[sif-screener] upserted ${rows.length} rows into Postgres`);
 }
-main().catch((e) => { console.error(e); process.exit(1); });
+// Only run main() when this file is executed directly (`node
+// scripts/build-sif-screener.mjs`), not when merely imported as a module --
+// the standalone verify script imports parseSifHistoryResponse/
+// deriveSifReturns/deriveSifRisk from this same file to avoid duplicating
+// them, and without this guard, ES modules run ALL top-level code
+// (including this main() call) on first import, which would trigger a full
+// live AMFI fetch -- and, if POSTGRES_URL happened to be set in whatever
+// imported this file, an unintended production database write -- as a
+// side effect of what looks like a simple function import.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((e) => { console.error(e); process.exit(1); });
+}
