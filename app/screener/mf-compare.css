@@ -130,6 +130,12 @@
 }
 .cmp-section-head-label {
   display: inline-block; position: sticky; left: 0; padding: 8px 18px;
+  /* Guards against longer section titles being wider than a phone viewport
+     once the row spans 2-3 compared funds' columns -- without this, a
+     stuck sticky element's overflow is clipped and, unlike normal
+     scrolling text, never becomes reachable again since the box doesn't
+     move once pinned. Wraps onto multiple lines instead. */
+  max-width: calc(100vw - 60px);
 }
 .cmp-strat-header { padding: 20px 18px; border-bottom: 2px solid var(--g3); }
 .cmp-strat-name { font-weight: 800; font-size: .92rem; color: var(--g1); line-height: 1.3; margin-bottom: 4px; }

@@ -231,6 +231,13 @@
   position: sticky;
   left: 0;
   padding: 8px 18px;
+  /* Longer section titles (e.g. "APMI Quartile Ranking · Peer-Relative,
+     Not Self-Calculated") are wider than a phone viewport once the row
+     spans 2-3 compared funds' worth of columns -- without this, a stuck
+     sticky element's overflow is clipped and, unlike normal scrolling
+     text, never becomes reachable again since the box doesn't move once
+     pinned. Wraps onto multiple lines instead. */
+  max-width: calc(100vw - 60px);
 }
 /* Strategy header row */
 .cmp-strat-header {
