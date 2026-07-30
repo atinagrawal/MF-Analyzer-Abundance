@@ -62,6 +62,26 @@ function pickDefaultSortPeriod(schemes) {
   }
   return null;
 }
+// Same idea, but picks `count` return-period COLUMNS for the SIF table's
+// default (mobile) view instead of a single sort key -- prefers the
+// LONGEST periods a majority of schemes actually have, capping at 5Y (same
+// ceiling as MF's own DEFAULT_COLS, deliberately shorter than METRICS'
+// full 1M..10Y range since 7Y/10Y are unrealistic defaults for a fund
+// category that's only existed since 2024-25). Falls back to whichever
+// periods have ANY data at all once fewer than `count` clear the majority
+// bar, so a brand-new dataset still shows *something* useful. Returns null
+// if there's no data yet at all, in which case the caller falls back to
+// the same static 1Y/3Y/5Y MF uses.
+const SIF_COL_PERIODS_ASC = ['ret_1m', 'ret_3m', 'ret_6m', 'ret_1y', 'ret_3y', 'ret_5y'];
+function pickDefaultSifReturnCols(schemes, count = 3) {
+  if (!schemes.length) return null;
+  const desc = [...SIF_COL_PERIODS_ASC].reverse();
+  const majority = desc.filter((key) => schemes.filter((s) => s[key] != null).length > schemes.length / 2);
+  const anyData = desc.filter((key) => schemes.some((s) => s[key] != null));
+  if (!anyData.length) return null;
+  const picked = [...new Set([...majority, ...anyData])].slice(0, count);
+  return picked.sort((a, b) => SIF_COL_PERIODS_ASC.indexOf(a) - SIF_COL_PERIODS_ASC.indexOf(b));
+}
 
 function backtestSifLink(s) {
   try {
@@ -188,16 +208,27 @@ export default function ScreenerPage() {
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(0);
   const [cols, setCols] = useState(DEFAULT_COLS);
+  // SIF's own column selection, independent of MF's -- unlike MF's fixed
+  // 1Y/3Y/5Y default (always meaningful, since MFs are long-established),
+  // SIFs are a brand-new category where 1Y/3Y/5Y are still entirely blank
+  // for every fund today. This placeholder gets replaced by
+  // pickDefaultSifReturnCols once real data has loaded (see the
+  // sifSortInitialized effect below) -- kept as the same static fallback
+  // MF uses so there's a sensible starting point before that happens.
+  const [sifCols, setSifCols] = useState(DEFAULT_COLS);
 
   // On wide desktop viewports, default to showing every column (all time
   // frames incl. Inception, not just the curated 5) since there's room for
   // more data at a glance. Runs once on mount, client-side only (avoids an
   // SSR/hydration mismatch from reading window.innerWidth during render);
   // no resize listener, so it never overrides a user's own column picks
-  // made after the page loads.
+  // made after the page loads. Applies to both tables -- SIF benefits from
+  // "there's room, show everything" the same way MF does; the smart
+  // per-availability default below only kicks in on narrower viewports.
   useEffect(() => {
     if (window.innerWidth >= 1024) {
       setCols(METRICS.map((m) => m.key));
+      setSifCols(METRICS.map((m) => m.key));
     }
   }, []);
 
@@ -287,16 +318,24 @@ export default function ScreenerPage() {
   // Default sort shouldn't be NAV -- once real data has loaded, switch it
   // once to the longest period most SIFs actually have (see
   // pickDefaultSortPeriod), so it naturally shifts from 1M today toward 3Y
-  // as SIFs age, with no future code change needed. Runs only once (guarded
-  // by sifSortInitialized) so it never overrides a user's own later sort
-  // clicks, even if sifSchemes changes again (e.g. after the next nightly
-  // rebuild). Falls back to leaving the initial NAV default in place if no
-  // period has a majority yet.
+  // as SIFs age, with no future code change needed. Same pass also picks
+  // SIF's default COLUMNS (pickDefaultSifReturnCols) on narrower viewports
+  // only -- on wide desktop the mount-time effect above already set
+  // sifCols to show everything, and this must not narrow that back down
+  // once data arrives. Runs only once (guarded by sifSortInitialized) so
+  // it never overrides a user's own later sort/column clicks, even if
+  // sifSchemes changes again (e.g. after the next nightly rebuild). Falls
+  // back to leaving the initial NAV/static defaults in place if no period
+  // has a majority (or any data) yet.
   const [sifSortInitialized, setSifSortInitialized] = useState(false);
   useEffect(() => {
     if (!sifSortInitialized && sifSchemes.length > 0) {
       const period = pickDefaultSortPeriod(sifSchemes);
       if (period) setSifSort({ key: period.key, dir: -1 });
+      if (window.innerWidth < 1024) {
+        const retCols = pickDefaultSifReturnCols(sifSchemes, 3);
+        if (retCols) setSifCols([...retCols, 'max_dd', 'ret_per_risk']);
+      }
       setSifSortInitialized(true);
     }
   }, [sifSchemes, sifSortInitialized]);
@@ -384,8 +423,14 @@ export default function ScreenerPage() {
     return hit ? hit.category : 'All';
   };
   const pickGroup = (g) => { setGroup(g); if (g !== 'SIF') setCat(defaultCatFor(g)); setQ(''); setSifQ(''); };
-  const visibleCols = METRICS.filter((m) => cols.includes(m.key));
-  const toggleCol = (key) => setCols((c) => (c.includes(key) ? (c.length > 1 ? c.filter((k) => k !== key) : c) : [...c, key]));
+  // MF and SIF now keep independent column selections (see sifCols above),
+  // since their sensible defaults genuinely differ -- activeCols/toggleCol
+  // resolve to whichever table is currently showing, so the rest of the
+  // render code (visibleCols, the Columns bar) doesn't need to know which.
+  const activeCols = isSIF ? sifCols : cols;
+  const setActiveCols = isSIF ? setSifCols : setCols;
+  const visibleCols = METRICS.filter((m) => activeCols.includes(m.key));
+  const toggleCol = (key) => setActiveCols((c) => (c.includes(key) ? (c.length > 1 ? c.filter((k) => k !== key) : c) : [...c, key]));
 
   // pagination
   useEffect(() => { setPage(0); }, [group, cat, q, openOnly, sort, pageSize]);
@@ -448,7 +493,7 @@ export default function ScreenerPage() {
         <div className="scr-colbar">
           <span className="scr-colbar-l">Columns:</span>
           {METRICS.map((m) => (
-            <button key={m.key} className={`scr-colchip ${cols.includes(m.key) ? 'on' : ''}`} onClick={() => toggleCol(m.key)}>{m.label}</button>
+            <button key={m.key} className={`scr-colchip ${activeCols.includes(m.key) ? 'on' : ''}`} onClick={() => toggleCol(m.key)}>{m.label}</button>
           ))}
         </div>
 
