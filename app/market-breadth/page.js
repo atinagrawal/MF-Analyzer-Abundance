@@ -764,7 +764,7 @@ function StockScreenerSection({ raw, err }) {
           onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
         <div className="ssc-chips">
           {SS_FILTERS.map(({ key, label, pos }) => (
-            <button key={key} className={`ssc-chip ${active.has(key) ? 'on' : ''} ${pos ? 'pos' : 'neg'}`} onClick={() => toggleFilter(key)}>{label}</button>
+            <button key={key} className={`ssc-chip ${active.has(key) ? 'on' : ''} ${pos ? 'ssc-pos' : 'ssc-neg'}`} onClick={() => toggleFilter(key)}>{label}</button>
           ))}
           {active.size > 0 && <button className="ssc-chip clear" onClick={() => { setActive(new Set()); setPage(0); }}>Clear ×</button>}
         </div>
@@ -1127,8 +1127,8 @@ const CSS = `
 .ssc-search:focus{border-color:var(--g2)}
 .ssc-chips{display:flex;flex-wrap:wrap;gap:6px}
 .ssc-chip{padding:6px 12px;border:1.5px solid var(--border);background:var(--surface);border-radius:999px;font:700 11.5px JetBrains Mono,monospace;color:var(--muted);cursor:pointer;transition:all .14s}
-.ssc-chip.pos.on{background:var(--g1);color:#fff;border-color:var(--g1)}
-.ssc-chip.neg.on{background:var(--neg);color:#fff;border-color:var(--neg)}
+.ssc-chip.ssc-pos.on{background:var(--g1);color:#fff;border-color:var(--g1)}
+.ssc-chip.ssc-neg.on{background:var(--neg);color:#fff;border-color:var(--neg)}
 .ssc-chip.clear{background:var(--s3,#eef5ee);border-color:var(--border);color:var(--text2)}
 .ssc-chip:hover:not(.on){background:var(--s2)}
 .ssc-meta{font:600 12px JetBrains Mono,monospace;color:var(--muted);margin-bottom:12px}
