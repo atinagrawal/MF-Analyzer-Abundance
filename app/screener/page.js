@@ -50,6 +50,18 @@ function pickCategoryLeaderPeriod(categorySchemes) {
   }
   return null;
 }
+// Same fallback list, but for the table's DEFAULT sort column -- picks the
+// longest period MOST (>50%) of all SIF schemes actually have, capping at
+// 3Y same as the leader cards. Shifts automatically as SIFs age (1M today,
+// eventually 3Y) with no future code change needed. Returns null if not
+// even 1M has a majority yet, in which case the caller falls back to NAV.
+function pickDefaultSortPeriod(schemes) {
+  if (!schemes.length) return null;
+  for (const period of LEADER_PERIOD_FALLBACK) {
+    if (schemes.filter((s) => s[period.key] != null).length > schemes.length / 2) return period;
+  }
+  return null;
+}
 
 function backtestSifLink(s) {
   try {
@@ -272,6 +284,22 @@ export default function ScreenerPage() {
   // server-side by scripts/build-sif-screener.mjs (same regex MF's own
   // build script applies) -- no client-side filtering needed.
   const sifSchemes = sifData?.schemes || [];
+  // Default sort shouldn't be NAV -- once real data has loaded, switch it
+  // once to the longest period most SIFs actually have (see
+  // pickDefaultSortPeriod), so it naturally shifts from 1M today toward 3Y
+  // as SIFs age, with no future code change needed. Runs only once (guarded
+  // by sifSortInitialized) so it never overrides a user's own later sort
+  // clicks, even if sifSchemes changes again (e.g. after the next nightly
+  // rebuild). Falls back to leaving the initial NAV default in place if no
+  // period has a majority yet.
+  const [sifSortInitialized, setSifSortInitialized] = useState(false);
+  useEffect(() => {
+    if (!sifSortInitialized && sifSchemes.length > 0) {
+      const period = pickDefaultSortPeriod(sifSchemes);
+      if (period) setSifSort({ key: period.key, dir: -1 });
+      setSifSortInitialized(true);
+    }
+  }, [sifSchemes, sifSortInitialized]);
   const sifHouses = useMemo(() => [...new Set(sifSchemes.map((s) => s.sif_name))].sort(), [sifSchemes]);
   const sifCats = useMemo(() => [...new Set(sifSchemes.map((s) => s.category))].sort(), [sifSchemes]);
   const sifRows = useMemo(() => {
