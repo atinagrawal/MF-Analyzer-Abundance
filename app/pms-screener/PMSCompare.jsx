@@ -415,7 +415,7 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
 
             {/* Returns */}
             <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
-              📊 Returns Across All Time Horizons
+              <span className="cmp-section-head-label">📊 Returns Across All Time Horizons</span>
             </div>
             {PERIODS.map(({ label, key }) => {
               const vals = enrichedFunds.map(f => f[key]);
@@ -442,7 +442,7 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
             {!quartileLoading && funds.some(f => quartileData[f.id]?.length) && (
               <>
                 <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
-                  🏅 APMI Quartile Ranking · Peer-Relative, Not Self-Calculated
+                  <span className="cmp-section-head-label">🏅 APMI Quartile Ranking · Peer-Relative, Not Self-Calculated</span>
                 </div>
                 {QUARTILE_PERIODS.map(period => {
                   const anyData = funds.some(f => quartileData[f.id]?.find(r => r.period === period));
@@ -473,7 +473,9 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
                   className="cmp-quartile-footnote"
                   style={{ gridColumn: `1 / span ${n + 1}` }}
                 >
-                  Source: APMI India · WSIAConsolidateReport · Quartile = performance rank vs. all peer Investment Approaches in the same strategy for that period.
+                  <span className="cmp-quartile-footnote-label">
+                    Source: APMI India · WSIAConsolidateReport · Quartile = performance rank vs. all peer Investment Approaches in the same strategy for that period.
+                  </span>
                 </div>
               </>
             )}
@@ -481,7 +483,7 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
             {/* Alpha vs each fund's OWN declared benchmark (real data, not a
                 single generic Nifty 50 guess) — see the useEffects above */}
             <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
-              📈 Alpha vs Own Benchmark
+              <span className="cmp-section-head-label">📈 Alpha vs Own Benchmark</span>
             </div>
             <div className="cmp-row">
               <div className="cmp-cell" style={{ fontWeight: 700 }}>Benchmark</div>
@@ -523,7 +525,7 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
 
             {/* Wealth simulation — Growth Journey Strip: 1Y -> 3Y -> 5Y */}
             <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
-              💰 Wealth Creation Simulation · ₹50 Lakh Invested
+              <span className="cmp-section-head-label">💰 Wealth Creation Simulation · ₹50 Lakh Invested</span>
             </div>
             <div className="cmp-row">
               <div className="cmp-cell" style={{ fontWeight: 700 }}>Growth Journey</div>
@@ -551,7 +553,7 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
 
             {/* AUM */}
             <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
-              🏦 Assets Under Management
+              <span className="cmp-section-head-label">🏦 Assets Under Management</span>
             </div>
             <div className="cmp-row">
               <div className="cmp-cell" style={{ fontWeight: 700 }}>AUM</div>

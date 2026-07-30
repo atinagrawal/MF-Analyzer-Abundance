@@ -236,7 +236,7 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
 
             {/* Returns */}
             <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
-              📊 Returns Across All Time Horizons
+              <span className="cmp-section-head-label">📊 Returns Across All Time Horizons</span>
             </div>
             {PERIODS.map(({ label, key }) => {
               const vals = derived.map((f) => f[key]);
@@ -276,7 +276,7 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
 
             {/* Risk metrics */}
             <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
-              📉 Risk Metrics
+              <span className="cmp-section-head-label">📉 Risk Metrics</span>
             </div>
             {RISK_METRICS.map(({ label, key, lowerIsBetter, suffix }) => {
               const vals = derived.map((f) => f[key]);
@@ -309,7 +309,7 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
               return (
                 <>
                   <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
-                    🏅 Category Peer-Rank
+                    <span className="cmp-section-head-label">🏅 Category Peer-Rank</span>
                   </div>
                   <div className="cmp-row">
                     <div className="cmp-cell" style={{ fontWeight: 700 }}>Rank by {rankPeriod.label} Return</div>
@@ -349,7 +349,7 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
               return (
                 <>
                   <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
-                    💰 Wealth Simulation
+                    <span className="cmp-section-head-label">💰 Wealth Simulation</span>
                   </div>
                   {lumpsumStops.length > 0 && (
                     <div className="cmp-row">

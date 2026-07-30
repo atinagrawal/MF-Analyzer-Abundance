@@ -119,9 +119,17 @@
   background: var(--s2); font-weight: 700; color: var(--muted); font-size: .7rem;
   letter-spacing: 0.5px; position: sticky; left: 0; border-right: 1px solid var(--border); z-index: 2;
 }
+/* The bar spans/scrolls with the full row so its background always covers
+   every column; the label INSIDE it is independently sticky so it stays
+   pinned to the visible left edge as the grid scrolls horizontally --
+   without this, scrolling right (e.g. on mobile, to see a 3rd fund's data)
+   pushes the section title off-screen, leaving a plain unlabeled bar. */
 .cmp-section-head {
   background: var(--g1); color: white; font-size: .62rem; font-weight: 800;
-  letter-spacing: 1.4px; text-transform: uppercase; padding: 8px 18px; font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 1.4px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace;
+}
+.cmp-section-head-label {
+  display: inline-block; position: sticky; left: 0; padding: 8px 18px;
 }
 .cmp-strat-header { padding: 20px 18px; border-bottom: 2px solid var(--g3); }
 .cmp-strat-name { font-weight: 800; font-size: .92rem; color: var(--g1); line-height: 1.3; margin-bottom: 4px; }

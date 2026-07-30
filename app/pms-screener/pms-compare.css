@@ -212,7 +212,11 @@
   border-right: 1px solid var(--border);
   z-index: 2;
 }
-/* Section headers */
+/* Section headers. The bar spans/scrolls with the full row so its
+   background always covers every column; the label INSIDE it is
+   independently sticky so it stays pinned to the visible left edge as the
+   grid scrolls horizontally -- without this, scrolling right pushes the
+   section title off-screen, leaving a plain unlabeled bar. */
 .cmp-section-head {
   background: var(--g1);
   color: white;
@@ -220,8 +224,13 @@
   font-weight: 800;
   letter-spacing: 1.4px;
   text-transform: uppercase;
-  padding: 8px 18px;
   font-family: 'JetBrains Mono', monospace;
+}
+.cmp-section-head-label {
+  display: inline-block;
+  position: sticky;
+  left: 0;
+  padding: 8px 18px;
 }
 /* Strategy header row */
 .cmp-strat-header {
@@ -288,11 +297,21 @@
   margin-top: 3px;
   font-family: 'JetBrains Mono', monospace;
 }
+/* Same span-the-row/sticky-label split as .cmp-section-head above, for the
+   same reason: this footnote spans the full row width, so its text needs
+   its own sticky positioning to stay readable once the grid is scrolled
+   horizontally. */
 .cmp-quartile-footnote {
-  padding: 8px 18px 16px;
   font-size: .62rem;
   color: var(--muted);
   font-weight: 400;
+}
+.cmp-quartile-footnote-label {
+  display: inline-block;
+  position: sticky;
+  left: 0;
+  padding: 8px 18px 16px;
+  max-width: calc(100vw - 60px);
 }
 
 /* Win indicator dots under each column header */
