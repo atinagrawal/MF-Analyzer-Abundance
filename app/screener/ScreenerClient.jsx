@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Fragment, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
 import { MFCompareBar, MFCompareModal } from './MFCompare';
 import { useRouter } from 'next/navigation';
-import { shortCat, FAQ_ITEMS, categoryToSlug } from './screenerContent';
+import { shortCat, FAQ_ITEMS, GLOSSARY_ITEMS, CURATED_CATEGORIES, categoryToSlug } from './screenerContent';
 
 // Slim, server-fetched projection of data/isin-scheme-master.json (see
 // app/api/scheme-master-facts/route.js) — fetched once and cached across
@@ -197,6 +197,7 @@ export default function ScreenerClient({ initialCategory }) {
   const [sort, setSort] = useState({ key: 'ret_3y', dir: -1 });
   const [sel, setSel] = useState(null);
   const [faq, setFaq] = useState(0);
+  const [glossaryOpen, setGlossaryOpen] = useState(-1);
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(0);
   const [cols, setCols] = useState(DEFAULT_COLS);
@@ -438,6 +439,8 @@ export default function ScreenerClient({ initialCategory }) {
   const from = rows.length ? cur * pageSize + 1 : 0;
   const to = Math.min(rows.length, (cur + 1) * pageSize);
 
+  const curatedCat = !isSIF ? CURATED_CATEGORIES.find((c) => c.category === cat) : null;
+
   return (
     <div className="scr-body">
       <Navbar activePage="screener" />
@@ -448,7 +451,7 @@ export default function ScreenerClient({ initialCategory }) {
           <p className="page-subtitle">
             {isSIF
               ? <>Discover all SEBI-regulated <b>Specialised Investment Funds</b> — {sifData ? sifSchemes.length : '…'} schemes across Equity Long-Short, Hybrid Long-Short and Active Asset Allocator strategies.</>
-              : <>Filter and rank {data ? data.count.toLocaleString('en-IN') : '1,800+'} mutual funds by category, returns and risk — on real historical NAVs.</>
+              : <>Filter and rank {data ? data.count.toLocaleString('en-IN') : '1,800+'} mutual funds by category, returns and risk — on real historical NAVs.{curatedCat?.subtitleSuffix}</>
             }
           </p>
         </div>
@@ -726,14 +729,52 @@ export default function ScreenerClient({ initialCategory }) {
           </>
         )}
 
+        {curatedCat && (
+          <div className="scr-explainer">
+            <b>{curatedCat.label} funds.</b> {curatedCat.explainer}
+          </div>
+        )}
+
+        {/* Glossary */}
+        <section className="scr-faq" aria-label="Glossary">
+          <h2>Glossary</h2>
+          {GLOSSARY_ITEMS.map((g, i) => (
+            <div className={`scr-faq-item ${glossaryOpen === i ? 'open' : ''}`} key={i}>
+              <button className="scr-faq-q" onClick={() => setGlossaryOpen(glossaryOpen === i ? -1 : i)} aria-expanded={glossaryOpen === i}><span>{g.q}</span><span className="scr-faq-ic">{glossaryOpen === i ? '−' : '+'}</span></button>
+              <div className="scr-faq-a" style={{ maxHeight: glossaryOpen === i ? 800 : 0 }}><p>{g.a}</p></div>
+            </div>
+          ))}
+        </section>
+
+        {!isSIF && (
+          <section className="scr-cat-links" aria-label="Browse by category">
+            <div className="scr-cat-links-h">Best funds by category</div>
+            <div className="scr-cat-links-row">
+              {CURATED_CATEGORIES.map((c) => (
+                <a
+                  key={c.slug}
+                  href={`/screener?category=${c.slug}`}
+                  className={`scr-cat-link ${cat === c.category ? 'active' : ''}`}
+                  onClick={(e) => { e.preventDefault(); setGroup(assetClass(c.category)); changeCat(c.category); }}
+                >
+                  {c.label}
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* FAQ */}
         <section className="scr-faq" aria-label="FAQ">
           <h2>Frequently asked questions</h2>
           {FAQ_ITEMS.map((f, i) => (
-            <div className={`scr-faq-item ${faq === i ? 'open' : ''}`} key={i}>
-              <button className="scr-faq-q" onClick={() => setFaq(faq === i ? -1 : i)} aria-expanded={faq === i}><span>{f.q}</span><span className="scr-faq-ic">{faq === i ? '−' : '+'}</span></button>
-              <div className="scr-faq-a" style={{ maxHeight: faq === i ? 320 : 0 }}><p>{f.a}</p></div>
-            </div>
+            <Fragment key={i}>
+              {(i === 0 || FAQ_ITEMS[i - 1].group !== f.group) && <div className="scr-faq-group-h">{f.group}</div>}
+              <div className={`scr-faq-item ${faq === i ? 'open' : ''}`}>
+                <button className="scr-faq-q" onClick={() => setFaq(faq === i ? -1 : i)} aria-expanded={faq === i}><span>{f.q}</span><span className="scr-faq-ic">{faq === i ? '−' : '+'}</span></button>
+                <div className="scr-faq-a" style={{ maxHeight: faq === i ? 800 : 0 }}><p>{f.a}</p></div>
+              </div>
+            </Fragment>
           ))}
         </section>
 
@@ -1148,6 +1189,18 @@ const CSS = `
 .scr-faq-a p{margin:0;padding:0 15px 15px;font-size:13px;line-height:1.65;color:var(--text2)}
 .scr-disc{margin-top:20px;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:15px 17px;font-size:11.5px;line-height:1.65;color:var(--muted)}
 .scr-disc b{color:var(--text2)}
+
+/* category explainer + internal links + FAQ group headings */
+.scr-explainer{background:var(--g-xlight);border:1px solid var(--g-light);border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.6;color:var(--text2);margin-bottom:16px}
+.scr-explainer b{color:var(--g1)}
+.scr-cat-links{margin-bottom:18px}
+.scr-cat-links-h{font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.scr-cat-links-row{display:flex;flex-wrap:wrap;gap:8px}
+.scr-cat-link{padding:7px 13px;border:1px solid var(--border);border-radius:9px;font:700 12px Raleway,sans-serif;color:var(--g1);text-decoration:none;background:var(--surface);cursor:pointer;transition:all .14s;display:inline-block}
+.scr-cat-link:hover{border-color:var(--g3);background:var(--g-xlight)}
+.scr-cat-link.active{background:var(--g1);color:#fff;border-color:var(--g1)}
+.scr-faq-group-h{font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
+.scr-faq-group-h:first-child{margin-top:0}
 
 /* drawer */
 .scr-drawer-wrap{position:fixed;inset:0;background:#0d260d55;backdrop-filter:blur(3px);z-index:10000;display:flex;justify-content:flex-end;animation:scrfade .2s ease}
