@@ -28,25 +28,36 @@ function pickFacts(entry) {
   return out;
 }
 
+function cleanFuzzy(str) {
+  if (!str) return '';
+  return str.toUpperCase()
+    .replace(/DIRECT|REGULAR|GROWTH|IDCW|INCOME DISTRIBUTION CUM CAPITAL WITHDRAWAL|OPTION|PLAN|FUND|MUTUAL/g, '')
+    .replace(/[^A-Z0-9]/g, '');
+}
+
 // Built once at module load (mirrors cas-tracker's nameToSchemeEntry) so
 // even a cold/uncached hit is an O(1) return, not a fresh 26k-entry scan.
-const { byIsin, byNormName } = (() => {
+const { byIsin, byNormName, byFuzzyName } = (() => {
   const byIsin = {};
   const byNormName = {};
+  const byFuzzyName = {};
   for (const [isin, entry] of Object.entries(isinSchemeMaster)) {
     const facts = pickFacts(entry);
     byIsin[isin] = facts;
     if (entry.name) {
       const norm = entry.name.toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (norm && !byNormName[norm]) byNormName[norm] = facts;
+
+      const fuzzy = cleanFuzzy(entry.name);
+      if (fuzzy && !byFuzzyName[fuzzy]) byFuzzyName[fuzzy] = facts;
     }
   }
-  return { byIsin, byNormName };
+  return { byIsin, byNormName, byFuzzyName };
 })();
 
 export async function GET() {
   return Response.json(
-    { byIsin, byNormName },
+    { byIsin, byNormName, byFuzzyName },
     { headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' } }
   );
 }
