@@ -1,4 +1,5 @@
-import { getSitemapEntries, getHomeSitemapEntries } from '@/lib/metadata';
+import { getSitemapEntries, getHomeSitemapEntries, getScreenerCategorySitemapEntries } from '@/lib/metadata';
+import { CURATED_CATEGORIES } from './screener/screenerContent';
 
 /**
  * app/sitemap.js — Dynamic sitemap generation
@@ -11,5 +12,6 @@ export default function sitemap() {
   return [
     ...getSitemapEntries(),
     ...getHomeSitemapEntries(),
+    ...getScreenerCategorySitemapEntries(CURATED_CATEGORIES),
   ];
 }
