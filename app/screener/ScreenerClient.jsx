@@ -6,7 +6,8 @@ import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
 import { MFCompareBar, MFCompareModal } from './MFCompare';
-import { shortCat, FAQ_ITEMS } from './screenerContent';
+import { useRouter } from 'next/navigation';
+import { shortCat, FAQ_ITEMS, categoryToSlug } from './screenerContent';
 
 // Slim, server-fetched projection of data/isin-scheme-master.json (see
 // app/api/scheme-master-facts/route.js) — fetched once and cached across
@@ -404,7 +405,13 @@ export default function ScreenerClient({ initialCategory }) {
     })).filter((c) => c.top.length > 0);
   }, [funds, group]);
 
-  const jumpTo = (f) => { setCat(f.category); setSort({ key: 'ret_3y', dir: -1 }); };
+  const router = useRouter();
+  const changeCat = useCallback((newCat) => {
+    setCat(newCat);
+    const slug = categoryToSlug(newCat);
+    router.replace(slug ? `/screener?category=${slug}` : '/screener', { scroll: false });
+  }, [router]);
+  const jumpTo = (f) => { changeCat(f.category); setSort({ key: 'ret_3y', dir: -1 }); };
 
   // pick a sensible default category when a type is chosen
   const defaultCatFor = (g) => {
@@ -413,7 +420,7 @@ export default function ScreenerClient({ initialCategory }) {
     const hit = re && funds.find((f) => assetClass(f.category) === g && re.test(f.category || ''));
     return hit ? hit.category : 'All';
   };
-  const pickGroup = (g) => { setGroup(g); if (g !== 'SIF') setCat(defaultCatFor(g)); setQ(''); setSifQ(''); };
+  const pickGroup = (g) => { setGroup(g); if (g !== 'SIF') changeCat(defaultCatFor(g)); setQ(''); setSifQ(''); };
   // MF and SIF now keep independent column selections (see sifCols above),
   // since their sensible defaults genuinely differ -- activeCols/toggleCol
   // resolve to whichever table is currently showing, so the rest of the
@@ -456,7 +463,7 @@ export default function ScreenerClient({ initialCategory }) {
             ))}
           </div>
           {!isSIF && (
-            <select className="scr-select" value={cat} onChange={(e) => setCat(e.target.value)}>
+            <select className="scr-select" value={cat} onChange={(e) => changeCat(e.target.value)}>
               <option value="All">All categories</option>
               {cats.map(([c, n]) => <option key={c} value={c}>{shortCat(c)} ({n})</option>)}
             </select>
