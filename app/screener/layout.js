@@ -1,4 +1,5 @@
 import { getPageMeta } from '@/lib/metadata';
+import { FAQ_ITEMS, GLOSSARY_ITEMS } from './screenerContent';
 
 export const metadata = getPageMeta('screener');
 
@@ -38,16 +39,10 @@ export default function ScreenerLayout({ children }) {
       { "@type": "ListItem", "position": 3, "name": "Mutual Fund Screener", "item": "https://mfcalc.getabundance.in/screener" }
     ]
   };
-  const faqs = [
-    ["How are the returns calculated?", "Returns are point-to-point CAGR computed from real AMFI NAVs: the latest NAV versus the NAV one, three and five years earlier. For periods shorter than a fund's age, the figure is left blank rather than estimated."],
-    ["How current is the data?", "The dataset is rebuilt every day from AMFI's official NAV files, so returns and risk metrics reflect the most recent published NAVs."],
-    ["What do volatility and max drawdown mean?", "Volatility is the annualised standard deviation of monthly returns — how bumpy the ride was. Max drawdown is the largest peak-to-trough fall. Both are computed on a month-end basis over the available history."],
-    ["Is this investment advice?", "No. The screener is an educational data tool. Past performance is not indicative of future results, and nothing here is a recommendation to buy or sell any scheme. Please consult your financial advisor before investing."]
-  ];
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    "mainEntity": faqs.map(([q, a]) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } }))
+    "mainEntity": [...FAQ_ITEMS, ...GLOSSARY_ITEMS].map(({ q, a }) => ({ "@type": "Question", "name": q, "acceptedAnswer": { "@type": "Answer", "text": a } }))
   };
   return (
     <>
