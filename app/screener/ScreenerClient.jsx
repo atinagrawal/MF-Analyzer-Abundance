@@ -746,24 +746,6 @@ export default function ScreenerClient({ initialCategory }) {
           ))}
         </section>
 
-        {!isSIF && (
-          <section className="scr-cat-links" aria-label="Browse by category">
-            <div className="scr-cat-links-h">Best funds by category</div>
-            <div className="scr-cat-links-row">
-              {CURATED_CATEGORIES.map((c) => (
-                <a
-                  key={c.slug}
-                  href={`/screener?category=${c.slug}`}
-                  className={`scr-cat-link ${cat === c.category ? 'active' : ''}`}
-                  onClick={(e) => { e.preventDefault(); setGroup(assetClass(c.category)); changeCat(c.category); }}
-                >
-                  {c.label}
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* FAQ */}
         <section className="scr-faq" aria-label="FAQ">
           <h2>Frequently asked questions</h2>
@@ -1190,15 +1172,9 @@ const CSS = `
 .scr-disc{margin-top:20px;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:15px 17px;font-size:11.5px;line-height:1.65;color:var(--muted)}
 .scr-disc b{color:var(--text2)}
 
-/* category explainer + internal links + FAQ group headings */
+/* category explainer + FAQ group headings */
 .scr-explainer{background:var(--g-xlight);border:1px solid var(--g-light);border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.6;color:var(--text2);margin-bottom:16px}
 .scr-explainer b{color:var(--g1)}
-.scr-cat-links{margin-bottom:18px}
-.scr-cat-links-h{font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
-.scr-cat-links-row{display:flex;flex-wrap:wrap;gap:8px}
-.scr-cat-link{padding:7px 13px;border:1px solid var(--border);border-radius:9px;font:700 12px Raleway,sans-serif;color:var(--g1);text-decoration:none;background:var(--surface);cursor:pointer;transition:all .14s;display:inline-block}
-.scr-cat-link:hover{border-color:var(--g3);background:var(--g-xlight)}
-.scr-cat-link.active{background:var(--g1);color:#fff;border-color:var(--g1)}
 .scr-faq-group-h{font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
 h2 + .scr-faq-group-h{margin-top:0}
 
