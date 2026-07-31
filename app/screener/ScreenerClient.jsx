@@ -191,7 +191,7 @@ export default function ScreenerClient({ initialCategory }) {
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
   const [q, setQ] = useState('');
-  const [group, setGroup] = useState('Equity');
+  const [group, setGroup] = useState(initialCategory ? assetClass(initialCategory) : 'Equity');
   const [cat, setCat] = useState(initialCategory || 'Equity Scheme - Flexi Cap Fund');
   const [openOnly, setOpenOnly] = useState(true);
   const [sort, setSort] = useState({ key: 'ret_3y', dir: -1 });
@@ -1200,7 +1200,7 @@ const CSS = `
 .scr-cat-link:hover{border-color:var(--g3);background:var(--g-xlight)}
 .scr-cat-link.active{background:var(--g1);color:#fff;border-color:var(--g1)}
 .scr-faq-group-h{font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
-.scr-faq-group-h:first-child{margin-top:0}
+h2 + .scr-faq-group-h{margin-top:0}
 
 /* drawer */
 .scr-drawer-wrap{position:fixed;inset:0;background:#0d260d55;backdrop-filter:blur(3px);z-index:10000;display:flex;justify-content:flex-end;animation:scrfade .2s ease}
