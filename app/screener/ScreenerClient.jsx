@@ -940,14 +940,19 @@ function Detail({ f, stress, onClose }) {
 
         {(() => {
           if (!schemeFacts) return null;
-          const masterRec = (f.isin && schemeFacts.byIsin?.[f.isin]) || (() => {
-            const norm = (f.name || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-            if (norm && schemeFacts.byNormName?.[norm]) return schemeFacts.byNormName[norm];
-            const fuzzy = (f.name || '').toUpperCase()
-              .replace(/DIRECT|REGULAR|GROWTH|IDCW|INCOME DISTRIBUTION CUM CAPITAL WITHDRAWAL|OPTION|PLAN|FUND|MUTUAL/g, '')
-              .replace(/[^A-Z0-9]/g, '');
-            return fuzzy ? schemeFacts.byFuzzyName?.[fuzzy] : null;
-          })();
+          const masterRec = (f.isin && schemeFacts.byIsin?.[f.isin]) ||
+            (f.code && schemeFacts.byAmfiCode?.[f.code]) || (() => {
+              const norm = (f.name || '').toUpperCase()
+                .replace(/\s*-\s*/g, ' ')
+                .replace(/\s+/g, ' ')
+                .replace(/DIRECT PLAN/g, 'DIRECT')
+                .replace(/REGULAR PLAN/g, 'REGULAR')
+                .replace(/GROWTH OPTION/g, 'GROWTH')
+                .replace(/IDCW OPTION/g, 'IDCW')
+                .replace(/[^A-Z0-9]/g, '')
+                .trim();
+              return norm ? schemeFacts.byNormName?.[norm] : null;
+            })();
 
           if (!masterRec) return null;
 
