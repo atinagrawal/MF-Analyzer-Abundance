@@ -8,6 +8,7 @@ import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
 import { MFCompareBar, MFCompareModal } from './MFCompare';
 import { useRouter } from 'next/navigation';
 import { shortCat, FAQ_ITEMS, GLOSSARY_ITEMS, CURATED_CATEGORIES, categoryToSlug } from './screenerContent';
+import { normalizeSchemeName } from '@/lib/normalizeSchemeName';
 
 // Slim, server-fetched projection of data/isin-scheme-master.json (see
 // app/api/scheme-master-facts/route.js) — fetched once and cached across
@@ -17,8 +18,8 @@ let schemeMasterFactsPromise = null;
 function getSchemeMasterFacts() {
   if (!schemeMasterFactsPromise) {
     schemeMasterFactsPromise = fetch('/api/scheme-master-facts')
-      .then(r => r.ok ? r.json() : { byIsin: {}, byNormName: {} })
-      .catch(() => ({ byIsin: {}, byNormName: {} }));
+      .then(r => r.ok ? r.json() : { byIsin: {}, byAmfiCode: {}, byNormName: {} })
+      .catch(() => ({ byIsin: {}, byAmfiCode: {}, byNormName: {} }));
   }
   return schemeMasterFactsPromise;
 }
@@ -942,15 +943,7 @@ function Detail({ f, stress, onClose }) {
           if (!schemeFacts) return null;
           const masterRec = (f.isin && schemeFacts.byIsin?.[f.isin]) ||
             (f.code && schemeFacts.byAmfiCode?.[f.code]) || (() => {
-              const norm = (f.name || '').toUpperCase()
-                .replace(/\s*-\s*/g, ' ')
-                .replace(/\s+/g, ' ')
-                .replace(/DIRECT PLAN/g, 'DIRECT')
-                .replace(/REGULAR PLAN/g, 'REGULAR')
-                .replace(/GROWTH OPTION/g, 'GROWTH')
-                .replace(/IDCW OPTION/g, 'IDCW')
-                .replace(/[^A-Z0-9]/g, '')
-                .trim();
+              const norm = normalizeSchemeName(f.name);
               return norm ? schemeFacts.byNormName?.[norm] : null;
             })();
 

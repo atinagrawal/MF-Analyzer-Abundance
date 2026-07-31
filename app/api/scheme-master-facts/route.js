@@ -16,11 +16,12 @@
  * elsewhere in this codebase — letters/digits only, uppercased).
  */
 
-import fs from 'fs';
-import path from 'path';
 import isinSchemeMaster from '@/data/isin-scheme-master.json';
+import { normalizeSchemeName as normalizeName } from '@/lib/normalizeSchemeName';
 
 const FACT_FIELDS = ['name', 'rta', 'settlement', 'purchaseCutoff', 'redeemCutoff', 'minPurchase', 'sip', 'swp'];
+const AMFI_NAV_URL = 'https://portal.amfiindia.com/spages/NAVAll.txt';
+const AMFI_TTL_MS = 6 * 60 * 60 * 1000; // 6h -- code-to-ISIN mapping barely changes day to day
 
 function pickFacts(entry) {
   const out = {};
@@ -30,24 +31,10 @@ function pickFacts(entry) {
   return out;
 }
 
-function normalizeName(str) {
-  if (!str) return '';
-  return str.toUpperCase()
-    .replace(/\s*-\s*/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/DIRECT PLAN/g, 'DIRECT')
-    .replace(/REGULAR PLAN/g, 'REGULAR')
-    .replace(/GROWTH OPTION/g, 'GROWTH')
-    .replace(/IDCW OPTION/g, 'IDCW')
-    .replace(/[^A-Z0-9]/g, '')
-    .trim();
-}
-
-// Built once at module load so even a cold hit is an O(1) return.
-const { byIsin, byAmfiCode, byNormName } = (() => {
+// byIsin/byNormName built once at module load -- pure, synchronous, no I/O.
+const { byIsin, byNormName } = (() => {
   const byIsin = {};
   const byNormName = {};
-  const byAmfiCode = {};
 
   for (const [isin, entry] of Object.entries(isinSchemeMaster)) {
     const facts = pickFacts(entry);
@@ -58,10 +45,28 @@ const { byIsin, byAmfiCode, byNormName } = (() => {
     }
   }
 
+  return { byIsin, byNormName };
+})();
+
+// byAmfiCode needs a live fetch (NAVAll.txt is never present on disk in
+// production -- it's an AMFI-hosted daily file, matching the pattern
+// pages/api/mf.js already uses for the same file). TTL-cached in memory so
+// a warm serverless instance doesn't refetch on every request.
+let _amfiCodeCache = null;
+let _amfiCodeCacheTime = 0;
+
+async function buildByAmfiCode() {
+  const now = Date.now();
+  if (_amfiCodeCache && (now - _amfiCodeCacheTime) < AMFI_TTL_MS) return _amfiCodeCache;
+
+  const byAmfiCode = {};
   try {
-    const navAllPath = path.join(process.cwd(), 'NAVAll.txt');
-    if (fs.existsSync(navAllPath)) {
-      const navAllText = fs.readFileSync(navAllPath, 'utf8');
+    const r = await fetch(AMFI_NAV_URL, {
+      headers: { Accept: 'text/plain' },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (r.ok) {
+      const navAllText = await r.text();
       for (const l of navAllText.split('\n')) {
         const p = l.split(';');
         if (p.length >= 6) {
@@ -76,15 +81,20 @@ const { byIsin, byAmfiCode, byNormName } = (() => {
           }
         }
       }
+    } else {
+      console.warn('[scheme-master-facts] AMFI NAVAll.txt returned HTTP', r.status);
     }
   } catch (e) {
-    console.warn('[scheme-master-facts] Warning reading NAVAll.txt:', e.message);
+    console.warn('[scheme-master-facts] Warning fetching NAVAll.txt:', e.message);
   }
 
-  return { byIsin, byAmfiCode, byNormName };
-})();
+  _amfiCodeCache = byAmfiCode;
+  _amfiCodeCacheTime = now;
+  return byAmfiCode;
+}
 
 export async function GET() {
+  const byAmfiCode = await buildByAmfiCode();
   return Response.json(
     { byIsin, byAmfiCode, byNormName },
     { headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' } }
