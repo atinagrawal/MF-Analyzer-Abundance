@@ -85,7 +85,7 @@ function parseUniverse(txt) {
     if (!isDivYield && /\bdividend\b/i.test(name)) continue;
 
     const nav = +p[4]; if (!isFinite(nav) || nav <= 0) continue;
-    out.set(p[0], { code: p[0], name, amc, cat, structure, nav, navDate: pd(p[5]), isin: p[1] });
+    out.set(p[0], { code: p[0], name, amc, cat, structure, nav, navDate: pd(p[5]), isin: p[1].trim() });
   }
   return out;
 }
@@ -317,7 +317,7 @@ async function main() {
     const ageYears = incTs ? (now - incTs) / Y : (ser.length ? (now - ser[0].t) / Y : null);
 
     rows.push({
-      code: f.code, name: f.name, amc: f.amc, category: f.cat, structure: f.structure,
+      code: f.code, name: f.name, amc: f.amc, category: f.cat, structure: f.structure, isin: f.isin || null,
       nav: +f.nav.toFixed(4), nav_date: f.navDate ? fmt(f.navDate) : null,
       ret_1m: pc(ret.ret_1m), ret_3m: pc(ret.ret_3m), ret_6m: pc(ret.ret_6m),
       ret_1y: pc(ret.ret_1y), ret_3y: pc(r3), ret_5y: pc(ret.ret_5y),
@@ -342,6 +342,7 @@ async function main() {
   if (c) {
     await c.query(`CREATE TABLE IF NOT EXISTS mf_screener (
       code TEXT PRIMARY KEY, name TEXT NOT NULL, amc TEXT, category TEXT, structure TEXT,
+      isin TEXT,
       nav NUMERIC, nav_date TEXT,
       ret_1m NUMERIC, ret_3m NUMERIC, ret_6m NUMERIC,
       ret_1y NUMERIC, ret_3y NUMERIC, ret_5y NUMERIC, ret_7y NUMERIC, ret_10y NUMERIC,
@@ -354,6 +355,7 @@ async function main() {
       ["ret_1m","NUMERIC"],["ret_3m","NUMERIC"],["ret_6m","NUMERIC"],
       ["ret_7y","NUMERIC"],["ret_10y","NUMERIC"],
       ["inception_date","TEXT"],["ret_inception","NUMERIC"],
+      ["isin","TEXT"],
     ]) {
       await c.query(`ALTER TABLE mf_screener ADD COLUMN IF NOT EXISTS ${col} ${type}`);
     }
@@ -361,7 +363,7 @@ async function main() {
     await c.query(`CREATE INDEX IF NOT EXISTS idx_mf_screener_structure ON mf_screener (structure)`);
     await c.query(`CREATE INDEX IF NOT EXISTS idx_mf_screener_ret3y ON mf_screener (ret_3y)`);
 
-    const COLS = ["code","name","amc","category","structure","nav","nav_date","ret_1m","ret_3m","ret_6m","ret_1y","ret_3y","ret_5y","ret_7y","ret_10y","vol","max_dd","ret_per_risk","age_years","inception_date","ret_inception","flag","asof"];
+    const COLS = ["code","name","amc","category","structure","isin","nav","nav_date","ret_1m","ret_3m","ret_6m","ret_1y","ret_3y","ret_5y","ret_7y","ret_10y","vol","max_dd","ret_per_risk","age_years","inception_date","ret_inception","flag","asof"];
     const N = COLS.length;
     await c.query("BEGIN");
     await c.query("DELETE FROM mf_screener");
