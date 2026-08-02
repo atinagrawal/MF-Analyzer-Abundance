@@ -981,6 +981,21 @@ function Detail({ f, stress, onClose }) {
                   <div style={{ fontSize: '.78rem', fontWeight: 700, color: masterRec.rta === 'CAMS' ? '#1565c0' : masterRec.rta === 'KFINTECH' ? '#6a1b9a' : 'var(--text)' }}>{masterRec.rta || '—'}</div>
                 </div>
               </div>
+              {masterRec.exitLoadText && (
+                <div style={{ marginBottom: '10px' }}>
+                  <div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🚪 Exit Load {masterRec.exitLoadConfidence === 'low' && '(needs review)'}</div>
+                  {masterRec.exitLoadConfidence === 'high' && Array.isArray(masterRec.exitLoadTiers) ? (
+                    <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)' }}>
+                      {masterRec.exitLoadTiers.length === 0
+                        ? '0% (No Load)'
+                        : masterRec.exitLoadTiers.map((t) => `${(t.rate * 100).toFixed(2).replace(/\.00$/, '')}% (<${Math.round(t.days / 30.44)}mo)`).join(' / ')}
+                      {masterRec.exitLoadFreePercent ? ` · ${masterRec.exitLoadFreePercent}% free` : ''}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '.72rem', fontWeight: 600, color: 'var(--muted)', fontStyle: 'italic' }}>{masterRec.exitLoadText}</div>
+                  )}
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {masterRec.swp === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>SWP Eligible</span>}
                 {masterRec.sip === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>SIP Available</span>}

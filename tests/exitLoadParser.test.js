@@ -79,6 +79,23 @@ test('ELSS / Index Fund Nil exit load', () => {
   assert.deepStrictEqual(res.tiers, []);
 });
 
+// 6b. Regression: 3-tier clause with an unspaced comma between tiers
+// (real SBI Credit Risk Fund text) -- a prior version of the splitter
+// required whitespace before a comma to treat it as a boundary, so
+// "...12 months, 1.5% if..." merged two tiers into one chunk and silently
+// dropped the middle tier while still reporting confidence: "high".
+test('3-tier clause with unspaced comma (SBI Credit Risk Fund)', () => {
+  const input = "For units in excess of 8% of the investment, exit load of 3% if redeemed within 12 months, 1.5% if redeemed after 12 months but within 24 months and 0.75% if redeemed after 24 months but within 36 months";
+  const res = parseExitLoadText(input);
+  assert.strictEqual(res.confidence, 'high');
+  assert.strictEqual(res.freePercent, 8);
+  assert.deepStrictEqual(res.tiers, [
+    { days: 360, rate: 0.03 },
+    { days: 720, rate: 0.015 },
+    { days: 1080, rate: 0.0075 }
+  ]);
+});
+
 // 6. Ambiguous / Complex Unparseable Clause (Low confidence fallback)
 test('Ambiguous custom text clause fallback', () => {
   const input = "Subject to lock-in period specified under scheme information document. Consult AMC for details.";

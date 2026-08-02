@@ -9,6 +9,7 @@ import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows,
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getSIFLogo, getMFLogoFromSchemeName } from '@/lib/providerLogos';
 import isinSchemeMaster from '@/data/isin-scheme-master.json';
+import growwByAmfiCode from '@/data/groww-exit-loads.json';
 
 // Precomputed once: normalized fund name → scheme-master entry, used as a
 // fallback when no ISIN is available (e.g. manual holdings). Avoids an
@@ -21,6 +22,17 @@ const nameToSchemeEntry = (() => {
       const norm = entry.name.toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (norm && !map[norm]) map[norm] = entry; // first-wins on rare name collisions
     }
+  }
+  return map;
+})();
+
+// data/groww-exit-loads.json is keyed by AMFI code only -- derive a
+// secondary ISIN index once, mirroring app/api/scheme-master-facts/route.js's
+// own dual-indexing so both lookup paths in getExitLoadInfo resolve.
+const growwByIsin = (() => {
+  const map = {};
+  for (const rec of Object.values(growwByAmfiCode)) {
+    if (rec.isin) map[rec.isin] = rec;
   }
   return map;
 })();
@@ -202,34 +214,34 @@ function getExitLoadInfo(fundName, isin) {
     return Object.values(growwByAmfiCode).find(r => r.schemeName && r.schemeName.toUpperCase().replace(/[^A-Z0-9]/g, '') === norm);
   })();
 
-  if (growwRec && growwRec.rawText) {
-    if (growwRec.confidence === 'high' && Array.isArray(growwRec.tiers)) {
-      const sortedTiers = [...growwRec.tiers].sort((a, b) => a.days - b.days);
-      const tierStr = sortedTiers.length === 0
-        ? '0% (No Load)'
-        : sortedTiers.map(t => `${(t.rate * 100).toFixed(2).replace(/\.00$/, '')}% (<${formatTierPeriod(t.days)})`).join(' / ');
-      const freeStr = growwRec.freePercent ? ` (${growwRec.freePercent}% free)` : '';
-      const label = `Verified: ${tierStr}${freeStr}`;
-      return {
-        isLocked: false,
-        hasExitLoad: sortedTiers.length > 0,
-        schedule: sortedTiers,
-        freePercent: growwRec.freePercent || 0,
-        label,
-        rawText: growwRec.rawText
-      };
-    } else if (growwRec.confidence === 'low') {
-      // Unparseable complex clause -> Display text clause, require manual review for tier math
-      return {
-        isLocked: false,
-        hasExitLoad: true,
-        schedule: [{ rate: 0.01, days: 365 }],
-        freePercent: 0,
-        label: `Review: ${growwRec.rawText.substring(0, 60)}...`,
-        rawText: growwRec.rawText
-      };
-    }
+  if (growwRec && growwRec.rawText && growwRec.confidence === 'high' && Array.isArray(growwRec.tiers)) {
+    const sortedTiers = [...growwRec.tiers].sort((a, b) => a.days - b.days);
+    const tierStr = sortedTiers.length === 0
+      ? '0% (No Load)'
+      : sortedTiers.map(t => `${(t.rate * 100).toFixed(2).replace(/\.00$/, '')}% (<${formatTierPeriod(t.days)})`).join(' / ');
+    const freeStr = growwRec.freePercent ? ` (${growwRec.freePercent}% free)` : '';
+    const label = `Verified: ${tierStr}${freeStr}`;
+    return {
+      isLocked: false,
+      hasExitLoad: sortedTiers.length > 0,
+      schedule: sortedTiers,
+      freePercent: growwRec.freePercent || 0,
+      label,
+      rawText: growwRec.rawText
+    };
   }
+
+  // Groww found the real clause but couldn't parse it into numbers with
+  // confidence (confidence === 'low'). Do NOT fabricate a schedule here --
+  // that would silently compute a wrong exit-load amount from a guess
+  // dressed up as "verified" data. Instead fall through to the existing
+  // BSE-flag/category-guess logic below for the actual number, and tag
+  // whatever it returns with the real clause text so the UI can flag it
+  // for manual review instead of trusting the guess unquestioningly.
+  const needsReview = !!(growwRec && growwRec.rawText && growwRec.confidence === 'low');
+  const withReview = (result) => needsReview
+    ? { ...result, label: `${result.label} — Review: "${growwRec.rawText}"`, rawText: growwRec.rawText, needsReview: true }
+    : result;
 
   // 2. Fallback to existing BSE flag logic
   let masterEntry = isin && isinSchemeMaster[isin];
@@ -241,10 +253,10 @@ function getExitLoadInfo(fundName, isin) {
 
   if (masterEntry) {
     if (masterEntry.isLocked) {
-      return { isLocked: true, hasExitLoad: false, schedule: [], label: 'BSE: ELSS Locked' };
+      return withReview({ isLocked: true, hasExitLoad: false, schedule: [], label: 'BSE: ELSS Locked' });
     }
     if (!masterEntry.hasExitLoad) {
-      return { isLocked: false, hasExitLoad: false, schedule: [], label: 'BSE: 0% (No Load)' };
+      return withReview({ isLocked: false, hasExitLoad: false, schedule: [], label: 'BSE: 0% (No Load)' });
     }
     if (masterEntry.tiers && masterEntry.tiers.length > 0) {
       // Sort ascending by days — calcLotExitLoad's tier loop assumes this
@@ -254,24 +266,24 @@ function getExitLoadInfo(fundName, isin) {
       const sortedTiers = [...masterEntry.tiers].sort((a, b) => a.days - b.days);
       const tierStr = sortedTiers.map(t => `${(t.rate * 100).toFixed(0)}% (<${formatTierPeriod(t.days)})`).join(' / ');
       const label = masterEntry.freePercent ? `BSE: 0% (${masterEntry.freePercent}% free), ${tierStr}` : `BSE: ${tierStr}`;
-      return { isLocked: false, hasExitLoad: true, schedule: sortedTiers, freePercent: masterEntry.freePercent || 0, label };
+      return withReview({ isLocked: false, hasExitLoad: true, schedule: sortedTiers, freePercent: masterEntry.freePercent || 0, label });
     }
-    return { isLocked: false, hasExitLoad: true, schedule: [{ rate: 0.01, days: 365 }], label: 'BSE: load confirmed (~1% <365d)' };
+    return withReview({ isLocked: false, hasExitLoad: true, schedule: [{ rate: 0.01, days: 365 }], label: 'BSE: load confirmed (~1% <365d)' });
   }
 
   // 3. Fallback to pre-existing category guess logic
   const cat = inferExitLoadCategory(fundName);
   switch (cat) {
-    case 'liquid':       return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Guess: 0% (Liquid/Overnight)' };
-    case 'ultrashort':   return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Guess: 0% (Ultra Short)' };
-    case 'debt':         return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Guess: 0% (Debt/Gilt)' };
-    case 'index':        return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Guess: 0% (Index/ETF)' };
+    case 'liquid':       return withReview({ isLocked: false, hasExitLoad: false, schedule: [], label: 'Guess: 0% (Liquid/Overnight)' });
+    case 'ultrashort':   return withReview({ isLocked: false, hasExitLoad: false, schedule: [], label: 'Guess: 0% (Ultra Short)' });
+    case 'debt':         return withReview({ isLocked: false, hasExitLoad: false, schedule: [], label: 'Guess: 0% (Debt/Gilt)' });
+    case 'index':        return withReview({ isLocked: false, hasExitLoad: false, schedule: [], label: 'Guess: 0% (Index/ETF)' });
     case 'equity_hybrid':
     default:
       if (/ELSS|TAX.?SAVER/i.test(fundName || '')) {
-        return { isLocked: true, hasExitLoad: false, schedule: [], label: 'Guess: ELSS Locked' };
+        return withReview({ isLocked: true, hasExitLoad: false, schedule: [], label: 'Guess: ELSS Locked' });
       }
-      return { isLocked: false, hasExitLoad: true, schedule: [{ rate: 0.01, days: 365 }], label: 'Guess: 1% (< 365 days)' };
+      return withReview({ isLocked: false, hasExitLoad: true, schedule: [{ rate: 0.01, days: 365 }], label: 'Guess: 1% (< 365 days)' });
   }
 }
 

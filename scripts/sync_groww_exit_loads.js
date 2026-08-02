@@ -92,6 +92,27 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function pacingDelay() {
+  return 250 + Math.floor(Math.random() * 150); // randomized 250-400ms, per spec
+}
+
+// Retries on 429/5xx with exponential backoff (1s, 2s, 4s) before giving up;
+// any other non-ok status (404, etc.) is treated as "no data" immediately.
+async function fetchJsonWithRetry(url, maxRetries = 3) {
+  let attempt = 0;
+  while (true) {
+    const result = await fetchJson(url);
+    if (result.data || (result.status < 429 && result.status !== 500 && result.status !== 502 && result.status !== 503)) {
+      return result;
+    }
+    if (attempt >= maxRetries) return result;
+    const backoffMs = 1000 * Math.pow(2, attempt);
+    console.warn(`  [retry] HTTP ${result.status} from ${url} -- backing off ${backoffMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+    await sleep(backoffMs);
+    attempt++;
+  }
+}
+
 async function run() {
   console.log('=== Syncing Groww Exit Load Database ===');
   if (DRY_RUN) console.log('[Dry Run Mode Active]');
@@ -102,7 +123,20 @@ async function run() {
 
   if (fs.existsSync(navAllPath)) {
     const text = fs.readFileSync(navAllPath, 'utf8');
-    for (const line of text.split('\n')) {
+    // NAVAll.txt interleaves non-scheme lines that name the AMC/category for
+    // all scheme rows that follow, until the next such line (the same
+    // structure scripts/build-screener.mjs's parseUniverse() already relies
+    // on) -- track the current AMC across the file rather than guessing it
+    // from a single scheme name's first word, which loses multi-word AMC
+    // names (e.g. "Aditya Birla Sun Life" -> just "Aditya").
+    let amc = null;
+    for (const raw of text.split('\n')) {
+      const line = raw.replace(/\r$/, '').trim();
+      if (!line || line.startsWith('Scheme Code;')) continue;
+      if (!line.includes(';')) {
+        if (!/Schemes?\s*\(/i.test(line)) amc = line.trim();
+        continue;
+      }
       const parts = line.split(';');
       if (parts.length >= 6) {
         const code = parts[0].trim();
@@ -111,7 +145,6 @@ async function run() {
         const name = parts[3].trim();
         if (code && !isNaN(code) && name) {
           const isin = (isin1 && isin1.startsWith('INF')) ? isin1 : ((isin2 && isin2.startsWith('INF')) ? isin2 : null);
-          const amc = name.split(' ')[0] || '';
           allRows.push({ code, isin, name, amc });
         }
       }
@@ -145,8 +178,8 @@ async function run() {
     }
 
     const searchUrl = `https://groww.in/v1/api/search/v1/entity?app=false&entity_type=scheme&q=${encodeURIComponent(searchTerm)}&page=0&size=5`;
-    const searchRes = await fetchJson(searchUrl);
-    await sleep(250); // Pacing delay
+    const searchRes = await fetchJsonWithRetry(searchUrl);
+    await sleep(pacingDelay());
 
     if (!searchRes.data || !searchRes.data.content || !searchRes.data.content.length) {
       unverified.push({ familyKey: key, representative: representative.name, reason: 'No Groww search results' });
@@ -163,8 +196,8 @@ async function run() {
     }
 
     const detailUrl = `https://groww.in/v1/api/data/mf/web/v1/scheme/search/${match.search_id}`;
-    const detailRes = await fetchJson(detailUrl);
-    await sleep(250); // Pacing delay
+    const detailRes = await fetchJsonWithRetry(detailUrl);
+    await sleep(pacingDelay());
 
     if (!detailRes.data || detailRes.data.exit_load == null) {
       unverified.push({ familyKey: key, representative: representative.name, reason: 'Missing exit_load in Groww detail payload' });
