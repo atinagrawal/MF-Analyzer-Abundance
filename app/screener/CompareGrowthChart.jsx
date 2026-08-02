@@ -83,6 +83,16 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
   }, [effectiveFrom, effectiveTo]);
 
   const n = filteredSeries[0]?.data.length || 0;
+  // A committed selection's indices were valid against the filteredSeries
+  // that existed when it was made. If a custom date range is pinned
+  // (effectiveFrom/To unchanged) while the underlying series data itself
+  // shrinks -- e.g. a fund added to the comparison narrows the shared
+  // date grid -- the selection-clearing effect below (keyed only on
+  // effectiveFrom/To) won't fire, since neither actually changed. Guard
+  // every render-time read of `selection` through this derived value
+  // instead of trusting it directly, so a stale out-of-range index never
+  // reaches an array lookup.
+  const validSelection = selection && selection.hi < n ? selection : null;
   const { vMin, vMax } = useMemo(() => {
     const all = filteredSeries.flatMap((s) => s.data.map((p) => p.v));
     return { vMin: Math.min(...all), vMax: Math.max(...all) };
@@ -191,9 +201,9 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
     );
   }
 
-  const rangeRows = selection
+  const rangeRows = validSelection
     ? filteredSeries.map((s) => {
-        const pct = pctChange(s.data[selection.lo].v, s.data[selection.hi].v);
+        const pct = pctChange(s.data[validSelection.lo].v, s.data[validSelection.hi].v);
         return { name: s.name, color: s.color, pct, pos: +pct >= 0 };
       })
     : null;
@@ -227,18 +237,18 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
           })}
           {filteredSeries.map((s) => <path key={s.name} d={pathFor(s)} fill="none" stroke={s.color} strokeWidth="2" />)}
 
-          {(selection || dragState) && (() => {
-            const lo = selection ? selection.lo : Math.min(dragState.startIdx, dragState.curIdx);
-            const hi = selection ? selection.hi : Math.max(dragState.startIdx, dragState.curIdx);
+          {(validSelection || dragState) && (() => {
+            const lo = validSelection ? validSelection.lo : Math.min(dragState.startIdx, dragState.curIdx);
+            const hi = validSelection ? validSelection.hi : Math.max(dragState.startIdx, dragState.curIdx);
             return <rect x={X(lo)} y={PAD_T} width={Math.max(1, X(hi) - X(lo))} height={ih}
               fill="var(--g1)" opacity="0.1" stroke="var(--g1)" strokeWidth="1" strokeDasharray="4 3" />;
           })()}
 
-          {selection && filteredSeries.map((s) => (
-            <circle key={s.name} cx={X(selection.hi)} cy={Y(s.data[selection.hi].v)} r="4" fill={s.color} stroke="#fff" strokeWidth="2" />
+          {validSelection && filteredSeries.map((s) => (
+            <circle key={s.name} cx={X(validSelection.hi)} cy={Y(s.data[validSelection.hi].v)} r="4" fill={s.color} stroke="#fff" strokeWidth="2" />
           ))}
 
-          {hoverIdx != null && !dragState && !selection && (
+          {hoverIdx != null && !dragState && !validSelection && (
             <g>
               <line x1={X(hoverIdx)} y1={PAD_T} x2={X(hoverIdx)} y2={H - PAD_B} stroke="var(--muted)" strokeWidth="1" strokeDasharray="3 3" />
               {filteredSeries.map((s) => <circle key={s.name} cx={X(hoverIdx)} cy={Y(s.data[hoverIdx].v)} r="3.5" fill={s.color} />)}
@@ -246,7 +256,7 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
           )}
         </svg>
 
-        {hoverIdx != null && !dragState && !selection && (
+        {hoverIdx != null && !dragState && !validSelection && (
           <div className="cmp-tip" style={{ left: X(hoverIdx) / W > 0.6 ? `calc(${(X(hoverIdx) / W) * 100}% - 190px)` : `calc(${(X(hoverIdx) / W) * 100}% + 14px)` }}>
             <div style={{ marginBottom: 4, opacity: 0.7 }}>{fmtDate(filteredSeries[0].data[hoverIdx].t)}</div>
             {filteredSeries.map((s) => (
@@ -269,9 +279,9 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
           </>
         )}
 
-        {selection && rangeRows && (
-          <div className="cmp-onchart-summary show" style={{ left: `${((X(selection.lo) + X(selection.hi)) / 2 / W) * 100}%`, transform: 'translateX(-50%)' }}>
-            <div style={{ marginBottom: 3, opacity: 0.6, fontSize: 9 }}>{fmtDate(filteredSeries[0].data[selection.lo].t)} → {fmtDate(filteredSeries[0].data[selection.hi].t)}</div>
+        {validSelection && rangeRows && (
+          <div className="cmp-onchart-summary show" style={{ left: `${((X(validSelection.lo) + X(validSelection.hi)) / 2 / W) * 100}%`, transform: 'translateX(-50%)' }}>
+            <div style={{ marginBottom: 3, opacity: 0.6, fontSize: 9 }}>{fmtDate(filteredSeries[0].data[validSelection.lo].t)} → {fmtDate(filteredSeries[0].data[validSelection.hi].t)}</div>
             {rangeRows.map((r) => (
               <div key={r.name} className="cmp-onchart-row"><span>{r.name}</span><b style={{ color: r.color }}>{r.pos ? '+' : ''}{r.pct}%</b></div>
             ))}
@@ -279,10 +289,10 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
         )}
       </div>
       <div className="cmp-hint">Drag left→right to select a range · tap anywhere to clear</div>
-      {selection && rangeRows && (
+      {validSelection && rangeRows && (
         <div className="cmp-range-summary show">
           <div className="cmp-range-summary-h">
-            <span>{fmtDate(filteredSeries[0].data[selection.lo].t)} → {fmtDate(filteredSeries[0].data[selection.hi].t)}</span>
+            <span>{fmtDate(filteredSeries[0].data[validSelection.lo].t)} → {fmtDate(filteredSeries[0].data[validSelection.hi].t)}</span>
             <span className="cmp-range-clear" onClick={() => setSelection(null)}>✕ Clear</span>
           </div>
           {rangeRows.map((r) => (
