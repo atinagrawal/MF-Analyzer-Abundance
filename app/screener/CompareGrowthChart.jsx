@@ -22,8 +22,8 @@ function fmtDate(t) {
 function fmtDateShort(t) {
   return new Date(t).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
-function fmtVal(v) {
-  return '₹' + Math.round(v).toLocaleString('en-IN');
+function fmtVal(v, compact) {
+  return compact ? '₹' + Math.round(v).toLocaleString('en-IN') : '₹' + v.toFixed(2);
 }
 function pctChange(a, b) {
   return (((b - a) / a) * 100).toFixed(1);
@@ -157,7 +157,7 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
             return (
               <g key={g}>
                 <line x1={PAD_L} y1={Y(v)} x2={W - PAD_R} y2={Y(v)} stroke="var(--border)" strokeWidth="0.6" />
-                <text x={2} y={Y(v) + 3} fontSize="8" fill="var(--muted)" fontFamily="monospace">{(v / 1000).toFixed(0)}k</text>
+                <text x={2} y={Y(v) + 3} fontSize="8" fill="var(--muted)" fontFamily="monospace">{vMax >= 1000 ? `${(v / 1000).toFixed(0)}k` : v.toFixed(2)}</text>
               </g>
             );
           })}
@@ -186,7 +186,7 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
           <div className="cmp-tip" style={{ left: X(hoverIdx) / W > 0.6 ? `calc(${(X(hoverIdx) / W) * 100}% - 190px)` : `calc(${(X(hoverIdx) / W) * 100}% + 14px)` }}>
             <div style={{ marginBottom: 4, opacity: 0.7 }}>{fmtDate(series[0].data[hoverIdx].t)}</div>
             {series.map((s) => (
-              <div key={s.name} className="cmp-tip-row"><span>{s.name}</span><b style={{ color: s.color }}>{fmtVal(s.data[hoverIdx].v)}</b></div>
+              <div key={s.name} className="cmp-tip-row"><span>{s.name}</span><b style={{ color: s.color }}>{fmtVal(s.data[hoverIdx].v, vMax >= 1000)}</b></div>
             ))}
           </div>
         )}
