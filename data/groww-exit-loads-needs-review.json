@@ -33,5 +33,875 @@
     "familyKey": "ITI::ITIBANKINGPSUDEBTFUND",
     "representative": "ITI Banking & PSU Debt Fund - Direct Plan - Growth Option",
     "reason": "Missing exit_load in Groww detail payload"
+  },
+  {
+    "familyKey": "KOTAK::KOTAKBANKINGANDPSUDEBTOFINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "Kotak Banking and PSU Debt Direct - Monthly Payout of Income Distribution cum capital withdrawal option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SBI::SBIBANKINGPSUFUNDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "SBI Banking & PSU Fund - Direct Plan - Daily Income Distribution cum Capital Withdrawal Option (IDCW)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SBI::SBIBANKINGPSUFUNDPALN",
+    "representative": "SBI BANKING & PSU FUND - Regular Paln - Growth",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SUNDARAM::SUNDARAMBANKINGPSUFUNDFORMERLYKNOWNASSUNDARAMBANKINGPSUDEBTFUND",
+    "representative": "Sundaram Banking & PSU Fund (Formerly Known as Sundaram Banking & PSU Debt Fund) - Direct Growth",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SUNDARAM::SUNDARAMBANKINGPSUFUNDFORMERLYKNOWNASSUNDARAMBANKINGANDPSUDEBTFUNDOFINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "Sundaram Banking & PSU Fund (Formerly Known as Sundaram Banking and PSU Debt Fund) Direct Plan - Daily Reinvestment of Income Distribution cum Capital Withdrawal (IDCW)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SUNDARAM::SUNDARAMBANKINGPSUFUNDFORMERLYKNOWNASSUNDARAMBANKINGANDPSUDEBTFUNDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "Sundaram Banking & PSU Fund (Formerly Known as Sundaram Banking and PSU Debt Fund) Direct Plan - Income Distribution cum Capital Withdrawal (IDCW)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SUNDARAM::SUNDARAMBANKINGPSUFUNDFORMERLYKNOWNASSUNDARAMBANKINGANDPSUDEBTFUNDRETAIL",
+    "representative": "Sundaram Banking & PSU Fund (Formerly Known as Sundaram Banking and PSU Debt Fund) Retail Plan - Growth",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SUNDARAM::SUNDARAMBANKINGPSUFUNDFORMERLYKNOWNASSUNDARAMBANKINGANDPSUDEBTFUNDRETAILINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "Sundaram Banking & PSU Fund (Formerly Known as Sundaram Banking and PSU Debt Fund) Retail Plan - Monthly Income Distribution cum Capital Withdrawal (IDCW)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIBANKINGPSUFUNDFLEXI",
+    "representative": "UTI Banking & PSU Fund - Direct Plan - Flexi IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIBANKINGPSUFUNDHALFYEARLY",
+    "representative": "UTI Banking & PSU Fund - Direct Plan - Half-Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANCORPORATEBONDFUNDHALFYEARLY",
+    "representative": "BANDHAN Corporate Bond Fund - Direct Half Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANCORPORATEBONDFUNDPERIODIC",
+    "representative": "BANDHAN Corporate Bond Fund - Direct Periodic IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BARODA::BARODABNPPARIBASCORPORATEBONDFUNDDEFUNCT",
+    "representative": "BARODA BNP PARIBAS Corporate Bond Fund - Defunct Plan - Annual-IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "FRANKLIN::FRANKLININDIACORPORATEDEBTFUNDA",
+    "representative": "Franklin India Corporate Debt Fund - Plan A - Direct - Annual - IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "FRANKLIN::FRANKLININDIACORPORATEDEBTFUNDAHALFYEARLY",
+    "representative": "Franklin India Corporate Debt Fund - Plan A - Direct - Half yearly - IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "FRANKLIN::FRANKLININDIACORPORATEDEBTFUNDBHALFYEARLY",
+    "representative": "Franklin India Corporate Debt Fund - Plan B - Half yearly - IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "FRANKLIN::FRANKLININDIACORPORATEDEBTFUNDB",
+    "representative": "Franklin India Corporate Debt Fund - Plan B - Monthly - IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "HSBC::HSBCCORPORATEBONDFUNDSEMI",
+    "representative": "HSBC Corporate Bond Fund - Direct Semi Annual IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALCORPORATEBONDFUNDFORTNIGHTLY",
+    "representative": "ICICI Prudential Corporate Bond Fund - Direct Plan - Fortnightly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALCORPORATEBONDFUNDHALFYEARLY",
+    "representative": "ICICI Prudential Corporate Bond Fund - Direct Plan - Half Yearly IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALCORPORATEBONDFUNDPREMIUM",
+    "representative": "ICICI Prudential Corporate Bond Fund - Premium Daily Dividend",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALCORPORATEBONDFUNDRETAIL",
+    "representative": "ICICI Prudential Corporate Bond Fund Retail Daily Dividend",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALCORPORATEBONDFUNDRETAILFORTNIGHTLY",
+    "representative": "ICICI Prudential Corporate Bond Fund Retail Fort Nightly Dividend",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "INVESCO::INVESCOINDIACORPORATEBONDFUNDDISCRETIONARY",
+    "representative": "Invesco India Corporate Bond Fund - Direct Plan - Discretionary IDCW (Payout / Reinvestment)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "KOTAK::KOTAKCOPORATEBONDFUNDRETAIL",
+    "representative": "Kotak Coporate Bond Fund- Retail Plan-Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "KOTAK::KOTAKCORPORATEBONDFUNDOFINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "Kotak Corporate Bond Fund- Direct Plan- Monthly Payout of Income Distribution cum capital withdrawal option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "KOTAK::KOTAKCORPORATEBONDFUNDINSTITUTIONAL",
+    "representative": "Kotak Corporate Bond Fund- Institutional Plan-Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "KOTAK::KOTAKCORPORATEBONDFUNDRETAIL",
+    "representative": "Kotak Corporate Bond Fund- Retail Plan- Monthly Dividend Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "KOTAK::KOTAKCORPORATEBONDFUNDSTANDARD",
+    "representative": "Kotak Corporate Bond Fund- Standard Plan-Daily Dividend Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "NIPPON::NIPPONINDIACORPORATEBONDFUND",
+    "representative": "Nippon India Corporate Bond Fund - Direct Plan Growth Plan - Bonus",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "PGIM::PGIMINDIACORPORATEBONDFUNDPREMIUMPLUS",
+    "representative": "PGIM India Corporate Bond Fund - Premium Plus Plan - Growth",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "PGIM::PGIMINDIAPREMIERBONDFUND",
+    "representative": "PGIM India Premier Bond Fund - Annual Bonus",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "PGIM::PGIMINDIAPREMIERBONDFUNDHALFYEARLY",
+    "representative": "PGIM India Premier Bond Fund - Direct Plan - Half-Yearly Bonus",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SBI::SBICORPORATEBONDFUNDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "SBI Corporate Bond Fund - Direct Plan - Monthly Income Distribution cum Capital Withdrawal Option (IDCW)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SUNDARAM::SUNDARAMBANKINGANDPSUDEBTFUNDOFINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "Sundaram Banking and PSU Debt Fund Direct Plan - Weekly Reinvestment of Income Distribution cum Capital Withdrawal (IDCW)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SUNDARAM::SUNDARAMCORPORATEBONDFUNDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "Sundaram Corporate Bond Fund Direct Plan - Income Distribution cum Capital Withdrawal (IDCW)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "TATA::TATACORPORATEBONDFUNDPERIODIC",
+    "representative": "Tata Corporate Bond Fund-Direct Plan-IDCW Periodic Payout",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIBONDFUNDSEGREGATED17022020",
+    "representative": "UTI - Bond Fund (Segregated - 17022020) - Direct Plan - Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIBONDFUNDSEGREGATED17022020FLEXI",
+    "representative": "UTI Bond Fund ( Segregated - 17022020) - Direct Plan - Flexi IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIBONDFUNDSEGREGATED17022020HALFYEARLY",
+    "representative": "UTI Bond Fund ( Segregated - 17022020) - Direct Plan - Half-Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICORPORATEBONDFUNDFLEXI",
+    "representative": "UTI Corporate Bond Fund - Direct Plan - Flexi IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICORPORATEBONDFUNDHALFYEARLY",
+    "representative": "UTI Corporate Bond Fund - Direct Plan - Half-Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANCREDITRISKFUNDHALFYEARLY",
+    "representative": "BANDHAN CREDIT RISK FUND - DIRECT PLAN HALF YEARLY IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANCREDITRISKFUNDPERIODIC",
+    "representative": "BANDHAN Credit Risk Fund-Direct Plan-Periodic IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BARODA::BARODABNPPARIBASCREDITRISKFUNDSEGPORTFOLIO2ERSTWHILEBBNPPMEDIUMDURATIONFUNDSEGPORTFOLIO1",
+    "representative": "Baroda BNP Paribas Credit Risk fund -Direct - Growth option -Seg. Portfolio 2 (erstwhile BBNPP Medium Duration Fund Direct-Growth option Seg. Portfolio 1)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BARODA::BARODABNPPARIBASCREDITRISKFUNDDEFUNCTSEGPORTFOLIO2ERSTWHILEBBNPPMEDIUMDURATIONFUNDDEFUNCTSEGPORTFOLIO1",
+    "representative": "Baroda BNP Paribas Credit risk fund -Defunct -Growth option -Seg-Portfolio 2 (erstwhile BBNPP Medium Duration Fund-Defunct Growth Option Seg.Portfolio1)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BARODA::BARODABNPPARIBASCREDITRISKFUNDSEGREGATEDPORTFOLIO1",
+    "representative": "Baroda BNP Paribas Credit Risk Fund- Direct- Growth Option- Segregated Portfolio- 1",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "FRANKLIN::FRANKLININDIACREDITRISKFUND",
+    "representative": "Franklin India Credit Risk Fund - Direct - Growth",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "FRANKLIN::FRANKLININDIACREDITRISKFUNDSEGREGATEDPORTFOLIO3950YESBANKLTDCO23DEC21",
+    "representative": "Franklin India Credit Risk Fund - Segregated Portfolio 3 (9.50% Yes bank Ltd CO 23Dec21) - Direct Growth Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "FRANKLIN::FRANKLININDIACREDITRISKFUNDSEGREGATEDPORTFOLIO1825VODAFONEIDEALTD10JUL20",
+    "representative": "Franklin India Credit Risk Fund- Segregated Portfolio 1- 8.25% Vodafone Idea Ltd-10JUL20-Direct-Growth Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "FRANKLIN::FRANKLININDIACREDITRISKFUNDSEGREGATEDPORTFOLIO21090VODAFONEIDEALTD02SEP2023",
+    "representative": "Franklin India Credit Risk Fund- Segregated Portfolio 2- 10.90% Vodafone Idea Ltd 02Sep2023-Direct Growth Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALCREDITRISKFUNDHALFYEARLY",
+    "representative": "ICICI Prudential Credit Risk Fund - Direct Plan - Half Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "INVESCO::INVESCOINDIACREDITRISKFUNDDISCRETIONARY",
+    "representative": "Invesco India Credit Risk Fund - Direct Plan - Discretionary IDCW (Payout / Reinvestment)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "KOTAK::KOTAKCREDITRISKFUNDSTANDARDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "Kotak Credit Risk Fund - Direct Plan - Standard Income Distribution cum capital withdrawal option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "NIPPON::NIPPONINDIACREDITRISKFUNDINSTITUTIONAL",
+    "representative": "Nippon India Credit Risk Fund  - Institutional Growth Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "NIPPON::NIPPONINDIACREDITRISKFUNDSEGREGATEDPORTFOLIO2",
+    "representative": "Nippon India Credit Risk Fund - Segregated Portfolio 2 - Direct Plan - Growth Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "NIPPON::NIPPONINDIACREDITRISKFUNDSEGREGATEDPORTFOLIO1",
+    "representative": "Nippon India Credit Risk Fund - Segregated Portfolio 1 - Direct Plan - Growth Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "NIPPON::NIPPONINDIACREDITRISKFUNDSEGREGATEDPORTFOLIO1INSTITUTIONAL",
+    "representative": "Nippon India Credit Risk Fund - Segregated Portfolio 1 - Institutional Growth Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "NIPPON::NIPPONINDIACREDITRISKFUNDSEGREGATEDPORTFOLIO2INSTITUTIONAL",
+    "representative": "Nippon India Credit Risk Fund - Segregated Portfolio 2 - Institutional Growth Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SBI::SBICREDITRISKFUNDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "SBI Credit Risk Fund - Direct Plan - Daily Income Distribution cum Capital Withdrawal Option (IDCW)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDSEGREGATED06032020",
+    "representative": "UTI - Credit Risk Fund (Segregated - 06032020) - Direct Plan - Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDSEGREGATED06032020FLEXI",
+    "representative": "UTI - Credit Risk Fund (Segregated - 06032020) - Direct Plan - Flexi Dividend Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDSEGREGATED06032020HALFYEARLY",
+    "representative": "UTI - Credit Risk Fund (Segregated - 06032020) - Direct Plan - Half Yearly Dividend Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDSEGREGATED07072020",
+    "representative": "UTI - Credit Risk Fund (Segregated - 07072020) - Direct Plan - Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDSEGREGATED07072020FLEXI",
+    "representative": "UTI - Credit Risk Fund (Segregated - 07072020) - Direct Plan - Flexi  Dividend Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDSEGREGATED07072020HALFYEARLY",
+    "representative": "UTI - Credit Risk Fund (Segregated - 07072020) - Direct Plan - Half Yearly Dividend Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDSEGREGATED13092019",
+    "representative": "UTI - Credit Risk Fund (Segregated - 13092019) - Direct Plan - Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDSEGREGATED13092019FLEXI",
+    "representative": "UTI - Credit Risk Fund (Segregated - 13092019) - Direct Plan - Flexi Dividend Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDSEGREGATED13092019HALFYEARLY",
+    "representative": "UTI - Credit Risk Fund (Segregated - 13092019) - Direct Plan - Half Yearly Dividend Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDSEGREGATED17022020",
+    "representative": "UTI - Credit Risk Fund (Segregated - 17022020) - Direct Plan - Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDSEGREGATED17022020FLEXI",
+    "representative": "UTI Credit Risk Fund ( Segregated - 17022020 ) - Direct Plan - Flexi IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDSEGREGATED17022020HALFYEARLY",
+    "representative": "UTI Credit Risk Fund ( Segregated - 17022020 ) - Direct Plan - Half-Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDFLEXI",
+    "representative": "UTI Credit Risk Fund - Direct Plan - Flexi IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTICREDITRISKFUNDHALFYEARLY",
+    "representative": "UTI Credit Risk Fund - Direct Plan - Half-Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "360::360ONEDYNAMICBONDFUNDHALFYEARLY",
+    "representative": "360 ONE Dynamic Bond Fund Regular Plan Half Yearly Dividend",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ADITYA::ADITYABIRLASUNLIFEDYNAMICBONDFUNDDISCIPLINEADVANTAGE",
+    "representative": "Aditya Birla Sun Life Dynamic Bond Fund-Discipline Advantage Plan-Growth",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "AXIS::AXISDYNAMICBONDFUNDHALFYEARLY",
+    "representative": "Axis Dynamic Bond Fund - Direct Plan - Half Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANDYNAMICBONDFUNDB",
+    "representative": "BANDHAN Dynamic Bond Fund - Regular Plan B - Growth",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANDYNAMICBONDFUNDBHALFYEARLY",
+    "representative": "BANDHAN Dynamic Bond Fund - Regular Plan B - Half Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANDYNAMICBONDFUNDBPERIODIC",
+    "representative": "BANDHAN Dynamic Bond Fund - Regular Plan B - Periodic IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANDYNAMICBONDFUNDHALFYEARLY",
+    "representative": "BANDHAN Dynamic Bond Fund-Direct Plan-Half Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANDYNAMICBONDFUNDPERIODIC",
+    "representative": "BANDHAN Dynamic Bond Fund-Direct Plan-Periodic IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BARODA::BARODABNPPARIBASDYNAMICBONDFUNDHALFYEARLY",
+    "representative": "Baroda BNP Paribas Dynamic Bond Fund - Direct Plan - Half Yearly IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BARODA::BARODABNPPARIBASDYNAMICBONDFUNDDEFUNCT",
+    "representative": "Baroda BNP Paribas Dynamic Bond Fund-Defunct Plan - Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "FRANKLIN::FRANKLININDIADYNAMICACCRUALFUND",
+    "representative": "Franklin India Dynamic Accrual Fund - Direct - Growth",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "FRANKLIN::FRANKLININDIADYNAMICACCRUALFUNDSEGREGATEDPORTFOLIO3950YESBANKLTDCO23DEC21",
+    "representative": "Franklin India Dynamic Accrual Fund - Segregated Portfolio 3 (9.50% Yes Bank Ltd CO 23Dec21) - Direct Growth Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "FRANKLIN::FRANKLININDIADYNAMICACCRUALFUNDSEGREGATEDPORTFOLIO1825VODAFONEIDEALTD10JUL20",
+    "representative": "Franklin India Dynamic Accrual Fund- Segregated Portfolio 1- 8.25% Vodafone Idea Ltd-10JUL20-Direct-Growth Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "FRANKLIN::FRANKLININDIADYNAMICACCRUALFUNDSEGREGATEDPORTFOLIO21090VODAFONEIDEALTD02SEP2023",
+    "representative": "Franklin India Dynamic Accrual Fund- Segregated Portfolio 2- 10.90% Vodafone Idea Ltd 02Sep2023-Direct-Growth Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "GROWW::GROWWDYNAMICTERMFUNDFORMERLYKNOWNASINDIABULLSDYNAMICBONDFUNDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "Groww Dynamic Term Fund (formerly known as Indiabulls Dynamic Bond Fund)- Direct Plan- - Income Distribution cum capital withdrawal Option ( Reinvestment)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "GROWW::GROWWDYNAMICTERMFUNDFORMERLYKNOWNASINDIABULLSDYNAMICBONDFUNDFORTNIGHTLYINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "Groww Dynamic Term Fund (formerly known as Indiabulls Dynamic Bond Fund)- Direct Plan- Fortnightly - Income Distribution cum capital withdrawal Option (Payout & Reinvestment)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "HDFC::HDFCDYNAMICDEBTFUNDHALFYEARLY",
+    "representative": "HDFC Dynamic Debt Fund - Half Yearly IDCW - Direct Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "HDFC::HDFCDYNAMICDEBTFUNDNORMAL",
+    "representative": "HDFC Dynamic Debt Fund - Normal IDCW - Direct Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "HDFC::HDFCDYNAMICDEBTFUNDYEARLY",
+    "representative": "HDFC Dynamic Debt Fund - Yearly IDCW - Direct Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALALLSEASONSBONDFUNDPREMIUM",
+    "representative": "ICICI Prudential All Seasons Bond Fund - Premium Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALALLSEASONSBONDFUNDRETAIL",
+    "representative": "ICICI Prudential All Seasons Bond Fund Retail - Annual Dividend",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALALLSEASONSBONDFUNDRETAILCUMULATIVE",
+    "representative": "ICICI Prudential All Seasons Bond Fund Retail - Cumulative",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ITI::ITIDYNAMICBONDFUNDANNUALLY",
+    "representative": "ITI Dynamic Bond Fund - Direct Plan - Annually IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ITI::ITIDYNAMICBONDFUNDHALFYEARLY",
+    "representative": "ITI Dynamic Bond Fund - Direct Plan - Half Yearly IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ITI::ITIDYNAMICBONDFUNDIDCWOPTION",
+    "representative": "ITI Dynamic Bond Fund - Direct Plan - Monthly IDCWOption",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ITI::ITIDYNAMICBONDFUNDANNUALLYIDCWOPTION",
+    "representative": "ITI Dynamic Bond Fund - Regular Plan - Annually IDCWOption",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "JM::JMDYNAMICBONDFUNDPRINCIPALUNITS",
+    "representative": "JM Dynamic Bond Fund - (Direct) - Bonus Option-Principal Units",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "JM::JMDYNAMICBONDFUNDHALFYEARLYPRINCIPALUNITS",
+    "representative": "JM Dynamic Bond Fund - (Direct) - Half Yearly Bonus Option - Principal Units",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "JM::JMDYNAMICBONDFUNDPREMIUM",
+    "representative": "JM Dynamic Bond Fund (Regular)- Premium Plan IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "KOTAK::KOTAKDYNAMICBONDFUNDSTANDARDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "Kotak Dynamic Bond Fund - Direct Plan - Standard Income Distribution cum capital withdrawal option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "PGIM::PGIMINDIADYNAMICBONDFUND",
+    "representative": "PGIM India Dynamic Bond Fund - Direct Plan-Growth Option",
+    "reason": "Missing exit_load in Groww detail payload"
+  },
+  {
+    "familyKey": "SBI::SBIDYNAMICBONDFUNDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "SBI Dynamic Bond Fund - Direct Plan - Income Distribution cum Capital Withdrawal Option (IDCW)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "TATA::TATADYNAMICBONDFUND",
+    "representative": "Tata Dynamic Bond Fund- Direct Plan-Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "TATA::TATADYNAMICBONDFUNDOF",
+    "representative": "Tata Dynamic Bond Fund- Regular Plan - Payout of IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "TATA::TATADYNAMICBONDOF",
+    "representative": "Tata Dynamic Bond- Direct Plan - Payout of IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIDYNAMICBONDFUNDSEGREGATED17022020",
+    "representative": "UTI - Dynamic Bond Fund (Segregated - 17022020) - Direct Plan - Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIDYNAMICBONDFUNDSEGREGATED17022020FLEXI",
+    "representative": "UTI Dynamic Bond Fund ( Segregated - 17022020 ) - Direct Plan - Flexi IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIDYNAMICBONDFUNDSEGREGATED17022020HALFYEARLY",
+    "representative": "UTI Dynamic Bond Fund ( Segregated - 17022020 ) - Direct Plan - Half-Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIDYNAMICBONDFUNDFLEXI",
+    "representative": "UTI Dynamic Bond Fund - Direct Plan - Flexi IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIDYNAMICBONDFUNDHALFYEARLY",
+    "representative": "UTI Dynamic Bond Fund - Direct Plan - Half-Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ADITYA::ADITYABIRLASUNLIFEFLOATINGRATEFUNDRETAIL",
+    "representative": "Aditya Birla Sun Life Floating Rate Fund-RETAIL - WEEKLY IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANFLOATERFUNDPERIODIC",
+    "representative": "BANDHAN FLOATER FUND  - DIRECT PLAN PERIODIC IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALFLOATINGINTERESTFUNDFORTNIGHTLY",
+    "representative": "ICICI Prudential Floating Interest Fund - Direct Plan - Fortnightly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALFLOATINGINTERESTFUNDOTHERS",
+    "representative": "ICICI Prudential Floating Interest Fund - Direct Plan - IDCW Others",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALFLOATINGINTERESTFUNDA",
+    "representative": "ICICI Prudential Floating Interest Fund Plan A - Dividend Daily",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALFLOATINGINTERESTFUNDAFORTNIGHTLY",
+    "representative": "ICICI Prudential Floating Interest Fund Plan A - Fortnightly Dividend",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALFLOATINGINTERESTFUNDB",
+    "representative": "ICICI Prudential Floating Interest Fund Plan B - Dividend Daily",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALFLOATINGINTERESTFUNDBFORTNIGHTLY",
+    "representative": "ICICI Prudential Floating Interest Fund Plan B - Fortnightly Dividend",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALFLOATINGINTERESTFUNDC",
+    "representative": "ICICI Prudential Floating Interest Fund Plan C - Dividend Daily",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALFLOATINGINTERESTFUNDCFORTNIGHTLY",
+    "representative": "ICICI Prudential Floating Interest Fund Plan C - Fortnightly Dividend",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALSAVINGSFUNDC",
+    "representative": "ICICI Prudential Savings Fund Plan C - Growth",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "KOTAK::KOTAKFLOATINGRATEFUNDSTANDARDOFINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "KOTAK FLOATING RATE FUND-DIRECT PLAN-Standard Reinvestment of Income Distribution cum capital withdrawal option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SBI::SBIFLOATINGRATEDEBTFUNDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "SBI Floating Rate DEBT Fund - Direct Plan - Monthly Income Distribution cum Capital Withdrawal Option (IDCW)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "TATA::TATAFLOATINGRATEFUNDPERIODIC",
+    "representative": "Tata Floating Rate Fund-Direct Plan-IDCW Periodic Dividend Reinvestment",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIFLOATERFUNDFLEXI",
+    "representative": "UTI Floater Fund - Direct Plan - Flexi IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIFLOATERFUNDHALFYEARLY",
+    "representative": "UTI Floater Fund - Direct Plan - Half-Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ADITYA::ADITYABIRLASUNLIFEGOVENMENTSECURITIESFUND",
+    "representative": "Aditya Birla Sun Life Govenment Securities Fund -DIRECT - Quarterly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "AXIS::AXISGILTFUNDHALFYEARLY",
+    "representative": "Axis Gilt Fund - Direct Plan - Half Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANGILTFUNDHALFYEARLY",
+    "representative": "Bandhan Gilt Fund - Direct Plan - Half Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANGILTFUNDPERIODIC",
+    "representative": "Bandhan Gilt Fund - Direct Plan - Periodic IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANGILTFUNDBPERIODIC",
+    "representative": "Bandhan Gilt Fund - Regular Plan B - Periodic IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANGILTFUNDBHALFYEARLY",
+    "representative": "Bandhan Gilt Fund - Regular - Plan B - Half Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "EDELWEISS::EDELWEISSGOVERNMENTSECURITIESFUNDFORTNIGHTLY",
+    "representative": "Edelweiss Government Securities Fund - Direct Plan Fortnightly - IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALSHORTTERMGILTFUND",
+    "representative": "ICICI Prudential Short Term Gilt Fund - Direct Plan -  Growth",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALSHORTTERMGILTFUNDHALFYEARLY",
+    "representative": "ICICI Prudential Short Term Gilt Fund - Direct Plan -  Half Yearly Dividend",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "KOTAK::KOTAKGILTINVESTMENTPROVIDENTFUNDANDTRUSTOFINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "Kotak Gilt-Investment  Provident Fund and Trust-Payout of Income Distribution cum capital withdrawal option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "KOTAK::KOTAKGILTINVESTMENT",
+    "representative": "Kotak Gilt-Investment Regular-Growth - Direct",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "KOTAK::KOTAKGILTINVESTMENTOFINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "Kotak Gilt-Investment Regular-Payout of Income Distribution cum capital withdrawal option - Direct",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "LIC::LICMFGILTFUNDPF",
+    "representative": "LIC MF Gilt Fund-PF Plan-Growth",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "NIPPON::NIPPONINDIAGILTFUNDPFAUTOMATICCAPITALAPPRECIATION",
+    "representative": "Nippon India Gilt  Fund - Direct Plan - P F Option - Automatic Capital Appreciation Payout Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "NIPPON::NIPPONINDIAGILTFUNDINSTITUTIONAL",
+    "representative": "Nippon India Gilt  Fund - Institutional Plan-Growth Plan -Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "NIPPON::NIPPONINDIAGILTFUNDPFAUTOMATIC",
+    "representative": "Nippon India Gilt Fund - Direct Plan - P F Option - Automatic Annual Reinvest Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "NIPPON::NIPPONINDIAGILTFUNDINSTITUTIONALPFAUTOMATICCAPITALAPPRECIATION",
+    "representative": "Nippon India Gilt  Fund-Institutional Plan-P F Option-Automatic Capital Appreciation Payout Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "PGIM::PGIMINDIAGILTFUNDHALFYEARLY",
+    "representative": "PGIM India Gilt Fund - Direct Plan - Half Yearly Bonus",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SBI::SBIGILTFUNDPFFIXEDPERIOD3YRS",
+    "representative": "SBI GILT FUND -  GROWTH - PF (Fixed Period - 3 Yrs) Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SBI::SBIGILTFUNDPF",
+    "representative": "SBI GILT FUND -  GROWTH - PF (Regular) Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SBI::SBIGILTFUNDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "SBI Gilt Fund - Direct Plan - Income Distribution cum Capital Withdrawal Option (IDCW)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SBI::SBIGILTFUNDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWALPFFIXEDPERIOD1YR",
+    "representative": "SBI Gilt Fund - Income Distribution cum Capital Withdrawal Option (IDCW) - PF (Fixed Period - 1 Yr)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SBI::SBIGILTFUNDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWALPFFIXEDPERIOD2YRS",
+    "representative": "SBI Gilt Fund - Income Distribution cum Capital Withdrawal Option (IDCW) - PF (Fixed Period - 2 Yrs)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SBI::SBIGILTFUNDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWALPFFIXEDPERIOD3YRS",
+    "representative": "SBI Gilt Fund - Income Distribution cum Capital Withdrawal Option (IDCW) - PF (Fixed Period - 3 Yrs)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "TATA::TATAGILTRETIREMENT28225OF",
+    "representative": "Tata Gilt Retirement Plan (28/2/25) - Payout of IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "TATA::TATAGILTRETIREMENT28225",
+    "representative": "Tata Gilt Retirement Plan- 28/2/25 Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "TATA::TATAGILTSECURITIESFUNDOF",
+    "representative": "Tata Gilt Securities Fund - Direct Plan - Payout of IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UNION::UNIONGILTFUNDHALFYEARLY",
+    "representative": "Union Gilt Fund - Direct Plan - Half-yearly IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIGILTFUNDDISCONTINUEDPF",
+    "representative": "UTI - GILT FUND - Discontinued PF Plan - Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIGILTFUNDDISCONTINUEDPFPRESCRIBEDDATEAUTOREDEMPTION",
+    "representative": "UTI - GILT FUND - Discontinued PF Plan Prescribed Date Auto Redemption Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANGILTFUNDWITH10YEARCONSTANTDURATIONFUND",
+    "representative": "Bandhan Gilt Fund with 10 year constant duration Fund - Direct Plan - Growth",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANGILTFUNDWITH10YEARCONSTANTDURATIONFUNDPERIODIC",
+    "representative": "Bandhan Gilt Fund with 10 year constant duration Fund - Direct Plan - Periodic IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALCONSTANTMATURITYGILTFUNDHALFYEARLY",
+    "representative": "ICICI Prudential Constant Maturity Gilt Fund - Direct Plan - Half Yearly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "SBI::SBICONSTANTMATURITY10YEARGILTFUNDINCOMEDISTRIBUTIONCUMCAPITALWITHDRAWAL",
+    "representative": "SBI Constant Maturity 10 Year Gilt Fund - Direct Plan - Income Distribution cum Capital Withdrawal Option (IDCW)",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIGILTFUNDWITH10YEARCONSTANTDURATION",
+    "representative": "UTI Gilt Fund with 10 year Constant Duration - Direct Plan - Growth Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIGILTFUNDWITH10YEARCONSTANTDURATIONFLEXI",
+    "representative": "UTI Gilt Fund with 10 year Constant Duration - Direct Plan - Flexi IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "UTI::UTIGILTFUNDWITH10YEARCONSTANTDURATIONHALFYEARLY",
+    "representative": "UTI Gilt Fund with 10 year Constant Duration - Direct Plan - Half Yearly IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ADITYA::ADITYABIRLASUNLIFELIQUIDFUNDINSTITUTIONAL",
+    "representative": "Aditya Birla Sun Life Liquid Fund -Institutional - IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ADITYA::ADITYABIRLASUNLIFELIQUIDFUNDRETAIL",
+    "representative": "Aditya Birla Sun Life Liquid Fund -Retail - IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ADITYA::ADITYABIRLASUNLIFELIQUIDFUNDDISCIPLINEADVANTAGE",
+    "representative": "Aditya Birla Sun Life Liquid Fund- Discipline Advantage Plan",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "AXIS::AXISLIQUIDFUNDRETAIL",
+    "representative": "Axis Liquid Fund - Retail Plan - Daily IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BAJAJ::BAJAJFINSERVLIQUIDFUNDFORTNIGHTLY",
+    "representative": "Bajaj Finserv Liquid Fund - Direct Plan - Fortnightly - IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANLIQUIDFUNDINSTBPERIODICDIV",
+    "representative": "BANDHAN LIQUID FUND - Inst Plan B - Periodic Div",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANLIQUIDFUNDPERIODIC",
+    "representative": "BANDHAN LIQUID Fund -Direct Plan-Periodic IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
   }
 ]
