@@ -34,7 +34,7 @@ function pctChange(a, b) {
  *   All series must share the same length/x-axis (the caller aligns them —
  *   see Task 10 for how the modal builds this array).
  */
-export default function CompareGrowthChart({ series }) {
+export default function CompareGrowthChart({ series, showLegend = true }) {
   const svgRef = useRef(null);
   const [hoverIdx, setHoverIdx] = useState(null);
   const [dragState, setDragState] = useState(null); // { startIdx, curIdx } while actively dragging
@@ -137,11 +137,13 @@ export default function CompareGrowthChart({ series }) {
 
   return (
     <div className="cmp-chart-wrap">
-      <div className="cmp-chart-legend">
-        {series.map((s) => (
-          <span key={s.name}><i style={{ background: s.color }} />{s.name}</span>
-        ))}
-      </div>
+      {showLegend && (
+        <div className="cmp-chart-legend">
+          {series.map((s) => (
+            <span key={s.name}><i style={{ background: s.color }} />{s.name}</span>
+          ))}
+        </div>
+      )}
       <div style={{ position: 'relative' }}>
         <svg
           ref={svgRef}

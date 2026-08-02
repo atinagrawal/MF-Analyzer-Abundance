@@ -6,6 +6,7 @@ import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
 import { MFCompareBar, MFCompareModal } from './MFCompare';
+import CompareGrowthChart from './CompareGrowthChart';
 import { useRouter } from 'next/navigation';
 import { shortCat, FAQ_ITEMS, GLOSSARY_ITEMS, CURATED_CATEGORIES, categoryToSlug } from './screenerContent';
 import { normalizeSchemeName } from '@/lib/normalizeSchemeName';
@@ -838,7 +839,14 @@ function Detail({ f, stress, onClose }) {
           </div>
         )}
 
-        <Spark nav={nav} />
+        {!nav ? (
+          <div className="scr-spark-load">Loading NAV history…</div>
+        ) : nav.length < 2 ? null : (
+          <CompareGrowthChart
+            series={[{ name: f.name, color: nav[nav.length - 1].v >= nav[0].v ? '#2e7d32' : '#b71c1c', data: nav }]}
+            showLegend={false}
+          />
+        )}
 
         <div className="scr-drawer-kpis">
           {M.map(([l, v, u]) => (
@@ -1054,7 +1062,16 @@ function SifDetail({ s, onClose }) {
 
         <div className="scr-sif-notice">ⓘ SIFs are a new asset class (launched 2024–25) with limited NAV history — longer-horizon metrics (3Y+) will populate as funds mature. See the table for the return periods already available.</div>
 
-        <Spark nav={pts} loadingMsg={histLoading ? 'Loading NAV history…' : null} emptyMsg="No NAV history available yet" />
+        {histLoading ? (
+          <div className="scr-spark-load">Loading NAV history…</div>
+        ) : (!pts || pts.length < 2) ? (
+          <div className="scr-spark-load">No NAV history available yet</div>
+        ) : (
+          <CompareGrowthChart
+            series={[{ name: s.nav_name, color: pts[pts.length - 1].v >= pts[0].v ? '#2e7d32' : '#b71c1c', data: pts }]}
+            showLegend={false}
+          />
+        )}
 
         <div className="scr-drawer-kpis">
           <div className="scr-dk"><span>Latest NAV</span><b>₹{s.nav.toFixed(4)}</b></div>
@@ -1071,27 +1088,6 @@ function SifDetail({ s, onClose }) {
   );
 }
 
-function Spark({ nav, loadingMsg, emptyMsg }) {
-
-  if (loadingMsg || (!nav && loadingMsg !== null)) return <div className="scr-spark-load">{loadingMsg || 'Loading NAV history…'}</div>;
-  if (!nav || nav.length < 2) return emptyMsg ? <div className="scr-spark-load">{emptyMsg}</div> : null;
-  const W = 480, H = 110, pad = 4;
-  const xs = nav.map((p) => p.t), minX = xs[0], maxX = xs[xs.length - 1];
-  const vs = nav.map((p) => p.v), minV = Math.min(...vs), maxV = Math.max(...vs);
-  const X = (t) => pad + ((t - minX) / (maxX - minX || 1)) * (W - pad * 2);
-  const Y = (v) => pad + (1 - (v - minV) / (maxV - minV || 1)) * (H - pad * 2);
-  const d = nav.map((p, i) => `${i ? 'L' : 'M'}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ');
-  const up = vs[vs.length - 1] >= vs[0];
-  return (
-    <div className="scr-spark">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-        <path d={`${d} L${X(maxX)},${H} L${X(minX)},${H} Z`} fill={up ? '#2e7d3214' : '#b71c1c14'} />
-        <path d={d} fill="none" stroke={up ? '#2e7d32' : '#b71c1c'} strokeWidth="2" />
-      </svg>
-      <div className="scr-spark-lbl">NAV since {new Date(minX).getFullYear()}</div>
-    </div>
-  );
-}
 
 const CSS = `
 .scr-body{font-family:Raleway,sans-serif;color:var(--text);padding-bottom:48px}
@@ -1219,10 +1215,7 @@ h2 + .scr-faq-group-h{margin-top:0}
 .scr-tag.alt{background:var(--s3,#eef5ee);color:var(--text2)}
 .scr-x{width:34px;height:34px;border:1px solid var(--border);background:var(--surface);border-radius:9px;font-size:20px;color:var(--muted);cursor:pointer;flex:none}
 .scr-warn{background:var(--warn-bg,#fff3e0);border:1px solid #ffcc80;color:#8a4300;padding:9px 12px;border-radius:8px;font-size:12px;margin-bottom:14px}
-.scr-spark{margin-bottom:16px}
-.scr-spark svg{width:100%;height:110px;display:block;background:var(--s2);border:1px solid var(--border);border-radius:10px}
-.scr-spark-lbl,.scr-spark-load{font:500 11px JetBrains Mono,monospace;color:var(--muted);margin-top:5px}
-.scr-spark-load{padding:34px 0;text-align:center}
+.scr-spark-load{font:500 11px JetBrains Mono,monospace;color:var(--muted);margin-top:5px;padding:34px 0;text-align:center}
 .scr-drawer-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
 .scr-dk{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:9px 10px;display:flex;flex-direction:column;gap:3px}
 .scr-dk span{font:600 9.5px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase}
