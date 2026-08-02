@@ -25,6 +25,14 @@ function fmtDateShort(t) {
 function fmtVal(v, compact) {
   return compact ? '₹' + Math.round(v).toLocaleString('en-IN') : '₹' + v.toFixed(2);
 }
+function toDateInputValue(t) {
+  if (t == null) return '';
+  return new Date(t).toISOString().slice(0, 10);
+}
+function fromDateInputValue(str) {
+  if (!str) return null;
+  return Date.parse(str + 'T00:00:00Z');
+}
 function pctChange(a, b) {
   return (((b - a) / a) * 100).toFixed(1);
 }
@@ -53,13 +61,44 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
     };
   }, []);
 
-  const n = series[0]?.data.length || 0;
-  const { vMin, vMax } = useMemo(() => {
-    const all = series.flatMap((s) => s.data.map((p) => p.v));
-    return { vMin: Math.min(...all), vMax: Math.max(...all) };
-  }, [series]);
+  const [customFrom, setCustomFrom] = useState(null);
+  const [customTo, setCustomTo] = useState(null);
 
-  if (n < 2) return null;
+  const defaultFrom = series[0]?.data[0]?.t ?? null;
+  const defaultTo = series[0]?.data[series[0]?.data.length - 1]?.t ?? null;
+  const effectiveFrom = customFrom ?? defaultFrom;
+  const effectiveTo = customTo ?? defaultTo;
+  const hasCustomRange = customFrom != null || customTo != null;
+
+  const filteredSeries = useMemo(
+    () => series.map((s) => ({ ...s, data: s.data.filter((p) => p.t >= effectiveFrom && p.t <= effectiveTo) })),
+    [series, effectiveFrom, effectiveTo]
+  );
+
+  // A stale selection index (computed against a previous, differently-sized
+  // filteredSeries) would point at the wrong data point once the range
+  // changes -- clear it whenever the effective range changes.
+  useEffect(() => {
+    setSelection(null);
+  }, [effectiveFrom, effectiveTo]);
+
+  const n = filteredSeries[0]?.data.length || 0;
+  const { vMin, vMax } = useMemo(() => {
+    const all = filteredSeries.flatMap((s) => s.data.map((p) => p.v));
+    return { vMin: Math.min(...all), vMax: Math.max(...all) };
+  }, [filteredSeries]);
+
+  if (n < 2) {
+    if (hasCustomRange) {
+      return (
+        <div className="cmp-chart-wrap">
+          {renderRangePicker()}
+          <div className="cmp-range-empty">No data available in the selected date range.</div>
+        </div>
+      );
+    }
+    return null;
+  }
 
   const iw = W - PAD_L - PAD_R, ih = H - PAD_T - PAD_B;
   const X = (i) => PAD_L + (i / (n - 1)) * iw;
@@ -128,8 +167,32 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
     if (!dragRef.current.dragging) setHoverIdx(null);
   }
 
+  function renderRangePicker() {
+    return (
+      <div className="cmp-range-picker">
+        <label>From <input
+          type="date"
+          value={toDateInputValue(effectiveFrom)}
+          min={toDateInputValue(defaultFrom)}
+          max={toDateInputValue(effectiveTo)}
+          onChange={(e) => setCustomFrom(fromDateInputValue(e.target.value))}
+        /></label>
+        <label>To <input
+          type="date"
+          value={toDateInputValue(effectiveTo)}
+          min={toDateInputValue(effectiveFrom)}
+          max={toDateInputValue(defaultTo)}
+          onChange={(e) => setCustomTo(fromDateInputValue(e.target.value))}
+        /></label>
+        {hasCustomRange && (
+          <span className="cmp-range-picker-reset" onClick={() => { setCustomFrom(null); setCustomTo(null); }}>↺ Reset to full range</span>
+        )}
+      </div>
+    );
+  }
+
   const rangeRows = selection
-    ? series.map((s) => {
+    ? filteredSeries.map((s) => {
         const pct = pctChange(s.data[selection.lo].v, s.data[selection.hi].v);
         return { name: s.name, color: s.color, pct, pos: +pct >= 0 };
       })
@@ -137,9 +200,10 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
 
   return (
     <div className="cmp-chart-wrap">
+      {renderRangePicker()}
       {showLegend && (
         <div className="cmp-chart-legend">
-          {series.map((s) => (
+          {filteredSeries.map((s) => (
             <span key={s.name}><i style={{ background: s.color }} />{s.name}</span>
           ))}
         </div>
@@ -161,7 +225,7 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
               </g>
             );
           })}
-          {series.map((s) => <path key={s.name} d={pathFor(s)} fill="none" stroke={s.color} strokeWidth="2" />)}
+          {filteredSeries.map((s) => <path key={s.name} d={pathFor(s)} fill="none" stroke={s.color} strokeWidth="2" />)}
 
           {(selection || dragState) && (() => {
             const lo = selection ? selection.lo : Math.min(dragState.startIdx, dragState.curIdx);
@@ -170,22 +234,22 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
               fill="var(--g1)" opacity="0.1" stroke="var(--g1)" strokeWidth="1" strokeDasharray="4 3" />;
           })()}
 
-          {selection && series.map((s) => (
+          {selection && filteredSeries.map((s) => (
             <circle key={s.name} cx={X(selection.hi)} cy={Y(s.data[selection.hi].v)} r="4" fill={s.color} stroke="#fff" strokeWidth="2" />
           ))}
 
           {hoverIdx != null && !dragState && !selection && (
             <g>
               <line x1={X(hoverIdx)} y1={PAD_T} x2={X(hoverIdx)} y2={H - PAD_B} stroke="var(--muted)" strokeWidth="1" strokeDasharray="3 3" />
-              {series.map((s) => <circle key={s.name} cx={X(hoverIdx)} cy={Y(s.data[hoverIdx].v)} r="3.5" fill={s.color} />)}
+              {filteredSeries.map((s) => <circle key={s.name} cx={X(hoverIdx)} cy={Y(s.data[hoverIdx].v)} r="3.5" fill={s.color} />)}
             </g>
           )}
         </svg>
 
         {hoverIdx != null && !dragState && !selection && (
           <div className="cmp-tip" style={{ left: X(hoverIdx) / W > 0.6 ? `calc(${(X(hoverIdx) / W) * 100}% - 190px)` : `calc(${(X(hoverIdx) / W) * 100}% + 14px)` }}>
-            <div style={{ marginBottom: 4, opacity: 0.7 }}>{fmtDate(series[0].data[hoverIdx].t)}</div>
-            {series.map((s) => (
+            <div style={{ marginBottom: 4, opacity: 0.7 }}>{fmtDate(filteredSeries[0].data[hoverIdx].t)}</div>
+            {filteredSeries.map((s) => (
               <div key={s.name} className="cmp-tip-row"><span>{s.name}</span><b style={{ color: s.color }}>{fmtVal(s.data[hoverIdx].v, vMax >= 1000)}</b></div>
             ))}
           </div>
@@ -194,20 +258,20 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
         {dragState && (
           <>
             <div className="cmp-drag-date start" style={{ left: `${(X(dragState.startIdx) / W) * 100}%` }}>
-              {fmtDateShort(series[0].data[dragState.startIdx].t)}
+              {fmtDateShort(filteredSeries[0].data[dragState.startIdx].t)}
             </div>
             <div className="cmp-drag-date end" style={{
               left: `${(X(dragState.curIdx) / W) * 100}%`,
               top: Math.abs(X(dragState.curIdx) - X(dragState.startIdx)) < 70 ? 18 : -2,
             }}>
-              {fmtDateShort(series[0].data[dragState.curIdx].t)}
+              {fmtDateShort(filteredSeries[0].data[dragState.curIdx].t)}
             </div>
           </>
         )}
 
         {selection && rangeRows && (
           <div className="cmp-onchart-summary show" style={{ left: `${((X(selection.lo) + X(selection.hi)) / 2 / W) * 100}%`, transform: 'translateX(-50%)' }}>
-            <div style={{ marginBottom: 3, opacity: 0.6, fontSize: 9 }}>{fmtDate(series[0].data[selection.lo].t)} → {fmtDate(series[0].data[selection.hi].t)}</div>
+            <div style={{ marginBottom: 3, opacity: 0.6, fontSize: 9 }}>{fmtDate(filteredSeries[0].data[selection.lo].t)} → {fmtDate(filteredSeries[0].data[selection.hi].t)}</div>
             {rangeRows.map((r) => (
               <div key={r.name} className="cmp-onchart-row"><span>{r.name}</span><b style={{ color: r.color }}>{r.pos ? '+' : ''}{r.pct}%</b></div>
             ))}
@@ -218,7 +282,7 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
       {selection && rangeRows && (
         <div className="cmp-range-summary show">
           <div className="cmp-range-summary-h">
-            <span>{fmtDate(series[0].data[selection.lo].t)} → {fmtDate(series[0].data[selection.hi].t)}</span>
+            <span>{fmtDate(filteredSeries[0].data[selection.lo].t)} → {fmtDate(filteredSeries[0].data[selection.hi].t)}</span>
             <span className="cmp-range-clear" onClick={() => setSelection(null)}>✕ Clear</span>
           </div>
           {rangeRows.map((r) => (

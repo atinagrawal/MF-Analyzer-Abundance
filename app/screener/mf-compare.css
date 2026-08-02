@@ -236,6 +236,12 @@
 .cmp-range-clear { font-weight: 700; color: var(--muted); cursor: pointer; text-transform: none; letter-spacing: 0; font-size: 10px; }
 .cmp-range-row { display: flex; justify-content: space-between; padding: 3px 0; font-weight: 700; }
 .cmp-hint { font-size: 10px; color: var(--muted); margin-top: 6px; text-align: center; }
+.cmp-range-picker { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; font-size: 12px; font-family: 'Raleway', sans-serif; color: var(--text2); }
+.cmp-range-picker label { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.cmp-range-picker input[type="date"] { padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; font: 600 12px 'JetBrains Mono', monospace; background: var(--surface); color: var(--text); }
+.cmp-range-picker-reset { font-weight: 700; color: var(--muted); cursor: pointer; font-size: 11px; }
+.cmp-range-picker-reset:hover { color: var(--g1); }
+.cmp-range-empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13px; }
 
 /* ── Responsive ────────────────────────────────────────── */
 @media (max-width: 700px) {
