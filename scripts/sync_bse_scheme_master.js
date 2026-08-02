@@ -19,36 +19,58 @@
 const fs = require('fs');
 const path = require('path');
 
-// Expected header labels at the column indices parseReportStream reads —
-// verified against a real BSE SCHEMEMASTER export. If BSE ever reorders or
-// adds columns, this fires a loud warning instead of silently reading the
-// wrong field into isin/exitFlag/lockFlag.
-const EXPECTED_HEADERS = {
-  4: 'isin',
-  10: 'purchase amount minimum',
-  22: 'rta agent code',
-  24: 'purchase cutoff time',
-  25: 'redemption cutoff time',
-  26: 'settlement type',
-  37: 'exit load flag',
-  39: 'lock-in period flag',
-  40: 'sip flag',
-  42: 'swp flag'
+// Column indices are resolved dynamically from each report's own header
+// row, by matching against these expected label strings, rather than
+// hardcoded as fixed integers. BSE has reordered/inserted columns in this
+// report before without warning (confirmed 2026-08: minPurchase, rta,
+// both cutoff times, settlement, sip flag and swp flag had all moved from
+// the positions this script originally shipped with — a hardcoded-index
+// version parsed successfully but silently wrote garbage into every one
+// of those fields). Matching is done after stripping all non-alphanumeric
+// characters and lowercasing (normalizeHeader), so whitespace/punctuation
+// drift in BSE's own header text (e.g. "Cut off" vs "Cutoff", "-" vs the
+// en-dash "–" seen in "Redemption Amount – Maximum") doesn't matter — only
+// an actual column reorder or a genuine label rename does.
+const COLUMN_LABELS = {
+  isin: 'ISIN',
+  type: 'Scheme Type',
+  name: 'Scheme Name',
+  minPurchase: 'Minimum Purchase Amount',
+  rta: 'RTA Agent Code',
+  purchaseCutoff: 'Purchase Cutoff Time',
+  redeemCutoff: 'Redemption Cut off Time',
+  settlement: 'Settlement Type',
+  exitFlag: 'Exit Load Flag',
+  lockFlag: 'Lock-in Period Flag',
+  sipFlag: 'SIP Flag',
+  swpFlag: 'SWP Flag',
 };
 
-function validateHeader(content, reportLabel) {
-  const headerLine = (content.split('\n')[0] || '');
-  const cols = headerLine.split('|').map(c => c.trim().toLowerCase());
-  for (const [idx, expected] of Object.entries(EXPECTED_HEADERS)) {
-    const actual = cols[idx] || '';
-    if (!actual.includes(expected)) {
-      console.error(
-        `[BSE Sync] WARNING: ${reportLabel} column ${idx} header is "${cols[idx] ?? '(missing)'}", ` +
-        `expected to contain "${expected}". BSE may have changed the report layout — ` +
-        `parseReportStream's column indices likely need updating.`
-      );
-    }
+function normalizeHeader(s) {
+  return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// Resolves each semantic field to its column index for THIS report's
+// header row. Throws (rather than warning and continuing) if any field's
+// label can't be found — the caller must not parse data rows using
+// indices it isn't confident about; that's exactly how the corruption
+// above happened.
+function resolveColumns(headerLine) {
+  const cols = headerLine.split('|').map(normalizeHeader);
+  const indices = {};
+  const missing = [];
+  for (const [field, label] of Object.entries(COLUMN_LABELS)) {
+    const idx = cols.indexOf(normalizeHeader(label));
+    if (idx === -1) missing.push(`${field} ("${label}")`);
+    else indices[field] = idx;
   }
+  if (missing.length) {
+    throw new Error(
+      `Could not locate column(s) by header label: ${missing.join(', ')}. ` +
+      `BSE may have renamed these columns (not just reordered them) — COLUMN_LABELS needs updating.`
+    );
+  }
+  return indices;
 }
 
 // Special Tiered Schemes Overrides (e.g. Parag Parikh Flexi Cap: 2% < 1y, 1% < 2y, 10% free)
@@ -136,22 +158,23 @@ function formatSettlement(settleStr) {
 
 function parseReportStream(content, isinMap) {
   const lines = content.split('\n');
+  const idx = resolveColumns(lines[0] || '');
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trim()) continue;
     const cols = line.split('|');
-    const isin = cols[4];
-    const type = cols[6];
-    const name = cols[8];
-    const minPurRaw = parseFloat(cols[10]);
-    const rtaRaw = cols[22];
-    const purCutoffRaw = cols[24];
-    const redCutoffRaw = cols[25];
-    const settleRaw = cols[26];
-    const exitFlag = cols[37];
-    const lockFlag = cols[39];
-    const sipFlag = cols[40];
-    const swpFlag = cols[42];
+    const isin = cols[idx.isin];
+    const type = cols[idx.type];
+    const name = cols[idx.name];
+    const minPurRaw = parseFloat(cols[idx.minPurchase]);
+    const rtaRaw = cols[idx.rta];
+    const purCutoffRaw = cols[idx.purchaseCutoff];
+    const redCutoffRaw = cols[idx.redeemCutoff];
+    const settleRaw = cols[idx.settlement];
+    const exitFlag = cols[idx.exitFlag];
+    const lockFlag = cols[idx.lockFlag];
+    const sipFlag = cols[idx.sipFlag];
+    const swpFlag = cols[idx.swpFlag];
 
     if (isin && isin.startsWith('INF')) {
       const hasExitLoad = exitFlag === 'Y';
@@ -221,9 +244,12 @@ async function run() {
     const content = await fetchBseReport(opt);
 
     if (content) {
-      validateHeader(content, opt);
-      parseReportStream(content, isinMap);
-      console.log(`[BSE Sync] Successfully parsed ${opt}. Total unique ISINs accumulated: ${isinMap.size}`);
+      try {
+        parseReportStream(content, isinMap);
+        console.log(`[BSE Sync] Successfully parsed ${opt}. Total unique ISINs accumulated: ${isinMap.size}`);
+      } catch (e) {
+        console.error(`[BSE Sync] ABORTING parse of ${opt}: ${e.message}`);
+      }
     } else {
       console.warn(`[BSE Sync] Could not retrieve data for ${opt}`);
     }
