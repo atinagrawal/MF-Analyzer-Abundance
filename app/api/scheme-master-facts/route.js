@@ -19,7 +19,7 @@
 import isinSchemeMaster from '@/data/isin-scheme-master.json';
 import { normalizeSchemeName as normalizeName } from '@/lib/normalizeSchemeName';
 
-const FACT_FIELDS = ['name', 'rta', 'settlement', 'purchaseCutoff', 'redeemCutoff', 'minPurchase', 'sip', 'swp'];
+const FACT_FIELDS = ['name', 'rta', 'settlement', 'purchaseCutoff', 'redeemCutoff', 'minPurchase', 'sip', 'swp', 'purchaseAllowed', 'redemptionAllowed', 'switchAllowed', 'divReinvest'];
 const AMFI_NAV_URL = 'https://portal.amfiindia.com/spages/NAVAll.txt';
 const AMFI_TTL_MS = 6 * 60 * 60 * 1000; // 6h -- code-to-ISIN mapping barely changes day to day
 

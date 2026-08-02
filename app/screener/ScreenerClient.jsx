@@ -954,6 +954,15 @@ function Detail({ f, stress, onClose }) {
               <div style={{ fontSize: '.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--muted)', marginBottom: '10px', fontFamily: "'JetBrains Mono', monospace" }}>
                 📋 Key Operational Facts (BSE StAR)
               </div>
+              {(masterRec.purchaseAllowed === false || masterRec.redemptionAllowed === false) && (
+                <div style={{ fontSize: '.68rem', fontWeight: 700, color: '#d32f2f', background: 'rgba(211,47,47,0.08)', border: '1px solid rgba(211,47,47,0.2)', borderRadius: '6px', padding: '6px 10px', marginBottom: '10px' }}>
+                  ⚠️ {masterRec.purchaseAllowed === false && masterRec.redemptionAllowed === false
+                    ? 'Currently not accepting fresh purchases or redemptions via BSE'
+                    : masterRec.purchaseAllowed === false
+                    ? 'Currently not accepting fresh purchases via BSE'
+                    : 'Currently not accepting redemptions via BSE'}
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '10px' }}>
                 <div>
                   <div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🕒 Daily NAV Cutoff</div>
@@ -975,6 +984,8 @@ function Detail({ f, stress, onClose }) {
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {masterRec.swp === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>SWP Eligible</span>}
                 {masterRec.sip === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>SIP Available</span>}
+                {masterRec.switchAllowed === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>Switch Available</span>}
+                {masterRec.divReinvest === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>IDCW Reinvestment</span>}
                 <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>Demat &amp; SOA</span>
               </div>
             </div>

@@ -44,6 +44,11 @@ const COLUMN_LABELS = {
   lockFlag: 'Lock-in Period Flag',
   sipFlag: 'SIP Flag',
   swpFlag: 'SWP Flag',
+  purchaseAllowedFlag: 'Purchase Allowed',
+  redemptionAllowedFlag: 'Redemption Allowed',
+  stpFlag: 'STP Flag',
+  switchFlag: 'Switch Flag',
+  divReinvestFlag: 'Dividend Reinvestment Flag',
 };
 
 function normalizeHeader(s) {
@@ -175,6 +180,11 @@ function parseReportStream(content, isinMap) {
     const lockFlag = cols[idx.lockFlag];
     const sipFlag = cols[idx.sipFlag];
     const swpFlag = cols[idx.swpFlag];
+    const purchaseAllowedFlag = cols[idx.purchaseAllowedFlag];
+    const redemptionAllowedFlag = cols[idx.redemptionAllowedFlag];
+    const stpFlag = cols[idx.stpFlag];
+    const switchFlag = cols[idx.switchFlag];
+    const divReinvestFlag = cols[idx.divReinvestFlag];
 
     if (isin && isin.startsWith('INF')) {
       const hasExitLoad = exitFlag === 'Y';
@@ -190,6 +200,11 @@ function parseReportStream(content, isinMap) {
       const minPurchase = !isNaN(minPurRaw) && minPurRaw > 0 ? Math.round(minPurRaw) : null;
       const sip = sipFlag === 'Y';
       const swp = swpFlag === 'Y';
+      const purchaseAllowed = purchaseAllowedFlag === 'Y';
+      const redemptionAllowed = redemptionAllowedFlag === 'Y';
+      const stp = stpFlag === 'Y';
+      const switchAllowed = switchFlag === 'Y';
+      const divReinvest = divReinvestFlag === 'Y';
 
       if (!isinMap.has(isin)) {
         const entry = {
@@ -197,6 +212,12 @@ function parseReportStream(content, isinMap) {
           type,
           hasExitLoad,
           isLocked,
+          // Purchase/RedemptionAllowed are stored explicitly (true AND
+          // false), unlike the true-only flags below -- "not currently
+          // redeemable via BSE" is itself a fact worth surfacing, not just
+          // the absence of one.
+          purchaseAllowed,
+          redemptionAllowed,
         };
         if (rta) entry.rta = rta;
         if (settlement) entry.settlement = settlement;
@@ -205,6 +226,9 @@ function parseReportStream(content, isinMap) {
         if (minPurchase != null) entry.minPurchase = minPurchase;
         if (sip) entry.sip = true;
         if (swp) entry.swp = true;
+        if (stp) entry.stp = true;
+        if (switchAllowed) entry.switchAllowed = true;
+        if (divReinvest) entry.divReinvest = true;
 
         if (KNOWN_TIERED_SCHEMES[isin]) {
           Object.assign(entry, KNOWN_TIERED_SCHEMES[isin]);
@@ -228,6 +252,15 @@ function parseReportStream(content, isinMap) {
         if (!existing.minPurchase && minPurchase != null) existing.minPurchase = minPurchase;
         if (sip) existing.sip = true;
         if (swp) existing.swp = true;
+        // OR-merge across report types: allowed via ANY channel (physical
+        // or demat) counts as allowed overall, matching how every other
+        // flag here already merges (true from any report wins, never
+        // downgraded back to false by a later report).
+        if (purchaseAllowed) existing.purchaseAllowed = true;
+        if (redemptionAllowed) existing.redemptionAllowed = true;
+        if (stp) existing.stp = true;
+        if (switchAllowed) existing.switchAllowed = true;
+        if (divReinvest) existing.divReinvest = true;
       }
     }
   }
