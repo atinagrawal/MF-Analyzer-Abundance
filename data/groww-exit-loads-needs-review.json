@@ -1,0 +1,37 @@
+[
+  {
+    "familyKey": "ADITYA::ADITYABIRLASUNLIFEBANKINGPSUDEBTFUNDRETAIL",
+    "representative": "Aditya Birla Sun Life Banking & PSU Debt Fund  - retail - monthly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "BANDHAN::BANDHANBANKINGANDPSUFUNDFORTNIGHTLY",
+    "representative": "Bandhan Banking and PSU Fund - Direct Fortnightly IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "EDELWEISS::EDELWEISSBANKINGANDPSUDEBTFUNDFORTNIGHTLY",
+    "representative": "Edelweiss Banking and PSU Debt Fund - Direct Plan Fortnightly - IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "FRANKLIN::FRANKLININDIABANKINGANDPSUDEBTFUND",
+    "representative": "Franklin India Banking and PSU Debt Fund - Direct - IDCW",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALBANKINGANDPSUDEBTFUNDHALFYEARLY",
+    "representative": "ICICI Prudential Banking and PSU Debt Fund - Direct Plan Half Yearly IDCW Option",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ICICI::ICICIPRUDENTIALBANKINGANDPSUDEBTFUNDRETAIL",
+    "representative": "ICICI Prudential Banking and PSU Debt Fund Retail Daily Dividend",
+    "reason": "AMFI Code / ISIN validation failed"
+  },
+  {
+    "familyKey": "ITI::ITIBANKINGPSUDEBTFUND",
+    "representative": "ITI Banking & PSU Debt Fund - Direct Plan - Growth Option",
+    "reason": "Missing exit_load in Groww detail payload"
+  }
+]

@@ -195,6 +195,43 @@ function formatTierPeriod(days) {
 }
 
 function getExitLoadInfo(fundName, isin) {
+  // 1. Verified Groww Exit Loads (Decoupled, high-confidence dataset)
+  const growwRec = (isin && growwByIsin[isin]) || (() => {
+    const norm = (fundName || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!norm) return null;
+    return Object.values(growwByAmfiCode).find(r => r.schemeName && r.schemeName.toUpperCase().replace(/[^A-Z0-9]/g, '') === norm);
+  })();
+
+  if (growwRec && growwRec.rawText) {
+    if (growwRec.confidence === 'high' && Array.isArray(growwRec.tiers)) {
+      const sortedTiers = [...growwRec.tiers].sort((a, b) => a.days - b.days);
+      const tierStr = sortedTiers.length === 0
+        ? '0% (No Load)'
+        : sortedTiers.map(t => `${(t.rate * 100).toFixed(2).replace(/\.00$/, '')}% (<${formatTierPeriod(t.days)})`).join(' / ');
+      const freeStr = growwRec.freePercent ? ` (${growwRec.freePercent}% free)` : '';
+      const label = `Verified: ${tierStr}${freeStr}`;
+      return {
+        isLocked: false,
+        hasExitLoad: sortedTiers.length > 0,
+        schedule: sortedTiers,
+        freePercent: growwRec.freePercent || 0,
+        label,
+        rawText: growwRec.rawText
+      };
+    } else if (growwRec.confidence === 'low') {
+      // Unparseable complex clause -> Display text clause, require manual review for tier math
+      return {
+        isLocked: false,
+        hasExitLoad: true,
+        schedule: [{ rate: 0.01, days: 365 }],
+        freePercent: 0,
+        label: `Review: ${growwRec.rawText.substring(0, 60)}...`,
+        rawText: growwRec.rawText
+      };
+    }
+  }
+
+  // 2. Fallback to existing BSE flag logic
   let masterEntry = isin && isinSchemeMaster[isin];
   if (!masterEntry && fundName) {
     // Name fallback if ISIN is not passed or empty
@@ -222,8 +259,7 @@ function getExitLoadInfo(fundName, isin) {
     return { isLocked: false, hasExitLoad: true, schedule: [{ rate: 0.01, days: 365 }], label: 'BSE: load confirmed (~1% <365d)' };
   }
 
-  // No BSE master record for this ISIN (not yet synced, or a manual holding
-  // with no ISIN) — fall back to the pre-existing name-based guess.
+  // 3. Fallback to pre-existing category guess logic
   const cat = inferExitLoadCategory(fundName);
   switch (cat) {
     case 'liquid':       return { isLocked: false, hasExitLoad: false, schedule: [], label: 'Guess: 0% (Liquid/Overnight)' };

@@ -5,17 +5,11 @@
  *
  * Slim, server-side projection of data/isin-scheme-master.json's
  * operational-facts fields (RTA, cutoffs, settlement, min lumpsum, SIP/SWP
- * eligibility) for the screener page's fund detail drawer. Excludes the
- * exit-load tier/lock data cas-tracker needs (most of the 5.6MB file's
- * size) — importing the full file into the screener's client bundle was
- * unnecessary bundle weight for a page most users hit.
- *
- * Returns two pre-built indices so the client never scans the full
- * dataset: byIsin (direct ISIN lookup) and byNormName (fallback lookup for
- * funds without an ISIN, keyed by the same normalized-name scheme used
- * elsewhere in this codebase — letters/digits only, uppercased).
+ * eligibility) & data/groww-exit-loads.json for the screener page's fund detail drawer.
  */
 
+import fs from 'fs';
+import path from 'path';
 import isinSchemeMaster from '@/data/isin-scheme-master.json';
 import { normalizeSchemeName as normalizeName } from '@/lib/normalizeSchemeName';
 
@@ -31,6 +25,25 @@ function pickFacts(entry) {
   return out;
 }
 
+// Load decoupled Groww exit loads data
+const { growwByAmfiCode, growwByIsin } = (() => {
+  const growwByAmfiCode = {};
+  const growwByIsin = {};
+  try {
+    const filePath = path.join(process.cwd(), 'data', 'groww-exit-loads.json');
+    if (fs.existsSync(filePath)) {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      for (const [code, rec] of Object.entries(data)) {
+        growwByAmfiCode[code] = rec;
+        if (rec.isin) growwByIsin[rec.isin] = rec;
+      }
+    }
+  } catch (e) {
+    console.warn('[scheme-master-facts] Warning loading groww-exit-loads.json:', e.message);
+  }
+  return { growwByAmfiCode, growwByIsin };
+})();
+
 // byIsin/byNormName built once at module load -- pure, synchronous, no I/O.
 const { byIsin, byNormName } = (() => {
   const byIsin = {};
@@ -38,6 +51,13 @@ const { byIsin, byNormName } = (() => {
 
   for (const [isin, entry] of Object.entries(isinSchemeMaster)) {
     const facts = pickFacts(entry);
+    const growwRec = growwByIsin[isin];
+    if (growwRec) {
+      facts.exitLoadText = growwRec.rawText;
+      facts.exitLoadTiers = growwRec.tiers;
+      facts.exitLoadConfidence = growwRec.confidence;
+      facts.exitLoadFreePercent = growwRec.freePercent;
+    }
     byIsin[isin] = facts;
     if (entry.name) {
       const norm = normalizeName(entry.name);
@@ -48,10 +68,6 @@ const { byIsin, byNormName } = (() => {
   return { byIsin, byNormName };
 })();
 
-// byAmfiCode needs a live fetch (NAVAll.txt is never present on disk in
-// production -- it's an AMFI-hosted daily file, matching the pattern
-// pages/api/mf.js already uses for the same file). TTL-cached in memory so
-// a warm serverless instance doesn't refetch on every request.
 let _amfiCodeCache = null;
 let _amfiCodeCacheTime = 0;
 
@@ -76,7 +92,15 @@ async function buildByAmfiCode() {
           if (code && !isNaN(code)) {
             const targetIsin = (isin1 && isin1.startsWith('INF')) ? isin1 : ((isin2 && isin2.startsWith('INF')) ? isin2 : null);
             if (targetIsin && byIsin[targetIsin]) {
-              byAmfiCode[code] = byIsin[targetIsin];
+              const facts = { ...byIsin[targetIsin] };
+              const growwRec = growwByAmfiCode[code];
+              if (growwRec) {
+                facts.exitLoadText = growwRec.rawText;
+                facts.exitLoadTiers = growwRec.tiers;
+                facts.exitLoadConfidence = growwRec.confidence;
+                facts.exitLoadFreePercent = growwRec.freePercent;
+              }
+              byAmfiCode[code] = facts;
             }
           }
         }

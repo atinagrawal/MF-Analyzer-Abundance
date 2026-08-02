@@ -1,0 +1,932 @@
+{
+  "108272": {
+    "amfiCode": "108272",
+    "isin": "INF209K01LX6",
+    "schemeName": "Aditya Birla Sun Life Banking & PSU Debt Fund  - REGULAR - IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:14.578Z"
+  },
+  "108273": {
+    "amfiCode": "108273",
+    "isin": "INF209K01LV0",
+    "schemeName": "Aditya Birla Sun Life Banking & PSU Debt Fund - Regular Plan-Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:14.578Z"
+  },
+  "108274": {
+    "amfiCode": "108274",
+    "isin": "INF209K01LN7",
+    "schemeName": "Aditya Birla Sun Life Banking & PSU Debt Fund  - REGULAR - Quarterly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:14.578Z"
+  },
+  "110282": {
+    "amfiCode": "110282",
+    "isin": "INF209K01LU2",
+    "schemeName": "Aditya Birla Sun Life Banking & PSU Debt Fund  - REGULAR - MONTHLY IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:14.578Z"
+  },
+  "112342": {
+    "amfiCode": "112342",
+    "isin": "INF109K01RT3",
+    "schemeName": "ICICI Prudential Banking and PSU Debt Fund - Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:24.789Z"
+  },
+  "112343": {
+    "amfiCode": "112343",
+    "isin": "INF109K01WS5",
+    "schemeName": "ICICI Prudential Banking and PSU Debt Fund -  Daily IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:24.789Z"
+  },
+  "112344": {
+    "amfiCode": "112344",
+    "isin": "INF109K01WR7",
+    "schemeName": "ICICI Prudential Banking and PSU Debt Fund -  Weekly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:24.789Z"
+  },
+  "116174": {
+    "amfiCode": "116174",
+    "isin": "INF109K01YE1",
+    "schemeName": "ICICI Prudential Banking and PSU Debt Fund - Quarterly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:24.789Z"
+  },
+  "117446": {
+    "amfiCode": "117446",
+    "isin": "INF846K01CB0",
+    "schemeName": "Axis Banking & PSU Debt Fund - Regular Plan - Growth option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.209Z"
+  },
+  "117447": {
+    "amfiCode": "117447",
+    "isin": "INF846K01CC8",
+    "schemeName": "Axis Banking & PSU Debt Fund - Regular Plan - Daily IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.209Z"
+  },
+  "117448": {
+    "amfiCode": "117448",
+    "isin": "INF846K01CD6",
+    "schemeName": "Axis Banking & PSU Debt Fund - Regular Plan - Weekly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.209Z"
+  },
+  "117449": {
+    "amfiCode": "117449",
+    "isin": "INF846K01CF1",
+    "schemeName": "Axis Banking & PSU Debt Fund - Regular Plan - Monthly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.209Z"
+  },
+  "118232": {
+    "amfiCode": "118232",
+    "isin": "INF205K01JV2",
+    "schemeName": "Invesco India Banking and PSU Fund - Regular Plan - Growth Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:26.986Z"
+  },
+  "118233": {
+    "amfiCode": "118233",
+    "isin": "INF205K01JW0",
+    "schemeName": "Invesco India Banking and PSU Fund - Regular Plan - Monthly IDCW (Payout / Reinvestment)",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:26.986Z"
+  },
+  "118234": {
+    "amfiCode": "118234",
+    "isin": "INF205K01JX8",
+    "schemeName": "Invesco India Banking and PSU Fund - Regular Plan - Daily IDCW (Reinvestment)",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:26.986Z"
+  },
+  "119550": {
+    "amfiCode": "119550",
+    "isin": "INF209K01YN0",
+    "schemeName": "Aditya Birla Sun Life Banking & PSU Debt Fund- Direct Plan-Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:14.578Z"
+  },
+  "119551": {
+    "amfiCode": "119551",
+    "isin": "INF209KA12Z1",
+    "schemeName": "Aditya Birla Sun Life Banking & PSU Debt Fund  - DIRECT - IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:14.578Z"
+  },
+  "119552": {
+    "amfiCode": "119552",
+    "isin": "INF209K01YM2",
+    "schemeName": "Aditya Birla Sun Life Banking & PSU Debt Fund  - DIRECT - MONTHLY IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:14.578Z"
+  },
+  "119553": {
+    "amfiCode": "119553",
+    "isin": "INF209K01YO8",
+    "schemeName": "Aditya Birla Sun Life Banking & PSU Debt Fund  - Direct - Quarterly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:14.578Z"
+  },
+  "120255": {
+    "amfiCode": "120255",
+    "isin": "INF109K013A0",
+    "schemeName": "ICICI Prudential Banking and PSU Debt Fund - Direct Plan -  Weekly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:24.789Z"
+  },
+  "120256": {
+    "amfiCode": "120256",
+    "isin": "INF109K010A6",
+    "schemeName": "ICICI Prudential Banking and PSU Debt Fund - Direct Plan -  Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:24.789Z"
+  },
+  "120257": {
+    "amfiCode": "120257",
+    "isin": "INF109K01Z89",
+    "schemeName": "ICICI Prudential Banking and PSU Debt Fund - Direct Plan -  Daily IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:24.789Z"
+  },
+  "120258": {
+    "amfiCode": "120258",
+    "isin": "INF109K011A4",
+    "schemeName": "ICICI Prudential Banking and PSU Debt Fund - Direct Plan -  Quarterly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:24.789Z"
+  },
+  "120436": {
+    "amfiCode": "120436",
+    "isin": "INF846K01CV8",
+    "schemeName": "Axis Banking & PSU Debt Fund - Direct Plan - Weekly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.209Z"
+  },
+  "120437": {
+    "amfiCode": "120437",
+    "isin": "INF846K01CU0",
+    "schemeName": "Axis Banking & PSU Debt Fund - Direct Plan - Daily IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.209Z"
+  },
+  "120438": {
+    "amfiCode": "120438",
+    "isin": "INF846K01CR6",
+    "schemeName": "Axis Banking & PSU Debt Fund - Direct Plan - Growth Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.209Z"
+  },
+  "120439": {
+    "amfiCode": "120439",
+    "isin": "INF846K01CT2",
+    "schemeName": "Axis Banking & PSU Debt Fund - Direct Plan - Monthly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.209Z"
+  },
+  "120443": {
+    "amfiCode": "120443",
+    "isin": "INF205K01KS6",
+    "schemeName": "Invesco India Banking and PSU Fund - Direct Plan - Daily IDCW (Reinvestment)",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:26.986Z"
+  },
+  "120444": {
+    "amfiCode": "120444",
+    "isin": "INF205K01KT4",
+    "schemeName": "Invesco India Banking and PSU Fund - Direct Plan -  Growth Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:26.986Z"
+  },
+  "120445": {
+    "amfiCode": "120445",
+    "isin": "INF205K01KU2",
+    "schemeName": "Invesco India Banking and PSU Fund - Direct Plan - Monthly IDCW (Payout / Reinvestment)",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:26.986Z"
+  },
+  "121279": {
+    "amfiCode": "121279",
+    "isin": "INF194K015G8",
+    "schemeName": "Bandhan Banking and PSU Fund - Direct Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:17.484Z"
+  },
+  "121280": {
+    "amfiCode": "121280",
+    "isin": "INF194K01SN6",
+    "schemeName": "Bandhan Banking and PSU Fund - Regular Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:17.484Z"
+  },
+  "121281": {
+    "amfiCode": "121281",
+    "isin": "INF194K016G6",
+    "schemeName": "Bandhan Banking and PSU Fund - Direct IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:17.484Z"
+  },
+  "121282": {
+    "amfiCode": "121282",
+    "isin": "INF194K01SO4",
+    "schemeName": "Bandhan Banking and PSU Fund - Regular IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:17.484Z"
+  },
+  "121932": {
+    "amfiCode": "121932",
+    "isin": "INF194K017M2",
+    "schemeName": "Bandhan Banking and PSU Fund - Regular Monthly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:17.484Z"
+  },
+  "121933": {
+    "amfiCode": "121933",
+    "isin": "INF194K015M6",
+    "schemeName": "Bandhan Banking and PSU Fund - Regular Annual IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:17.484Z"
+  },
+  "121935": {
+    "amfiCode": "121935",
+    "isin": "INF194K011N3",
+    "schemeName": "Bandhan Banking and PSU Fund - Direct Monthly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:17.484Z"
+  },
+  "121936": {
+    "amfiCode": "121936",
+    "isin": "INF194K019M8",
+    "schemeName": "Bandhan Banking and PSU Fund - Direct Annual IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:17.484Z"
+  },
+  "121937": {
+    "amfiCode": "121937",
+    "isin": "INF194K014M9",
+    "schemeName": "Bandhan Banking and PSU Fund - Regular Quarterly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:17.484Z"
+  },
+  "121938": {
+    "amfiCode": "121938",
+    "isin": "INF194K018M0",
+    "schemeName": "Bandhan Banking and PSU Fund - Direct Quarterly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:17.484Z"
+  },
+  "123689": {
+    "amfiCode": "123689",
+    "isin": "INF174K01KI5",
+    "schemeName": "Kotak Banking and PSU Debt Direct - Annual Dividend",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:28.496Z"
+  },
+  "123690": {
+    "amfiCode": "123690",
+    "isin": "INF174K01FO3",
+    "schemeName": "Kotak Banking and PSU Debt - Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:28.496Z"
+  },
+  "123693": {
+    "amfiCode": "123693",
+    "isin": "INF174K01KH7",
+    "schemeName": "Kotak Banking and PSU Debt Direct - Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:28.496Z"
+  },
+  "124172": {
+    "amfiCode": "124172",
+    "isin": "INF740K01ZP6",
+    "schemeName": "DSP Banking & PSU Debt Fund - Regular Plan - Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:19.759Z"
+  },
+  "124173": {
+    "amfiCode": "124173",
+    "isin": "INF740KA1OI1",
+    "schemeName": "DSP Banking & PSU Debt Fund - Regular Plan - IDCW - Daily Reinvest",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:19.759Z"
+  },
+  "124174": {
+    "amfiCode": "124174",
+    "isin": "INF740K01ZU6",
+    "schemeName": "DSP Banking & PSU Debt Fund - Regular Plan - IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:19.759Z"
+  },
+  "124175": {
+    "amfiCode": "124175",
+    "isin": "INF740K01ZW2",
+    "schemeName": "DSP Banking & PSU Debt Fund - Direct Plan - Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:19.759Z"
+  },
+  "124176": {
+    "amfiCode": "124176",
+    "isin": "INF740K01ZX0",
+    "schemeName": "DSP Banking & PSU Debt Fund - Direct Plan - IDCW - Monthly",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:19.759Z"
+  },
+  "124177": {
+    "amfiCode": "124177",
+    "isin": "INF740K01ZZ5",
+    "schemeName": "DSP Banking & PSU Debt Fund - Direct Plan - IDCW - Quarterly",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:19.759Z"
+  },
+  "124178": {
+    "amfiCode": "124178",
+    "isin": "INF740K01A18",
+    "schemeName": "DSP Banking & PSU Debt Fund - Direct Plan - IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:19.759Z"
+  },
+  "124179": {
+    "amfiCode": "124179",
+    "isin": "INF740KA1OJ9",
+    "schemeName": "DSP Banking & PSU Debt Fund - Regular Plan - IDCW - Weekly",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:19.759Z"
+  },
+  "124180": {
+    "amfiCode": "124180",
+    "isin": "INF740K01ZQ4",
+    "schemeName": "DSP Banking & PSU Debt Fund - Regular Plan - IDCW - Monthly",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:19.759Z"
+  },
+  "124181": {
+    "amfiCode": "124181",
+    "isin": "INF740K01ZS0",
+    "schemeName": "DSP Banking & PSU Debt Fund - Regular Plan - IDCW - Quarterly",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:19.759Z"
+  },
+  "124182": {
+    "amfiCode": "124182",
+    "isin": "INF740KA1OF7",
+    "schemeName": "DSP Banking & PSU Debt Fund - Direct Plan - IDCW - Daily Reinvest",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:19.759Z"
+  },
+  "124183": {
+    "amfiCode": "124183",
+    "isin": "INF740KA1OG5",
+    "schemeName": "DSP Banking & PSU Debt Fund - Direct Plan - IDCW - Weekly",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:19.759Z"
+  },
+  "127470": {
+    "amfiCode": "127470",
+    "isin": "INF194KA1JC5",
+    "schemeName": "Bandhan Banking and PSU Fund - Regular Daily IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:17.484Z"
+  },
+  "127471": {
+    "amfiCode": "127471",
+    "isin": "INF194KA1JD3",
+    "schemeName": "Bandhan Banking and PSU Fund - Direct Daily IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:17.484Z"
+  },
+  "128626": {
+    "amfiCode": "128626",
+    "isin": "INF179KA1JA8",
+    "schemeName": "HDFC Banking and PSU Debt Fund - IDCW Option - Direct Plan",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:23.134Z"
+  },
+  "128627": {
+    "amfiCode": "128627",
+    "isin": "INF179KA1JD2",
+    "schemeName": "HDFC Banking and PSU Debt Fund - IDCW Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:23.134Z"
+  },
+  "128628": {
+    "amfiCode": "128628",
+    "isin": "INF179KA1JC4",
+    "schemeName": "HDFC Banking and PSU Debt Fund - Growth Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:23.134Z"
+  },
+  "128629": {
+    "amfiCode": "128629",
+    "isin": "INF179KA1IZ7",
+    "schemeName": "HDFC Banking and PSU Debt Fund - Growth Option - Direct Plan",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:23.134Z"
+  },
+  "128952": {
+    "amfiCode": "128952",
+    "isin": "INF846K01NF8",
+    "schemeName": "Axis Banking & PSU Debt Fund - Direct Plan - Bonus Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.209Z"
+  },
+  "128953": {
+    "amfiCode": "128953",
+    "isin": "INF846K01NG6",
+    "schemeName": "Axis Banking & PSU Debt Fund - Regular Plan - Bonus Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.209Z"
+  },
+  "129006": {
+    "amfiCode": "129006",
+    "isin": "INF090I01KO5",
+    "schemeName": "Franklin India Banking & PSU Debt Fund - Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:22.156Z"
+  },
+  "129008": {
+    "amfiCode": "129008",
+    "isin": "INF090I01KR8",
+    "schemeName": "Franklin India Banking & PSU Debt Fund - Direct - Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:22.156Z"
+  },
+  "130897": {
+    "amfiCode": "130897",
+    "isin": "INF109KA1B57",
+    "schemeName": "ICICI Prudential Banking and PSU Debt Fund - Bonus",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:24.789Z"
+  },
+  "130950": {
+    "amfiCode": "130950",
+    "isin": "INF109KA1B40",
+    "schemeName": "ICICI Prudential Banking and PSU Debt Fund - Direct Plan Bonus",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:24.789Z"
+  },
+  "140283": {
+    "amfiCode": "140283",
+    "isin": "INF843K01FK1",
+    "schemeName": "Edelweiss Banking and PSU Debt Fund - Regular Plan - Growth Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:20.385Z"
+  },
+  "140284": {
+    "amfiCode": "140284",
+    "isin": "INF843K01FL9",
+    "schemeName": "Edelweiss Banking and PSU Debt Fund - Regular Plan - IDCW Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:20.385Z"
+  },
+  "140286": {
+    "amfiCode": "140286",
+    "isin": "INF843K01FC8",
+    "schemeName": "Edelweiss Banking and PSU Debt Fund - Direct Plan - Growth Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:20.385Z"
+  },
+  "140288": {
+    "amfiCode": "140288",
+    "isin": "INF843K01FD6",
+    "schemeName": "Edelweiss Banking and PSU Debt Fund - Direct Plan - IDCW Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:20.385Z"
+  },
+  "140289": {
+    "amfiCode": "140289",
+    "isin": "INF843K01FN5",
+    "schemeName": "Edelweiss Banking and PSU Debt Fund - Regular Plan Weekly - IDCW Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:20.385Z"
+  },
+  "140290": {
+    "amfiCode": "140290",
+    "isin": "INF843K01FF1",
+    "schemeName": "Edelweiss Banking and PSU Debt Fund - Direct Plan weekly - IDCW Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:20.385Z"
+  },
+  "140292": {
+    "amfiCode": "140292",
+    "isin": "INF843K01FQ8",
+    "schemeName": "Edelweiss Banking and PSU Debt Fund - Regular Plan Monthly - IDCW Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:20.385Z"
+  },
+  "140293": {
+    "amfiCode": "140293",
+    "isin": "INF843K01FI5",
+    "schemeName": "Edelweiss Banking and PSU Debt Fund - Direct Plan Monthly - IDCW Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:20.385Z"
+  },
+  "150503": {
+    "amfiCode": "150503",
+    "isin": "INF760K01KF7",
+    "schemeName": "Canara Robeco Banking and PSU Debt Fund- Regular Plan- Growth Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:18.886Z"
+  },
+  "150504": {
+    "amfiCode": "150504",
+    "isin": "INF760K01KH3",
+    "schemeName": "Canara Robeco Banking and PSU Debt Fund- Regular Plan- IDCW (Payout/ Reinvestment)",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:18.886Z"
+  },
+  "150505": {
+    "amfiCode": "150505",
+    "isin": "INF760K01KC4",
+    "schemeName": "Canara Robeco Banking and PSU Debt Fund- Direct Plan- Growth Option",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:18.886Z"
+  },
+  "150507": {
+    "amfiCode": "150507",
+    "isin": "INF760K01KE0",
+    "schemeName": "Canara Robeco Banking and PSU Debt Fund- Direct Plan- IDCW Payout",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:18.886Z"
+  },
+  "151102": {
+    "amfiCode": "151102",
+    "isin": "INF677K01AF4",
+    "schemeName": "HSBC Banking and PSU Debt Fund - Regular Daily IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:23.775Z"
+  },
+  "151103": {
+    "amfiCode": "151103",
+    "isin": "INF917K01HM5",
+    "schemeName": "HSBC Banking and PSU Debt Fund - Regular Weekly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:23.775Z"
+  },
+  "151104": {
+    "amfiCode": "151104",
+    "isin": "INF677K01AE7",
+    "schemeName": "HSBC Banking and PSU Debt Fund - Regular Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:23.775Z"
+  },
+  "151105": {
+    "amfiCode": "151105",
+    "isin": "INF677K01AI8",
+    "schemeName": "HSBC Banking and PSU Debt Fund - Regular Monthly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:23.775Z"
+  },
+  "151106": {
+    "amfiCode": "151106",
+    "isin": "INF917K01HJ1",
+    "schemeName": "HSBC Banking and PSU Debt Fund - Direct Monthly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:23.775Z"
+  },
+  "151107": {
+    "amfiCode": "151107",
+    "isin": "INF917K01HH5",
+    "schemeName": "HSBC Banking and PSU Debt Fund - Direct Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:23.775Z"
+  },
+  "151108": {
+    "amfiCode": "151108",
+    "isin": "INF917K01HL7",
+    "schemeName": "HSBC Banking and PSU Debt Fund - Direct Daily IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:23.775Z"
+  },
+  "151109": {
+    "amfiCode": "151109",
+    "isin": "INF917K01HK9",
+    "schemeName": "HSBC Banking and PSU Debt Fund - Direct Weekly IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:23.775Z"
+  },
+  "152162": {
+    "amfiCode": "152162",
+    "isin": "INF0QA701607",
+    "schemeName": "Bajaj Finserv Banking and PSU Fund-Direct Plan- Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.849Z"
+  },
+  "152163": {
+    "amfiCode": "152163",
+    "isin": "INF0QA701615",
+    "schemeName": "Bajaj Finserv Banking and PSU Fund- Direct Plan- IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.849Z"
+  },
+  "152164": {
+    "amfiCode": "152164",
+    "isin": "INF0QA701649",
+    "schemeName": "Bajaj Finserv Banking and PSU Fund-  Direct Plan-Monthly- IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.849Z"
+  },
+  "152165": {
+    "amfiCode": "152165",
+    "isin": "INF0QA701557",
+    "schemeName": "Bajaj Finserv Banking and PSU Fund- Regular Plan- Growth",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.849Z"
+  },
+  "152166": {
+    "amfiCode": "152166",
+    "isin": "INF0QA701565",
+    "schemeName": "Bajaj Finserv Banking and PSU Fund- Regular Plan- IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.849Z"
+  },
+  "152167": {
+    "amfiCode": "152167",
+    "isin": "INF0QA701599",
+    "schemeName": "Bajaj Finserv Banking and PSU Fund-Regular Plan-Monthly-IDCW",
+    "rawText": "Nil",
+    "freePercent": 0,
+    "confidence": "high",
+    "tiers": [],
+    "lastUpdated": "2026-08-02T12:45:16.849Z"
+  }
+}
