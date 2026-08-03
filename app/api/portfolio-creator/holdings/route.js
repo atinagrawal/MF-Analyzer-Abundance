@@ -138,35 +138,40 @@ export async function GET(request) {
     return Response.json({ error: 'amfiCode and schemeName are required' }, { status: 400 });
   }
 
-  const mem = memCache.get(amfiCode);
-  if (isFresh(mem?.ts)) {
-    return Response.json({ ...mem.data, source: 'memory' });
-  }
+  try {
+    const mem = memCache.get(amfiCode);
+    if (isFresh(mem?.ts)) {
+      return Response.json({ ...mem.data, source: 'memory' });
+    }
 
-  const blobData = await blobGet(amfiCode);
-  if (blobData) {
-    memCache.set(amfiCode, { data: blobData, ts: Date.now() });
-    return Response.json({ ...blobData, source: 'blob' });
-  }
+    const blobData = await blobGet(amfiCode);
+    if (blobData) {
+      memCache.set(amfiCode, { data: blobData, ts: Date.now() });
+      return Response.json({ ...blobData, source: 'blob' });
+    }
 
-  if (inflight.has(amfiCode)) {
-    const data = await inflight.get(amfiCode);
+    if (inflight.has(amfiCode)) {
+      const data = await inflight.get(amfiCode);
+      if (!data) return Response.json({ error: 'No holdings data found for this fund' }, { status: 404 });
+      return Response.json({ ...data, source: 'dedup' });
+    }
+
+    const fetchPromise = fetchFresh(amfiCode, schemeName)
+      .then((data) => {
+        if (data) {
+          memCache.set(amfiCode, { data, ts: Date.now() });
+          blobPut(amfiCode, data); // fire-and-forget
+        }
+        return data;
+      })
+      .finally(() => inflight.delete(amfiCode));
+    inflight.set(amfiCode, fetchPromise);
+
+    const data = await fetchPromise;
     if (!data) return Response.json({ error: 'No holdings data found for this fund' }, { status: 404 });
-    return Response.json({ ...data, source: 'dedup' });
+    return Response.json({ ...data, source: 'live' });
+  } catch (err) {
+    console.error('[portfolio-creator/holdings]', err.message);
+    return Response.json({ error: err.message }, { status: 500 });
   }
-
-  const fetchPromise = fetchFresh(amfiCode, schemeName)
-    .then((data) => {
-      if (data) {
-        memCache.set(amfiCode, { data, ts: Date.now() });
-        blobPut(amfiCode, data); // fire-and-forget
-      }
-      return data;
-    })
-    .finally(() => inflight.delete(amfiCode));
-  inflight.set(amfiCode, fetchPromise);
-
-  const data = await fetchPromise;
-  if (!data) return Response.json({ error: 'No holdings data found for this fund' }, { status: 404 });
-  return Response.json({ ...data, source: 'live' });
 }
