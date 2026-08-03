@@ -1,13 +1,10 @@
 // pages/api/og-breadth.js — Dynamic OG PNG for the Market Breadth dashboard. 1200x630.
 import { ImageResponse } from '@vercel/og';
+import { OG_LOGO_MARK_URL } from '@/lib/ogAssets';
 
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
-  const { origin } = new URL(req.url);
-  let logoData = null;
-  try { const r = await fetch(`${origin}/logo-og.png`); if (r.ok) logoData = await r.arrayBuffer(); } catch (e) {}
-
   const dmaBars = [['20D', 44], ['50D', 54], ['100D', 59], ['150D', 51], ['200D', 47]].map(([l, v]) => ({
     type: 'div',
     props: {
@@ -35,7 +32,7 @@ export default async function handler(req) {
               children: [
                 { type: 'div', props: { style: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 },
                   children: [
-                    logoData ? { type: 'img', props: { src: logoData, style: { height: 42, width: 42 } } } : { type: 'div', props: { style: { color: '#66bb6a', fontSize: 18, fontWeight: 800, display: 'flex' }, children: 'Abundance' } },
+                    { type: 'img', props: { src: OG_LOGO_MARK_URL, style: { height: 42, width: 42, objectFit: 'contain' } } },
                     { type: 'div', props: { style: { display: 'flex', flexDirection: 'column' }, children: [
                       { type: 'div', props: { style: { color: '#66bb6a', fontSize: 11, fontWeight: 700, letterSpacing: 2, display: 'flex' }, children: 'ABUNDANCE · PREMIUM' } },
                       { type: 'div', props: { style: { color: 'rgba(255,255,255,0.45)', fontSize: 10, display: 'flex' }, children: 'ARN-251838 · AMFI Registered MFD & SIF Distributor' } },

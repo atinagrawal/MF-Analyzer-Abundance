@@ -10,6 +10,7 @@
  */
 
 import { ImageResponse } from '@vercel/og';
+import { OG_LOGO_MARK_URL } from '@/lib/ogAssets';
 
 export const runtime = 'edge';
 
@@ -71,8 +72,9 @@ export async function GET() {
             background: 'rgba(255,255,255,.12)',
             border: '2px solid rgba(255,255,255,.2)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 24, fontWeight: 900, color: '#fff',
-          }}>A</div>
+          }}>
+            <img src={OG_LOGO_MARK_URL} width={38} height={38} style={{ objectFit: 'contain' }} />
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ color: '#fff', fontSize: 20, fontWeight: 900, letterSpacing: -0.5 }}>
               Abundance Financial Services

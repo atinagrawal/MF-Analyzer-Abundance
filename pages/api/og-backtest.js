@@ -2,19 +2,11 @@
 // @vercel/og (Satori) — plain JS object tree, no JSX. 1200x630.
 
 import { ImageResponse } from '@vercel/og';
+import { OG_LOGO_MARK_URL } from '@/lib/ogAssets';
 
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
-  const { origin } = new URL(req.url);
-
-  // Brand logo (embedded as bytes; never a self-referential fetch at render time)
-  let logoData = null;
-  try {
-    const r = await fetch(`${origin}/logo-og.png`);
-    if (r.ok) logoData = await r.arrayBuffer();
-  } catch (e) {}
-
   // Ascending "hypothetical growth" bars (purely decorative — no figures implied)
   const barHeights = [34, 46, 42, 60, 72, 66, 88, 104, 124];
   const bars = barHeights.map((h, i) => ({
@@ -69,9 +61,7 @@ export default async function handler(req) {
                 { type: 'div', props: {
                   style: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 22 },
                   children: [
-                    logoData
-                      ? { type: 'img', props: { src: logoData, style: { height: 44, width: 44, objectFit: 'contain' } } }
-                      : { type: 'div', props: { style: { color: '#66bb6a', fontSize: 18, fontWeight: 800, display: 'flex' }, children: 'Abundance' } },
+                    { type: 'img', props: { src: OG_LOGO_MARK_URL, style: { height: 44, width: 44, objectFit: 'contain' } } },
                     { type: 'div', props: {
                       style: { display: 'flex', flexDirection: 'column' },
                       children: [

@@ -3,6 +3,7 @@
 // Returns PNG via @vercel/og
 
 import { ImageResponse } from '@vercel/og';
+import { OG_LOGO_MARK_URL } from '@/lib/ogAssets';
 
 export const config = { runtime: 'edge' };
 
@@ -36,13 +37,6 @@ export default async function handler(req) {
     return n.toLocaleString('en-IN');
   }
 
-  // Load logo
-  let logoData = null;
-  try {
-    const logoRes = await fetch(`${new URL(req.url).origin}/logo-og.png`);
-    if (logoRes.ok) logoData = await logoRes.arrayBuffer();
-  } catch(e) {}
-
   const stats = [
     totalAum  ? { label: 'Total Industry AUM', value: '₹' + fmtCr(totalAum),  color: '#ffffff' } : null,
     folios    ? { label: 'Total Folios',        value: fmtFolios(folios),       color: '#80cbc4' } : null,
@@ -72,9 +66,7 @@ export default async function handler(req) {
                 { type: 'div', props: {
                   style: { display:'flex',alignItems:'center',gap:14,marginBottom:18 },
                   children: [
-                    logoData
-                      ? { type:'img', props:{ src:logoData, style:{ height:44,width:44,objectFit:'contain' } } }
-                      : { type:'div', props:{ style:{ height:44,display:'flex',alignItems:'center' }, children:{ type:'div', props:{ style:{ color:'#66bb6a',fontSize:18,fontWeight:800 }, children:'Abundance' } } } },
+                    { type:'img', props:{ src:OG_LOGO_MARK_URL, style:{ height:44,width:44,objectFit:'contain' } } },
                     { type:'div', props:{ style:{ display:'flex',flexDirection:'column' }, children:[
                       { type:'div', props:{ style:{ color:'#66bb6a',fontSize:11,fontWeight:700,letterSpacing:2,textTransform:'uppercase' }, children:'ABUNDANCE FINANCIAL SERVICES' } },
                       { type:'div', props:{ style:{ color:'rgba(255,255,255,0.45)',fontSize:10,marginTop:1 }, children:'ARN-251838  AMFI Registered MFD' } },

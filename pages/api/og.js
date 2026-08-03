@@ -2,11 +2,12 @@
 // Uses @vercel/og — returns image/png via plain JS object tree (no JSX)
 
 import { ImageResponse } from '@vercel/og';
+import { OG_LOGO_MARK_URL } from '@/lib/ogAssets';
 
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
-  const { searchParams, origin } = new URL(req.url);
+  const { searchParams } = new URL(req.url);
 
   const tab      = searchParams.get('tab') || '';
   // SWP backtester params
@@ -64,13 +65,6 @@ export default async function handler(req) {
   const survives = survived === '1';
   const depleted = survived === '0';
 
-  // Load logo
-  let logoData = null;
-  try {
-    const r = await fetch(`${origin}/logo-og.png`);
-    if (r.ok) logoData = await r.arrayBuffer();
-  } catch(e) {}
-
   // ── Stats for right panel ──
   const sipStats = [
     sipBTAmount ? { label: 'Monthly SIP',     value: 'Rs ' + fmtINR(sipBTAmount) + '/mo', color: '#80cbc4' } : null,
@@ -122,9 +116,7 @@ export default async function handler(req) {
                 { type: 'div', props: {
                   style: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 },
                   children: [
-                    logoData
-                      ? { type: 'img', props: { src: logoData, style: { height: 44, width: 44, objectFit: 'contain' } } }
-                      : { type: 'div', props: { style: { height: 44, display:'flex', alignItems:'center'}, children: { type:'div', props: { style: { color:'#66bb6a', fontSize:18, fontWeight:800 }, children:'Abundance' } } } },
+                    { type: 'img', props: { src: OG_LOGO_MARK_URL, style: { height: 44, width: 44, objectFit: 'contain' } } },
                     { type: 'div', props: {
                       style: { display: 'flex', flexDirection: 'column' },
                       children: [

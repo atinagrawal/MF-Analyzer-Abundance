@@ -1,13 +1,10 @@
 // pages/api/og-screener.js — Dynamic OG PNG for the MF Screener. 1200x630.
 import { ImageResponse } from '@vercel/og';
+import { OG_LOGO_MARK_URL } from '@/lib/ogAssets';
 
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
-  const { origin } = new URL(req.url);
-  let logoData = null;
-  try { const r = await fetch(`${origin}/logo-og.png`); if (r.ok) logoData = await r.arrayBuffer(); } catch (e) {}
-
   // little ranked-bars motif (decorative)
   const bars = [88, 72, 60, 50, 40].map((w, i) => ({
     type: 'div',
@@ -42,8 +39,7 @@ export default async function handler(req) {
                 { type: 'div', props: {
                   style: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 22 },
                   children: [
-                    logoData ? { type: 'img', props: { src: logoData, style: { height: 44, width: 44, objectFit: 'contain' } } }
-                             : { type: 'div', props: { style: { color: '#66bb6a', fontSize: 18, fontWeight: 800, display: 'flex' }, children: 'Abundance' } },
+                    { type: 'img', props: { src: OG_LOGO_MARK_URL, style: { height: 44, width: 44, objectFit: 'contain' } } },
                     { type: 'div', props: {
                       style: { display: 'flex', flexDirection: 'column' },
                       children: [

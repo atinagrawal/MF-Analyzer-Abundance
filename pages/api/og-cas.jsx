@@ -1,6 +1,7 @@
 
 // api/og-cas.jsx
 import { ImageResponse } from '@vercel/og';
+import { OG_LOGO_MARK_URL } from '@/lib/ogAssets';
 
 export const config = {
   runtime: 'edge',
@@ -22,7 +23,7 @@ export default function handler(req) {
             overflow: 'hidden',
           }}
         >
-          {/* â”€â”€ Background grid â”€â”€ */}
+          {/* ── Background grid ── */}
           <div style={{
             position: 'absolute', inset: 0,
             backgroundImage:
@@ -31,7 +32,7 @@ export default function handler(req) {
             backgroundSize: '48px 48px',
           }} />
 
-          {/* â”€â”€ Green radial glow â”€â”€ */}
+          {/* ── Green radial glow ── */}
           <div style={{
             position: 'absolute', top: '-160px', left: '-160px',
             width: '600px', height: '600px',
@@ -43,16 +44,16 @@ export default function handler(req) {
             background: 'radial-gradient(circle, rgba(22,163,74,0.14) 0%, transparent 65%)',
           }} />
 
-          {/* â”€â”€ Top accent bar â”€â”€ */}
+          {/* ── Top accent bar ── */}
           <div style={{
             position: 'absolute', top: 0, left: 0, right: 0, height: '4px',
             background: 'linear-gradient(90deg, #14532d, #22c55e, #86efac, #22c55e, #14532d)',
           }} />
 
-          {/* â”€â”€ Content wrapper â”€â”€ */}
+          {/* ── Content wrapper ── */}
           <div style={{ display: 'flex', flex: 1, padding: '56px 72px', position: 'relative', zIndex: 10 }}>
 
-            {/* â”€â”€ LEFT COLUMN â”€â”€ */}
+            {/* ── LEFT COLUMN ── */}
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
 
               {/* Brand */}
@@ -61,9 +62,10 @@ export default function handler(req) {
                   width: '52px', height: '52px', borderRadius: '14px',
                   background: 'linear-gradient(135deg, #16a34a, #166534)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'white', fontSize: '28px', fontWeight: 900,
                   boxShadow: '0 0 24px rgba(34,197,94,0.35)',
-                }}>A</div>
+                }}>
+                  <img src={OG_LOGO_MARK_URL} width={36} height={36} style={{ objectFit: 'contain' }} />
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <span style={{ color: '#f0fdf4', fontSize: '22px', fontWeight: 800, lineHeight: 1 }}>Abundance</span>
                   <span style={{ color: '#4ade80', fontSize: '11px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', marginTop: '4px' }}>Financial Services</span>
@@ -110,7 +112,7 @@ export default function handler(req) {
               </div>
             </div>
 
-            {/* â”€â”€ RIGHT COLUMN â€“ mock dashboard card â”€â”€ */}
+            {/* ── RIGHT COLUMN – mock dashboard card ── */}
             <div style={{
               display: 'flex', flexDirection: 'column', width: '360px',
               marginLeft: '64px', gap: '14px',
@@ -118,13 +120,14 @@ export default function handler(req) {
 
               {/* Portfolio summary card */}
               <div style={{
+                display: 'flex', flexDirection: 'column',
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: '16px', padding: '22px 24px',
               }}>
                 <div style={{ color: '#64748b', fontSize: '12px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>Current Value</div>
-                <div style={{ color: '#f0fdf4', fontSize: '36px', fontWeight: 900, fontFamily: 'monospace' }}>â‚¹42,18,350</div>
+                <div style={{ color: '#f0fdf4', fontSize: '36px', fontWeight: 900, fontFamily: 'monospace' }}>₹42,18,350</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                  <span style={{ color: '#4ade80', fontSize: '14px', fontWeight: 700 }}>â†‘ +â‚¹11,43,200</span>
+                  <span style={{ color: '#4ade80', fontSize: '14px', fontWeight: 700 }}>↑ +₹11,43,200</span>
                   <span style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80', padding: '2px 10px', borderRadius: '20px', fontSize: '13px', fontWeight: 700 }}>+37.2%</span>
                 </div>
               </div>
@@ -133,7 +136,7 @@ export default function handler(req) {
               {[
                 { name: 'Mirae Asset Large Cap', nav: '108.42', gain: '+18.3%', pos: true },
                 { name: 'Parag Parikh Flexi Cap', nav: '76.91', gain: '+42.1%', pos: true },
-                { name: 'Axis ELSS Tax Saver ðŸ”’', nav: '91.05', gain: '-4.2%', pos: false },
+                { name: 'Axis ELSS Tax Saver 🔒', nav: '91.05', gain: '-4.2%', pos: false },
               ].map(f => (
                 <div key={f.name} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -142,7 +145,7 @@ export default function handler(req) {
                 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <span style={{ color: '#cbd5e1', fontSize: '13px', fontWeight: 700, maxWidth: '200px' }}>{f.name}</span>
-                    <span style={{ color: '#64748b', fontSize: '12px', fontFamily: 'monospace' }}>NAV â‚¹{f.nav}</span>
+                    <span style={{ color: '#64748b', fontSize: '12px', fontFamily: 'monospace' }}>NAV ₹{f.nav}</span>
                   </div>
                   <span style={{
                     color: f.pos ? '#4ade80' : '#f87171',
@@ -159,13 +162,13 @@ export default function handler(req) {
                 border: '1px solid rgba(34,197,94,0.2)', borderRadius: '12px', padding: '12px',
                 background: 'rgba(34,197,94,0.05)',
               }}>
-                <span style={{ color: '#22c55e', fontSize: '20px' }}>ðŸ‘¨â€ðŸ‘©â€ðŸ‘§</span>
-                <span style={{ color: '#86efac', fontSize: '13px', fontWeight: 700 }}>3 PANs detected Â· Family CAS</span>
+                <span style={{ color: '#22c55e', fontSize: '20px' }}>👨‍👩‍👧</span>
+                <span style={{ color: '#86efac', fontSize: '13px', fontWeight: 700 }}>3 PANs detected · Family CAS</span>
               </div>
             </div>
           </div>
 
-          {/* â”€â”€ Bottom watermark â”€â”€ */}
+          {/* ── Bottom watermark ── */}
           <div style={{
             position: 'absolute', bottom: '28px', left: 0, right: 0,
             display: 'flex', justifyContent: 'center',

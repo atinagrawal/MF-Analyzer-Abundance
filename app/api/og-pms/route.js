@@ -17,6 +17,7 @@
 
 import { ImageResponse } from '@vercel/og';
 import { getLatestPmsDataDate } from '@/lib/pmsDate';
+import { OG_LOGO_MARK_URL } from '@/lib/ogAssets';
 
 export const runtime = 'edge';
 
@@ -139,12 +140,22 @@ export async function GET(request) {
 
         {/* Bottom row: Abundance branding */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div style={{ fontSize: '22px', fontWeight: 800, color: 'white', display: 'flex' }}>
-              Atin Kumar Agrawal
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{
+              width: 46, height: 46, borderRadius: 12,
+              background: 'rgba(255,255,255,.08)',
+              border: '1.5px solid rgba(165,214,167,.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <img src={OG_LOGO_MARK_URL} width={32} height={32} style={{ objectFit: 'contain' }} />
             </div>
-            <div style={{ fontSize: '15px', color: '#81c784', display: 'flex' }}>
-              APMI Registered PMS Distributor · APRN04279 · ARN-251838
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ fontSize: '22px', fontWeight: 800, color: 'white', display: 'flex' }}>
+                Atin Kumar Agrawal
+              </div>
+              <div style={{ fontSize: '15px', color: '#81c784', display: 'flex' }}>
+                APMI Registered PMS Distributor · APRN04279 · ARN-251838
+              </div>
             </div>
           </div>
 
