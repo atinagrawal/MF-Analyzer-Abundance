@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { startCheckout } from '@/lib/checkoutClient';
 import { getMFLogoFromSchemeName } from '@/lib/providerLogos';
-import { combineExposure, computeOverlap, computeMCapAllocation } from '@/lib/portfolioAnalysis';
+import { combineExposure, computeOverlap, computeMCapAllocation, normalizeName, isComparableHolding } from '@/lib/portfolioAnalysis';
 import { PROPOSAL_STUDIO_FAQ } from '@/lib/proposalStudioFaq';
 
 export default function ProposalStudioClient() {
@@ -42,13 +42,13 @@ function PfcExplainer() {
         Proposal Studio combines the mutual funds and SIFs you choose — either your real
         holdings imported from a CAS statement, or a new investment plan you're building —
         into a single combined view: how your money is spread across asset classes and
-        sectors, which stocks show up in more than one fund (overlap), and how much sits in
-        Large, Mid, and Small-cap companies.
+        sectors, which holdings — stocks, bonds, gold or other ETFs — show up in more than
+        one fund (overlap), and how much sits in Large, Mid, and Small-cap companies.
       </p>
       <ul className="pfc-explainer-list">
         <li>Combined asset allocation and sector exposure across every fund you add</li>
-        <li>Stock-level exposure, with a full-holdings view beyond just the top 10</li>
-        <li>Pairwise fund overlap — how much of your equity holdings are duplicated between funds</li>
+        <li>Security-level exposure, with a full-holdings view beyond just the top 10</li>
+        <li>Pairwise fund overlap — how much of every named holding (stocks, bonds, gold/other ETFs) is duplicated between funds</li>
         <li>M-Cap allocation using AMFI's official Large/Mid/Small-cap categorization</li>
         <li>Works for a Lumpsum or a SIP proposal, with mutual funds and SIFs both supported</li>
       </ul>
@@ -95,7 +95,7 @@ function PfcSignInGate() {
       <div className="brd-gate-lock">🔒</div>
       <h2 className="brd-gate-title">Sign in to use Proposal Studio</h2>
       <p className="brd-gate-desc">
-        Select multiple mutual funds and see combined sector/stock exposure, fund overlap,
+        Select multiple mutual funds and see combined sector/security exposure, fund overlap,
         and M-Cap allocation — everything a real investment proposal covers.
       </p>
       <div className="brd-gate-actions">
@@ -130,7 +130,7 @@ function PfcProGate({ session }) {
       <div className="brd-gate-lock">⭐</div>
       <h2 className="brd-gate-title">Proposal Studio is a Pro feature</h2>
       <p className="brd-gate-desc">
-        Select multiple mutual funds and see combined sector/stock exposure, fund overlap
+        Select multiple mutual funds and see combined sector/security exposure, fund overlap
         detection, and M-Cap allocation — everything a real investment proposal covers, in
         one view.
       </p>
@@ -329,7 +329,7 @@ function ProposalStudioTool() {
 
             <ExposureTable title="Asset Allocation" rows={assetAllocation} />
             <ExposureTable title="Sector Exposure" rows={sectorExposure} />
-            <ExposureTable title="Stock Exposure" rows={stockExposure} fullRows={fullStockExposure(readyFunds, allocations)} />
+            <ExposureTable title="Security Exposure" rows={stockExposure} fullRows={fullSecurityExposure(readyFunds, allocations)} />
 
             <SchemeDetailsTable selectedFunds={selectedFunds} holdingsByFund={holdingsByFund} />
 
@@ -367,23 +367,26 @@ function CollapsibleSection({ title, children, defaultOpen = true }) {
   );
 }
 
-// Same per-stock aggregation combineExposure uses internally, without the
+// Same per-security aggregation combineExposure uses internally, without the
 // top-10 truncation -- scoped to this file since only the "show all
-// holdings" expansion needs the untruncated list.
-function fullStockExposure(funds, allocations) {
-  const stock = new Map(); // normalizedName -> {name, pct}
+// holdings" expansion needs the untruncated list. Named holdings of any
+// asset class (equity stocks, specific bonds, REITs, gold/other ETFs) are
+// included, matching combineExposure's isComparableHolding filter; generic
+// cash-equivalent bucket names (Repo, Net Current Assets, etc.) are excluded.
+function fullSecurityExposure(funds, allocations) {
+  const security = new Map(); // normalizedName -> {name, pct}
   for (const fund of funds) {
     const fundWeight = (allocations[fund.amfiCode] || 0) / 100;
     for (const h of fund.holdings) {
-      if (h.assetClass !== 'EQUITY') continue;
+      if (!isComparableHolding(h)) continue;
       const w = Math.max(0, h.weightagePct || 0) * fundWeight;
-      const key = h.securityName.toLowerCase().replace(/\./g, '').replace(/\b(ltd|limited)\b/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
-      const existing = stock.get(key) || { name: h.securityName, pct: 0 };
+      const key = normalizeName(h.securityName);
+      const existing = security.get(key) || { name: h.securityName, pct: 0 };
       existing.pct += w;
-      stock.set(key, existing);
+      security.set(key, existing);
     }
   }
-  return [...stock.values()]
+  return [...security.values()]
     .map((r) => ({ name: r.name, pct: Math.round(r.pct * 100) / 100 }))
     .sort((a, b) => b.pct - a.pct);
 }
@@ -452,7 +455,7 @@ function OverlapGrid({ funds, selectedFunds }) {
   const names = funds.map((f) => selectedFunds.find((s) => s.amfiCode === f.amfiCode)?.schemeName || f.amfiCode);
 
   return (
-    <CollapsibleSection title="Portfolio Overlap (Equity Stocks Only)">
+    <CollapsibleSection title="Portfolio Overlap (Named Holdings)">
       <div className="pfc-overlap-wrap">
         <table className="pfc-table pfc-overlap-table">
           <thead>

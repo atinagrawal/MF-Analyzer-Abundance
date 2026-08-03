@@ -4,7 +4,7 @@
 // Run with: node tests/portfolioAnalysis.test.js
 
 const assert = require('assert');
-const { normalizeName, combineExposure, computeOverlap, computeMCapAllocation } = require('../lib/portfolioAnalysis');
+const { normalizeName, combineExposure, computeOverlap, computeMCapAllocation, isComparableHolding } = require('../lib/portfolioAnalysis');
 
 console.log('=== Running Portfolio Analysis Unit Tests ===\n');
 
@@ -59,7 +59,27 @@ test('combineExposure clamps negative (short) weightage to 0', () => {
   assert.strictEqual(Math.round(equity * 100) / 100, 90); // the -15 contributes 0, not -15
 });
 
-test('combineExposure appends a Debt & Other Securities row summing all non-equity weight', () => {
+test('isComparableHolding treats generic cash-equivalent names as non-comparable, everything else as comparable', () => {
+  assert.strictEqual(isComparableHolding({ securityName: 'Net Current Assets' }), false);
+  assert.strictEqual(isComparableHolding({ securityName: 'TREPS' }), false);
+  assert.strictEqual(isComparableHolding({ securityName: 'Reverse Repo' }), false);
+  assert.strictEqual(isComparableHolding({ securityName: '' }), false);
+  assert.strictEqual(isComparableHolding({ securityName: 'Govt Bond X', assetClass: 'DEBT' }), true);
+  assert.strictEqual(isComparableHolding({ securityName: 'REIT Fund Y', assetClass: 'REALEST' }), true);
+  assert.strictEqual(isComparableHolding({ securityName: 'Gold ETF Z', assetClass: 'MF' }), true);
+});
+
+test('isComparableHolding matches generic cash names even when suffixed with a maturity date/tenor', () => {
+  // Real disclosures often suffix these with a date, e.g. "TREPS 02-Apr-2026 DEPO 10"
+  // -- an exact-match check would let these slip through as if they were named securities.
+  assert.strictEqual(isComparableHolding({ securityName: 'TREPS 02-Apr-2026 DEPO 10' }), false);
+  assert.strictEqual(isComparableHolding({ securityName: 'Reverse Repo 01-May-2026' }), false);
+  assert.strictEqual(isComparableHolding({ securityName: 'Net  Current   Assets' }), false); // extra whitespace
+  // But a real security whose name merely starts with similar letters must still count.
+  assert.strictEqual(isComparableHolding({ securityName: 'Repco Home Finance Ltd' }), true);
+});
+
+test('combineExposure includes named debt/REIT holdings in stockExposure and appends a Cash & Other Unnamed row for generic cash only', () => {
   const funds = [
     { amfiCode: 'A', holdings: [
       { securityName: 'HDFC Bank Ltd', assetClass: 'EQUITY', sector: 'Banks', weightagePct: 70 },
@@ -72,12 +92,21 @@ test('combineExposure appends a Debt & Other Securities row summing all non-equi
   ];
   const allocations = { A: 60, B: 40 };
   const result = combineExposure(funds, allocations);
-  const debtRow = result.stockExposure.find((r) => r.name === 'Debt & Other Securities');
-  assert.ok(debtRow, 'Debt & Other Securities row should be present in stockExposure');
-  // A contributes (20 debt + 10 cash) * 0.6 = 18; B contributes 100 (REALEST->Other) * 0.4 = 40
-  assert.strictEqual(debtRow.pct, 58);
+
+  // Named DEBT/REALEST holdings show up individually, not lumped into a generic bucket.
+  const bondRow = result.stockExposure.find((r) => r.name === 'Govt Bond X');
+  const reitRow = result.stockExposure.find((r) => r.name === 'REIT Fund Y');
+  assert.ok(bondRow, 'Govt Bond X should appear as a named holding');
+  assert.ok(reitRow, 'REIT Fund Y should appear as a named holding');
+  assert.strictEqual(bondRow.pct, 12);  // 20 * 0.6
+  assert.strictEqual(reitRow.pct, 40);  // 100 * 0.4
+
+  // Only the generic-named "Cash" holding lands in the summary row.
+  const cashRow = result.stockExposure.find((r) => r.name === 'Cash & Other Unnamed');
+  assert.ok(cashRow, 'Cash & Other Unnamed row should be present in stockExposure');
+  assert.strictEqual(cashRow.pct, 6); // 10 * 0.6
   // The last row of stockExposure should be this summary row (appended after top10+Other)
-  assert.strictEqual(result.stockExposure[result.stockExposure.length - 1].name, 'Debt & Other Securities');
+  assert.strictEqual(result.stockExposure[result.stockExposure.length - 1].name, 'Cash & Other Unnamed');
 });
 
 test('computeOverlap: identical single holding across two funds gives full overlap', () => {
@@ -92,7 +121,7 @@ test('computeOverlap: identical single holding across two funds gives full overl
   assert.strictEqual(grid[1][0], 25);
 });
 
-test('computeOverlap excludes debt/cash from the overlap sum', () => {
+test('computeOverlap includes named debt holdings in the overlap sum', () => {
   const funds = [
     { amfiCode: 'A', holdings: [
       { securityName: 'Govt Bond X', assetClass: 'DEBT', sector: 'Sovereign', weightagePct: 60 },
@@ -104,7 +133,22 @@ test('computeOverlap excludes debt/cash from the overlap sum', () => {
     ] },
   ];
   const grid = computeOverlap(funds);
-  assert.strictEqual(grid[0][1], 40); // only the equity holding counts, not the matching 60% debt holding
+  assert.strictEqual(grid[0][1], 100); // both the named debt holding and the equity holding count: 60 + 40
+});
+
+test('computeOverlap still excludes generic cash-equivalent holdings even when both funds share the same generic name', () => {
+  const funds = [
+    { amfiCode: 'A', holdings: [
+      { securityName: 'Net Current Assets', assetClass: 'CASH', sector: null, weightagePct: 50 },
+      { securityName: 'HDFC Bank Ltd', assetClass: 'EQUITY', sector: 'Banks', weightagePct: 50 },
+    ] },
+    { amfiCode: 'B', holdings: [
+      { securityName: 'Net Current Assets', assetClass: 'CASH', sector: null, weightagePct: 50 },
+      { securityName: 'HDFC Bank Ltd', assetClass: 'EQUITY', sector: 'Banks', weightagePct: 50 },
+    ] },
+  ];
+  const grid = computeOverlap(funds);
+  assert.strictEqual(grid[0][1], 50); // only the equity holding counts, not the matching generic cash bucket
 });
 
 test('computeMCapAllocation buckets by the provided M-Cap index and reports Unclassified', () => {
