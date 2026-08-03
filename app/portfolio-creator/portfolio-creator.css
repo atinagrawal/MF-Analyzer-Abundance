@@ -25,3 +25,10 @@
 .pfc-remove { border: none; background: transparent; color: var(--neg); cursor: pointer; font: 500 12px Raleway, sans-serif; }
 .pfc-alloc-total { margin-top: 10px; font: 600 12px JetBrains Mono, monospace; color: var(--muted); }
 .pfc-alloc-warn { color: var(--warn); }
+
+.pfc-section { background: var(--surface, #fff); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+.pfc-section-title { font: 600 16px Raleway, sans-serif; color: var(--g1); margin-bottom: 12px; }
+.pfc-table { width: 100%; border-collapse: collapse; font: 500 13px Raleway, sans-serif; }
+.pfc-table td, .pfc-table th { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; }
+.pfc-table-pct { font: 500 13px JetBrains Mono, monospace; text-align: right !important; }
+.pfc-table-wide th { font: 600 11px Raleway, sans-serif; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }

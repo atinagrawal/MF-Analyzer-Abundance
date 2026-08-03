@@ -5,6 +5,7 @@ import { useSession, signIn } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { startCheckout } from '@/lib/checkoutClient';
+import { combineExposure } from '@/lib/portfolioAnalysis';
 
 export default function PortfolioCreatorClient() {
   const { data: session, status } = useSession();
@@ -172,8 +173,87 @@ function PortfolioCreatorTool() {
         onRemove={removeFund}
         onAllocationChange={setAllocation}
       />
-      {/* Sections 2-8 render here once funds are selected -- added in Tasks 5 and 6 */}
+      {selectedFunds.length > 0 && (() => {
+        const readyFunds = selectedFunds
+          .filter((f) => holdingsByFund[f.amfiCode])
+          .map((f) => ({ amfiCode: f.amfiCode, holdings: holdingsByFund[f.amfiCode].holdings }));
+        const allocations = Object.fromEntries(selectedFunds.map((f) => [f.amfiCode, f.allocationPct]));
+        const pendingCount = selectedFunds.length - readyFunds.length;
+
+        if (readyFunds.length === 0) {
+          return <div className="pfc-hint">Loading holdings…</div>;
+        }
+
+        const { assetAllocation, sectorExposure, stockExposure } = combineExposure(readyFunds, allocations);
+
+        return (
+          <>
+            {pendingCount > 0 && <div className="pfc-hint">Loading holdings for {pendingCount} more fund(s)…</div>}
+
+            <ExposureTable title="Asset Allocation" rows={assetAllocation} />
+            <ExposureTable title="Sector Exposure" rows={sectorExposure} />
+            <ExposureTable title="Stock Exposure" rows={stockExposure} />
+
+            <SchemeDetailsTable selectedFunds={selectedFunds} holdingsByFund={holdingsByFund} />
+          </>
+        );
+      })()}
     </div>
+  );
+}
+
+function ExposureTable({ title, rows }) {
+  return (
+    <section className="pfc-section">
+      <h2 className="pfc-section-title">{title}</h2>
+      <table className="pfc-table">
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.name}>
+              <td>{r.name}</td>
+              <td className="pfc-table-pct">{r.pct.toFixed(2)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+function SchemeDetailsTable({ selectedFunds, holdingsByFund }) {
+  return (
+    <section className="pfc-section">
+      <h2 className="pfc-section-title">Scheme Details</h2>
+      <table className="pfc-table pfc-table-wide">
+        <thead>
+          <tr>
+            <th>Fund</th>
+            <th>Category</th>
+            <th>AUM (₹ Cr)</th>
+            <th>Expense Ratio</th>
+            <th>Risk</th>
+            <th>Equity Holdings</th>
+          </tr>
+        </thead>
+        <tbody>
+          {selectedFunds.map((f) => {
+            const d = holdingsByFund[f.amfiCode];
+            if (!d) return null;
+            const equityCount = d.holdings.filter((h) => h.assetClass === 'EQUITY').length;
+            return (
+              <tr key={f.amfiCode}>
+                <td>{f.schemeName}</td>
+                <td>{d.category}{d.subCategory ? ` · ${d.subCategory}` : ''}</td>
+                <td className="pfc-table-pct">{d.aum != null ? d.aum.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—'}</td>
+                <td className="pfc-table-pct">{d.expenseRatio != null ? `${d.expenseRatio}%` : '—'}</td>
+                <td>{d.risk || '—'}</td>
+                <td className="pfc-table-pct">{equityCount}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
   );
 }
 
