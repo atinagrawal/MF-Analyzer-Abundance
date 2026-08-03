@@ -127,6 +127,43 @@ async function blobPut(amfiCode, data) {
   }
 }
 
+// resolveSearchId's normalized-title fallback can land on a search candidate
+// whose title superficially matches but whose scheme_code points at an
+// unrelated fund -- e.g. Groww's own search index carries a mislabeled
+// legacy candidate for "HDFC Multi Asset Fund" (search_id
+// hdfc-multiple-yield-fund-plan-2005-direct-growth, scheme_code 119131,
+// shared with an unrelated real fund). Confirm the resolved detail payload
+// actually is the requested fund before trusting its holdings.
+//
+// Two independent ways to pass: (a) one of the detail's own scheme-code
+// fields literally equals the requested amfiCode -- true for exact
+// Direct-plan matches, or (b) the detail's own scheme_name normalizes
+// (via cleanSearchTerm) to the same thing as the requested schemeName --
+// true for legitimate Regular-plan resolutions, where the numeric codes
+// differ from amfiCode by design (Groww's detail payload is Direct-plan
+// centric) but the underlying fund identity is still correct.
+//
+// Verified live (2026-08-03): for the mismatched legacy candidate above,
+// detail.scheme_name comes back as an unrelated internal slug
+// ("hdfc-multi-asset-allocation-fund-direct-growth" -- a DIFFERENT fund's
+// slug), which normalizes to "hdfc multi asset allocation" and does not
+// match "HDFC Multi Asset Fund" ("hdfc multi asset"). Meanwhile a
+// legitimate resolution like HDFC Flexi Cap Fund has detail.scheme_name
+// "HDFC Flexi Cap Direct Plan Growth", which normalizes to "hdfc flexi cap"
+// and matches the requested "HDFC Flexi Cap Fund - Growth Plan" the same
+// way. That legit case's own scheme-code fields (scheme_code/direct_scheme_code
+// = 118955) do NOT equal the requested Regular-plan amfiCode (101762) --
+// confirming the code check alone isn't sufficient and the name-match
+// fallback is required.
+function schemeIdentityMatches(detail, amfiCode, schemeName) {
+  const codeFields = [detail.scheme_code, detail.regular_scheme_code, detail.direct_scheme_code];
+  if (codeFields.some((c) => c != null && String(c) === String(amfiCode))) return true;
+
+  const detailName = cleanSearchTerm(detail.scheme_name).toLowerCase();
+  const requestedName = cleanSearchTerm(schemeName).toLowerCase();
+  return Boolean(detailName) && detailName === requestedName;
+}
+
 async function fetchFresh(amfiCode, schemeName) {
   const searchId = await resolveSearchId(amfiCode, schemeName);
   if (!searchId) return null;
@@ -135,6 +172,7 @@ async function fetchFresh(amfiCode, schemeName) {
   if (!detailRes.ok) return null;
   const detail = await detailRes.json();
   if (!detail || !Array.isArray(detail.holdings)) return null;
+  if (!schemeIdentityMatches(detail, amfiCode, schemeName)) return null;
 
   return {
     schemeName: detail.scheme_name || schemeName,
