@@ -309,6 +309,9 @@ function ExposureTable({ title, rows }) {
   );
 }
 
+// TODO: AUM and expense ratio removed from this table -- both are Direct-plan-only
+// values from the underlying data source, misleading for a Regular-plan proposal.
+// Re-add once a reliable per-plan (Direct vs Regular) source is found.
 function SchemeDetailsTable({ selectedFunds, holdingsByFund }) {
   return (
     <section className="pfc-section">
@@ -318,8 +321,6 @@ function SchemeDetailsTable({ selectedFunds, holdingsByFund }) {
           <tr>
             <th>Fund</th>
             <th>Category</th>
-            <th>AUM (₹ Cr)</th>
-            <th>Expense Ratio</th>
             <th>Risk</th>
             <th>Equity Holdings</th>
           </tr>
@@ -333,8 +334,6 @@ function SchemeDetailsTable({ selectedFunds, holdingsByFund }) {
               <tr key={f.amfiCode}>
                 <td>{f.schemeName}</td>
                 <td>{d.category}{d.subCategory ? ` · ${d.subCategory}` : ''}</td>
-                <td className="pfc-table-pct">{d.aum != null ? d.aum.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—'}</td>
-                <td className="pfc-table-pct">{d.expenseRatio != null ? `${d.expenseRatio}%` : '—'}</td>
                 <td>{d.risk || '—'}</td>
                 <td className="pfc-table-pct">{equityCount}</td>
               </tr>
