@@ -586,19 +586,24 @@ function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProp
         <div className="pfc-selected">
           <h3>Selected funds ({selectedFunds.length})</h3>
           {selectedFunds.map((f) => (
-            <div className="pfc-selected-row" key={f.amfiCode}>
-              <ProviderAvatar name={f.schemeName} logoPath={getMFLogoFromSchemeName(f.schemeName)} size={24} radius={6} />
-              <span className="pfc-selected-name">{f.schemeName}</span>
-              <div className="pfc-amount-input"><i>₹</i>
-                <input
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={f.amount}
-                  onChange={(e) => onAmountChange(f.amfiCode, Math.max(0, +e.target.value || 0))}
-                />
+            <div className="pfc-selected-item" key={f.amfiCode}>
+              <div className="pfc-selected-row">
+                <ProviderAvatar name={f.schemeName} logoPath={getMFLogoFromSchemeName(f.schemeName)} size={24} radius={6} />
+                <span className="pfc-selected-name">{f.schemeName}</span>
+                <div className="pfc-amount-input"><i>₹</i>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={f.amount}
+                    onChange={(e) => onAmountChange(f.amfiCode, Math.max(0, +e.target.value || 0))}
+                  />
+                </div>
+                <button className="pfc-remove" onClick={() => onRemove(f.amfiCode)}>Remove</button>
               </div>
-              <button className="pfc-remove" onClick={() => onRemove(f.amfiCode)}>Remove</button>
+              {f.amount <= 0 && (
+                <div className="pfc-zero-hint">Raise Total Amount above, or reduce another fund's amount, to allocate to this fund.</div>
+              )}
             </div>
           ))}
           <div className={`pfc-alloc-total ${Math.abs(totalEntered - totalAmount) > 1 ? 'pfc-alloc-warn' : ''}`}>

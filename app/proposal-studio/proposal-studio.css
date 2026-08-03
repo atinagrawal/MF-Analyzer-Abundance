@@ -31,12 +31,14 @@
 
 .pfc-selected { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
 .pfc-selected h3 { font: 600 14px Raleway, sans-serif; margin-bottom: 10px; }
-.pfc-selected-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
-.pfc-selected-row:last-of-type { border-bottom: none; }
+.pfc-selected-item { border-bottom: 1px solid var(--border); }
+.pfc-selected-item:last-of-type { border-bottom: none; }
+.pfc-selected-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
 .pfc-selected-name { flex: 1; font: 500 13px Raleway, sans-serif; }
 .pfc-amount-input input { width: 90px; }
 .pfc-remove { border: none; background: transparent; color: var(--neg); cursor: pointer; font: 500 12px Raleway, sans-serif; padding: 4px 8px; border-radius: 6px; transition: background 0.15s; }
 .pfc-remove:hover { background: var(--neg-bg); }
+.pfc-zero-hint { font: 500 12px Raleway, sans-serif; color: var(--warn); padding: 0 0 8px; }
 .pfc-alloc-total { margin-top: 10px; font: 600 12px JetBrains Mono, monospace; color: var(--muted); }
 .pfc-alloc-warn { color: var(--warn); }
 
