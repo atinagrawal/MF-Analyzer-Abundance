@@ -10,7 +10,7 @@
  * most monthly, so a 7-day TTL is generous without going stale.
  */
 
-const CACHE_PREFIX = 'proposal-studio-holdings/';
+const CACHE_PREFIX = 'portfolio-creator-holdings/';
 const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 
