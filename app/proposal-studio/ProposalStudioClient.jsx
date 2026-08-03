@@ -291,10 +291,22 @@ function ProposalStudioTool() {
   );
 }
 
-function ExposureTable({ title, rows }) {
+function CollapsibleSection({ title, children, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <section className="pfc-section">
-      <h2 className="pfc-section-title">{title}</h2>
+      <button className="pfc-section-header" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <h2 className="pfc-section-title">{title}</h2>
+        <span className={`pfc-chevron ${open ? 'pfc-chevron-open' : ''}`}>▾</span>
+      </button>
+      {open && <div className="pfc-section-body">{children}</div>}
+    </section>
+  );
+}
+
+function ExposureTable({ title, rows }) {
+  return (
+    <CollapsibleSection title={title}>
       <table className="pfc-table">
         <tbody>
           {rows.map((r) => (
@@ -305,7 +317,7 @@ function ExposureTable({ title, rows }) {
           ))}
         </tbody>
       </table>
-    </section>
+    </CollapsibleSection>
   );
 }
 
@@ -314,8 +326,7 @@ function ExposureTable({ title, rows }) {
 // Re-add once a reliable per-plan (Direct vs Regular) source is found.
 function SchemeDetailsTable({ selectedFunds, holdingsByFund }) {
   return (
-    <section className="pfc-section">
-      <h2 className="pfc-section-title">Scheme Details</h2>
+    <CollapsibleSection title="Scheme Details">
       <table className="pfc-table pfc-table-wide">
         <thead>
           <tr>
@@ -341,7 +352,7 @@ function SchemeDetailsTable({ selectedFunds, holdingsByFund }) {
           })}
         </tbody>
       </table>
-    </section>
+    </CollapsibleSection>
   );
 }
 
@@ -350,8 +361,7 @@ function OverlapGrid({ funds, selectedFunds }) {
   const names = funds.map((f) => selectedFunds.find((s) => s.amfiCode === f.amfiCode)?.schemeName || f.amfiCode);
 
   return (
-    <section className="pfc-section">
-      <h2 className="pfc-section-title">Portfolio Overlap (Equity Stocks Only)</h2>
+    <CollapsibleSection title="Portfolio Overlap (Equity Stocks Only)">
       <div className="pfc-overlap-wrap">
         <table className="pfc-table pfc-overlap-table">
           <thead>
@@ -372,7 +382,7 @@ function OverlapGrid({ funds, selectedFunds }) {
           </tbody>
         </table>
       </div>
-    </section>
+    </CollapsibleSection>
   );
 }
 
@@ -399,8 +409,7 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex, allocations }) {
     : { large: 0, mid: 0, small: 0, unclassified: 0 };
 
   return (
-    <section className="pfc-section">
-      <h2 className="pfc-section-title">Scheme M-Cap Allocation</h2>
+    <CollapsibleSection title="Scheme M-Cap Allocation">
       <table className="pfc-table pfc-table-wide">
         <thead>
           <tr>
@@ -430,7 +439,7 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex, allocations }) {
           </tr>
         </tbody>
       </table>
-    </section>
+    </CollapsibleSection>
   );
 }
 

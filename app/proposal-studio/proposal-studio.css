@@ -33,7 +33,11 @@
 .pfc-alloc-warn { color: var(--warn); }
 
 .pfc-section { background: var(--surface, #fff); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-.pfc-section-title { font: 600 16px Raleway, sans-serif; color: var(--g1); margin-bottom: 12px; }
+.pfc-section-header { display: flex; align-items: center; justify-content: space-between; width: 100%; background: none; border: none; padding: 0; cursor: pointer; text-align: left; }
+.pfc-section-title { font: 600 16px Raleway, sans-serif; color: var(--g1); margin: 0; }
+.pfc-chevron { font-size: 14px; color: var(--muted); transition: transform 0.2s; transform: rotate(-90deg); }
+.pfc-chevron-open { transform: rotate(0deg); }
+.pfc-section-body { margin-top: 12px; }
 .pfc-table { width: 100%; border-collapse: collapse; font: 500 13px Raleway, sans-serif; }
 .pfc-table td, .pfc-table th { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; }
 .pfc-table-pct { font: 500 13px JetBrains Mono, monospace; text-align: right !important; }
