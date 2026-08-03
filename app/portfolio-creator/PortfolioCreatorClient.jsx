@@ -234,7 +234,11 @@ function PortfolioCreatorTool() {
 
             {mCapIndex && <MCapTable selectedFunds={selectedFunds} readyFunds={readyFunds} mCapIndex={mCapIndex} />}
 
-            <BenchmarkSection selectedFunds={selectedFunds} holdingsByFund={holdingsByFund} />
+            {/* BenchmarkSection hidden for launch: it only matches funds benchmarked
+                directly to a BSE index, which excludes most real funds. Revisit once
+                AMFI's official FundCategory -> NSE/BSE index mapping
+                (https://www.amfiindia.com/otherdata/listofbenchmarkindices) is wired up
+                with NSE-first (pages/api/index-dashboard.js) / BSE-fallback matching. */}
           </>
         );
       })()}
