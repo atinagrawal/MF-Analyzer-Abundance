@@ -61,11 +61,31 @@ function PfcFaq() {
     <section className="pfc-faq">
       <h2 className="pfc-faq-title">Frequently Asked Questions</h2>
       {PROPOSAL_STUDIO_FAQ.map((f) => (
-        <CollapsibleSection key={f.q} title={f.q} defaultOpen={false}>
-          <p>{f.a}</p>
-        </CollapsibleSection>
+        <PfcFaqItem key={f.q} q={f.q} a={f.a} />
       ))}
     </section>
+  );
+}
+
+// Deliberately does NOT reuse CollapsibleSection: that component conditionally
+// *mounts* its body ({open && <div>...}), so a closed FAQ item's answer text
+// never reaches the DOM at all -- invisible to crawlers even though the page
+// is otherwise indexable, and inconsistent with the FAQPage JSON-LD (layout.js)
+// which does carry the full answer text. This keeps the answer always in the
+// DOM and only toggles visibility, matching app/pms-screener/page.jsx's
+// existing `hidden={!open}` FAQ pattern.
+function PfcFaqItem({ q, a }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="pfc-faq-item">
+      <button className="pfc-section-header" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <h3 className="pfc-faq-q">{q}</h3>
+        <span className={`pfc-chevron ${open ? 'pfc-chevron-open' : ''}`}>▾</span>
+      </button>
+      <div className="pfc-faq-a" hidden={!open}>
+        <p>{a}</p>
+      </div>
+    </div>
   );
 }
 

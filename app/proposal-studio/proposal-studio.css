@@ -74,3 +74,8 @@
 
 .pfc-faq { margin-top: 32px; }
 .pfc-faq-title { font: 700 22px Raleway, sans-serif; color: var(--g1); margin-bottom: 16px; }
+.pfc-faq-item { border-bottom: 1px solid var(--border); padding: 14px 0; }
+.pfc-faq-item:last-of-type { border-bottom: none; }
+.pfc-faq-q { font: 600 14px Raleway, sans-serif; color: var(--text2, #333); margin: 0; }
+.pfc-faq-a { margin-top: 10px; font: 400 14px Raleway, sans-serif; line-height: 1.6; color: var(--muted); }
+.pfc-faq-a p { margin: 0; }
