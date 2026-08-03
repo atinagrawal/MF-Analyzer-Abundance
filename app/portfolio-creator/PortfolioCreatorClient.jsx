@@ -5,7 +5,7 @@ import { useSession, signIn } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { startCheckout } from '@/lib/checkoutClient';
-import { combineExposure } from '@/lib/portfolioAnalysis';
+import { combineExposure, computeOverlap, computeMCapAllocation } from '@/lib/portfolioAnalysis';
 
 export default function PortfolioCreatorClient() {
   const { data: session, status } = useSession();
@@ -95,6 +95,15 @@ function PortfolioCreatorTool() {
   const [casLoading, setCasLoading] = useState(true);
   const [holdingsByFund, setHoldingsByFund] = useState({}); // amfiCode -> holdings API response
   const [holdingsError, setHoldingsError] = useState({});   // amfiCode -> error message
+  const [mCapIndex, setMCapIndex] = useState(null); // Map<normalizedName, category>
+
+  // Load the AMFI M-Cap categorization index once on mount.
+  useEffect(() => {
+    fetch('/data/amfi-cap-categorization.json')
+      .then((r) => r.json())
+      .then((d) => setMCapIndex(new Map(Object.entries(d.categories))))
+      .catch(() => setMCapIndex(new Map()));
+  }, []);
 
   // Load the user's CAS-derived fund list once on mount.
   useEffect(() => {
@@ -195,6 +204,15 @@ function PortfolioCreatorTool() {
             <ExposureTable title="Stock Exposure" rows={stockExposure} />
 
             <SchemeDetailsTable selectedFunds={selectedFunds} holdingsByFund={holdingsByFund} />
+
+            {readyFunds.length >= 2 && (
+              <OverlapGrid funds={readyFunds} selectedFunds={selectedFunds} />
+            )}
+            {readyFunds.length === 1 && (
+              <div className="pfc-hint">Add another fund to see overlap analysis.</div>
+            )}
+
+            {mCapIndex && <MCapTable selectedFunds={selectedFunds} readyFunds={readyFunds} mCapIndex={mCapIndex} />}
           </>
         );
       })()}
@@ -251,6 +269,72 @@ function SchemeDetailsTable({ selectedFunds, holdingsByFund }) {
               </tr>
             );
           })}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+function OverlapGrid({ funds, selectedFunds }) {
+  const grid = computeOverlap(funds);
+  const names = funds.map((f) => selectedFunds.find((s) => s.amfiCode === f.amfiCode)?.schemeName || f.amfiCode);
+
+  return (
+    <section className="pfc-section">
+      <h2 className="pfc-section-title">Portfolio Overlap (Equity Stocks Only)</h2>
+      <div className="pfc-overlap-wrap">
+        <table className="pfc-table pfc-overlap-table">
+          <thead>
+            <tr>
+              <th></th>
+              {names.map((n, i) => <th key={i}>{n}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {grid.map((row, i) => (
+              <tr key={i}>
+                <th>{names[i]}</th>
+                {row.map((v, j) => (
+                  <td key={j} className={`pfc-table-pct ${i === j ? 'pfc-overlap-diag' : ''}`}>{v.toFixed(1)}%</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function MCapTable({ selectedFunds, readyFunds, mCapIndex }) {
+  const rows = readyFunds.map((f) => {
+    const name = selectedFunds.find((s) => s.amfiCode === f.amfiCode)?.schemeName || f.amfiCode;
+    return { name, ...computeMCapAllocation(f, mCapIndex) };
+  });
+
+  return (
+    <section className="pfc-section">
+      <h2 className="pfc-section-title">Scheme M-Cap Allocation</h2>
+      <table className="pfc-table pfc-table-wide">
+        <thead>
+          <tr>
+            <th>Fund</th>
+            <th>Large Cap</th>
+            <th>Mid Cap</th>
+            <th>Small Cap</th>
+            <th>Unclassified</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.name}>
+              <td>{r.name}</td>
+              <td className="pfc-table-pct">{r.large.toFixed(1)}%</td>
+              <td className="pfc-table-pct">{r.mid.toFixed(1)}%</td>
+              <td className="pfc-table-pct">{r.small.toFixed(1)}%</td>
+              <td className="pfc-table-pct">{r.unclassified.toFixed(1)}%</td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </section>

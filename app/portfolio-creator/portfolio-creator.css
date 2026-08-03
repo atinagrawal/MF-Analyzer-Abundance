@@ -32,3 +32,7 @@
 .pfc-table td, .pfc-table th { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; }
 .pfc-table-pct { font: 500 13px JetBrains Mono, monospace; text-align: right !important; }
 .pfc-table-wide th { font: 600 11px Raleway, sans-serif; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+
+.pfc-overlap-wrap { overflow-x: auto; }
+.pfc-overlap-table th, .pfc-overlap-table td { min-width: 90px; text-align: center; }
+.pfc-overlap-diag { background: var(--surface2, #edf6ed); font-weight: 700; }
