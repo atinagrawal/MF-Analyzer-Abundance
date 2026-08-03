@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -90,12 +90,15 @@ function PfcProGate({ session }) {
 }
 
 function ProposalStudioTool() {
-  const [selectedFunds, setSelectedFunds] = useState([]); // [{amfiCode, schemeName, allocationPct}]
-  const [casFunds, setCasFunds] = useState([]);            // [{amfiCode, schemeName}] deduped from CAS
+  const [selectedFunds, setSelectedFunds] = useState([]); // [{amfiCode, schemeName, amount, source: 'cas'|'manual'}]
+  const [casFunds, setCasFunds] = useState([]);            // [{amfiCode, schemeName, value}] deduped from CAS
   const [casLoading, setCasLoading] = useState(true);
   const [holdingsByFund, setHoldingsByFund] = useState({}); // amfiCode -> holdings API response
   const [holdingsError, setHoldingsError] = useState({});   // amfiCode -> error message
-  const [mCapIndex, setMCapIndex] = useState(null); // Map<normalizedName, category>
+  const [mCapIndex, setMCapIndex] = useState(null);         // Map<normalizedName, category>
+  const [proposalType, setProposalType] = useState('lumpsum'); // 'lumpsum' | 'sip'
+  const [sipFrequency, setSipFrequency] = useState('monthly');  // 'daily' | 'monthly'
+  const [totalAmount, setTotalAmount] = useState(0);
 
   // Load the AMFI M-Cap categorization index once on mount.
   useEffect(() => {
@@ -105,25 +108,31 @@ function ProposalStudioTool() {
       .catch(() => setMCapIndex(new Map()));
   }, []);
 
-  // Load the user's CAS-derived fund list once on mount.
+  // Load the user's CAS-derived fund list once on mount, including each
+  // fund's real current value (units x NAV, same computation app/portfolio/page.jsx
+  // already does) so it can pre-fill an accurate amount instead of an even split.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const listRes = await fetch('/api/cas/list').then((r) => r.json());
         const portfolios = listRes.portfolios || [];
-        const seen = new Map(); // amfiCode -> schemeName
+        const seen = new Map(); // amfiCode -> {schemeName, value}
         for (const p of portfolios) {
           const data = await fetch(`/api/cas/load?key=${encodeURIComponent(p.blob_key)}`).then((r) => r.json());
           for (const folio of data.folios || []) {
             for (const scheme of folio.schemes || []) {
-              if (scheme.amfi && parseFloat(scheme.close) > 0.001) {
-                seen.set(scheme.amfi, scheme.scheme);
+              const units = parseFloat(scheme.close) || 0;
+              if (scheme.amfi && units > 0.001) {
+                const nav = parseFloat(scheme.valuation?.nav || 0);
+                seen.set(scheme.amfi, { schemeName: scheme.scheme, value: Math.round(units * nav * 100) / 100 });
               }
             }
           }
         }
-        if (!cancelled) setCasFunds([...seen.entries()].map(([amfiCode, schemeName]) => ({ amfiCode, schemeName })));
+        if (!cancelled) {
+          setCasFunds([...seen.entries()].map(([amfiCode, v]) => ({ amfiCode, schemeName: v.schemeName, value: v.value })));
+        }
       } catch {
         if (!cancelled) setCasFunds([]);
       } finally {
@@ -133,27 +142,54 @@ function ProposalStudioTool() {
     return () => { cancelled = true; };
   }, []);
 
-  const addFund = useCallback((amfiCode, schemeName) => {
-    setSelectedFunds((prev) => {
-      if (prev.some((f) => f.amfiCode === amfiCode)) return prev;
-      const next = [...prev, { amfiCode, schemeName, allocationPct: 0 }];
-      const equalPct = Math.round((100 / next.length) * 100) / 100;
-      return next.map((f) => ({ ...f, allocationPct: equalPct }));
-    });
-  }, []);
+  // Recomputes every 'manual' fund's amount as an even split of whatever
+  // portion of `total` isn't already claimed by 'cas' funds' real values.
+  // 'cas' funds' amounts are untouched here -- they represent real money,
+  // not a derived split.
+  function redistributeManualAmounts(funds, total) {
+    const casTotal = funds.filter((f) => f.source === 'cas').reduce((s, f) => s + f.amount, 0);
+    const manualFunds = funds.filter((f) => f.source === 'manual');
+    if (manualFunds.length === 0) return funds;
+    const remaining = Math.max(0, total - casTotal);
+    const share = Math.round((remaining / manualFunds.length) * 100) / 100;
+    return funds.map((f) => (f.source === 'manual' ? { ...f, amount: share } : f));
+  }
 
-  const removeFund = useCallback((amfiCode) => {
-    setSelectedFunds((prev) => {
-      const next = prev.filter((f) => f.amfiCode !== amfiCode);
-      if (next.length === 0) return next;
-      const equalPct = Math.round((100 / next.length) * 100) / 100;
-      return next.map((f) => ({ ...f, allocationPct: equalPct }));
-    });
-  }, []);
+  function addCasFund(amfiCode, schemeName, value) {
+    if (selectedFunds.some((f) => f.amfiCode === amfiCode)) return;
+    setSelectedFunds((prev) => [...prev, { amfiCode, schemeName, amount: value, source: 'cas' }]);
+    setTotalAmount((prev) => prev + value);
+  }
 
-  const setAllocation = useCallback((amfiCode, pct) => {
-    setSelectedFunds((prev) => prev.map((f) => (f.amfiCode === amfiCode ? { ...f, allocationPct: pct } : f)));
-  }, []);
+  function addManualFund(amfiCode, schemeName) {
+    if (selectedFunds.some((f) => f.amfiCode === amfiCode)) return;
+    setSelectedFunds((prev) => redistributeManualAmounts(
+      [...prev, { amfiCode, schemeName, amount: 0, source: 'manual' }],
+      totalAmount,
+    ));
+  }
+
+  function removeFund(amfiCode) {
+    const removed = selectedFunds.find((f) => f.amfiCode === amfiCode);
+    if (!removed) return;
+    const next = selectedFunds.filter((f) => f.amfiCode !== amfiCode);
+    if (removed.source === 'cas') {
+      const newTotal = Math.max(0, totalAmount - removed.amount);
+      setTotalAmount(newTotal);
+      setSelectedFunds(redistributeManualAmounts(next, newTotal));
+    } else {
+      setSelectedFunds(redistributeManualAmounts(next, totalAmount));
+    }
+  }
+
+  function setFundAmount(amfiCode, amount) {
+    setSelectedFunds((prev) => prev.map((f) => (f.amfiCode === amfiCode ? { ...f, amount } : f)));
+  }
+
+  function handleTotalAmountChange(newTotal) {
+    setTotalAmount(newTotal);
+    setSelectedFunds((prev) => redistributeManualAmounts(prev, newTotal));
+  }
 
   // Fetch holdings for any selected fund not yet loaded.
   useEffect(() => {
@@ -178,16 +214,25 @@ function ProposalStudioTool() {
         selectedFunds={selectedFunds}
         casFunds={casFunds}
         casLoading={casLoading}
-        onAdd={addFund}
+        proposalType={proposalType}
+        setProposalType={setProposalType}
+        sipFrequency={sipFrequency}
+        setSipFrequency={setSipFrequency}
+        totalAmount={totalAmount}
+        onTotalAmountChange={handleTotalAmountChange}
+        onAddCas={addCasFund}
+        onAddManual={addManualFund}
         onRemove={removeFund}
-        onAllocationChange={setAllocation}
+        onAmountChange={setFundAmount}
       />
       {selectedFunds.length > 0 && (() => {
         const readyFunds = selectedFunds
           .filter((f) => holdingsByFund[f.amfiCode])
           .map((f) => ({ amfiCode: f.amfiCode, holdings: holdingsByFund[f.amfiCode].holdings }));
         const erroredFunds = selectedFunds.filter((f) => holdingsError[f.amfiCode]);
-        const allocations = Object.fromEntries(selectedFunds.map((f) => [f.amfiCode, f.allocationPct]));
+        const allocations = Object.fromEntries(
+          selectedFunds.map((f) => [f.amfiCode, totalAmount > 0 ? (f.amount / totalAmount) * 100 : 0]),
+        );
         const pendingCount = selectedFunds.length - readyFunds.length - erroredFunds.length;
 
         const errorNotices = erroredFunds.length > 0 && (
@@ -232,7 +277,7 @@ function ProposalStudioTool() {
               <div className="pfc-hint">Add another fund to see overlap analysis.</div>
             )}
 
-            {mCapIndex && <MCapTable selectedFunds={selectedFunds} readyFunds={readyFunds} mCapIndex={mCapIndex} />}
+            {mCapIndex && <MCapTable selectedFunds={selectedFunds} readyFunds={readyFunds} mCapIndex={mCapIndex} allocations={allocations} />}
 
             {/* BenchmarkSection hidden for launch: it only matches funds benchmarked
                 directly to a BSE index, which excludes most real funds. Revisit once
@@ -332,11 +377,11 @@ function OverlapGrid({ funds, selectedFunds }) {
   );
 }
 
-function MCapTable({ selectedFunds, readyFunds, mCapIndex }) {
+function MCapTable({ selectedFunds, readyFunds, mCapIndex, allocations }) {
   const rows = readyFunds.map((f) => {
     const selected = selectedFunds.find((s) => s.amfiCode === f.amfiCode);
     const name = selected?.schemeName || f.amfiCode;
-    const allocationPct = selected?.allocationPct || 0;
+    const allocationPct = allocations[f.amfiCode] || 0;
     return { name, allocationPct, ...computeMCapAllocation(f, mCapIndex) };
   });
 
@@ -390,7 +435,7 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex }) {
   );
 }
 
-function FundPicker({ selectedFunds, casFunds, casLoading, onAdd, onRemove, onAllocationChange }) {
+function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProposalType, sipFrequency, setSipFrequency, totalAmount, onTotalAmountChange, onAddCas, onAddManual, onRemove, onAmountChange }) {
   const [tab, setTab] = useState('cas');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -416,10 +461,34 @@ function FundPicker({ selectedFunds, casFunds, casLoading, onAdd, onRemove, onAl
   }, [query, tab]);
 
   const selectedCodes = new Set(selectedFunds.map((f) => f.amfiCode));
-  const totalAllocation = selectedFunds.reduce((s, f) => s + (f.allocationPct || 0), 0);
+  const totalEntered = selectedFunds.reduce((s, f) => s + (f.amount || 0), 0);
 
   return (
     <section className="pfc-picker">
+      <div className="pfc-proposal-type">
+        <div className="pfc-picker-tabs">
+          <button className={proposalType === 'lumpsum' ? 'on' : ''} onClick={() => setProposalType('lumpsum')}>Lumpsum</button>
+          <button className={proposalType === 'sip' ? 'on' : ''} onClick={() => setProposalType('sip')}>SIP</button>
+        </div>
+        <label className="pfc-total-input">
+          <span>Total {proposalType === 'sip' ? 'SIP' : 'Lumpsum'} Amount</span>
+          <div className="pfc-inp"><i>₹</i>
+            <input
+              type="number"
+              min="0"
+              value={totalAmount}
+              onChange={(e) => onTotalAmountChange(Math.max(0, +e.target.value || 0))}
+            />
+          </div>
+        </label>
+        {proposalType === 'sip' && (
+          <div className="pfc-picker-tabs pfc-freq-tabs">
+            <button className={sipFrequency === 'monthly' ? 'on' : ''} onClick={() => setSipFrequency('monthly')}>Monthly</button>
+            <button className={sipFrequency === 'daily' ? 'on' : ''} onClick={() => setSipFrequency('daily')}>Daily</button>
+          </div>
+        )}
+      </div>
+
       <div className="pfc-picker-tabs">
         <button className={tab === 'cas' ? 'on' : ''} onClick={() => setTab('cas')}>From your CAS holdings</button>
         <button className={tab === 'search' ? 'on' : ''} onClick={() => setTab('search')}>Search any fund</button>
@@ -434,10 +503,10 @@ function FundPicker({ selectedFunds, casFunds, casLoading, onAdd, onRemove, onAl
               key={f.amfiCode}
               className="pfc-picker-item"
               disabled={selectedCodes.has(f.amfiCode)}
-              onClick={() => onAdd(f.amfiCode, f.schemeName)}
+              onClick={() => onAddCas(f.amfiCode, f.schemeName, f.value)}
             >
               {f.schemeName}
-              <span className="pfc-add">{selectedCodes.has(f.amfiCode) ? 'Added' : 'Add'}</span>
+              <span className="pfc-add">{selectedCodes.has(f.amfiCode) ? 'Added' : `Add · ₹${f.value.toLocaleString('en-IN')}`}</span>
             </button>
           ))}
         </div>
@@ -458,7 +527,7 @@ function FundPicker({ selectedFunds, casFunds, casLoading, onAdd, onRemove, onAl
               key={s.schemeCode}
               className="pfc-picker-item"
               disabled={selectedCodes.has(s.schemeCode)}
-              onClick={() => onAdd(s.schemeCode, s.schemeName)}
+              onClick={() => onAddManual(s.schemeCode, s.schemeName)}
             >
               {s.schemeName}
               <span className="pfc-add">{selectedCodes.has(s.schemeCode) ? 'Added' : 'Add'}</span>
@@ -473,21 +542,20 @@ function FundPicker({ selectedFunds, casFunds, casLoading, onAdd, onRemove, onAl
           {selectedFunds.map((f) => (
             <div className="pfc-selected-row" key={f.amfiCode}>
               <span className="pfc-selected-name">{f.schemeName}</span>
-              <input
-                type="number"
-                className="pfc-alloc-input"
-                min="0"
-                max="100"
-                step="0.1"
-                value={f.allocationPct}
-                onChange={(e) => onAllocationChange(f.amfiCode, parseFloat(e.target.value) || 0)}
-              />
-              <span className="pfc-alloc-pct">%</span>
+              <div className="pfc-amount-input"><i>₹</i>
+                <input
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={f.amount}
+                  onChange={(e) => onAmountChange(f.amfiCode, Math.max(0, +e.target.value || 0))}
+                />
+              </div>
               <button className="pfc-remove" onClick={() => onRemove(f.amfiCode)}>Remove</button>
             </div>
           ))}
-          <div className={`pfc-alloc-total ${Math.abs(totalAllocation - 100) > 0.5 ? 'pfc-alloc-warn' : ''}`}>
-            Total allocation: {Math.round(totalAllocation * 100) / 100}% {Math.abs(totalAllocation - 100) > 0.5 && '(should sum to 100%)'}
+          <div className={`pfc-alloc-total ${Math.abs(totalEntered - totalAmount) > 1 ? 'pfc-alloc-warn' : ''}`}>
+            Entered: ₹{totalEntered.toLocaleString('en-IN')} {Math.abs(totalEntered - totalAmount) > 1 && `(should sum to ₹${totalAmount.toLocaleString('en-IN')} total)`}
           </div>
         </div>
       )}

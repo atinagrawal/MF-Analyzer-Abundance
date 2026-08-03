@@ -16,12 +16,18 @@
 .pfc-search-input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px; font: 400 14px Raleway, sans-serif; }
 .pfc-hint { font: 400 13px Raleway, sans-serif; color: var(--muted); padding: 12px 0; }
 
+.pfc-proposal-type { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.pfc-total-input { display: flex; align-items: center; gap: 8px; font: 500 13px Raleway, sans-serif; }
+.pfc-inp, .pfc-amount-input { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; gap: 4px; }
+.pfc-inp i, .pfc-amount-input i { font-style: normal; color: var(--muted); font: 500 13px JetBrains Mono, monospace; }
+.pfc-inp input, .pfc-amount-input input { border: none; outline: none; width: 110px; font: 500 13px JetBrains Mono, monospace; text-align: right; }
+.pfc-freq-tabs button { padding: 6px 12px; font-size: 12px; }
+
 .pfc-selected { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
 .pfc-selected h3 { font: 600 14px Raleway, sans-serif; margin-bottom: 10px; }
 .pfc-selected-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
 .pfc-selected-name { flex: 1; font: 500 13px Raleway, sans-serif; }
-.pfc-alloc-input { width: 64px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border); font: 500 13px JetBrains Mono, monospace; text-align: right; }
-.pfc-alloc-pct { font: 500 13px Raleway, sans-serif; color: var(--muted); }
+.pfc-amount-input input { width: 90px; }
 .pfc-remove { border: none; background: transparent; color: var(--neg); cursor: pointer; font: 500 12px Raleway, sans-serif; }
 .pfc-alloc-total { margin-top: 10px; font: 600 12px JetBrains Mono, monospace; color: var(--muted); }
 .pfc-alloc-warn { color: var(--warn); }
