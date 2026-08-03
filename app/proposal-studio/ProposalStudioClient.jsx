@@ -196,6 +196,23 @@ function ProposalStudioTool() {
     });
   }, [selectedFunds, holdingsByFund, holdingsError, proposalType]);
 
+  // The effect above only sets a fund's minimum-investment default at the
+  // moment its holdings first arrive. If the user switches Lumpsum <-> SIP
+  // AFTER that (for a fund whose amount was never manually edited), this
+  // keeps the amount synced to the newly-relevant minimum instead of
+  // silently staying at the old proposal type's figure. amountTouched is
+  // deliberately never set by auto-fill (see addManualFund/the effect
+  // above) specifically so this can keep tracking it.
+  useEffect(() => {
+    setSelectedFunds((prev) => prev.map((f) => {
+      if (f.source !== 'manual' || f.amountTouched) return f;
+      const data = holdingsByFund[f.amfiCode];
+      if (!data) return f; // still loading -- the fetch effect will set it on arrival
+      const min = proposalType === 'sip' ? data.minSipInvestment : data.minInvestment;
+      return min > 0 && f.amount !== min ? { ...f, amount: min } : f;
+    }));
+  }, [proposalType, holdingsByFund]);
+
   return (
     <div className="pfc-tool">
       <FundPicker
