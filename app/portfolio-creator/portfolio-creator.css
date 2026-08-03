@@ -39,3 +39,5 @@
 .pfc-overlap-wrap { overflow-x: auto; }
 .pfc-overlap-table th, .pfc-overlap-table td { min-width: 90px; text-align: center; }
 .pfc-overlap-diag { background: var(--surface2, #edf6ed); font-weight: 700; }
+
+.pfc-mcap-avg td { background: var(--surface2, #edf6ed); font-weight: 700; }

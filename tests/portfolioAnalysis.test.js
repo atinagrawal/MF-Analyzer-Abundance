@@ -59,6 +59,27 @@ test('combineExposure clamps negative (short) weightage to 0', () => {
   assert.strictEqual(Math.round(equity * 100) / 100, 90); // the -15 contributes 0, not -15
 });
 
+test('combineExposure appends a Debt & Other Securities row summing all non-equity weight', () => {
+  const funds = [
+    { amfiCode: 'A', holdings: [
+      { securityName: 'HDFC Bank Ltd', assetClass: 'EQUITY', sector: 'Banks', weightagePct: 70 },
+      { securityName: 'Govt Bond X', assetClass: 'DEBT', sector: 'Sovereign', weightagePct: 20 },
+      { securityName: 'Cash', assetClass: 'CASH', sector: null, weightagePct: 10 },
+    ] },
+    { amfiCode: 'B', holdings: [
+      { securityName: 'REIT Fund Y', assetClass: 'REALEST', sector: null, weightagePct: 100 },
+    ] },
+  ];
+  const allocations = { A: 60, B: 40 };
+  const result = combineExposure(funds, allocations);
+  const debtRow = result.stockExposure.find((r) => r.name === 'Debt & Other Securities');
+  assert.ok(debtRow, 'Debt & Other Securities row should be present in stockExposure');
+  // A contributes (20 debt + 10 cash) * 0.6 = 18; B contributes 100 (REALEST->Other) * 0.4 = 40
+  assert.strictEqual(debtRow.pct, 58);
+  // The last row of stockExposure should be this summary row (appended after top10+Other)
+  assert.strictEqual(result.stockExposure[result.stockExposure.length - 1].name, 'Debt & Other Securities');
+});
+
 test('computeOverlap: identical single holding across two funds gives full overlap', () => {
   const funds = [
     { amfiCode: 'A', holdings: [{ securityName: 'HDFC Bank Ltd', assetClass: 'EQUITY', sector: 'Banks', weightagePct: 40 }] },

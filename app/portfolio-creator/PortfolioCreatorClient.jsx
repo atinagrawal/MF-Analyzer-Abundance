@@ -334,9 +334,25 @@ function OverlapGrid({ funds, selectedFunds }) {
 
 function MCapTable({ selectedFunds, readyFunds, mCapIndex }) {
   const rows = readyFunds.map((f) => {
-    const name = selectedFunds.find((s) => s.amfiCode === f.amfiCode)?.schemeName || f.amfiCode;
-    return { name, ...computeMCapAllocation(f, mCapIndex) };
+    const selected = selectedFunds.find((s) => s.amfiCode === f.amfiCode);
+    const name = selected?.schemeName || f.amfiCode;
+    const allocationPct = selected?.allocationPct || 0;
+    return { name, allocationPct, ...computeMCapAllocation(f, mCapIndex) };
   });
+
+  // Portfolio-weighted average row: weight each fund's Large/Mid/Small/
+  // Unclassified % by that fund's allocation %, summed and divided by the
+  // total allocation actually represented by readyFunds (not a hardcoded
+  // 100, since some selected funds may still be loading).
+  const totalAllocation = rows.reduce((s, r) => s + r.allocationPct, 0);
+  const weightedAvg = totalAllocation > 0
+    ? {
+        large: rows.reduce((s, r) => s + r.large * r.allocationPct, 0) / totalAllocation,
+        mid: rows.reduce((s, r) => s + r.mid * r.allocationPct, 0) / totalAllocation,
+        small: rows.reduce((s, r) => s + r.small * r.allocationPct, 0) / totalAllocation,
+        unclassified: rows.reduce((s, r) => s + r.unclassified * r.allocationPct, 0) / totalAllocation,
+      }
+    : { large: 0, mid: 0, small: 0, unclassified: 0 };
 
   return (
     <section className="pfc-section">
@@ -361,6 +377,13 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex }) {
               <td className="pfc-table-pct">{r.unclassified.toFixed(1)}%</td>
             </tr>
           ))}
+          <tr className="pfc-mcap-avg">
+            <td>Portfolio (weighted avg)</td>
+            <td className="pfc-table-pct">{weightedAvg.large.toFixed(1)}%</td>
+            <td className="pfc-table-pct">{weightedAvg.mid.toFixed(1)}%</td>
+            <td className="pfc-table-pct">{weightedAvg.small.toFixed(1)}%</td>
+            <td className="pfc-table-pct">{weightedAvg.unclassified.toFixed(1)}%</td>
+          </tr>
         </tbody>
       </table>
     </section>
