@@ -33,6 +33,9 @@
 .pfc-table-pct { font: 500 13px JetBrains Mono, monospace; text-align: right !important; }
 .pfc-table-wide th { font: 600 11px Raleway, sans-serif; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
 
+.pfc-fund-errors { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.pfc-error-hint { font: 500 13px Raleway, sans-serif; color: var(--neg); background: var(--neg-bg); border: 1px solid #ffcdd2; border-radius: 8px; padding: 10px 12px; }
+
 .pfc-overlap-wrap { overflow-x: auto; }
 .pfc-overlap-table th, .pfc-overlap-table td { min-width: 90px; text-align: center; }
 .pfc-overlap-diag { background: var(--surface2, #edf6ed); font-weight: 700; }

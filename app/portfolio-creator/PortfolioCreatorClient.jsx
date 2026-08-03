@@ -186,17 +186,37 @@ function PortfolioCreatorTool() {
         const readyFunds = selectedFunds
           .filter((f) => holdingsByFund[f.amfiCode])
           .map((f) => ({ amfiCode: f.amfiCode, holdings: holdingsByFund[f.amfiCode].holdings }));
+        const erroredFunds = selectedFunds.filter((f) => holdingsError[f.amfiCode]);
         const allocations = Object.fromEntries(selectedFunds.map((f) => [f.amfiCode, f.allocationPct]));
-        const pendingCount = selectedFunds.length - readyFunds.length;
+        const pendingCount = selectedFunds.length - readyFunds.length - erroredFunds.length;
+
+        const errorNotices = erroredFunds.length > 0 && (
+          <div className="pfc-fund-errors">
+            {erroredFunds.map((f) => (
+              <div className="pfc-error-hint" key={f.amfiCode}>
+                Couldn't load holdings for {f.schemeName}: {holdingsError[f.amfiCode]}
+              </div>
+            ))}
+          </div>
+        );
 
         if (readyFunds.length === 0) {
-          return <div className="pfc-hint">Loading holdings…</div>;
+          if (erroredFunds.length === selectedFunds.length) {
+            return errorNotices;
+          }
+          return (
+            <>
+              {errorNotices}
+              <div className="pfc-hint">Loading holdings…</div>
+            </>
+          );
         }
 
         const { assetAllocation, sectorExposure, stockExposure } = combineExposure(readyFunds, allocations);
 
         return (
           <>
+            {errorNotices}
             {pendingCount > 0 && <div className="pfc-hint">Loading holdings for {pendingCount} more fund(s)…</div>}
 
             <ExposureTable title="Asset Allocation" rows={assetAllocation} />
