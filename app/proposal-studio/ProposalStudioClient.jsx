@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import ProviderAvatar from '@/components/ProviderAvatar';
 import { startCheckout } from '@/lib/checkoutClient';
+import { getMFLogoFromSchemeName } from '@/lib/providerLogos';
 import { combineExposure, computeOverlap, computeMCapAllocation } from '@/lib/portfolioAnalysis';
 
 export default function ProposalStudioClient() {
@@ -557,6 +559,7 @@ function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProp
           <h3>Selected funds ({selectedFunds.length})</h3>
           {selectedFunds.map((f) => (
             <div className="pfc-selected-row" key={f.amfiCode}>
+              <ProviderAvatar name={f.schemeName} logoPath={getMFLogoFromSchemeName(f.schemeName)} size={24} radius={6} />
               <span className="pfc-selected-name">{f.schemeName}</span>
               <div className="pfc-amount-input"><i>₹</i>
                 <input
