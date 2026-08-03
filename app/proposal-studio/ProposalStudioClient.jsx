@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -92,7 +92,7 @@ function PfcProGate({ session }) {
 }
 
 function ProposalStudioTool() {
-  const [selectedFunds, setSelectedFunds] = useState([]); // [{amfiCode, schemeName, amount, source: 'cas'|'manual'}]
+  const [selectedFunds, setSelectedFunds] = useState([]); // [{amfiCode, schemeName, amount, source: 'cas'|'manual', amountTouched}]
   const [casFunds, setCasFunds] = useState([]);            // [{amfiCode, schemeName, value}] deduped from CAS
   const [casLoading, setCasLoading] = useState(true);
   const [holdingsByFund, setHoldingsByFund] = useState({}); // amfiCode -> holdings API response
@@ -100,7 +100,11 @@ function ProposalStudioTool() {
   const [mCapIndex, setMCapIndex] = useState(null);         // Map<normalizedName, category>
   const [proposalType, setProposalType] = useState('lumpsum'); // 'lumpsum' | 'sip'
   const [sipFrequency, setSipFrequency] = useState('monthly');  // 'daily' | 'monthly'
-  const [totalAmount, setTotalAmount] = useState(0);
+
+  // Total is a derived sum of every selected fund's amount, not a separate
+  // target you set first -- add funds, type an amount for each, the total
+  // just adds up. Requiring a total upfront blocked basic use.
+  const totalAmount = selectedFunds.reduce((s, f) => s + (f.amount || 0), 0);
 
   // Load the AMFI M-Cap categorization index once on mount.
   useEffect(() => {
@@ -144,53 +148,26 @@ function ProposalStudioTool() {
     return () => { cancelled = true; };
   }, []);
 
-  // Recomputes every 'manual' fund's amount as an even split of whatever
-  // portion of `total` isn't already claimed by 'cas' funds' real values.
-  // 'cas' funds' amounts are untouched here -- they represent real money,
-  // not a derived split.
-  function redistributeManualAmounts(funds, total) {
-    const casTotal = funds.filter((f) => f.source === 'cas').reduce((s, f) => s + f.amount, 0);
-    const manualFunds = funds.filter((f) => f.source === 'manual');
-    if (manualFunds.length === 0) return funds;
-    const remaining = Math.max(0, total - casTotal);
-    const share = Math.round((remaining / manualFunds.length) * 100) / 100;
-    return funds.map((f) => (f.source === 'manual' ? { ...f, amount: share } : f));
-  }
-
   function addCasFund(amfiCode, schemeName, value) {
     if (selectedFunds.some((f) => f.amfiCode === amfiCode)) return;
-    setSelectedFunds((prev) => [...prev, { amfiCode, schemeName, amount: value, source: 'cas' }]);
-    setTotalAmount((prev) => prev + value);
+    // CAS funds already carry their real invested value -- nothing to fill in later.
+    setSelectedFunds((prev) => [...prev, { amfiCode, schemeName, amount: value, source: 'cas', amountTouched: true }]);
   }
 
   function addManualFund(amfiCode, schemeName) {
     if (selectedFunds.some((f) => f.amfiCode === amfiCode)) return;
-    setSelectedFunds((prev) => redistributeManualAmounts(
-      [...prev, { amfiCode, schemeName, amount: 0, source: 'manual' }],
-      totalAmount,
-    ));
+    // Starts at 0; the holdings-fetch effect below fills in the fund's real
+    // minimum investment amount once its data arrives, unless the user has
+    // already typed their own amount in the meantime (amountTouched).
+    setSelectedFunds((prev) => [...prev, { amfiCode, schemeName, amount: 0, source: 'manual', amountTouched: false }]);
   }
 
   function removeFund(amfiCode) {
-    const removed = selectedFunds.find((f) => f.amfiCode === amfiCode);
-    if (!removed) return;
-    const next = selectedFunds.filter((f) => f.amfiCode !== amfiCode);
-    if (removed.source === 'cas') {
-      const newTotal = Math.max(0, totalAmount - removed.amount);
-      setTotalAmount(newTotal);
-      setSelectedFunds(redistributeManualAmounts(next, newTotal));
-    } else {
-      setSelectedFunds(redistributeManualAmounts(next, totalAmount));
-    }
+    setSelectedFunds((prev) => prev.filter((f) => f.amfiCode !== amfiCode));
   }
 
   function setFundAmount(amfiCode, amount) {
-    setSelectedFunds((prev) => prev.map((f) => (f.amfiCode === amfiCode ? { ...f, amount } : f)));
-  }
-
-  function handleTotalAmountChange(newTotal) {
-    setTotalAmount(newTotal);
-    setSelectedFunds((prev) => redistributeManualAmounts(prev, newTotal));
+    setSelectedFunds((prev) => prev.map((f) => (f.amfiCode === amfiCode ? { ...f, amount, amountTouched: true } : f)));
   }
 
   // Fetch holdings for any selected fund not yet loaded.
@@ -204,11 +181,20 @@ function ProposalStudioTool() {
             setHoldingsError((prev) => ({ ...prev, [amfiCode]: data.error }));
           } else {
             setHoldingsByFund((prev) => ({ ...prev, [amfiCode]: data }));
+            // Default a just-added manual fund's amount to its real minimum
+            // investment (matching the current proposal type) instead of
+            // leaving it at 0 -- but only if the user hasn't already typed
+            // their own amount in the meantime.
+            setSelectedFunds((prev) => prev.map((f) => {
+              if (f.amfiCode !== amfiCode || f.source !== 'manual' || f.amountTouched) return f;
+              const min = proposalType === 'sip' ? data.minSipInvestment : data.minInvestment;
+              return min > 0 ? { ...f, amount: min } : f;
+            }));
           }
         })
         .catch(() => setHoldingsError((prev) => ({ ...prev, [amfiCode]: 'Failed to load holdings' })));
     });
-  }, [selectedFunds, holdingsByFund, holdingsError]);
+  }, [selectedFunds, holdingsByFund, holdingsError, proposalType]);
 
   return (
     <div className="pfc-tool">
@@ -221,7 +207,6 @@ function ProposalStudioTool() {
         sipFrequency={sipFrequency}
         setSipFrequency={setSipFrequency}
         totalAmount={totalAmount}
-        onTotalAmountChange={handleTotalAmountChange}
         onAddCas={addCasFund}
         onAddManual={addManualFund}
         onRemove={removeFund}
@@ -473,16 +458,19 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex, allocations }) {
   );
 }
 
-function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProposalType, sipFrequency, setSipFrequency, totalAmount, onTotalAmountChange, onAddCas, onAddManual, onRemove, onAmountChange }) {
+function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProposalType, sipFrequency, setSipFrequency, totalAmount, onAddCas, onAddManual, onRemove, onAmountChange }) {
   const [tab, setTab] = useState('cas');
+  const [searchKind, setSearchKind] = useState('mf'); // 'mf' | 'sif'
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [showIdcw, setShowIdcw] = useState(false);
+  const [sifList, setSifList] = useState([]);
+  const [sifLoading, setSifLoading] = useState(true);
   const timerRef = useRef(null);
 
   useEffect(() => {
-    if (tab !== 'search') return;
+    if (tab !== 'search' || searchKind !== 'mf') return;
     if (timerRef.current) clearTimeout(timerRef.current);
     if (query.trim().length < 3) { setResults([]); return; }
     timerRef.current = setTimeout(async () => {
@@ -500,10 +488,24 @@ function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProp
       setSearching(false);
     }, 280);
     return () => timerRef.current && clearTimeout(timerRef.current);
-  }, [query, tab, showIdcw]);
+  }, [query, tab, showIdcw, searchKind]);
+
+  // SIF list is small and static per session -- fetch once, filter client-side
+  // as the user types (same pattern app/backtest/page.js's Picker already uses).
+  useEffect(() => {
+    fetch('/api/sif-nav')
+      .then((r) => r.json())
+      .then((d) => setSifList(d.schemes || []))
+      .catch(() => setSifList([]))
+      .finally(() => setSifLoading(false));
+  }, []);
+
+  const sifFiltered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return sifList.filter((s) => !q || (s.nav_name || '').toLowerCase().includes(q) || (s.category || '').toLowerCase().includes(q));
+  }, [query, sifList]);
 
   const selectedCodes = new Set(selectedFunds.map((f) => f.amfiCode));
-  const totalEntered = selectedFunds.reduce((s, f) => s + (f.amount || 0), 0);
 
   return (
     <section className="pfc-picker">
@@ -512,17 +514,10 @@ function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProp
           <button className={proposalType === 'lumpsum' ? 'on' : ''} onClick={() => setProposalType('lumpsum')}>Lumpsum</button>
           <button className={proposalType === 'sip' ? 'on' : ''} onClick={() => setProposalType('sip')}>SIP</button>
         </div>
-        <label className="pfc-total-input">
+        <div className="pfc-total-input">
           <span>Total {proposalType === 'sip' ? 'SIP' : 'Lumpsum'} Amount</span>
-          <div className="pfc-inp"><i>₹</i>
-            <input
-              type="number"
-              min="0"
-              value={totalAmount}
-              onChange={(e) => onTotalAmountChange(Math.max(0, +e.target.value || 0))}
-            />
-          </div>
-        </label>
+          <div className="pfc-total-readout">₹{totalAmount.toLocaleString('en-IN')}</div>
+        </div>
         {proposalType === 'sip' && (
           <div className="pfc-picker-tabs pfc-freq-tabs">
             <button className={sipFrequency === 'monthly' ? 'on' : ''} onClick={() => setSipFrequency('monthly')}>Monthly</button>
@@ -556,19 +551,25 @@ function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProp
 
       {tab === 'search' && (
         <div className="pfc-picker-list">
+          <div className="pfc-picker-tabs pfc-search-kind-tabs">
+            <button className={searchKind === 'mf' ? 'on' : ''} onClick={() => setSearchKind('mf')}>Mutual Funds</button>
+            <button className={searchKind === 'sif' ? 'on' : ''} onClick={() => setSearchKind('sif')}>SIFs</button>
+          </div>
           <input
             className="pfc-search-input"
-            placeholder="Type at least 3 letters, e.g. 'parag parikh flexi'…"
+            placeholder={searchKind === 'sif' ? "Filter SIFs by name or category…" : "Type at least 3 letters, e.g. 'parag parikh flexi'…"}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <label className="pfc-idcw-toggle">
-            <input type="checkbox" checked={showIdcw} onChange={(e) => setShowIdcw(e.target.checked)} />
-            Show IDCW/Dividend plans
-          </label>
-          {searching && <div className="pfc-hint">Searching…</div>}
-          {!searching && query.trim().length >= 3 && results.length === 0 && <div className="pfc-hint">No funds matched. Try a simpler keyword.</div>}
-          {results.map((s) => (
+          {searchKind === 'mf' && (
+            <label className="pfc-idcw-toggle">
+              <input type="checkbox" checked={showIdcw} onChange={(e) => setShowIdcw(e.target.checked)} />
+              Show IDCW/Dividend plans
+            </label>
+          )}
+          {searchKind === 'mf' && searching && <div className="pfc-hint">Searching…</div>}
+          {searchKind === 'mf' && !searching && query.trim().length >= 3 && results.length === 0 && <div className="pfc-hint">No funds matched. Try a simpler keyword.</div>}
+          {searchKind === 'mf' && results.map((s) => (
             <button
               key={s.schemeCode}
               className="pfc-picker-item"
@@ -577,6 +578,19 @@ function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProp
             >
               {s.schemeName}
               <span className="pfc-add">{selectedCodes.has(s.schemeCode) ? 'Added' : 'Add'}</span>
+            </button>
+          ))}
+          {searchKind === 'sif' && sifLoading && <div className="pfc-hint">Loading SIFs…</div>}
+          {searchKind === 'sif' && !sifLoading && sifFiltered.length === 0 && <div className="pfc-hint">No SIFs matched.</div>}
+          {searchKind === 'sif' && sifFiltered.map((s) => (
+            <button
+              key={s.scheme_id}
+              className="pfc-picker-item"
+              disabled={selectedCodes.has(s.scheme_id)}
+              onClick={() => onAddManual(s.scheme_id, s.nav_name)}
+            >
+              {s.nav_name}
+              <span className="pfc-add">{selectedCodes.has(s.scheme_id) ? 'Added' : 'Add'}</span>
             </button>
           ))}
         </div>
@@ -602,13 +616,10 @@ function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProp
                 <button className="pfc-remove" onClick={() => onRemove(f.amfiCode)}>Remove</button>
               </div>
               {f.amount <= 0 && (
-                <div className="pfc-zero-hint">Raise Total Amount above, or reduce another fund's amount, to allocate to this fund.</div>
+                <div className="pfc-zero-hint">This fund has no amount yet — set one to include it in the analysis.</div>
               )}
             </div>
           ))}
-          <div className={`pfc-alloc-total ${Math.abs(totalEntered - totalAmount) > 1 ? 'pfc-alloc-warn' : ''}`}>
-            Entered: ₹{totalEntered.toLocaleString('en-IN')} {Math.abs(totalEntered - totalAmount) > 1 && `(should sum to ₹${totalAmount.toLocaleString('en-IN')} total)`}
-          </div>
         </div>
       )}
     </section>

@@ -3,11 +3,18 @@
  *
  * GET /api/proposal-studio/holdings?amfiCode=118955&schemeName=HDFC%20Flexi%20Cap%20Fund
  *
- * Resolves a fund (by AMFI code + name) against an external scheme-detail
- * data source and returns its holdings plus scheme-level fields (AUM,
- * expense ratio, risk, category). Cached in-memory -> Vercel Blob -> live
- * fetch, same 3-layer pattern as pages/api/nifty-tri.js. Holdings change at
- * most monthly, so a 7-day TTL is generous without going stale.
+ * Resolves a fund OR SIF scheme (by its AMFI/SIF scheme code + name) against
+ * an external scheme-detail data source and returns its holdings plus
+ * scheme-level fields (AUM, expense ratio, risk, category, min investment
+ * amounts). Cached in-memory -> Vercel Blob -> live fetch, same 3-layer
+ * pattern as pages/api/nifty-tri.js. Holdings change at most monthly, so a
+ * 7-day TTL is generous without going stale.
+ *
+ * `amfiCode` also accepts a SIF scheme_id (e.g. "SIF-120", the same value
+ * /api/sif-nav exposes as `scheme_id`) -- verified live (2026-08-03) that
+ * this same data source resolves SIFs too (flagged `sifScheme: true` in its
+ * detail payload) with holdings in the identical positional-array shape, no
+ * special-casing needed here.
  */
 
 const CACHE_PREFIX = 'portfolio-creator-holdings/';
@@ -182,6 +189,8 @@ async function fetchFresh(amfiCode, schemeName) {
     category: detail.category ?? null,
     subCategory: detail.sub_category ?? null,
     benchmarkName: detail.benchmark_name ?? null,
+    minInvestment: detail.min_investment_amount ?? null,
+    minSipInvestment: detail.min_sip_investment ?? null,
     holdings: normalizeHoldings(detail.holdings),
   };
 }
