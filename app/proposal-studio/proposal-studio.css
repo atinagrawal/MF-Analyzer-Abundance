@@ -47,3 +47,5 @@
 .pfc-overlap-diag { background: var(--surface2, #edf6ed); font-weight: 700; }
 
 .pfc-mcap-avg td { background: var(--surface2, #edf6ed); font-weight: 700; }
+
+.pfc-idcw-toggle { display: flex; align-items: center; gap: 6px; font: 500 12px Raleway, sans-serif; color: var(--muted); margin-bottom: 10px; cursor: pointer; }

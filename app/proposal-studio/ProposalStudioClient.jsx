@@ -440,6 +440,7 @@ function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProp
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [showIdcw, setShowIdcw] = useState(false);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -450,15 +451,18 @@ function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProp
       setSearching(true);
       try {
         const data = await fetch(`/api/mf?q=${encodeURIComponent(query.trim())}`).then((r) => r.json());
-        const regular = (Array.isArray(data) ? data : []).filter((s) => !/\bdirect\b/i.test(s.schemeName));
-        setResults(regular.slice(0, 40));
+        let filtered = (Array.isArray(data) ? data : []).filter((s) => !/\bdirect\b/i.test(s.schemeName));
+        if (!showIdcw) {
+          filtered = filtered.filter((s) => !/\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(s.schemeName));
+        }
+        setResults(filtered.slice(0, 40));
       } catch {
         setResults([]);
       }
       setSearching(false);
     }, 280);
     return () => timerRef.current && clearTimeout(timerRef.current);
-  }, [query, tab]);
+  }, [query, tab, showIdcw]);
 
   const selectedCodes = new Set(selectedFunds.map((f) => f.amfiCode));
   const totalEntered = selectedFunds.reduce((s, f) => s + (f.amount || 0), 0);
@@ -520,6 +524,10 @@ function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProp
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          <label className="pfc-idcw-toggle">
+            <input type="checkbox" checked={showIdcw} onChange={(e) => setShowIdcw(e.target.checked)} />
+            Show IDCW/Dividend plans
+          </label>
           {searching && <div className="pfc-hint">Searching…</div>}
           {!searching && query.trim().length >= 3 && results.length === 0 && <div className="pfc-hint">No funds matched. Try a simpler keyword.</div>}
           {results.map((s) => (
