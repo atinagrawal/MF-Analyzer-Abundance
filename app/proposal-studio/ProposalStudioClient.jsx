@@ -8,6 +8,7 @@ import ProviderAvatar from '@/components/ProviderAvatar';
 import { startCheckout } from '@/lib/checkoutClient';
 import { getMFLogoFromSchemeName } from '@/lib/providerLogos';
 import { combineExposure, computeOverlap, computeMCapAllocation } from '@/lib/portfolioAnalysis';
+import { PROPOSAL_STUDIO_FAQ } from '@/lib/proposalStudioFaq';
 
 export default function ProposalStudioClient() {
   const { data: session, status } = useSession();
@@ -21,12 +22,50 @@ export default function ProposalStudioClient() {
         <h1 className="pfc-title">Proposal Studio</h1>
         <p className="pfc-subtitle">Combine funds to see overlap, exposure, and scheme details in one view.</p>
 
+        <PfcExplainer />
+
         {status !== 'loading' && !isAuthed && <PfcSignInGate />}
         {status !== 'loading' && isAuthed && !isPro && <PfcProGate session={session} />}
         {isAuthed && isPro && <ProposalStudioTool />}
+
+        <PfcFaq />
       </main>
       <Footer />
     </>
+  );
+}
+
+function PfcExplainer() {
+  return (
+    <section className="pfc-explainer">
+      <p>
+        Proposal Studio combines the mutual funds and SIFs you choose — either your real
+        holdings imported from a CAS statement, or a new investment plan you're building —
+        into a single combined view: how your money is spread across asset classes and
+        sectors, which stocks show up in more than one fund (overlap), and how much sits in
+        Large, Mid, and Small-cap companies.
+      </p>
+      <ul className="pfc-explainer-list">
+        <li>Combined asset allocation and sector exposure across every fund you add</li>
+        <li>Stock-level exposure, with a full-holdings view beyond just the top 10</li>
+        <li>Pairwise fund overlap — how much of your equity holdings are duplicated between funds</li>
+        <li>M-Cap allocation using AMFI's official Large/Mid/Small-cap categorization</li>
+        <li>Works for a Lumpsum or a SIP proposal, with mutual funds and SIFs both supported</li>
+      </ul>
+    </section>
+  );
+}
+
+function PfcFaq() {
+  return (
+    <section className="pfc-faq">
+      <h2 className="pfc-faq-title">Frequently Asked Questions</h2>
+      {PROPOSAL_STUDIO_FAQ.map((f) => (
+        <CollapsibleSection key={f.q} title={f.q} defaultOpen={false}>
+          <p>{f.a}</p>
+        </CollapsibleSection>
+      ))}
+    </section>
   );
 }
 
