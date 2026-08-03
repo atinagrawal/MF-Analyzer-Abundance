@@ -1,0 +1,27 @@
+/* app/portfolio-creator/portfolio-creator.css */
+
+.pfc-page { max-width: 1100px; margin: 0 auto; padding: 32px 20px 64px; }
+.pfc-title { font: 700 32px Raleway, sans-serif; color: var(--g1); margin-bottom: 6px; }
+.pfc-subtitle { font: 400 15px Raleway, sans-serif; color: var(--muted); margin-bottom: 28px; }
+
+.pfc-picker { background: var(--surface, #fff); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+.pfc-picker-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.pfc-picker-tabs button { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; cursor: pointer; font: 500 13px Raleway, sans-serif; }
+.pfc-picker-tabs button.on { background: var(--g2); color: #fff; border-color: var(--g2); }
+
+.pfc-picker-list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+.pfc-picker-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: transparent; cursor: pointer; text-align: left; font: 500 13px Raleway, sans-serif; }
+.pfc-picker-item:disabled { opacity: 0.55; cursor: default; }
+.pfc-add { font: 600 11px JetBrains Mono, monospace; color: var(--g2); }
+.pfc-search-input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px; font: 400 14px Raleway, sans-serif; }
+.pfc-hint { font: 400 13px Raleway, sans-serif; color: var(--muted); padding: 12px 0; }
+
+.pfc-selected { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
+.pfc-selected h3 { font: 600 14px Raleway, sans-serif; margin-bottom: 10px; }
+.pfc-selected-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.pfc-selected-name { flex: 1; font: 500 13px Raleway, sans-serif; }
+.pfc-alloc-input { width: 64px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border); font: 500 13px JetBrains Mono, monospace; text-align: right; }
+.pfc-alloc-pct { font: 500 13px Raleway, sans-serif; color: var(--muted); }
+.pfc-remove { border: none; background: transparent; color: var(--neg); cursor: pointer; font: 500 12px Raleway, sans-serif; }
+.pfc-alloc-total { margin-top: 10px; font: 600 12px JetBrains Mono, monospace; color: var(--muted); }
+.pfc-alloc-warn { color: var(--warn); }
