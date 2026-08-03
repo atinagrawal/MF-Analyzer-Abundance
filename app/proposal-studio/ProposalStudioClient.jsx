@@ -268,7 +268,7 @@ function ProposalStudioTool() {
 
             <ExposureTable title="Asset Allocation" rows={assetAllocation} />
             <ExposureTable title="Sector Exposure" rows={sectorExposure} />
-            <ExposureTable title="Stock Exposure" rows={stockExposure} />
+            <ExposureTable title="Stock Exposure" rows={stockExposure} fullRows={fullStockExposure(readyFunds, allocations)} />
 
             <SchemeDetailsTable selectedFunds={selectedFunds} holdingsByFund={holdingsByFund} />
 
@@ -306,12 +306,35 @@ function CollapsibleSection({ title, children, defaultOpen = true }) {
   );
 }
 
-function ExposureTable({ title, rows }) {
+// Same per-stock aggregation combineExposure uses internally, without the
+// top-10 truncation -- scoped to this file since only the "show all
+// holdings" expansion needs the untruncated list.
+function fullStockExposure(funds, allocations) {
+  const stock = new Map(); // normalizedName -> {name, pct}
+  for (const fund of funds) {
+    const fundWeight = (allocations[fund.amfiCode] || 0) / 100;
+    for (const h of fund.holdings) {
+      if (h.assetClass !== 'EQUITY') continue;
+      const w = Math.max(0, h.weightagePct || 0) * fundWeight;
+      const key = h.securityName.toLowerCase().replace(/\./g, '').replace(/\b(ltd|limited)\b/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+      const existing = stock.get(key) || { name: h.securityName, pct: 0 };
+      existing.pct += w;
+      stock.set(key, existing);
+    }
+  }
+  return [...stock.values()]
+    .map((r) => ({ name: r.name, pct: Math.round(r.pct * 100) / 100 }))
+    .sort((a, b) => b.pct - a.pct);
+}
+
+function ExposureTable({ title, rows, fullRows }) {
+  const [showAll, setShowAll] = useState(false);
+  const displayRows = showAll && fullRows ? fullRows : rows;
   return (
     <CollapsibleSection title={title}>
       <table className="pfc-table">
         <tbody>
-          {rows.map((r) => (
+          {displayRows.map((r) => (
             <tr key={r.name}>
               <td>{r.name}</td>
               <td className="pfc-table-pct">{r.pct.toFixed(2)}%</td>
@@ -319,6 +342,11 @@ function ExposureTable({ title, rows }) {
           ))}
         </tbody>
       </table>
+      {fullRows && (
+        <button className="pfc-show-all" onClick={() => setShowAll((s) => !s)}>
+          {showAll ? 'Show top 10 only' : `Show all ${fullRows.length} holdings`}
+        </button>
+      )}
     </CollapsibleSection>
   );
 }

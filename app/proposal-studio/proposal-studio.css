@@ -53,3 +53,6 @@
 .pfc-mcap-avg td { background: var(--surface2, #edf6ed); font-weight: 700; }
 
 .pfc-idcw-toggle { display: flex; align-items: center; gap: 6px; font: 500 12px Raleway, sans-serif; color: var(--muted); margin-bottom: 10px; cursor: pointer; }
+
+.pfc-show-all { display: block; margin-top: 10px; border: none; background: none; color: var(--g2); font: 600 12px Raleway, sans-serif; cursor: pointer; padding: 0; }
+.pfc-show-all:hover { color: var(--g1); text-decoration: underline; }
