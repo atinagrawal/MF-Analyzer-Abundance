@@ -7,21 +7,21 @@ import Footer from '@/components/Footer';
 import { startCheckout } from '@/lib/checkoutClient';
 import { combineExposure, computeOverlap, computeMCapAllocation } from '@/lib/portfolioAnalysis';
 
-export default function PortfolioCreatorClient() {
+export default function ProposalStudioClient() {
   const { data: session, status } = useSession();
   const isAuthed = status === 'authenticated';
   const isPro = session?.user?.plan === 'pro';
 
   return (
     <>
-      <Navbar activePage="portfolio-creator" />
+      <Navbar activePage="proposal-studio" />
       <main className="pfc-page">
-        <h1 className="pfc-title">Portfolio Creator</h1>
+        <h1 className="pfc-title">Proposal Studio</h1>
         <p className="pfc-subtitle">Combine funds to see overlap, exposure, and scheme details in one view.</p>
 
         {status !== 'loading' && !isAuthed && <PfcSignInGate />}
         {status !== 'loading' && isAuthed && !isPro && <PfcProGate session={session} />}
-        {isAuthed && isPro && <PortfolioCreatorTool />}
+        {isAuthed && isPro && <ProposalStudioTool />}
       </main>
       <Footer />
     </>
@@ -32,7 +32,7 @@ function PfcSignInGate() {
   return (
     <div className="brd-gate">
       <div className="brd-gate-lock">🔒</div>
-      <h2 className="brd-gate-title">Sign in to use Portfolio Creator</h2>
+      <h2 className="brd-gate-title">Sign in to use Proposal Studio</h2>
       <p className="brd-gate-desc">
         Select multiple mutual funds and see combined sector/stock exposure, fund overlap,
         and M-Cap allocation — everything a real investment proposal covers.
@@ -67,7 +67,7 @@ function PfcProGate({ session }) {
   return (
     <div className="brd-gate">
       <div className="brd-gate-lock">⭐</div>
-      <h2 className="brd-gate-title">Portfolio Creator is a Pro feature</h2>
+      <h2 className="brd-gate-title">Proposal Studio is a Pro feature</h2>
       <p className="brd-gate-desc">
         Select multiple mutual funds and see combined sector/stock exposure, fund overlap
         detection, and M-Cap allocation — everything a real investment proposal covers, in
@@ -89,7 +89,7 @@ function PfcProGate({ session }) {
   );
 }
 
-function PortfolioCreatorTool() {
+function ProposalStudioTool() {
   const [selectedFunds, setSelectedFunds] = useState([]); // [{amfiCode, schemeName, allocationPct}]
   const [casFunds, setCasFunds] = useState([]);            // [{amfiCode, schemeName}] deduped from CAS
   const [casLoading, setCasLoading] = useState(true);
@@ -159,7 +159,7 @@ function PortfolioCreatorTool() {
   useEffect(() => {
     selectedFunds.forEach(({ amfiCode, schemeName }) => {
       if (holdingsByFund[amfiCode] || holdingsError[amfiCode]) return;
-      fetch(`/api/portfolio-creator/holdings?amfiCode=${encodeURIComponent(amfiCode)}&schemeName=${encodeURIComponent(schemeName)}`)
+      fetch(`/api/proposal-studio/holdings?amfiCode=${encodeURIComponent(amfiCode)}&schemeName=${encodeURIComponent(schemeName)}`)
         .then((r) => r.json())
         .then((data) => {
           if (data.error) {

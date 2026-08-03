@@ -1,7 +1,7 @@
 /**
- * app/api/portfolio-creator/holdings/route.js
+ * app/api/proposal-studio/holdings/route.js
  *
- * GET /api/portfolio-creator/holdings?amfiCode=118955&schemeName=HDFC%20Flexi%20Cap%20Fund
+ * GET /api/proposal-studio/holdings?amfiCode=118955&schemeName=HDFC%20Flexi%20Cap%20Fund
  *
  * Resolves a fund (by AMFI code + name) against an external scheme-detail
  * data source and returns its holdings plus scheme-level fields (AUM,
@@ -10,7 +10,7 @@
  * most monthly, so a 7-day TTL is generous without going stale.
  */
 
-const CACHE_PREFIX = 'portfolio-creator-holdings/';
+const CACHE_PREFIX = 'proposal-studio-holdings/';
 const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 
@@ -123,7 +123,7 @@ async function blobPut(amfiCode, data) {
       token: BLOB_TOKEN,
     });
   } catch (e) {
-    console.error('[portfolio-creator/holdings] Blob write failed:', e.message);
+    console.error('[proposal-studio/holdings] Blob write failed:', e.message);
   }
 }
 
@@ -228,7 +228,7 @@ export async function GET(request) {
     if (!data) return Response.json({ error: 'No holdings data found for this fund' }, { status: 404 });
     return Response.json({ ...data, source: 'live' });
   } catch (err) {
-    console.error('[portfolio-creator/holdings]', err.message);
+    console.error('[proposal-studio/holdings]', err.message);
     return Response.json({ error: err.message }, { status: 500 });
   }
 }

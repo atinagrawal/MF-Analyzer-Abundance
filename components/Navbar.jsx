@@ -34,7 +34,7 @@ const NAV_TOOLS = [
   { key: 'pms-screener', label: '🏆 PMS Screener',    href: '/pms-screener' },
   { key: 'screener',     label: '🔎 MF Screener',     href: '/screener' },
   { key: 'breadth',        label: '📊 Market Breadth',    href: '/market-breadth' },
-  { key: 'portfolio-creator', label: '🧩 Portfolio Creator', href: '/portfolio-creator' },
+  { key: 'proposal-studio', label: '🧩 Proposal Studio', href: '/proposal-studio' },
   { key: 'contact',        label: '📞 Contact',          href: 'https://www.getabundance.in/contact-us', external: true },
 ];
 
