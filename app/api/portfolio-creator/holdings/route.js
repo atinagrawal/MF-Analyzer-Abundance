@@ -40,6 +40,13 @@ function cleanSearchTerm(schemeName) {
     .replace(/\bPlan\b/gi, '')
     .replace(/\b(Growth|IDCW|Dividend)\b/gi, '')
     .replace(/\b(Payout|Reinvestment|Reinvest|Bonus|Option|Quarterly|Monthly|Weekly|Daily|Annual)\b/gi, '')
+    // Groww's own scheme titles inconsistently include the word "Fund" (e.g.
+    // "HDFC Flexi Cap Direct Plan-Growth" has no "Fund", but "HDFC Focused
+    // Fund" does) -- stripped here too so the normalized-name comparison in
+    // resolveSearchId lines up regardless of which form Groww used. Verified
+    // live (2026-08-03) this doesn't hurt query relevance or create
+    // collisions across similar fund names in the same AMC family.
+    .replace(/\bFund\b/gi, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -57,7 +64,18 @@ async function resolveSearchId(amfiCode, schemeName) {
   // `.data.content` there means `(parsed JSON).content`, i.e. the same
   // top-level `content` field this route reads directly.)
   const candidates = json?.content || [];
-  const match = candidates.find((c) => String(c.scheme_code) === String(amfiCode));
+  // Groww's search index only carries the Direct-plan variant of a scheme,
+  // so its scheme_code is always the Direct plan's AMFI code. A Regular-plan
+  // fund (the common case for CAS-imported holdings) will never match on
+  // scheme_code alone even though Direct/Regular share identical underlying
+  // holdings. Fall back to a normalized-name match (same cleanSearchTerm
+  // used to build the query) so Regular-plan funds resolve too, while still
+  // preferring the exact scheme_code match when it's the Direct plan itself.
+  // Live testing (2026-08-03): each candidate's display name is on a `title`
+  // field, e.g. "HDFC Flexi Cap Direct Plan-Growth" -- there is no `name` field.
+  const normalizedTerm = term.toLowerCase();
+  const match = candidates.find((c) => String(c.scheme_code) === String(amfiCode))
+    || candidates.find((c) => cleanSearchTerm(c.title).toLowerCase() === normalizedTerm);
   return match ? match.search_id : null;
 }
 
