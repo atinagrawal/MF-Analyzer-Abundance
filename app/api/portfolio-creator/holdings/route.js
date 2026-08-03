@@ -125,6 +125,7 @@ async function fetchFresh(amfiCode, schemeName) {
     risk: detail.risk ?? null,
     category: detail.category ?? null,
     subCategory: detail.sub_category ?? null,
+    benchmarkName: detail.benchmark_name ?? null,
     holdings: normalizeHoldings(detail.holdings),
   };
 }

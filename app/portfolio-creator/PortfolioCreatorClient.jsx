@@ -213,6 +213,8 @@ function PortfolioCreatorTool() {
             )}
 
             {mCapIndex && <MCapTable selectedFunds={selectedFunds} readyFunds={readyFunds} mCapIndex={mCapIndex} />}
+
+            <BenchmarkSection selectedFunds={selectedFunds} holdingsByFund={holdingsByFund} />
           </>
         );
       })()}
@@ -333,6 +335,56 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex }) {
               <td className="pfc-table-pct">{r.mid.toFixed(1)}%</td>
               <td className="pfc-table-pct">{r.small.toFixed(1)}%</td>
               <td className="pfc-table-pct">{r.unclassified.toFixed(1)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+function BenchmarkSection({ selectedFunds, holdingsByFund }) {
+  const [benchData, setBenchData] = useState({}); // amfiCode -> {index, data} | null
+
+  useEffect(() => {
+    selectedFunds.forEach((f) => {
+      const d = holdingsByFund[f.amfiCode];
+      if (!d?.benchmarkName || benchData[f.amfiCode] !== undefined) return;
+      fetch(`/api/nifty-tri?index=${encodeURIComponent(d.benchmarkName)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((res) => setBenchData((prev) => ({ ...prev, [f.amfiCode]: res })))
+        .catch(() => setBenchData((prev) => ({ ...prev, [f.amfiCode]: null })));
+    });
+  }, [selectedFunds, holdingsByFund, benchData]);
+
+  const rows = selectedFunds
+    .map((f) => {
+      const d = holdingsByFund[f.amfiCode];
+      const bench = benchData[f.amfiCode];
+      if (!d?.benchmarkName || !bench?.data?.length) return null;
+      const first = bench.data[0].value;
+      const last = bench.data[bench.data.length - 1].value;
+      const benchReturn = ((last - first) / first) * 100;
+      return { name: f.schemeName, benchmarkName: bench.index, benchReturn };
+    })
+    .filter(Boolean);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <section className="pfc-section">
+      <h2 className="pfc-section-title">Fund vs. Benchmark</h2>
+      <p className="pfc-hint">Benchmark series is a best-effort price-index match — see the fund's own factsheet for its official benchmark return.</p>
+      <table className="pfc-table pfc-table-wide">
+        <thead>
+          <tr><th>Fund</th><th>Benchmark</th><th>Benchmark return (full history)</th></tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.name}>
+              <td>{r.name}</td>
+              <td>{r.benchmarkName}</td>
+              <td className="pfc-table-pct">{r.benchReturn.toFixed(1)}%</td>
             </tr>
           ))}
         </tbody>
