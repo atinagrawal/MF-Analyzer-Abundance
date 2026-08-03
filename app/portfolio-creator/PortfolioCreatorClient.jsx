@@ -17,7 +17,7 @@ export default function PortfolioCreatorClient() {
       <Navbar activePage="portfolio-creator" />
       <main className="pfc-page">
         <h1 className="pfc-title">Portfolio Creator</h1>
-        <p className="pfc-subtitle">Combine funds to see overlap, exposure, and benchmark comparison in one view.</p>
+        <p className="pfc-subtitle">Combine funds to see overlap, exposure, and scheme details in one view.</p>
 
         {status !== 'loading' && !isAuthed && <PfcSignInGate />}
         {status !== 'loading' && isAuthed && !isPro && <PfcProGate session={session} />}
@@ -35,7 +35,7 @@ function PfcSignInGate() {
       <h2 className="brd-gate-title">Sign in to use Portfolio Creator</h2>
       <p className="brd-gate-desc">
         Select multiple mutual funds and see combined sector/stock exposure, fund overlap,
-        M-Cap allocation, and benchmark comparison — everything a real investment proposal covers.
+        and M-Cap allocation — everything a real investment proposal covers.
       </p>
       <div className="brd-gate-actions">
         <button className="brd-gate-btn" onClick={() => signIn()}>Sign in to continue →</button>
@@ -70,8 +70,8 @@ function PfcProGate({ session }) {
       <h2 className="brd-gate-title">Portfolio Creator is a Pro feature</h2>
       <p className="brd-gate-desc">
         Select multiple mutual funds and see combined sector/stock exposure, fund overlap
-        detection, M-Cap allocation, and benchmark comparison — everything a real investment
-        proposal covers, in one view.
+        detection, and M-Cap allocation — everything a real investment proposal covers, in
+        one view.
       </p>
       <div className="brd-gate-pricing">
         <span className="brd-gate-amount">₹499</span>
@@ -384,56 +384,6 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex }) {
             <td className="pfc-table-pct">{weightedAvg.small.toFixed(1)}%</td>
             <td className="pfc-table-pct">{weightedAvg.unclassified.toFixed(1)}%</td>
           </tr>
-        </tbody>
-      </table>
-    </section>
-  );
-}
-
-function BenchmarkSection({ selectedFunds, holdingsByFund }) {
-  const [benchData, setBenchData] = useState({}); // amfiCode -> {index, data} | null
-
-  useEffect(() => {
-    selectedFunds.forEach((f) => {
-      const d = holdingsByFund[f.amfiCode];
-      if (!d?.benchmarkName || benchData[f.amfiCode] !== undefined) return;
-      fetch(`/api/nifty-tri?index=${encodeURIComponent(d.benchmarkName)}`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((res) => setBenchData((prev) => ({ ...prev, [f.amfiCode]: res })))
-        .catch(() => setBenchData((prev) => ({ ...prev, [f.amfiCode]: null })));
-    });
-  }, [selectedFunds, holdingsByFund, benchData]);
-
-  const rows = selectedFunds
-    .map((f) => {
-      const d = holdingsByFund[f.amfiCode];
-      const bench = benchData[f.amfiCode];
-      if (!d?.benchmarkName || !bench?.data?.length) return null;
-      const first = bench.data[0].value;
-      const last = bench.data[bench.data.length - 1].value;
-      const benchReturn = ((last - first) / first) * 100;
-      return { name: f.schemeName, benchmarkName: bench.index, benchReturn };
-    })
-    .filter(Boolean);
-
-  if (rows.length === 0) return null;
-
-  return (
-    <section className="pfc-section">
-      <h2 className="pfc-section-title">Fund vs. Benchmark</h2>
-      <p className="pfc-hint">Benchmark series is a best-effort price-index match — see the fund's own factsheet for its official benchmark return.</p>
-      <table className="pfc-table pfc-table-wide">
-        <thead>
-          <tr><th>Fund</th><th>Benchmark</th><th>Benchmark return (full history)</th></tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.name}>
-              <td>{r.name}</td>
-              <td>{r.benchmarkName}</td>
-              <td className="pfc-table-pct">{r.benchReturn.toFixed(1)}%</td>
-            </tr>
-          ))}
         </tbody>
       </table>
     </section>
