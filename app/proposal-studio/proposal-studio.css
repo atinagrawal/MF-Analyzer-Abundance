@@ -63,6 +63,7 @@
 .pfc-table tr:last-child td { border-bottom: none; }
 .pfc-table-pct { font: 500 13px JetBrains Mono, monospace; text-align: right !important; }
 .pfc-table-wide th { font: 600 11px Raleway, sans-serif; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.pfc-risk-benchmark-note { font: 400 10px Raleway, sans-serif; color: var(--muted); }
 
 .pfc-show-all { display: block; margin-top: 10px; border: none; background: none; color: var(--g2); font: 600 12px Raleway, sans-serif; cursor: pointer; padding: 0; }
 .pfc-show-all:hover { color: var(--g1); text-decoration: underline; }

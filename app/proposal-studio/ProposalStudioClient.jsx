@@ -5,6 +5,7 @@ import { useSession, signIn } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
+import RiskGauge from '@/components/RiskGauge';
 import { startCheckout } from '@/lib/checkoutClient';
 import { getMFLogoFromSchemeName } from '@/lib/providerLogos';
 import { combineExposure, computeOverlap, computeMCapAllocation, normalizeName, isComparableHolding } from '@/lib/portfolioAnalysis';
@@ -606,9 +607,20 @@ function ExposureTable({ title, rows, fullRows, chart }) {
   );
 }
 
-// TODO: AUM and expense ratio removed from this table -- both are Direct-plan-only
-// values from the underlying data source, misleading for a Regular-plan proposal.
-// Re-add once a reliable per-plan (Direct vs Regular) source is found.
+// TODO: Expense ratio still not shown here -- it's a Direct-plan-only value
+// from the underlying data source, misleading for a Regular-plan proposal.
+// Re-add once a reliable per-plan (Direct vs Regular) source is found. AUM
+// and Inception Date below come from data/amfi-aum.json instead (AMFI's own
+// scheme-level AUM disclosure), which is plan-agnostic, so no such caveat
+// applies to those two columns.
+//
+// RISK_SCORE_BY_LABEL: RiskGauge needs a numeric score (1-7) to position the
+// needle, but /api/proposal-studio/holdings only returns the label (from the
+// underlying data source's own "risk" field, or the benchmark fallback's
+// label) -- map label back to the same score scale RiskGauge already uses
+// via RISK_CONFIG's ordering.
+const RISK_SCORE_BY_LABEL = { 'Low': 1, 'Low To Moderate': 2, 'Moderate': 3, 'Moderately High': 4, 'High': 5, 'Very High': 6 };
+
 function SchemeDetailsTable({ selectedFunds, holdingsByFund }) {
   return (
     <CollapsibleSection title="Scheme Details">
@@ -619,6 +631,8 @@ function SchemeDetailsTable({ selectedFunds, holdingsByFund }) {
               <th>Fund</th>
               <th>Category</th>
               <th>Risk</th>
+              <th className="pfc-table-pct">AUM (Cr)</th>
+              <th>Inception</th>
               <th className="pfc-table-pct">Equity Holdings</th>
             </tr>
           </thead>
@@ -631,7 +645,12 @@ function SchemeDetailsTable({ selectedFunds, holdingsByFund }) {
                 <tr key={f.amfiCode}>
                   <td>{f.schemeName}</td>
                   <td>{d.category}{d.subCategory ? ` · ${d.subCategory}` : ''}</td>
-                  <td>{d.risk || '—'}</td>
+                  <td>
+                    {d.risk ? <RiskGauge label={d.risk} score={RISK_SCORE_BY_LABEL[d.risk] || 3} /> : '—'}
+                    {d.riskSource === 'benchmark' && <span className="pfc-risk-benchmark-note"> (benchmark)</span>}
+                  </td>
+                  <td className="pfc-table-pct">{d.aumCr != null ? d.aumCr.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—'}</td>
+                  <td>{d.launchDate || '—'}</td>
                   <td className="pfc-table-pct">{equityCount}</td>
                 </tr>
               );
