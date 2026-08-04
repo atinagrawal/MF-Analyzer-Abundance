@@ -1,12 +1,16 @@
-name: Quarterly AMFI AUM Sync
+name: Monthly AMFI AUM Sync
 
 on:
   schedule:
-    # Run on the 5th of Jan/Apr/Jul/Oct at 03:00 UTC -- gives AMFI a few
-    # days after each quarter-end to publish the new quarter's Average AUM
-    # figures (the API itself lags by roughly a month at quarter boundaries,
-    # per the As_At_The_End_Of field observed during development).
-    - cron: '0 3 5 1,4,7,10 *'
+    # Run on the 15th of every month at 03:00 UTC. The underlying
+    # Average_AUM_For_The_Quarter figure itself only changes 4x/year, but
+    # the exact day AMFI publishes each new quarter isn't documented, so a
+    # monthly run (rather than trying to time a quarterly one precisely)
+    # guarantees the new quarter's figure is picked up within 15 days of
+    # publication instead of risking up to 3 months of staleness. The 15th
+    # was chosen as a safe buffer -- AMFI is expected to have published by
+    # then. Re-running on an unchanged quarter is harmless (idempotent).
+    - cron: '0 3 15 * *'
   workflow_dispatch:
 
 jobs:
@@ -35,6 +39,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to AMFI AUM data."
           else
-            git commit -m "chore: quarterly update of AMFI scheme AUM data"
+            git commit -m "chore: monthly sync of AMFI scheme AUM data"
             git push
           fi
