@@ -6,7 +6,7 @@
 //
 // Cached 12 hours (data is monthly, no point hitting PDF on every request)
 
-import https from 'https';
+import { fetchPdfText, fetchRiskometer } from '../../lib/riskometer';
 
 const MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 const MONTH_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -104,38 +104,6 @@ const INDEX_META = {
 
 const KNOWN_NAMES = Object.keys(INDEX_META);
 
-async function fetchPdfText(url) {
-  // Fetch the PDF binary
-  const buffer = await new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 Chrome/120.0.0.0 Safari/537.36' } }, res => {
-      const isPdf = res.headers['content-type']?.includes('pdf') || res.headers['content-type']?.includes('octet-stream');
-      if (res.statusCode !== 200 || !isPdf) {
-        // Drain response
-        res.resume();
-        return resolve({ status: res.statusCode !== 200 ? res.statusCode : 404, text: null });
-      }
-      const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve({ status: res.statusCode, buffer: Buffer.concat(chunks) }));
-    }).on('error', reject).setTimeout(25000, function() { this.destroy(new Error('PDF fetch timeout')); });
-  });
-
-  if (!buffer.buffer) return { status: buffer.status, text: null };
-
-  try {
-    // Use pdf-parse to extract text
-    const pdfParse = (await import('pdf-parse')).default;
-    const data = await pdfParse(buffer.buffer, {
-      // Extract all pages as text
-      max: 0,
-    });
-    return { status: 200, text: data.text };
-  } catch (err) {
-    console.error(`[fetchPdfText] Error parsing PDF from ${url}:`, err.message);
-    return { status: 404, text: null };
-  }
-}
-
 function parsePdfText(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const indices = [];
@@ -222,55 +190,6 @@ function parsePdfText(text) {
 }
 
 
-
-// Riskometer URL pattern: NSE_Indices_Riskometer_YYYY-MM.pdf
-// Try current month, fall back to previous month
-function getRiskometerUrl(year, month) {
-  // month: 1-12
-  const mm = String(month).padStart(2, '0');
-  return `https://niftyindices.com/Benchmark_Riskometer/NSE_Indices_Riskometer_${year}-${mm}.pdf`;
-}
-
-async function fetchRiskometer() {
-  const now = new Date();
-  // Try previous month (riskometer typically lags by ~1 month vs dashboard)
-  const attempts = [];
-  for (let i = 1; i <= 3; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    attempts.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
-  }
-
-  for (const { year, month } of attempts) {
-    const url = getRiskometerUrl(year, month);
-    try {
-      const { status, text } = await fetchPdfText(url);
-      if (status === 200 && text) {
-        return parseRiskometer(text);
-      }
-    } catch(e) { /* try next */ }
-  }
-  return {}; // graceful fallback — riskometer is optional
-}
-
-function parseRiskometer(text) {
-  // pdf-parse v1.1.1 renders each row with all columns concatenated, no spaces between fields:
-  // "1Nifty 505.33Very HighBroad Market"  (single-digit serials, no space)
-  // "119   Nifty100 Enhanced ESG5.37Very HighThematic"  (3-digit serials, trailing spaces)
-  // The score is always 1.xx–6.xx (single leading digit), which safely distinguishes
-  // it from trailing digits in index names (e.g. "50" in "Nifty 50").
-  // Strategy: lowercase the parsed name for case-insensitive matching at enrichment time.
-  const result = {};
-  const LABELS = 'Very High|Moderately High|Moderately Low|High|Low To Moderate|Moderate|Low';
-  const rowRe = new RegExp(`^\\d+\\s*([A-Z].+?)([1-9]\\.\\d{2})(${LABELS})`);
-  for (const line of text.split('\n').map(l => l.trim()).filter(Boolean)) {
-    const m = rowRe.exec(line);
-    if (m) {
-      // Store by lowercase key so INDEX_META keys like 'NIFTY 50' match 'Nifty 50'
-      result[m[1].trim().toLowerCase()] = { score: parseFloat(m[2]), label: m[3] };
-    }
-  }
-  return result;
-}
 
 // ── Fixed Income PDF — Hybrid Indices parser ────────────────────────────────
 // Source: niftyindices.com/Index_Dashboard_Fixed_Income/Index_Dashboard_FixedIncome_MAR2026.pdf
