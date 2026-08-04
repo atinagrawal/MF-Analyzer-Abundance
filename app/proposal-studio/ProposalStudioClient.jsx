@@ -327,6 +327,21 @@ function ProposalStudioTool() {
             {errorNotices}
             {pendingCount > 0 && <div className="pfc-hint">Loading holdings for {pendingCount} more fund(s)…</div>}
 
+            <div className="pfc-actions">
+              <button
+                className="pfc-export-btn"
+                disabled={pendingCount > 0}
+                title={pendingCount > 0 ? 'Wait for all fund holdings to finish loading before exporting' : undefined}
+                onClick={() => exportProposalPDF({
+                  proposalType, sipFrequency, totalAmount, selectedFunds,
+                  assetAllocation, sectorExposure, stockExposure, readyFunds, allocations, mCapIndex,
+                  erroredFunds,
+                })}
+              >
+                {pendingCount > 0 ? 'Export / Print Proposal (loading…)' : 'Export / Print Proposal'}
+              </button>
+            </div>
+
             <ExposureTable title="Asset Allocation" rows={assetAllocation} />
             <ExposureTable title="Sector Exposure" rows={sectorExposure} />
             <ExposureTable title="Security Exposure" rows={stockExposure} fullRows={fullSecurityExposure(readyFunds, allocations)} />
@@ -391,21 +406,155 @@ function fullSecurityExposure(funds, allocations) {
     .sort((a, b) => b.pct - a.pct);
 }
 
+// Branded print/PDF export -- opens a self-contained HTML document in a new
+// window and triggers the browser's print dialog (Save as PDF), matching the
+// pattern already established in app/backtest/page.js's doExport(). Recomputes
+// overlap/M-Cap from the same lib/portfolioAnalysis functions the live tables
+// use, rather than threading pre-built rows through, so this stays correct if
+// those functions change.
+function exportProposalPDF({
+  proposalType, sipFrequency, totalAmount, selectedFunds,
+  assetAllocation, sectorExposure, stockExposure, readyFunds, allocations, mCapIndex,
+  erroredFunds,
+}) {
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
+  const dateStr = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  const typeLabel = proposalType === 'sip' ? `SIP (${sipFrequency === 'daily' ? 'Daily' : 'Monthly'})` : 'Lumpsum';
+
+  const kpi = (l, v) => `<div class="banner-cell"><div class="banner-lbl">${l}</div><div class="banner-val">${v}</div></div>`;
+  const banner = [
+    kpi(`Total ${proposalType === 'sip' ? 'SIP' : 'Lumpsum'}`, inr(totalAmount)),
+    kpi('Funds', String(selectedFunds.length)),
+    kpi('Type', typeLabel),
+  ].join('');
+
+  const fundRows = selectedFunds.map((f) => {
+    const logo = getMFLogoFromSchemeName(f.schemeName);
+    const logoImg = logo
+      ? `<img src="${logo}" alt="" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:6px;border-radius:3px;border:1px solid #d7e7d8" onerror="this.style.display='none'">`
+      : '';
+    const pct = totalAmount > 0 ? (f.amount / totalAmount) * 100 : 0;
+    return `<tr><td>${logoImg}${esc(f.schemeName)}</td><td class="num">${inr(f.amount)}</td><td class="num">${pct.toFixed(1)}%</td></tr>`;
+  }).join('');
+
+  const pctRows = (rows) => rows.map((r) => `<tr><td>${esc(r.name)}</td><td class="num">${r.pct.toFixed(2)}%</td></tr>`).join('');
+  const exposureSection = (title, rows) => rows.length === 0 ? '' : `
+    <div class="sec">${title}</div>
+    <table class="ptable"><tbody>${pctRows(rows)}</tbody></table>`;
+
+  // The "Selected Funds" table below lists every fund with its amount, but
+  // the analysis sections (allocation/exposure/overlap/M-Cap) only cover
+  // readyFunds -- a fund whose holdings failed to load is silently absent
+  // from those percentages. Call that out explicitly rather than letting
+  // the numbers look complete when they aren't.
+  const erroredNoteHTML = erroredFunds && erroredFunds.length > 0
+    ? `<div class="meta" style="margin-top:10px">&#9888;&#65039; Excluded from Asset Allocation, Sector/Security Exposure, Overlap, and M-Cap Allocation below (holdings data unavailable): ${erroredFunds.map((f) => esc(f.schemeName)).join('; ')}.</div>`
+    : '';
+
+  let overlapHTML = '';
+  if (readyFunds.length >= 2) {
+    const grid = computeOverlap(readyFunds);
+    const names = readyFunds.map((f) => selectedFunds.find((s) => s.amfiCode === f.amfiCode)?.schemeName || f.amfiCode);
+    overlapHTML = `
+      <div class="sec">Portfolio Overlap (Named Holdings)</div>
+      <table class="ptable"><thead><tr><th></th>${names.map((n) => `<th class="num">${esc(n)}</th>`).join('')}</tr></thead>
+      <tbody>${grid.map((row, i) => `<tr><th style="text-align:left">${esc(names[i])}</th>${row.map((v, j) => `<td class="num${i === j ? ' diag' : ''}">${v.toFixed(1)}%</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  }
+
+  let mcapHTML = '';
+  if (mCapIndex && readyFunds.length > 0) {
+    const rows = readyFunds.map((f) => {
+      const name = selectedFunds.find((s) => s.amfiCode === f.amfiCode)?.schemeName || f.amfiCode;
+      const allocationPct = allocations[f.amfiCode] || 0;
+      return { name, allocationPct, ...computeMCapAllocation(f, mCapIndex) };
+    });
+    const totalAllocation = rows.reduce((s, r) => s + r.allocationPct, 0);
+    const weightedAvg = totalAllocation > 0
+      ? {
+          large: rows.reduce((s, r) => s + r.large * r.allocationPct, 0) / totalAllocation,
+          mid: rows.reduce((s, r) => s + r.mid * r.allocationPct, 0) / totalAllocation,
+          small: rows.reduce((s, r) => s + r.small * r.allocationPct, 0) / totalAllocation,
+          unclassified: rows.reduce((s, r) => s + r.unclassified * r.allocationPct, 0) / totalAllocation,
+        }
+      : { large: 0, mid: 0, small: 0, unclassified: 0 };
+    mcapHTML = `
+      <div class="sec">Scheme M-Cap Allocation</div>
+      <table class="ptable"><thead><tr><th style="text-align:left">Fund</th><th class="num">Large Cap</th><th class="num">Mid Cap</th><th class="num">Small Cap</th><th class="num">Unclassified</th></tr></thead>
+      <tbody>${rows.map((r) => `<tr><td>${esc(r.name)}</td><td class="num">${r.large.toFixed(1)}%</td><td class="num">${r.mid.toFixed(1)}%</td><td class="num">${r.small.toFixed(1)}%</td><td class="num">${r.unclassified.toFixed(1)}%</td></tr>`).join('')}
+      <tr class="avg"><td>Portfolio (weighted avg)</td><td class="num">${weightedAvg.large.toFixed(1)}%</td><td class="num">${weightedAvg.mid.toFixed(1)}%</td><td class="num">${weightedAvg.small.toFixed(1)}%</td><td class="num">${weightedAvg.unclassified.toFixed(1)}%</td></tr>
+      </tbody></table>`;
+  }
+
+  const win = window.open('', '_blank', 'width=960,height=760');
+  if (!win) return;
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Investment Proposal | Abundance Financial Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px 36px}
+.ph{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:2.5px solid #2e7d32;margin-bottom:18px}
+.pt{font-size:1.05rem;font-weight:800;color:#2e7d32}.pa{font-size:.6rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:2px}
+.logo{height:44px;object-fit:contain;mix-blend-mode:multiply}
+.sec{font-size:.56rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#5e8a5e;margin:16px 0 8px;display:flex;align-items:center;gap:7px}
+.sec::after{content:"";flex:1;height:1px;background:#c2dfc2}
+.banner-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.banner-cell{background:#edf6ed;border:1.5px solid #c2dfc2;border-radius:8px;padding:10px 12px;text-align:center}
+.banner-lbl{font-size:.52rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#5e8a5e;margin-bottom:3px}
+.banner-val{font-family:"JetBrains Mono",monospace;font-size:.9rem;font-weight:700;color:#1b5e20}
+.ptable{width:100%;border-collapse:collapse;font-size:.62rem;margin-bottom:4px}
+.ptable th{background:#1e4d20;color:#fff;font-size:.58rem;font-weight:700;letter-spacing:.5px;padding:6px 8px;text-align:right}
+.ptable th:first-child{text-align:left}
+.ptable td{padding:5px 8px;border-bottom:1px solid #e8f5e9;text-align:right;font-family:"JetBrains Mono",monospace;font-size:.65rem;font-weight:600}
+.ptable td:first-child{text-align:left;font-family:"Raleway",sans-serif;font-weight:700;max-width:220px}
+.ptable tr:nth-child(even) td{background:#f5fbf5}
+.ptable .diag{background:#dcedc8;font-weight:800}
+.ptable tr.avg td{background:#edf6ed;font-weight:800}
+.num{text-align:right}
+.dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:14px}
+.meta{font-size:.55rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:6px}
+@media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}
+</style></head><body>
+<div class="ph">
+  <div><div class="pt">Investment Proposal — ${esc(typeLabel)}</div>
+  <div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Fund &amp; SIF Distributor</div></div>
+  <img class="logo" src="/logo-og.png" onerror="this.style.display='none'">
+</div>
+<div class="banner-grid">${banner}</div>
+<div class="sec">Selected Funds</div>
+<table class="ptable"><thead><tr><th style="text-align:left">Fund</th><th class="num">Amount</th><th class="num">% of Total</th></tr></thead><tbody>${fundRows}</tbody></table>
+${erroredNoteHTML}
+${exposureSection('Asset Allocation', assetAllocation)}
+${exposureSection('Sector Exposure', sectorExposure)}
+${exposureSection('Security Exposure (Top Holdings)', stockExposure)}
+${overlapHTML}
+${mcapHTML}
+<div class="meta">Generated ${esc(dateStr)} · mfcalc.getabundance.in/proposal-studio</div>
+<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> This is an illustrative investment proposal, not investment advice. Mutual fund and SIF investments are subject to market risks; read all scheme-related documents carefully. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. Past performance is not indicative of future results. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
+</body></html>`);
+  win.document.close();
+  win.onload = () => setTimeout(() => { win.focus(); win.print(); }, 600);
+  setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} }, 1400);
+}
+
 function ExposureTable({ title, rows, fullRows }) {
   const [showAll, setShowAll] = useState(false);
   const displayRows = showAll && fullRows ? fullRows : rows;
   return (
     <CollapsibleSection title={title}>
-      <table className="pfc-table">
-        <tbody>
-          {displayRows.map((r) => (
-            <tr key={r.name}>
-              <td>{r.name}</td>
-              <td className="pfc-table-pct">{r.pct.toFixed(2)}%</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="pfc-table-wrap">
+        <table className="pfc-table">
+          <tbody>
+            {displayRows.map((r) => (
+              <tr key={r.name}>
+                <td>{r.name}</td>
+                <td className="pfc-table-pct">{r.pct.toFixed(2)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {fullRows && (
         <button className="pfc-show-all" onClick={() => setShowAll((s) => !s)}>
           {showAll ? 'Show top 10 only' : `Show all ${fullRows.length} holdings`}
@@ -421,31 +570,33 @@ function ExposureTable({ title, rows, fullRows }) {
 function SchemeDetailsTable({ selectedFunds, holdingsByFund }) {
   return (
     <CollapsibleSection title="Scheme Details">
-      <table className="pfc-table pfc-table-wide">
-        <thead>
-          <tr>
-            <th>Fund</th>
-            <th>Category</th>
-            <th>Risk</th>
-            <th>Equity Holdings</th>
-          </tr>
-        </thead>
-        <tbody>
-          {selectedFunds.map((f) => {
-            const d = holdingsByFund[f.amfiCode];
-            if (!d) return null;
-            const equityCount = d.holdings.filter((h) => h.assetClass === 'EQUITY').length;
-            return (
-              <tr key={f.amfiCode}>
-                <td>{f.schemeName}</td>
-                <td>{d.category}{d.subCategory ? ` · ${d.subCategory}` : ''}</td>
-                <td>{d.risk || '—'}</td>
-                <td className="pfc-table-pct">{equityCount}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div className="pfc-table-wrap">
+        <table className="pfc-table pfc-table-wide">
+          <thead>
+            <tr>
+              <th>Fund</th>
+              <th>Category</th>
+              <th>Risk</th>
+              <th className="pfc-table-pct">Equity Holdings</th>
+            </tr>
+          </thead>
+          <tbody>
+            {selectedFunds.map((f) => {
+              const d = holdingsByFund[f.amfiCode];
+              if (!d) return null;
+              const equityCount = d.holdings.filter((h) => h.assetClass === 'EQUITY').length;
+              return (
+                <tr key={f.amfiCode}>
+                  <td>{f.schemeName}</td>
+                  <td>{d.category}{d.subCategory ? ` · ${d.subCategory}` : ''}</td>
+                  <td>{d.risk || '—'}</td>
+                  <td className="pfc-table-pct">{equityCount}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </CollapsibleSection>
   );
 }
@@ -456,7 +607,7 @@ function OverlapGrid({ funds, selectedFunds }) {
 
   return (
     <CollapsibleSection title="Portfolio Overlap (Named Holdings)">
-      <div className="pfc-overlap-wrap">
+      <div className="pfc-table-wrap">
         <table className="pfc-table pfc-overlap-table">
           <thead>
             <tr>
@@ -504,35 +655,37 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex, allocations }) {
 
   return (
     <CollapsibleSection title="Scheme M-Cap Allocation">
-      <table className="pfc-table pfc-table-wide">
-        <thead>
-          <tr>
-            <th>Fund</th>
-            <th>Large Cap</th>
-            <th>Mid Cap</th>
-            <th>Small Cap</th>
-            <th>Unclassified</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.name}>
-              <td>{r.name}</td>
-              <td className="pfc-table-pct">{r.large.toFixed(1)}%</td>
-              <td className="pfc-table-pct">{r.mid.toFixed(1)}%</td>
-              <td className="pfc-table-pct">{r.small.toFixed(1)}%</td>
-              <td className="pfc-table-pct">{r.unclassified.toFixed(1)}%</td>
+      <div className="pfc-table-wrap">
+        <table className="pfc-table pfc-table-wide">
+          <thead>
+            <tr>
+              <th>Fund</th>
+              <th className="pfc-table-pct">Large Cap</th>
+              <th className="pfc-table-pct">Mid Cap</th>
+              <th className="pfc-table-pct">Small Cap</th>
+              <th className="pfc-table-pct">Unclassified</th>
             </tr>
-          ))}
-          <tr className="pfc-mcap-avg">
-            <td>Portfolio (weighted avg)</td>
-            <td className="pfc-table-pct">{weightedAvg.large.toFixed(1)}%</td>
-            <td className="pfc-table-pct">{weightedAvg.mid.toFixed(1)}%</td>
-            <td className="pfc-table-pct">{weightedAvg.small.toFixed(1)}%</td>
-            <td className="pfc-table-pct">{weightedAvg.unclassified.toFixed(1)}%</td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.name}>
+                <td>{r.name}</td>
+                <td className="pfc-table-pct">{r.large.toFixed(1)}%</td>
+                <td className="pfc-table-pct">{r.mid.toFixed(1)}%</td>
+                <td className="pfc-table-pct">{r.small.toFixed(1)}%</td>
+                <td className="pfc-table-pct">{r.unclassified.toFixed(1)}%</td>
+              </tr>
+            ))}
+            <tr className="pfc-mcap-avg">
+              <td>Portfolio (weighted avg)</td>
+              <td className="pfc-table-pct">{weightedAvg.large.toFixed(1)}%</td>
+              <td className="pfc-table-pct">{weightedAvg.mid.toFixed(1)}%</td>
+              <td className="pfc-table-pct">{weightedAvg.small.toFixed(1)}%</td>
+              <td className="pfc-table-pct">{weightedAvg.unclassified.toFixed(1)}%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </CollapsibleSection>
   );
 }
@@ -681,18 +834,22 @@ function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProp
           {selectedFunds.map((f) => (
             <div className="pfc-selected-item" key={f.amfiCode}>
               <div className="pfc-selected-row">
-                <ProviderAvatar name={f.schemeName} logoPath={getMFLogoFromSchemeName(f.schemeName)} size={24} radius={6} />
-                <span className="pfc-selected-name">{f.schemeName}</span>
-                <div className="pfc-amount-input"><i>₹</i>
-                  <input
-                    type="number"
-                    min="0"
-                    step="100"
-                    value={f.amount}
-                    onChange={(e) => onAmountChange(f.amfiCode, Math.max(0, +e.target.value || 0))}
-                  />
+                <div className="pfc-selected-main">
+                  <ProviderAvatar name={f.schemeName} logoPath={getMFLogoFromSchemeName(f.schemeName)} size={24} radius={6} />
+                  <span className="pfc-selected-name">{f.schemeName}</span>
                 </div>
-                <button className="pfc-remove" onClick={() => onRemove(f.amfiCode)}>Remove</button>
+                <div className="pfc-selected-controls">
+                  <div className="pfc-amount-input"><i>₹</i>
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={f.amount}
+                      onChange={(e) => onAmountChange(f.amfiCode, Math.max(0, +e.target.value || 0))}
+                    />
+                  </div>
+                  <button className="pfc-remove" onClick={() => onRemove(f.amfiCode)}>Remove</button>
+                </div>
               </div>
               {f.amount <= 0 && (
                 <div className="pfc-zero-hint">This fund has no amount yet — set one to include it in the analysis.</div>
