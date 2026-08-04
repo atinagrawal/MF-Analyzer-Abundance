@@ -370,7 +370,7 @@ function ProposalStudioTool() {
                 onClick={() => exportProposalPDF({
                   proposalType, sipFrequency, totalAmount, selectedFunds,
                   assetAllocation, sectorExposure, stockExposure, readyFunds, allocations, mCapIndex,
-                  erroredFunds,
+                  erroredFunds, clientName, clientEmail, clientPhone,
                 })}
               >
                 {pendingCount > 0 ? 'Export / Print Proposal (loading…)' : 'Export / Print Proposal'}
@@ -459,7 +459,7 @@ function fullSecurityExposure(funds, allocations) {
 function exportProposalPDF({
   proposalType, sipFrequency, totalAmount, selectedFunds,
   assetAllocation, sectorExposure, stockExposure, readyFunds, allocations, mCapIndex,
-  erroredFunds,
+  erroredFunds, clientName, clientEmail, clientPhone,
 }) {
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
@@ -484,8 +484,10 @@ function exportProposalPDF({
 
   const pctRows = (rows) => rows.map((r) => `<tr><td>${esc(r.name)}</td><td class="num">${r.pct.toFixed(2)}%</td></tr>`).join('');
   const exposureSection = (title, rows) => rows.length === 0 ? '' : `
+    <div class="sec-block">
     <div class="sec">${title}</div>
-    <table class="ptable"><tbody>${pctRows(rows)}</tbody></table>`;
+    <table class="ptable"><tbody>${pctRows(rows)}</tbody></table>
+    </div>`;
 
   // The "Selected Funds" table below lists every fund with its amount, but
   // the analysis sections (allocation/exposure/overlap/M-Cap) only cover
@@ -501,9 +503,11 @@ function exportProposalPDF({
     const grid = computeOverlap(readyFunds);
     const names = readyFunds.map((f) => selectedFunds.find((s) => s.amfiCode === f.amfiCode)?.schemeName || f.amfiCode);
     overlapHTML = `
+      <div class="sec-block">
       <div class="sec">Portfolio Overlap (Named Holdings)</div>
       <table class="ptable"><thead><tr><th></th>${names.map((n) => `<th class="num">${esc(n)}</th>`).join('')}</tr></thead>
-      <tbody>${grid.map((row, i) => `<tr><th style="text-align:left">${esc(names[i])}</th>${row.map((v, j) => `<td class="num${i === j ? ' diag' : ''}">${v.toFixed(1)}%</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+      <tbody>${grid.map((row, i) => `<tr><th style="text-align:left">${esc(names[i])}</th>${row.map((v, j) => `<td class="num${i === j ? ' diag' : ''}">${v.toFixed(1)}%</td>`).join('')}</tr>`).join('')}</tbody></table>
+      </div>`;
   }
 
   let mcapHTML = '';
@@ -523,11 +527,13 @@ function exportProposalPDF({
         }
       : { large: 0, mid: 0, small: 0, unclassified: 0 };
     mcapHTML = `
+      <div class="sec-block">
       <div class="sec">Scheme M-Cap Allocation</div>
       <table class="ptable"><thead><tr><th style="text-align:left">Fund</th><th class="num">Large Cap</th><th class="num">Mid Cap</th><th class="num">Small Cap</th><th class="num">Unclassified</th></tr></thead>
       <tbody>${rows.map((r) => `<tr><td>${esc(r.name)}</td><td class="num">${r.large.toFixed(1)}%</td><td class="num">${r.mid.toFixed(1)}%</td><td class="num">${r.small.toFixed(1)}%</td><td class="num">${r.unclassified.toFixed(1)}%</td></tr>`).join('')}
       <tr class="avg"><td>Portfolio (weighted avg)</td><td class="num">${weightedAvg.large.toFixed(1)}%</td><td class="num">${weightedAvg.mid.toFixed(1)}%</td><td class="num">${weightedAvg.small.toFixed(1)}%</td><td class="num">${weightedAvg.unclassified.toFixed(1)}%</td></tr>
-      </tbody></table>`;
+      </tbody></table>
+      </div>`;
   }
 
   const win = window.open('', '_blank', 'width=960,height=760');
@@ -559,15 +565,54 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 .dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:14px}
 .meta{font-size:.55rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:6px}
 @media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}
+.cover { min-height: 700px; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, #0a2e0a 0%, #1b5e20 50%, #2e7d32 100%); color: #fff; padding: 60px 50px; margin: -30px -36px 0; }
+.cover-logo img { height: 48px; object-fit: contain; margin-bottom: 30px; }
+.cover-title { font-size: 2.2rem; font-weight: 800; margin-bottom: 30px; }
+.cover-blocks { display: flex; gap: 40px; margin-bottom: 30px; }
+.cover-label { font-size: .6rem; letter-spacing: 1.5px; text-transform: uppercase; opacity: .65; margin-bottom: 4px; }
+.cover-name { font-size: 1.1rem; font-weight: 700; }
+.cover-detail { font-size: .8rem; opacity: .8; margin-top: 2px; }
+.cover-stats { margin-bottom: 20px; }
+.cover-date { opacity: .55; font-size: .75rem; }
+.page-break { page-break-after: always; }
+.running-header { display: none; }
+@media print {
+  .running-header { display: flex; align-items: center; gap: 8px; position: fixed; top: 0; left: 0; right: 0; padding: 8px 36px; background: #fff; border-bottom: 1px solid #e8f5e9; font-size: .6rem; color: #5e8a5e; font-weight: 700; z-index: 10; }
+  .running-header img { height: 16px; }
+  body { padding-top: 34px; }
+}
+.sec-block { page-break-inside: avoid; }
 </style></head><body>
+<div class="running-header"><img src="/logo-og.png" onerror="this.style.display='none'">Abundance Financial Services</div>
+<div class="cover">
+  <div class="cover-logo"><img src="/logo-og.png" onerror="this.style.display='none'"></div>
+  <div class="cover-title">Investment Proposal</div>
+  <div class="cover-blocks">
+    <div class="cover-block">
+      <div class="cover-label">Prepared For</div>
+      <div class="cover-name">${esc(clientName || 'Client')}</div>
+      ${clientEmail ? `<div class="cover-detail">${esc(clientEmail)}</div>` : ''}
+      ${clientPhone ? `<div class="cover-detail">${esc(clientPhone)}</div>` : ''}
+    </div>
+    <div class="cover-block">
+      <div class="cover-label">Prepared By</div>
+      <div class="cover-name">Atin Kumar Agrawal</div>
+      <div class="cover-detail">ARN-251838</div>
+    </div>
+  </div>
+  <div class="cover-stats banner-grid">${banner}</div>
+  <div class="cover-date">${esc(dateStr)}</div>
+</div>
+<div class="page-break"></div>
 <div class="ph">
   <div><div class="pt">Investment Proposal — ${esc(typeLabel)}</div>
   <div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Fund &amp; SIF Distributor</div></div>
   <img class="logo" src="/logo-og.png" onerror="this.style.display='none'">
 </div>
-<div class="banner-grid">${banner}</div>
+<div class="sec-block">
 <div class="sec">Selected Funds</div>
 <table class="ptable"><thead><tr><th style="text-align:left">Fund</th><th class="num">Amount</th><th class="num">% of Total</th></tr></thead><tbody>${fundRows}</tbody></table>
+</div>
 ${erroredNoteHTML}
 ${exposureSection('Asset Allocation', assetAllocation)}
 ${exposureSection('Sector Exposure', sectorExposure)}
