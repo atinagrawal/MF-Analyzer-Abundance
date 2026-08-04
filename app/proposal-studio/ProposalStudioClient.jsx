@@ -9,6 +9,7 @@ import { startCheckout } from '@/lib/checkoutClient';
 import { getMFLogoFromSchemeName } from '@/lib/providerLogos';
 import { combineExposure, computeOverlap, computeMCapAllocation, normalizeName, isComparableHolding } from '@/lib/portfolioAnalysis';
 import { PROPOSAL_STUDIO_FAQ } from '@/lib/proposalStudioFaq';
+import { donutChartSvg, barRankingSvg, overlapHeatmapSvg, stackedBarSvg } from '@/lib/chartSvg';
 
 export default function ProposalStudioClient() {
   const { data: session, status } = useSession();
@@ -374,9 +375,9 @@ function ProposalStudioTool() {
               </button>
             </div>
 
-            <ExposureTable title="Asset Allocation" rows={assetAllocation} />
-            <ExposureTable title="Sector Exposure" rows={sectorExposure} />
-            <ExposureTable title="Security Exposure" rows={stockExposure} fullRows={fullSecurityExposure(readyFunds, allocations)} />
+            <ExposureTable title="Asset Allocation" rows={assetAllocation} chart="donut" />
+            <ExposureTable title="Sector Exposure" rows={sectorExposure} chart="bars" />
+            <ExposureTable title="Security Exposure" rows={stockExposure} fullRows={fullSecurityExposure(readyFunds, allocations)} chart="bars" />
 
             <SchemeDetailsTable selectedFunds={selectedFunds} holdingsByFund={holdingsByFund} />
 
@@ -399,6 +400,13 @@ function ProposalStudioTool() {
       })()}
     </div>
   );
+}
+
+// `svg` is always our own generated string from lib/chartSvg.js (never
+// user-controlled raw HTML/markup) -- the same trust boundary already
+// relied on elsewhere in this file for scheme logos.
+function InlineSvg({ svg, className }) {
+  return <div className={className} dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
 function CollapsibleSection({ title, children, defaultOpen = true }) {
@@ -570,11 +578,13 @@ ${mcapHTML}
   setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} }, 1400);
 }
 
-function ExposureTable({ title, rows, fullRows }) {
+function ExposureTable({ title, rows, fullRows, chart }) {
   const [showAll, setShowAll] = useState(false);
   const displayRows = showAll && fullRows ? fullRows : rows;
   return (
     <CollapsibleSection title={title}>
+      {chart === 'donut' && <InlineSvg className="pfc-chart" svg={donutChartSvg(rows)} />}
+      {chart === 'bars' && <InlineSvg className="pfc-chart" svg={barRankingSvg(rows.slice(0, 10))} />}
       <div className="pfc-table-wrap">
         <table className="pfc-table">
           <tbody>
@@ -639,6 +649,7 @@ function OverlapGrid({ funds, selectedFunds }) {
 
   return (
     <CollapsibleSection title="Portfolio Overlap (Named Holdings)">
+      <InlineSvg className="pfc-chart pfc-chart-scroll" svg={overlapHeatmapSvg(names, grid)} />
       <div className="pfc-table-wrap">
         <table className="pfc-table pfc-overlap-table">
           <thead>
@@ -687,6 +698,7 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex, allocations }) {
 
   return (
     <CollapsibleSection title="Scheme M-Cap Allocation">
+      <InlineSvg className="pfc-chart pfc-chart-scroll" svg={stackedBarSvg(rows)} />
       <div className="pfc-table-wrap">
         <table className="pfc-table pfc-table-wide">
           <thead>

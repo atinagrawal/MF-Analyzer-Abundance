@@ -76,6 +76,10 @@
 
 .pfc-mcap-avg td { background: var(--surface2, #edf6ed); font-weight: 700; }
 
+.pfc-chart { margin-bottom: 16px; }
+.pfc-chart-scroll { overflow-x: auto; }
+.pfc-chart svg { max-width: 100%; height: auto; }
+
 .pfc-explainer { background: var(--surface, #fff); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 24px; font: 400 14px Raleway, sans-serif; line-height: 1.6; color: var(--text2, #333); }
 .pfc-explainer-list { margin-top: 12px; padding-left: 20px; }
 .pfc-explainer-list li { margin-bottom: 6px; }
