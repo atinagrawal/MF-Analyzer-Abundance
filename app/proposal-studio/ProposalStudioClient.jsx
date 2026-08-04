@@ -595,7 +595,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 .num{text-align:right}
 .dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:14px}
 .meta{font-size:.55rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:6px}
-@media print{body{padding:16px 20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:.8cm;size:A4 portrait}.cover{margin:-16px -20px 0}}
+@media print{body{padding:16px 20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:.8cm;size:A4 portrait}}
 .cover { min-height: 700px; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, #0a2e0a 0%, #1b5e20 50%, #2e7d32 100%); color: #fff; padding: 60px 50px; margin: -30px -36px 0; }
 .cover-logo img { height: 48px; object-fit: contain; margin-bottom: 30px; }
 .cover-title { font-size: 2.2rem; font-weight: 800; margin-bottom: 30px; }
@@ -611,6 +611,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
   .running-header { display: flex; align-items: center; gap: 8px; position: fixed; top: 0; left: 0; right: 0; padding: 8px 36px; background: #fff; border-bottom: 1px solid #e8f5e9; font-size: .6rem; color: #5e8a5e; font-weight: 700; z-index: 10; }
   .running-header img { height: 16px; }
   body { padding-top: 34px; }
+  .cover { margin: -16px -20px 0; }
 }
 .sec-block { page-break-inside: avoid; }
 </style></head><body>

@@ -242,7 +242,11 @@ async function run() {
   // smaller than the existing cache. Refuse to overwrite good data with a
   // truncated result -- this script runs unattended on a monthly GitHub
   // Actions schedule that auto-commits its output with no human review.
-  if (existingCount > 0 && variantsWritten < existingCount * 0.5) {
+  // Only applies to a genuine full, unrestricted, non-dry-run sync -- a
+  // deliberately scoped --limit-amcs=N smoke test (per this script's own
+  // header comment) or a --dry-run legitimately writes far fewer records
+  // than the full dataset, which isn't a failure signal.
+  if (!DRY_RUN && LIMIT_AMCS === 0 && existingCount > 0 && variantsWritten < existingCount * 0.5) {
     console.error(`[AMFI AUM Sync] Error: New record count (${variantsWritten}) is less than 50% of existing data/amfi-aum.json's record count (${existingCount}) -- likely a partial AMFI API failure.`);
     console.log('[AMFI AUM Sync] Preserving existing data/amfi-aum.json cache.');
     process.exit(1);
