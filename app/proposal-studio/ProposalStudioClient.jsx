@@ -150,7 +150,22 @@ function PfcProGate({ session }) {
   );
 }
 
+function ClientDetailsCard({ clientName, setClientName, clientEmail, setClientEmail, clientPhone, setClientPhone, onTouched }) {
+  const handleChange = (setter) => (e) => { onTouched(); setter(e.target.value); };
+  return (
+    <section className="pfc-client-details">
+      <h3>Client Details</h3>
+      <div className="pfc-client-fields">
+        <input className="pfc-client-input" placeholder="Client name" value={clientName} onChange={handleChange(setClientName)} />
+        <input className="pfc-client-input" type="email" placeholder="Client email" value={clientEmail} onChange={handleChange(setClientEmail)} />
+        <input className="pfc-client-input" type="tel" placeholder="Client phone" value={clientPhone} onChange={handleChange(setClientPhone)} />
+      </div>
+    </section>
+  );
+}
+
 function ProposalStudioTool() {
+  const { data: session } = useSession();
   const [selectedFunds, setSelectedFunds] = useState([]); // [{amfiCode, schemeName, amount, source: 'cas'|'manual', amountTouched}]
   const [casFunds, setCasFunds] = useState([]);            // [{amfiCode, schemeName, value}] deduped from CAS
   const [casLoading, setCasLoading] = useState(true);
@@ -159,6 +174,10 @@ function ProposalStudioTool() {
   const [mCapIndex, setMCapIndex] = useState(null);         // Map<normalizedName, category>
   const [proposalType, setProposalType] = useState('lumpsum'); // 'lumpsum' | 'sip'
   const [sipFrequency, setSipFrequency] = useState('monthly');  // 'daily' | 'monthly'
+  const [clientName, setClientName] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
+  const [clientFieldsTouched, setClientFieldsTouched] = useState(false);
 
   // Total is a derived sum of every selected fund's amount, not a separate
   // target you set first -- add funds, type an amount for each, the total
@@ -172,6 +191,13 @@ function ProposalStudioTool() {
       .then((d) => setMCapIndex(new Map(Object.entries(d.categories))))
       .catch(() => setMCapIndex(new Map()));
   }, []);
+
+  // Prefill client details from session, only until the user edits
+  useEffect(() => {
+    if (clientFieldsTouched) return;
+    if (session?.user?.name) setClientName(session.user.name);
+    if (session?.user?.email) setClientEmail(session.user.email);
+  }, [session, clientFieldsTouched]);
 
   // Load the user's CAS-derived fund list once on mount, including each
   // fund's real current value (units x NAV, same computation app/portfolio/page.jsx
@@ -274,6 +300,12 @@ function ProposalStudioTool() {
 
   return (
     <div className="pfc-tool">
+      <ClientDetailsCard
+        clientName={clientName} setClientName={setClientName}
+        clientEmail={clientEmail} setClientEmail={setClientEmail}
+        clientPhone={clientPhone} setClientPhone={setClientPhone}
+        onTouched={() => setClientFieldsTouched(true)}
+      />
       <FundPicker
         selectedFunds={selectedFunds}
         casFunds={casFunds}
