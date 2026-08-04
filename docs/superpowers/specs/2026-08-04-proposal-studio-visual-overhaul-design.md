@@ -67,11 +67,11 @@ const ASSUMED_CAGR = {
 - When neither the fund's own rating nor a resolvable benchmark rating exists, render nothing (empty gauge state), never a guessed value.
 - Label the fallback state distinctly (e.g. "(benchmark)" suffix) so it's never confused with the fund's own official rating.
 
-## 4. AUM
+## 4. AUM and Launch Date
 
-- Source: `data/amfi-aum.json`, produced by `scripts/sync_amfi_aum.js` (built and verified this session), keyed by AMFI scheme code: `{ [amfiCode]: { isin, schemeName, aumCr, asOf } }`.
+- Source: `data/amfi-aum.json`, produced by `scripts/sync_amfi_aum.js` (built and verified this session), keyed by AMFI scheme code: `{ [amfiCode]: { isin, schemeName, aumCr, asOf, launchDate } }`.
 - Refreshed quarterly via `.github/workflows/amfi-aum-sync.yml` (cron: 5th of Jan/Apr/Jul/Oct), matching the existing monthly BSE scheme-master sync's convention.
-- Scheme Details table gains an AUM column, reading directly from this file (looked up by the fund's `amfiCode` — already the tool's primary key for every selected fund) — no per-request live fetch needed, no Direct/Regular ambiguity since the sync resolves per plan-variant.
+- Scheme Details table gains AUM and Inception Date columns (matching NJ's "AUM (Rs. Cr.)" and "Inception Date" columns), reading directly from this file (looked up by the fund's `amfiCode` — already the tool's primary key for every selected fund) — no per-request live fetch needed, no Direct/Regular ambiguity since AUM resolves per plan-variant; launch date is scheme-level and identical across all of a scheme's plan variants.
 - Expense Ratio remains deferred — the Direct/Regular mismatch problem hasn't been solved for that field, and this sync doesn't cover it (AMFI's scheme-details API wasn't tested for expense ratio in this session).
 
 ## 5. Shared visual components
