@@ -17,6 +17,9 @@
  * special-casing needed here.
  */
 
+import amfiAum from '@/data/amfi-aum.json';
+import { fetchRiskometer, matchBenchmarkRisk } from '@/lib/riskometer';
+
 const CACHE_PREFIX = 'portfolio-creator-holdings/';
 const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
@@ -181,11 +184,28 @@ async function fetchFresh(amfiCode, schemeName) {
   if (!detail || !Array.isArray(detail.holdings)) return null;
   if (!schemeIdentityMatches(detail, amfiCode, schemeName)) return null;
 
+  const aumRecord = amfiAum[amfiCode] || null;
+
+  let risk = detail.risk ?? null;
+  let riskSource = risk ? 'own' : null;
+  if (!risk && detail.benchmark_name) {
+    const riskMap = await fetchRiskometer();
+    const benchmarkRisk = matchBenchmarkRisk(detail.benchmark_name, riskMap);
+    if (benchmarkRisk) {
+      risk = benchmarkRisk.label;
+      riskSource = 'benchmark';
+    }
+  }
+
   return {
     schemeName: detail.scheme_name || schemeName,
     aum: detail.aum ?? null,
+    aumCr: aumRecord?.aumCr ?? null,
+    aumAsOf: aumRecord?.asOf ?? null,
+    launchDate: aumRecord?.launchDate ?? null,
     expenseRatio: detail.expense_ratio ?? null,
-    risk: detail.risk ?? null,
+    risk,
+    riskSource,
     category: detail.category ?? null,
     subCategory: detail.sub_category ?? null,
     benchmarkName: detail.benchmark_name ?? null,
