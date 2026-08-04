@@ -75,6 +75,19 @@ test('buildProjectionTable: SIP grows Total Invested linearly with months elapse
   assert.ok(year5.projectedValue > year5.totalInvested);
 });
 
+test('buildProjectionTable: daily SIP is scaled to its monthly-equivalent, not treated as a monthly amount', () => {
+  const dailyRows = buildProjectionTable({ proposalType: 'sip', totalAmount: 500, sipFrequency: 'daily', blendedRate: 0.12 });
+  const monthlyRows = buildProjectionTable({ proposalType: 'sip', totalAmount: 500, sipFrequency: 'monthly', blendedRate: 0.12 });
+  const dailyYear5 = dailyRows.find((r) => r.year === 5);
+  const monthlyYear5 = monthlyRows.find((r) => r.year === 5);
+  // A ₹500/day SIP is a ~30.44x larger monthly outlay than a ₹500/month
+  // SIP -- Total Invested and Projected Value must scale accordingly, not
+  // come out identical (the pre-fix bug).
+  assert.ok(dailyYear5.totalInvested > monthlyYear5.totalInvested * 25);
+  assert.strictEqual(dailyYear5.totalInvested, 500 * 30.44 * 12 * 5);
+  assert.ok(dailyYear5.projectedValue > monthlyYear5.projectedValue * 25);
+});
+
 test('buildProjectionTable: zero rate makes projected value equal total invested (lumpsum)', () => {
   const rows = buildProjectionTable({ proposalType: 'lumpsum', totalAmount: 50000, blendedRate: 0 });
   for (const r of rows) assert.strictEqual(r.projectedValue, 50000);

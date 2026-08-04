@@ -549,14 +549,16 @@ function exportProposalPDF({
     </p>
     <table class="ptable"><thead><tr><th style="text-align:left">Year</th><th class="num">Total Invested</th><th class="num">Projected Value</th></tr></thead>
     <tbody>${projectionRows.map((r) => `<tr><td>${r.year}</td><td class="num">${inr(r.totalInvested)}</td><td class="num">${inr(r.projectedValue)}</td></tr>`).join('')}</tbody></table>
-    <p style="font-size:.55rem;color:#5e8a5e;margin-top:6px;">Past performance may or may not be sustained in future and is not a guarantee of any future returns.</p>
+    <p style="font-size:.55rem;color:#5e8a5e;margin-top:6px;">Past performance may or may not be sustained in future and is not a guarantee of any future returns. This is an illustration using AMFI's prescribed assumed rates, not a projection specific to the funds in this proposal.</p>
     </div>`;
 
   const schemeDetailRows = selectedFunds.map((f) => {
     const d = holdingsByFund[f.amfiCode];
     if (!d) return '';
     const aum = d.aumCr != null ? d.aumCr.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—';
-    return `<tr><td>${esc(f.schemeName)}</td><td>${esc(d.category || '—')}</td><td>${esc(d.risk || '—')}</td><td class="num">${aum}</td><td>${esc(d.launchDate || '—')}</td></tr>`;
+    const aumWithAsOf = d.aumCr != null && d.aumAsOf ? `${aum} <span style="font-size:.85em;color:#5e8a5e">(${esc(d.aumAsOf)})</span>` : aum;
+    const riskLabel = d.risk ? esc(d.risk) + (d.riskSource === 'benchmark' ? ' (benchmark)' : '') : '—';
+    return `<tr><td>${esc(f.schemeName)}</td><td>${esc(d.category || '—')}</td><td>${riskLabel}</td><td class="num">${aumWithAsOf}</td><td>${esc(d.launchDate || '—')}</td></tr>`;
   }).join('');
   const schemeDetailsHTML = `
     <div class="sec-block">
@@ -593,7 +595,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 .num{text-align:right}
 .dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:14px}
 .meta{font-size:.55rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:6px}
-@media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}
+@media print{body{padding:16px 20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:.8cm;size:A4 portrait}.cover{margin:-16px -20px 0}}
 .cover { min-height: 700px; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, #0a2e0a 0%, #1b5e20 50%, #2e7d32 100%); color: #fff; padding: 60px 50px; margin: -30px -36px 0; }
 .cover-logo img { height: 48px; object-fit: contain; margin-bottom: 30px; }
 .cover-title { font-size: 2.2rem; font-weight: 800; margin-bottom: 30px; }
@@ -728,7 +730,10 @@ function SchemeDetailsTable({ selectedFunds, holdingsByFund }) {
                     {d.risk ? <RiskGauge label={d.risk} score={RISK_SCORE_BY_LABEL[d.risk] || 3} /> : '—'}
                     {d.riskSource === 'benchmark' && <span className="pfc-risk-benchmark-note"> (benchmark)</span>}
                   </td>
-                  <td className="pfc-table-pct">{d.aumCr != null ? d.aumCr.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—'}</td>
+                  <td className="pfc-table-pct">
+                    {d.aumCr != null ? d.aumCr.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—'}
+                    {d.aumCr != null && d.aumAsOf && <span style={{ fontSize: '0.75em', color: 'var(--muted)' }}> ({d.aumAsOf})</span>}
+                  </td>
                   <td>{d.launchDate || '—'}</td>
                   <td className="pfc-table-pct">{equityCount}</td>
                 </tr>

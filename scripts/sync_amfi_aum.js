@@ -218,13 +218,33 @@ async function run() {
   console.log(`Plan variants with AUM written: ${variantsWritten}`);
   console.log(`Plan variants with unresolved ISIN (not in NAVAll.txt): ${variantsUnresolved}`);
 
+  const targetFile = path.join(process.cwd(), 'data', 'amfi-aum.json');
+  let existingCount = 0;
+  if (fs.existsSync(targetFile)) {
+    try {
+      existingCount = Object.keys(JSON.parse(fs.readFileSync(targetFile, 'utf8'))).length;
+    } catch (e) {
+      console.warn(`[AMFI AUM Sync] Could not parse existing data/amfi-aum.json to compare record counts: ${e.message}`);
+    }
+  }
+
   if (variantsWritten === 0) {
     console.error('[AMFI AUM Sync] Error: No AUM records could be resolved!');
-    const targetFile = path.join(process.cwd(), 'data', 'amfi-aum.json');
     if (fs.existsSync(targetFile)) {
       console.log('[AMFI AUM Sync] Preserving existing data/amfi-aum.json cache.');
       return;
     }
+    process.exit(1);
+  }
+
+  // Partial-failure guard: if AMFI's API degraded mid-run (most AMCs fail
+  // but a few succeed), variantsWritten would still be > 0 but drastically
+  // smaller than the existing cache. Refuse to overwrite good data with a
+  // truncated result -- this script runs unattended on a monthly GitHub
+  // Actions schedule that auto-commits its output with no human review.
+  if (existingCount > 0 && variantsWritten < existingCount * 0.5) {
+    console.error(`[AMFI AUM Sync] Error: New record count (${variantsWritten}) is less than 50% of existing data/amfi-aum.json's record count (${existingCount}) -- likely a partial AMFI API failure.`);
+    console.log('[AMFI AUM Sync] Preserving existing data/amfi-aum.json cache.');
     process.exit(1);
   }
 
