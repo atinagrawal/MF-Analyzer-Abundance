@@ -1,15 +1,17 @@
 /**
  * scripts/sync_amfi_aum.js
  *
- * Syncs quarterly Average AUM per scheme plan-variant (Direct/Regular x
- * Growth/IDCW all resolved separately -- this is what makes it usable where
+ * Syncs quarterly Average AUM (per scheme plan-variant -- Direct/Regular x
+ * Growth/IDCW all resolved separately, which is what makes it usable where
  * the Groww-sourced `aum` field on /api/proposal-studio/holdings isn't:
  * that field is Direct-plan-only and silently wrong for a Regular-plan
- * holding) from AMFI's own (undocumented) scheme-details API:
- *   1. GET /api/populate-mf                                  -> AMC list
- *   2. GET /api/populate-scheme?MF_ID=X                      -> scheme list per AMC
- *   3. GET /api/scheme-data?strMFId=X&strSDId=Y&strOption=NAV -> plan variants + ISIN
- *   4. GET /api/scheme-data?strMFId=X&strSDId=Y&strOption=AUM -> plan variants + AUM (Lakhs)
+ * holding) plus scheme launch date, from AMFI's own (undocumented)
+ * scheme-details API:
+ *   1. GET /api/populate-mf                                     -> AMC list
+ *   2. GET /api/populate-scheme?MF_ID=X                         -> scheme list per AMC
+ *   3. GET /api/scheme-data?strMFId=X&strSDId=Y&strOption=NAV    -> plan variants + ISIN
+ *   4. GET /api/scheme-data?strMFId=X&strSDId=Y&strOption=AUM    -> plan variants + AUM (Lakhs)
+ *   5. GET /api/scheme-details?MF_ID=X&scheme_id=Y               -> Launch_Date (scheme-level, one call per scheme_id, not per plan-variant)
  * NAV and AUM responses are joined by their shared `Scheme_NAV_Name`, then
  * each ISIN is resolved to this app's AMFI scheme code via NAVAll.txt (the
  * same join key/parsing approach scripts/sync_groww_exit_loads.js already
@@ -172,6 +174,16 @@ async function run() {
       const aumRows = Array.isArray(aumRes.data) ? aumRes.data : [];
       const aumByName = new Map(aumRows.map((r) => [r.Scheme_NAV_Name, r]));
 
+      // Launch_Date is a scheme-level fact (one date for the scheme_id,
+      // shared by every plan-variant under it) -- fetched once here rather
+      // than per plan-variant.
+      const detailsRes = await fetchJsonWithRetry(
+        `${AMFI_BASE}/scheme-details?MF_ID=${amc.mfId}&scheme_id=${scheme.scheme_id}`,
+      );
+      await sleep(PACING_MS);
+      const rawLaunchDate = detailsRes.data?.data?.[0]?.Launch_Date;
+      const launchDate = rawLaunchDate ? rawLaunchDate.split('T')[0] : null;
+
       for (const navRow of navRows) {
         const isin = navRow.ISIN_Div_Payout_ISIN_Growth;
         if (!isin || !isin.startsWith('INF')) continue;
@@ -190,6 +202,7 @@ async function run() {
           schemeName: navRow.Scheme_NAV_Name,
           aumCr: Math.round((aumRow.Average_AUM_For_The_Quarter / 100) * 100) / 100,
           asOf: aumRow.As_At_The_End_Of || null,
+          launchDate,
         };
         variantsWritten++;
       }
