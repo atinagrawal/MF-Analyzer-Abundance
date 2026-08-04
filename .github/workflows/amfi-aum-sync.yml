@@ -1,0 +1,40 @@
+name: Quarterly AMFI AUM Sync
+
+on:
+  schedule:
+    # Run on the 5th of Jan/Apr/Jul/Oct at 03:00 UTC -- gives AMFI a few
+    # days after each quarter-end to publish the new quarter's Average AUM
+    # figures (the API itself lags by roughly a month at quarter boundaries,
+    # per the As_At_The_End_Of field observed during development).
+    - cron: '0 3 5 1,4,7,10 *'
+  workflow_dispatch:
+
+jobs:
+  sync-amfi-aum:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run AMFI AUM Sync
+        run: node scripts/sync_amfi_aum.js
+
+      - name: Commit and push changes if updated
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/amfi-aum.json
+          if git diff --staged --quiet; then
+            echo "No changes to AMFI AUM data."
+          else
+            git commit -m "chore: quarterly update of AMFI scheme AUM data"
+            git push
+          fi
