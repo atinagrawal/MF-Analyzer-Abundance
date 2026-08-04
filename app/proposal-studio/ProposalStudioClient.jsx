@@ -11,6 +11,7 @@ import { getMFLogoFromSchemeName } from '@/lib/providerLogos';
 import { combineExposure, computeOverlap, computeMCapAllocation, normalizeName, isComparableHolding } from '@/lib/portfolioAnalysis';
 import { PROPOSAL_STUDIO_FAQ } from '@/lib/proposalStudioFaq';
 import { donutChartSvg, barRankingSvg, overlapHeatmapSvg, stackedBarSvg } from '@/lib/chartSvg';
+import { blendedRate, buildProjectionTable, ASSUMED_CAGR } from '@/lib/growthProjection';
 
 export default function ProposalStudioClient() {
   const { data: session, status } = useSession();
@@ -391,6 +392,8 @@ function ProposalStudioTool() {
 
             {mCapIndex && <MCapTable selectedFunds={selectedFunds} readyFunds={readyFunds} mCapIndex={mCapIndex} allocations={allocations} />}
 
+            <GrowthProjectionTable proposalType={proposalType} totalAmount={totalAmount} sipFrequency={sipFrequency} assetAllocation={assetAllocation} />
+
             {/* BenchmarkSection hidden for launch: it only matches funds benchmarked
                 directly to a BSE index, which excludes most real funds. Revisit once
                 AMFI's official FundCategory -> NSE/BSE index mapping
@@ -689,6 +692,44 @@ function OverlapGrid({ funds, selectedFunds }) {
           </tbody>
         </table>
       </div>
+    </CollapsibleSection>
+  );
+}
+
+function GrowthProjectionTable({ proposalType, totalAmount, sipFrequency, assetAllocation }) {
+  const rate = blendedRate(assetAllocation);
+  const rows = buildProjectionTable({ proposalType, totalAmount, sipFrequency, blendedRate: rate });
+  const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
+
+  return (
+    <CollapsibleSection title="Growth Projection">
+      <p className="pfc-projection-note">
+        Assumed return: <b>{(rate * 100).toFixed(2)}% p.a.</b>, blended from your portfolio's actual asset mix using AMFI's own fixed illustration rates
+        (Equity {(ASSUMED_CAGR.EQUITY * 100).toFixed(2)}%, Debt {(ASSUMED_CAGR.DEBT * 100).toFixed(2)}%, Gold {(ASSUMED_CAGR.GOLD * 100).toFixed(2)}% — AMFI Best Practices Guidelines Circular No. 109).
+      </p>
+      <div className="pfc-table-wrap">
+        <table className="pfc-table">
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th className="pfc-table-pct">Total Invested</th>
+              <th className="pfc-table-pct">Projected Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.year}>
+                <td>{r.year}</td>
+                <td className="pfc-table-pct">{inr(r.totalInvested)}</td>
+                <td className="pfc-table-pct">{inr(r.projectedValue)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="pfc-projection-disclaimer">
+        Past performance may or may not be sustained in future and is not a guarantee of any future returns. This is an illustration using AMFI's prescribed assumed rates, not a projection specific to the funds in this proposal.
+      </p>
     </CollapsibleSection>
   );
 }
