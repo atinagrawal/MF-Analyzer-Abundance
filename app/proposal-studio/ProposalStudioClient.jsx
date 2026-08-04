@@ -370,7 +370,7 @@ function ProposalStudioTool() {
                 onClick={() => exportProposalPDF({
                   proposalType, sipFrequency, totalAmount, selectedFunds,
                   assetAllocation, sectorExposure, stockExposure, readyFunds, allocations, mCapIndex,
-                  erroredFunds, clientName, clientEmail, clientPhone,
+                  erroredFunds, clientName, clientEmail, clientPhone, holdingsByFund,
                 })}
               >
                 {pendingCount > 0 ? 'Export / Print Proposal (loading…)' : 'Export / Print Proposal'}
@@ -459,7 +459,7 @@ function fullSecurityExposure(funds, allocations) {
 function exportProposalPDF({
   proposalType, sipFrequency, totalAmount, selectedFunds,
   assetAllocation, sectorExposure, stockExposure, readyFunds, allocations, mCapIndex,
-  erroredFunds, clientName, clientEmail, clientPhone,
+  erroredFunds, clientName, clientEmail, clientPhone, holdingsByFund,
 }) {
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
@@ -483,9 +483,10 @@ function exportProposalPDF({
   }).join('');
 
   const pctRows = (rows) => rows.map((r) => `<tr><td>${esc(r.name)}</td><td class="num">${r.pct.toFixed(2)}%</td></tr>`).join('');
-  const exposureSection = (title, rows) => rows.length === 0 ? '' : `
+  const exposureSection = (title, rows, chartType) => rows.length === 0 ? '' : `
     <div class="sec-block">
     <div class="sec">${title}</div>
+    ${chartType === 'donut' ? donutChartSvg(rows) : chartType === 'bars' ? barRankingSvg(rows.slice(0, 10)) : ''}
     <table class="ptable"><tbody>${pctRows(rows)}</tbody></table>
     </div>`;
 
@@ -505,6 +506,7 @@ function exportProposalPDF({
     overlapHTML = `
       <div class="sec-block">
       <div class="sec">Portfolio Overlap (Named Holdings)</div>
+      ${overlapHeatmapSvg(names, grid)}
       <table class="ptable"><thead><tr><th></th>${names.map((n) => `<th class="num">${esc(n)}</th>`).join('')}</tr></thead>
       <tbody>${grid.map((row, i) => `<tr><th style="text-align:left">${esc(names[i])}</th>${row.map((v, j) => `<td class="num${i === j ? ' diag' : ''}">${v.toFixed(1)}%</td>`).join('')}</tr>`).join('')}</tbody></table>
       </div>`;
@@ -529,12 +531,39 @@ function exportProposalPDF({
     mcapHTML = `
       <div class="sec-block">
       <div class="sec">Scheme M-Cap Allocation</div>
+      ${stackedBarSvg(rows)}
       <table class="ptable"><thead><tr><th style="text-align:left">Fund</th><th class="num">Large Cap</th><th class="num">Mid Cap</th><th class="num">Small Cap</th><th class="num">Unclassified</th></tr></thead>
       <tbody>${rows.map((r) => `<tr><td>${esc(r.name)}</td><td class="num">${r.large.toFixed(1)}%</td><td class="num">${r.mid.toFixed(1)}%</td><td class="num">${r.small.toFixed(1)}%</td><td class="num">${r.unclassified.toFixed(1)}%</td></tr>`).join('')}
       <tr class="avg"><td>Portfolio (weighted avg)</td><td class="num">${weightedAvg.large.toFixed(1)}%</td><td class="num">${weightedAvg.mid.toFixed(1)}%</td><td class="num">${weightedAvg.small.toFixed(1)}%</td><td class="num">${weightedAvg.unclassified.toFixed(1)}%</td></tr>
       </tbody></table>
       </div>`;
   }
+
+  const projectionRate = blendedRate(assetAllocation);
+  const projectionRows = buildProjectionTable({ proposalType, totalAmount, sipFrequency, blendedRate: projectionRate });
+  const projectionHTML = `
+    <div class="sec-block">
+    <div class="sec">Growth Projection</div>
+    <p style="font-size:.62rem;color:#5e8a5e;margin-bottom:8px;line-height:1.5;">
+      Assumed return: <b>${(projectionRate * 100).toFixed(2)}% p.a.</b>, blended from this portfolio's asset mix per AMFI Best Practices Guidelines Circular No. 109 (Equity ${(ASSUMED_CAGR.EQUITY * 100).toFixed(2)}%, Debt ${(ASSUMED_CAGR.DEBT * 100).toFixed(2)}%, Gold ${(ASSUMED_CAGR.GOLD * 100).toFixed(2)}%).
+    </p>
+    <table class="ptable"><thead><tr><th style="text-align:left">Year</th><th class="num">Total Invested</th><th class="num">Projected Value</th></tr></thead>
+    <tbody>${projectionRows.map((r) => `<tr><td>${r.year}</td><td class="num">${inr(r.totalInvested)}</td><td class="num">${inr(r.projectedValue)}</td></tr>`).join('')}</tbody></table>
+    <p style="font-size:.55rem;color:#5e8a5e;margin-top:6px;">Past performance may or may not be sustained in future and is not a guarantee of any future returns.</p>
+    </div>`;
+
+  const schemeDetailRows = selectedFunds.map((f) => {
+    const d = holdingsByFund[f.amfiCode];
+    if (!d) return '';
+    const aum = d.aumCr != null ? d.aumCr.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—';
+    return `<tr><td>${esc(f.schemeName)}</td><td>${esc(d.category || '—')}</td><td>${esc(d.risk || '—')}</td><td class="num">${aum}</td><td>${esc(d.launchDate || '—')}</td></tr>`;
+  }).join('');
+  const schemeDetailsHTML = `
+    <div class="sec-block">
+    <div class="sec">Scheme Details</div>
+    <table class="ptable"><thead><tr><th style="text-align:left">Fund</th><th style="text-align:left">Category</th><th style="text-align:left">Risk</th><th class="num">AUM (Cr)</th><th style="text-align:left">Inception</th></tr></thead>
+    <tbody>${schemeDetailRows}</tbody></table>
+    </div>`;
 
   const win = window.open('', '_blank', 'width=960,height=760');
   if (!win) return;
@@ -614,11 +643,13 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 <table class="ptable"><thead><tr><th style="text-align:left">Fund</th><th class="num">Amount</th><th class="num">% of Total</th></tr></thead><tbody>${fundRows}</tbody></table>
 </div>
 ${erroredNoteHTML}
-${exposureSection('Asset Allocation', assetAllocation)}
-${exposureSection('Sector Exposure', sectorExposure)}
-${exposureSection('Security Exposure (Top Holdings)', stockExposure)}
+${schemeDetailsHTML}
+${exposureSection('Asset Allocation', assetAllocation, 'donut')}
+${exposureSection('Sector Exposure', sectorExposure, 'bars')}
+${exposureSection('Security Exposure (Top Holdings)', stockExposure, 'bars')}
 ${overlapHTML}
 ${mcapHTML}
+${projectionHTML}
 <div class="meta">Generated ${esc(dateStr)} · mfcalc.getabundance.in/proposal-studio</div>
 <div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> This is an illustrative investment proposal, not investment advice. Mutual fund and SIF investments are subject to market risks; read all scheme-related documents carefully. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. Past performance is not indicative of future results. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
 </body></html>`);
