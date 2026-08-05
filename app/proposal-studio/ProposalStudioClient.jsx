@@ -394,6 +394,8 @@ function ProposalStudioTool() {
 
             <GrowthProjectionTable proposalType={proposalType} totalAmount={totalAmount} sipFrequency={sipFrequency} assetAllocation={assetAllocation} />
 
+            <ClosingSection />
+
             {/* BenchmarkSection hidden for launch: it only matches funds benchmarked
                 directly to a BSE index, which excludes most real funds. Revisit once
                 AMFI's official FundCategory -> NSE/BSE index mapping
@@ -596,6 +598,11 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 svg{max-width:100%;height:auto;display:block;margin-bottom:8px}
 .chart-center{display:flex;justify-content:center}
 .dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:14px}
+.closing-cols{display:flex;gap:28px;margin-bottom:6px}
+.closing-col{flex:1}
+.closing-h{font-size:.62rem;font-weight:800;color:#1b5e20;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.closing-list{margin:0;padding-left:16px;font-size:.62rem;line-height:1.6;color:#333}
+.closing-list li{margin-bottom:4px}
 .meta{font-size:.55rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:6px}
 @media print{body{padding:16px 20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:.8cm;size:A4 portrait}}
 .cover { min-height: 700px; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, #0a2e0a 0%, #1b5e20 50%, #2e7d32 100%); color: #fff; padding: 60px 50px; margin: -30px -36px 0; }
@@ -655,8 +662,32 @@ ${exposureSection('Security Exposure (Top Holdings)', stockExposure, 'bars')}
 ${overlapHTML}
 ${mcapHTML}
 ${projectionHTML}
+<div class="sec-block">
+  <div class="sec">Expectations, Next Steps &amp; Disclaimer</div>
+  <div class="closing-cols">
+    <div class="closing-col">
+      <div class="closing-h">Expectations From You</div>
+      <ul class="closing-list">
+        <li>Confirm the investment amount and Lumpsum/SIP type above reflect what you actually intend to invest.</li>
+        <li>Review the asset allocation and satisfy yourself it matches your risk appetite and time horizon.</li>
+        <li>Review the funds/SIFs selected, their allocation, and the overlap and M-Cap figures shown above.</li>
+        <li>Review each fund's category, risk rating, AUM, and inception date in Scheme Details.</li>
+        <li>Read the disclaimer below in full before proceeding.</li>
+      </ul>
+    </div>
+    <div class="closing-col">
+      <div class="closing-h">Next Steps</div>
+      <ul class="closing-list">
+        <li>Get in touch with any questions or changes before we proceed.</li>
+        <li>Confirm your go-ahead so we can help you execute this plan.</li>
+        <li>Complete any KYC/account requirements needed for the funds involved.</li>
+        <li>We'll share the actual transaction/application forms once you confirm.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> This investment proposal has been prepared by Atin Kumar Agrawal, an AMFI-registered Mutual Fund and SIF Distributor, based on the information and preferences you've shared with us. It illustrates a possible portfolio for your reference — it is not investment advice, a recommendation, or a solicitation to invest in any specific fund, and there is no assurance the allocation or funds shown will achieve any particular outcome. Mutual fund and SIF investments are subject to market risks, including possible loss of principal; past performance is not indicative of future results, and the Growth Projection above uses AMFI's own prescribed assumed rates, not a fund-specific forecast. Please read the Scheme Information Document, Statement of Additional Information, and Key Information Memorandum of each scheme carefully before investing. This proposal is non-binding — you are under no obligation to act on it, and we encourage you to seek independent financial, tax, or legal advice where needed. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
+</div>
 <div class="meta">Generated ${esc(dateStr)} · mfcalc.getabundance.in/proposal-studio</div>
-<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> This is an illustrative investment proposal, not investment advice. Mutual fund and SIF investments are subject to market risks; read all scheme-related documents carefully. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. Past performance is not indicative of future results. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
 </body></html>`);
   win.document.close();
   win.onload = () => setTimeout(() => { win.focus(); win.print(); }, 600);
@@ -815,6 +846,37 @@ function GrowthProjectionTable({ proposalType, totalAmount, sipFrequency, assetA
       </div>
       <p className="pfc-projection-disclaimer">
         Past performance may or may not be sustained in future and is not a guarantee of any future returns. This is an illustration using AMFI's prescribed assumed rates, not a projection specific to the funds in this proposal.
+      </p>
+    </CollapsibleSection>
+  );
+}
+
+function ClosingSection() {
+  return (
+    <CollapsibleSection title="Expectations, Next Steps & Disclaimer">
+      <div className="pfc-closing-cols">
+        <div className="pfc-closing-col">
+          <h4>Expectations From You</h4>
+          <ul>
+            <li>Confirm the investment amount and Lumpsum/SIP type reflect what you actually intend to invest.</li>
+            <li>Review the asset allocation and satisfy yourself it matches your risk appetite and time horizon.</li>
+            <li>Review the funds/SIFs selected, their allocation, and the overlap and M-Cap figures above.</li>
+            <li>Review each fund's category, risk rating, AUM, and inception date in Scheme Details.</li>
+            <li>Read the disclaimer below in full before proceeding.</li>
+          </ul>
+        </div>
+        <div className="pfc-closing-col">
+          <h4>Next Steps</h4>
+          <ul>
+            <li>Get in touch with any questions or changes before we proceed.</li>
+            <li>Confirm your go-ahead so we can help you execute this plan.</li>
+            <li>Complete any KYC/account requirements needed for the funds involved.</li>
+            <li>We'll share the actual transaction/application forms once you confirm.</li>
+          </ul>
+        </div>
+      </div>
+      <p className="pfc-closing-disclaimer">
+        This investment proposal has been prepared by Atin Kumar Agrawal, an AMFI-registered Mutual Fund and SIF Distributor, based on the information and preferences you've shared with us. It illustrates a possible portfolio for your reference — it is not investment advice, a recommendation, or a solicitation to invest in any specific fund, and there is no assurance the allocation or funds shown will achieve any particular outcome. Mutual fund and SIF investments are subject to market risks, including possible loss of principal; past performance is not indicative of future results, and the Growth Projection above uses AMFI's own prescribed assumed rates, not a fund-specific forecast. Please read the Scheme Information Document, Statement of Additional Information, and Key Information Memorandum of each scheme carefully before investing. This proposal is non-binding — you are under no obligation to act on it, and we encourage you to seek independent financial, tax, or legal advice where needed. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. | ARN-251838 | Abundance Financial Services | EUIN: E334718
       </p>
     </CollapsibleSection>
   );

@@ -101,6 +101,17 @@
 .pfc-projection-note { font: 400 13px Raleway, sans-serif; color: var(--text2, #333); line-height: 1.6; margin-bottom: 14px; }
 .pfc-projection-disclaimer { font: 400 12px Raleway, sans-serif; color: var(--muted); line-height: 1.6; margin-top: 12px; }
 
+.pfc-closing-cols { display: flex; gap: 28px; flex-wrap: wrap; margin-bottom: 16px; }
+.pfc-closing-col { flex: 1 1 220px; }
+.pfc-closing-col h4 { font: 700 12px Raleway, sans-serif; color: var(--g1); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px; }
+.pfc-closing-col ul { margin: 0; padding-left: 18px; font: 400 13px Raleway, sans-serif; color: var(--text2, #333); line-height: 1.6; }
+.pfc-closing-col li { margin-bottom: 6px; }
+.pfc-closing-disclaimer { font: 400 12px Raleway, sans-serif; color: var(--muted); line-height: 1.7; padding: 12px 14px; background: var(--surface2, #edf6ed); border-radius: 8px; border-left: 3px solid var(--warn); }
+
+@media (max-width: 700px) {
+  .pfc-closing-cols { flex-direction: column; gap: 16px; }
+}
+
 .pfc-actions { display: flex; justify-content: flex-end; margin-bottom: 16px; }
 .pfc-export-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--g2); background: var(--g2); color: #fff; font: 600 13px Raleway, sans-serif; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
 .pfc-export-btn:hover:not(:disabled) { background: var(--g1); border-color: var(--g1); }
