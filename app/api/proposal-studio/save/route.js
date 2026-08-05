@@ -5,16 +5,16 @@
  * Body (JSON): { clientName, clientEmail, clientPhone, proposalType,
  *                sipFrequency, totalAmount, selectedFunds }
  *
- * Saves the full proposal payload to Vercel Blob, then logs it in the
+ * Saves the full proposal payload to Cloudflare R2, then logs it in the
  * proposals table so the owning user can list and reload it later.
- * Mirrors app/api/cas/save/route.js's blob-then-row pattern exactly.
+ * Mirrors app/api/cas/save/route.js's R2-then-row pattern exactly.
  *
  * Auth: requires a valid database session (set by NextAuth).
  */
 
 import { auth } from '@/auth';
 import pool     from '@/lib/db';
-import { put }  from '@vercel/blob';
+import { r2Put } from '@/lib/r2';
 
 export async function POST(req) {
   try {
@@ -50,17 +50,12 @@ export async function POST(req) {
       savedAt: new Date().toISOString(),
     };
 
-    // Write to Vercel Blob: proposal-studio/{userId}/{timestamp}-{safeName}.json
+    // Write to R2: proposal-studio/{userId}/{timestamp}-{safeName}.json
     const ts = Date.now();
     const safeName = (clientName || 'proposal').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 60);
     const blobKey = `proposal-studio/${userId}/${ts}-${safeName}.json`;
 
-    await put(blobKey, JSON.stringify(payload), {
-      access: 'private',
-      contentType: 'application/json',
-      addRandomSuffix: false,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-    });
+    await r2Put(blobKey, JSON.stringify(payload));
 
     const result = await pool.query(
       `INSERT INTO proposals (user_id, client_name, client_email, client_phone, proposal_type, total_amount, fund_count, blob_key)

@@ -3,14 +3,14 @@
  *
  * DELETE /api/cas/delete   { id }
  *
- * Deletes a saved CAS upload — its Vercel Blob object and its
- * cas_portfolios row. Allowed for the CAS's own owner, or an admin
- * deleting on behalf of any user (same ownership pattern as
- * app/api/cas/load/route.js).
+ * Deletes a saved CAS upload — its R2 object and its cas_portfolios row.
+ * Allowed for the CAS's own owner, or an admin deleting on behalf of any
+ * user (same ownership pattern as app/api/cas/load/route.js).
  */
 
 import { auth } from '@/auth';
 import pool     from '@/lib/db';
+import { r2Delete } from '@/lib/r2';
 
 export async function DELETE(req) {
   try {
@@ -54,18 +54,13 @@ export async function DELETE(req) {
       }
     }
 
-    // Delete the Blob object first — if this fails, the DB row is left
+    // Delete the R2 object first — if this fails, the DB row is left
     // intact so the entry (and a retry) is still visible instead of
     // silently leaking storage.
     try {
-      const { list, del } = await import('@vercel/blob');
-      const token = process.env.BLOB_READ_WRITE_TOKEN;
-      const { blobs } = await list({ prefix: blobKey, limit: 1, token });
-      if (blobs.length) {
-        await del(blobs[0].url, { token });
-      }
+      await r2Delete(blobKey);
     } catch (err) {
-      console.error('[cas/delete] blob delete failed:', err.message);
+      console.error('[cas/delete] R2 delete failed:', err.message);
       return Response.json({ error: 'Could not delete stored file' }, { status: 502 });
     }
 

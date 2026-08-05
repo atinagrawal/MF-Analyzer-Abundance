@@ -3,13 +3,13 @@
  *
  * GET /api/proposal-studio/load?id=<proposal id>
  *
- * Ownership-checked fetch of the full saved proposal payload from Blob.
+ * Ownership-checked fetch of the full saved proposal payload from R2.
  * Mirrors app/api/cas/load/route.js's ownership-then-fetch pattern.
  */
 
 import { auth } from '@/auth';
 import pool     from '@/lib/db';
-import { list } from '@vercel/blob';
+import { r2Get } from '@/lib/r2';
 
 export async function GET(req) {
   try {
@@ -36,16 +36,10 @@ export async function GET(req) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    const { blobs } = await list({ prefix: row.blob_key, limit: 1, token });
-    if (!blobs.length) {
+    const payload = await r2Get(row.blob_key);
+    if (!payload) {
       return Response.json({ error: 'Saved payload missing from storage' }, { status: 404 });
     }
-
-    const res = await fetch(blobs[0].downloadUrl, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const payload = await res.json();
 
     return Response.json({ id, ...payload });
 

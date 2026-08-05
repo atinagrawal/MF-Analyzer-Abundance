@@ -4,8 +4,9 @@
  * POST /api/cas/save
  * Body (JSON): { parsedData, fileName, panCount }
  *
- * Saves the raw parsed CAS JSON (output of /api/parse) to Vercel Blob,
- * then logs the upload in the cas_portfolios table.
+ * Saves the raw parsed CAS JSON (output of /api/parse) to Cloudflare R2,
+ * then logs the upload in the cas_portfolios table. blob_key's name/format
+ * is unchanged from the Vercel-Blob era -- it's just an R2 object key now.
  *
  * Auth: requires a valid database session (set by NextAuth).
  * Admin can call this on behalf of any user by passing targetUserId.
@@ -13,7 +14,7 @@
 
 import { auth }   from '@/auth';
 import pool        from '@/lib/db';
-import { put }     from '@vercel/blob';
+import { r2Put }   from '@/lib/r2';
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
@@ -44,17 +45,12 @@ export async function POST(req) {
         .filter(p => PAN_REGEX.test(p))
     )];
 
-    // Write to Vercel Blob: cas/{userId}/{timestamp}-{sanitisedName}.json
+    // Write to R2: cas/{userId}/{timestamp}-{sanitisedName}.json
     const ts       = Date.now();
     const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 60);
     const blobKey  = `cas/${userId}/${ts}-${safeName}.json`;
 
-    const blob = await put(blobKey, JSON.stringify(parsedData), {
-      access:           'private',
-      contentType:      'application/json',
-      addRandomSuffix:  false,
-      token:            process.env.BLOB_READ_WRITE_TOKEN,
-    });
+    await r2Put(blobKey, JSON.stringify(parsedData));
 
     // Log to database
     const result = await pool.query(

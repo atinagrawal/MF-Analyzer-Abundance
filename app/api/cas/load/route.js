@@ -4,13 +4,14 @@
  * GET /api/cas/load?key=cas/{userId}/{file}.json
  *
  * Verifies the session, confirms the requested blob key belongs to
- * the current user (or that the user is admin), fetches the private
- * blob with the server-side token, and streams the JSON back to the
- * client. The client never sees BLOB_READ_WRITE_TOKEN.
+ * the current user (or that the user is admin), fetches the object from
+ * R2 with the server-side credentials, and streams the JSON back to the
+ * client. The client never sees the R2 access keys.
  */
 
 import { auth } from '@/auth';
 import pool      from '@/lib/db';
+import { r2Get } from '@/lib/r2';
 
 export async function GET(req) {
   try {
@@ -43,28 +44,10 @@ export async function GET(req) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Fetch from Vercel Blob using server-side token
-    // Private blobs require Authorization header
-    const { list } = await import('@vercel/blob');
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    const { blobs } = await list({ prefix: blobKey, limit: 1, token });
-
-    if (!blobs.length) {
+    const data = await r2Get(blobKey);
+    if (!data) {
       return Response.json({ error: 'Blob not found' }, { status: 404 });
     }
-
-    const blobRes = await fetch(blobs[0].downloadUrl || blobs[0].url, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Cache-Control': 'no-store',
-      },
-    });
-
-    if (!blobRes.ok) {
-      return Response.json({ error: 'Failed to fetch blob' }, { status: 502 });
-    }
-
-    const data = await blobRes.json();
     return Response.json(data);
 
   } catch (err) {
