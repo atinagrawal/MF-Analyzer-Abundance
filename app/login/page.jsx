@@ -16,6 +16,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { sanitizeRedirectPath } from '@/lib/safeRedirect';
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -61,7 +62,7 @@ function LoginContent() {
   const { data: session, status } = useSession();
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const from         = searchParams.get('from')   || '/';
+  const from         = sanitizeRedirectPath(searchParams.get('from'));
   const verify       = searchParams.get('verify') === '1';
 
   const [email,     setEmail]     = useState('');

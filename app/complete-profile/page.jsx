@@ -14,6 +14,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { sanitizeRedirectPath } from '@/lib/safeRedirect';
 
 const S = {
   input: {
@@ -36,7 +37,7 @@ function CompleteProfileContent() {
   const { status, update } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const from = searchParams.get('from') || '/';
+  const from = sanitizeRedirectPath(searchParams.get('from'));
 
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
