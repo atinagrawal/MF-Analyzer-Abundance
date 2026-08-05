@@ -144,6 +144,27 @@ CREATE TABLE IF NOT EXISTS pan_investor_names (
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Saved Proposal Studio proposals — same shape as cas_portfolios: this row
+-- is just the searchable/listable metadata, the full proposal payload
+-- (selected funds, amounts, client details) lives in Vercel Blob at
+-- blob_key. id is also the client-facing "Proposal ID" (displayed as
+-- PROP-<first 8 hex chars, uppercased> by the app, not stored pre-formatted
+-- here so the raw UUID stays the actual unique key).
+CREATE TABLE IF NOT EXISTS proposals (
+  id            TEXT        NOT NULL DEFAULT gen_random_uuid()::text PRIMARY KEY,
+  user_id       TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  client_name   TEXT        NOT NULL DEFAULT '',
+  client_email  TEXT        NOT NULL DEFAULT '',
+  client_phone  TEXT        NOT NULL DEFAULT '',
+  proposal_type TEXT        NOT NULL,   -- 'lumpsum' | 'sip'
+  total_amount  NUMERIC     NOT NULL DEFAULT 0,
+  fund_count    INT         NOT NULL DEFAULT 0,
+  blob_key      TEXT        NOT NULL,   -- Vercel Blob key for the full saved proposal JSON
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_proposals_user ON proposals(user_id);
+
 -- =============================================================================
 -- Role values: 'client' | 'distributor' | 'admin'
 -- Promote a user manually:

@@ -153,6 +153,13 @@ function PfcProGate({ session }) {
   );
 }
 
+// Display form for a saved proposal's row id -- the raw UUID stays the real
+// unique key (used in every API call); this is purely cosmetic, shown to the
+// client/distributor and printed on the PDF.
+function formatProposalId(id) {
+  return 'PROP-' + String(id).replace(/-/g, '').slice(0, 8).toUpperCase();
+}
+
 function ClientDetailsCard({ clientName, setClientName, clientEmail, setClientEmail, clientPhone, setClientPhone, onTouched }) {
   const handleChange = (setter) => (e) => { onTouched(); setter(e.target.value); };
   return (
@@ -164,6 +171,103 @@ function ClientDetailsCard({ clientName, setClientName, clientEmail, setClientEm
         <input className="pfc-client-input" type="tel" placeholder="Client phone" value={clientPhone} onChange={handleChange(setClientPhone)} />
       </div>
     </section>
+  );
+}
+
+// Inline collapsible list of the signed-in user's previously saved proposals,
+// with client-side search (list can grow large over time -- searching beats
+// scrolling) and a per-row two-step delete confirm, matching the inline
+// confirm pattern already used for saved CAS portfolios
+// (app/cas-tracker/page.js's deletingId state) rather than a native confirm().
+function SavedProposalsSection({ onLoad, refreshKey }) {
+  const [proposals, setProposals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [deletingId, setDeletingId] = useState('');
+  const [deleteInFlight, setDeleteInFlight] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch('/api/proposal-studio/list')
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled) setProposals(d.proposals || []); })
+      .catch(() => { if (!cancelled) setError('Failed to load saved proposals.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [refreshKey]);
+
+  async function handleDelete(id) {
+    setDeleteInFlight(true);
+    setError('');
+    try {
+      const res = await fetch('/api/proposal-studio/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Delete failed.');
+      setProposals((prev) => prev.filter((p) => p.id !== id));
+      setDeletingId('');
+    } catch (err) {
+      setError(err.message);
+    }
+    setDeleteInFlight(false);
+  }
+
+  const filtered = proposals.filter((p) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return (p.client_name || '').toLowerCase().includes(q) || formatProposalId(p.id).toLowerCase().includes(q);
+  });
+
+  return (
+    <CollapsibleSection title={`My Saved Proposals${proposals.length ? ` (${proposals.length})` : ''}`} defaultOpen={false}>
+      {loading && <div className="pfc-hint">Loading saved proposals…</div>}
+      {!loading && proposals.length === 0 && <div className="pfc-hint">No saved proposals yet. Build one below and click "Save Proposal" once you're done.</div>}
+      {!loading && proposals.length > 0 && (
+        <>
+          <input
+            className="pfc-search-input"
+            placeholder="Search by client name or Proposal ID…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <div className="pfc-saved-list">
+            {filtered.map((p) => (
+              <div className="pfc-saved-item" key={p.id}>
+                {deletingId === p.id ? (
+                  <div className="pfc-saved-confirm">
+                    <span>Delete this proposal? This can't be undone.</span>
+                    <div className="pfc-saved-confirm-actions">
+                      <button className="pfc-saved-delete-confirm" disabled={deleteInFlight} onClick={() => handleDelete(p.id)}>
+                        {deleteInFlight ? '…' : 'Delete'}
+                      </button>
+                      <button className="pfc-saved-delete-cancel" disabled={deleteInFlight} onClick={() => setDeletingId('')}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <button className="pfc-saved-main" onClick={() => onLoad(p.id)}>
+                      <span className="pfc-saved-id">{formatProposalId(p.id)}</span>
+                      <span className="pfc-saved-name">{p.client_name || 'Unnamed client'}</span>
+                      <span className="pfc-saved-meta">
+                        {p.proposal_type === 'sip' ? 'SIP' : 'Lumpsum'} · ₹{Number(p.total_amount).toLocaleString('en-IN')} · {p.fund_count} fund{p.fund_count === 1 ? '' : 's'} · {new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </button>
+                    <button className="pfc-saved-delete" onClick={() => setDeletingId(p.id)}>Delete</button>
+                  </>
+                )}
+              </div>
+            ))}
+            {filtered.length === 0 && <div className="pfc-hint">No proposals match "{query}".</div>}
+          </div>
+        </>
+      )}
+      {error && <div className="pfc-error-hint">{error}</div>}
+    </CollapsibleSection>
   );
 }
 
@@ -181,6 +285,10 @@ function ProposalStudioTool() {
   const [clientEmail, setClientEmail] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientFieldsTouched, setClientFieldsTouched] = useState(false);
+  const [savedProposalId, setSavedProposalId] = useState(null);
+  const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
+  const [saveError, setSaveError] = useState('');
+  const [savedListRefresh, setSavedListRefresh] = useState(0);
 
   // Total is a derived sum of every selected fund's amount, not a separate
   // target you set first -- add funds, type an amount for each, the total
@@ -301,8 +409,58 @@ function ProposalStudioTool() {
     }));
   }, [proposalType, holdingsByFund]);
 
+  // Always inserts a new row -- each save is its own snapshot (matching the
+  // existing CAS-upload pattern, where re-uploading also creates a new saved
+  // record rather than editing one in place), not an update of a prior save.
+  async function saveProposal() {
+    setSaveStatus('saving');
+    setSaveError('');
+    try {
+      const res = await fetch('/api/proposal-studio/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientName, clientEmail, clientPhone, proposalType, sipFrequency, totalAmount,
+          selectedFunds: selectedFunds.map((f) => ({ amfiCode: f.amfiCode, schemeName: f.schemeName, amount: f.amount, source: f.source })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Save failed.');
+      setSavedProposalId(data.id);
+      setSaveStatus('saved');
+      setSavedListRefresh((n) => n + 1);
+    } catch (err) {
+      setSaveError(err.message);
+      setSaveStatus('error');
+    }
+  }
+
+  async function loadSavedProposal(id) {
+    setSaveStatus('idle');
+    setSaveError('');
+    try {
+      const data = await fetch(`/api/proposal-studio/load?id=${encodeURIComponent(id)}`).then((r) => r.json());
+      if (data.error) throw new Error(data.error);
+      setClientFieldsTouched(true);
+      setClientName(data.clientName || '');
+      setClientEmail(data.clientEmail || '');
+      setClientPhone(data.clientPhone || '');
+      setProposalType(data.proposalType || 'lumpsum');
+      setSipFrequency(data.sipFrequency || 'monthly');
+      setSelectedFunds((data.selectedFunds || []).map((f) => ({
+        amfiCode: f.amfiCode, schemeName: f.schemeName, amount: f.amount || 0, source: f.source || 'manual', amountTouched: true,
+      })));
+      setSavedProposalId(id);
+      setSaveStatus('saved');
+    } catch (err) {
+      setSaveError(err.message);
+      setSaveStatus('error');
+    }
+  }
+
   return (
     <div className="pfc-tool">
+      <SavedProposalsSection onLoad={loadSavedProposal} refreshKey={savedListRefresh} />
       <ClientDetailsCard
         clientName={clientName} setClientName={setClientName}
         clientEmail={clientEmail} setClientEmail={setClientEmail}
@@ -370,11 +528,18 @@ function ProposalStudioTool() {
                 onClick={() => exportProposalPDF({
                   proposalType, sipFrequency, totalAmount, selectedFunds,
                   assetAllocation, sectorExposure, stockExposure, readyFunds, allocations, mCapIndex,
-                  erroredFunds, clientName, clientEmail, clientPhone, holdingsByFund,
+                  erroredFunds, clientName, clientEmail, clientPhone, holdingsByFund, proposalId: savedProposalId,
                 })}
               >
                 {pendingCount > 0 ? 'Export / Print Proposal (loading…)' : 'Export / Print Proposal'}
               </button>
+              <button className="pfc-save-btn" disabled={saveStatus === 'saving'} onClick={saveProposal}>
+                {saveStatus === 'saving' ? 'Saving…' : 'Save Proposal'}
+              </button>
+              {saveStatus === 'saved' && savedProposalId && (
+                <span className="pfc-proposal-id">Saved · Proposal ID: {formatProposalId(savedProposalId)}</span>
+              )}
+              {saveStatus === 'error' && <span className="pfc-error-hint">{saveError}</span>}
             </div>
 
             <ExposureTable title="Asset Allocation" rows={assetAllocation} chart="donut" />
@@ -461,12 +626,13 @@ function fullSecurityExposure(funds, allocations) {
 function exportProposalPDF({
   proposalType, sipFrequency, totalAmount, selectedFunds,
   assetAllocation, sectorExposure, stockExposure, readyFunds, allocations, mCapIndex,
-  erroredFunds, clientName, clientEmail, clientPhone, holdingsByFund,
+  erroredFunds, clientName, clientEmail, clientPhone, holdingsByFund, proposalId,
 }) {
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
   const dateStr = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
   const typeLabel = proposalType === 'sip' ? `SIP (${sipFrequency === 'daily' ? 'Daily' : 'Monthly'})` : 'Lumpsum';
+  const proposalIdLabel = proposalId ? formatProposalId(proposalId) : '';
 
   const kpi = (l, v) => `<div class="banner-cell"><div class="banner-lbl">${l}</div><div class="banner-val">${v}</div></div>`;
   const banner = [
@@ -642,7 +808,7 @@ svg{max-width:100%;height:auto;display:block;margin-bottom:8px}
     </div>
   </div>
   <div class="cover-stats banner-grid">${banner}</div>
-  <div class="cover-date">${esc(dateStr)}</div>
+  <div class="cover-date">${esc(dateStr)}${proposalIdLabel ? ` · Proposal ID: ${esc(proposalIdLabel)}` : ''}</div>
 </div>
 <div class="page-break"></div>
 <div class="ph">
@@ -687,7 +853,7 @@ ${projectionHTML}
   </div>
   <div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> This investment proposal has been prepared by Atin Kumar Agrawal, an AMFI-registered Mutual Fund and SIF Distributor, based on the information and preferences you've shared with us. It illustrates a possible portfolio for your reference — it is not investment advice, a recommendation, or a solicitation to invest in any specific fund, and there is no assurance the allocation or funds shown will achieve any particular outcome. Mutual fund and SIF investments are subject to market risks, including possible loss of principal; past performance is not indicative of future results, and the Growth Projection above uses AMFI's own prescribed assumed rates, not a fund-specific forecast. Please read the Scheme Information Document, Statement of Additional Information, and Key Information Memorandum of each scheme carefully before investing. This proposal is non-binding — you are under no obligation to act on it, and we encourage you to seek independent financial, tax, or legal advice where needed. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
 </div>
-<div class="meta">Generated ${esc(dateStr)} · mfcalc.getabundance.in/proposal-studio</div>
+<div class="meta">Generated ${esc(dateStr)}${proposalIdLabel ? ` · Proposal ID: ${esc(proposalIdLabel)}` : ''} · mfcalc.getabundance.in/proposal-studio</div>
 </body></html>`);
   win.document.close();
   win.onload = () => setTimeout(() => { win.focus(); win.print(); }, 600);

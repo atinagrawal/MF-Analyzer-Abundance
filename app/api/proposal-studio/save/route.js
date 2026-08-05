@@ -1,0 +1,84 @@
+/**
+ * app/api/proposal-studio/save/route.js
+ *
+ * POST /api/proposal-studio/save
+ * Body (JSON): { clientName, clientEmail, clientPhone, proposalType,
+ *                sipFrequency, totalAmount, selectedFunds }
+ *
+ * Saves the full proposal payload to Vercel Blob, then logs it in the
+ * proposals table so the owning user can list and reload it later.
+ * Mirrors app/api/cas/save/route.js's blob-then-row pattern exactly.
+ *
+ * Auth: requires a valid database session (set by NextAuth).
+ */
+
+import { auth } from '@/auth';
+import pool     from '@/lib/db';
+import { put }  from '@vercel/blob';
+
+export async function POST(req) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return Response.json({ error: 'Unauthorised' }, { status: 401 });
+    }
+
+    const {
+      clientName, clientEmail, clientPhone,
+      proposalType, sipFrequency, totalAmount, selectedFunds,
+    } = await req.json();
+
+    if (!proposalType || !Array.isArray(selectedFunds) || selectedFunds.length === 0) {
+      return Response.json({ error: 'Missing proposalType or selectedFunds' }, { status: 400 });
+    }
+
+    const userId = session.user.id;
+
+    const payload = {
+      clientName: clientName || '',
+      clientEmail: clientEmail || '',
+      clientPhone: clientPhone || '',
+      proposalType,
+      sipFrequency: sipFrequency || 'monthly',
+      totalAmount: totalAmount || 0,
+      selectedFunds: selectedFunds.map((f) => ({
+        amfiCode: f.amfiCode,
+        schemeName: f.schemeName,
+        amount: f.amount || 0,
+        source: f.source,
+      })),
+      savedAt: new Date().toISOString(),
+    };
+
+    // Write to Vercel Blob: proposal-studio/{userId}/{timestamp}-{safeName}.json
+    const ts = Date.now();
+    const safeName = (clientName || 'proposal').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 60);
+    const blobKey = `proposal-studio/${userId}/${ts}-${safeName}.json`;
+
+    await put(blobKey, JSON.stringify(payload), {
+      access: 'private',
+      contentType: 'application/json',
+      addRandomSuffix: false,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+
+    const result = await pool.query(
+      `INSERT INTO proposals (user_id, client_name, client_email, client_phone, proposal_type, total_amount, fund_count, blob_key)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, created_at`,
+      [userId, clientName || '', clientEmail || '', clientPhone || '', proposalType, totalAmount || 0, selectedFunds.length, blobKey]
+    );
+
+    const row = result.rows[0];
+    return Response.json({
+      ok: true,
+      id: row.id,
+      blobKey,
+      createdAt: row.created_at,
+    });
+
+  } catch (err) {
+    console.error('[proposal-studio/save]', err.name, err.message);
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}

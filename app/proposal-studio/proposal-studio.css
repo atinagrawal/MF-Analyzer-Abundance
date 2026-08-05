@@ -112,10 +112,28 @@
   .pfc-closing-cols { flex-direction: column; gap: 16px; }
 }
 
-.pfc-actions { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+.pfc-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
 .pfc-export-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--g2); background: var(--g2); color: #fff; font: 600 13px Raleway, sans-serif; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
 .pfc-export-btn:hover:not(:disabled) { background: var(--g1); border-color: var(--g1); }
 .pfc-export-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.pfc-save-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--g2); background: transparent; color: var(--g2); font: 600 13px Raleway, sans-serif; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.pfc-save-btn:hover:not(:disabled) { background: var(--surface2, #edf6ed); }
+.pfc-save-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.pfc-proposal-id { font: 600 12px JetBrains Mono, monospace; color: var(--g1); background: var(--surface2, #edf6ed); border-radius: 6px; padding: 6px 10px; }
+
+.pfc-saved-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
+.pfc-saved-item { border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; overflow: hidden; }
+.pfc-saved-main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border: none; background: transparent; cursor: pointer; text-align: left; transition: background 0.15s; }
+.pfc-saved-main:hover { background: var(--surface2, #edf6ed); }
+.pfc-saved-id { font: 700 11px JetBrains Mono, monospace; color: var(--g2); letter-spacing: 0.02em; }
+.pfc-saved-name { font: 600 13px Raleway, sans-serif; color: var(--text2, #333); }
+.pfc-saved-meta { font: 400 11px Raleway, sans-serif; color: var(--muted); }
+.pfc-saved-delete { flex-shrink: 0; border: none; background: transparent; color: var(--neg); cursor: pointer; font: 500 12px Raleway, sans-serif; padding: 8px 12px; align-self: stretch; transition: background 0.15s; }
+.pfc-saved-delete:hover { background: var(--neg-bg); }
+.pfc-saved-confirm { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; font: 500 12px Raleway, sans-serif; color: var(--text2, #333); }
+.pfc-saved-confirm-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.pfc-saved-delete-confirm { font: 700 12px Raleway, sans-serif; color: #fff; background: var(--neg); border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+.pfc-saved-delete-cancel { font: 600 12px Raleway, sans-serif; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
 
 @media (max-width: 700px) {
   .pfc-page { padding: 24px 14px 48px; }
@@ -143,7 +161,8 @@
   .pfc-table td, .pfc-table th { padding: 8px 5px; }
 
   .pfc-actions { justify-content: stretch; }
-  .pfc-export-btn { width: 100%; justify-content: center; }
+  .pfc-export-btn, .pfc-save-btn { width: 100%; justify-content: center; }
+  .pfc-proposal-id { text-align: center; }
 }
 
 @media (max-width: 420px) {
