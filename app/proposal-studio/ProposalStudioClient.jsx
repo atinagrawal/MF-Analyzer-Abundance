@@ -160,6 +160,29 @@ function formatProposalId(id) {
   return 'PROP-' + String(id).replace(/-/g, '').slice(0, 8).toUpperCase();
 }
 
+// Some data sources (CAS registrar exports especially) render scheme names
+// in ALL CAPS, which looks visually jarring sitting next to a normally-cased
+// name from another source in the same table or PDF (e.g. "BANDHAN SMALL CAP
+// FUND - REGULAR PLAN GROWTH" next to "HDFC Defence Fund - Growth Option").
+// Only touches a string that is ENTIRELY uppercase -- a strong signal it's a
+// formatting artifact rather than a deliberately-capitalized name -- so an
+// already well-formatted name (including one that legitimately keeps just
+// its AMC name in caps, e.g. "BANK OF INDIA Flexi Cap Fund") is never
+// touched at all.
+const SCHEME_NAME_ACRONYMS = new Set(['SBI', 'ICICI', 'HDFC', 'LIC', 'UTI', 'ITI', 'JM', 'DSP', 'PGIM', 'PPFAS', 'HSBC', 'ESG', 'IDCW', 'ELSS', 'SIP', 'NFO', 'NJ', 'BOI', 'PNB', 'IDBI', 'IDFC', 'ETF', 'FOF', 'FMP', 'PSU', 'NAV', 'AMC']);
+const SCHEME_NAME_LOWERCASE_WORDS = new Set(['of', 'and', 'the', 'in', 'for', 'to', 'a', 'an', '&']);
+function prettifySchemeName(name) {
+  const s = String(name || '');
+  if (!s || !/[A-Z]/.test(s) || s !== s.toUpperCase()) return s;
+  return s.replace(/[A-Za-z']+/g, (word) => {
+    const upper = word.toUpperCase();
+    if (SCHEME_NAME_ACRONYMS.has(upper)) return upper;
+    const lower = word.toLowerCase();
+    if (SCHEME_NAME_LOWERCASE_WORDS.has(lower)) return lower;
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  });
+}
+
 function ClientDetailsCard({ clientName, setClientName, clientEmail, setClientEmail, clientPhone, setClientPhone, onTouched }) {
   const handleChange = (setter) => (e) => { onTouched(); setter(e.target.value); };
   return (
@@ -347,7 +370,7 @@ function ProposalStudioTool() {
   function addCasFund(amfiCode, schemeName, value) {
     if (selectedFunds.some((f) => f.amfiCode === amfiCode)) return;
     // CAS funds already carry their real invested value -- nothing to fill in later.
-    setSelectedFunds((prev) => [...prev, { amfiCode, schemeName, amount: value, source: 'cas', amountTouched: true }]);
+    setSelectedFunds((prev) => [...prev, { amfiCode, schemeName: prettifySchemeName(schemeName), amount: value, source: 'cas', amountTouched: true }]);
   }
 
   function addManualFund(amfiCode, schemeName) {
@@ -355,7 +378,7 @@ function ProposalStudioTool() {
     // Starts at 0; the holdings-fetch effect below fills in the fund's real
     // minimum investment amount once its data arrives, unless the user has
     // already typed their own amount in the meantime (amountTouched).
-    setSelectedFunds((prev) => [...prev, { amfiCode, schemeName, amount: 0, source: 'manual', amountTouched: false }]);
+    setSelectedFunds((prev) => [...prev, { amfiCode, schemeName: prettifySchemeName(schemeName), amount: 0, source: 'manual', amountTouched: false }]);
   }
 
   function removeFund(amfiCode) {
@@ -448,7 +471,7 @@ function ProposalStudioTool() {
       setProposalType(data.proposalType || 'lumpsum');
       setSipFrequency(data.sipFrequency || 'monthly');
       setSelectedFunds((data.selectedFunds || []).map((f) => ({
-        amfiCode: f.amfiCode, schemeName: f.schemeName, amount: f.amount || 0, source: f.source || 'manual', amountTouched: true,
+        amfiCode: f.amfiCode, schemeName: prettifySchemeName(f.schemeName), amount: f.amount || 0, source: f.source || 'manual', amountTouched: true,
       })));
       setSavedProposalId(id);
       setSaveStatus('saved');
@@ -726,7 +749,8 @@ function exportProposalPDF({
     const aum = d.aumCr != null ? d.aumCr.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—';
     const aumWithAsOf = d.aumCr != null && d.aumAsOf ? `${aum}<br/><span style="font-size:.7em;font-weight:400;color:#8fae8f">${esc(d.aumAsOf)}</span>` : aum;
     const riskLabel = d.risk ? esc(d.risk) + (d.riskSource === 'benchmark' ? ' (benchmark)' : '') : '—';
-    return `<tr><td>${esc(f.schemeName)}</td><td>${esc(d.category || '—')}</td><td>${riskLabel}</td><td class="num">${aumWithAsOf}</td><td>${esc(d.launchDate || '—')}</td></tr>`;
+    const categoryLabel = d.category ? esc(d.category) + (d.subCategory ? ` · ${esc(d.subCategory)}` : '') : '—';
+    return `<tr><td>${esc(f.schemeName)}</td><td>${categoryLabel}</td><td>${riskLabel}</td><td class="num">${aumWithAsOf}</td><td>${esc(d.launchDate || '—')}</td></tr>`;
   }).join('');
   const schemeDetailsHTML = `
     <div class="sec-block">
@@ -856,8 +880,19 @@ ${projectionHTML}
 <div class="meta">Generated ${esc(dateStr)}${proposalIdLabel ? ` · Proposal ID: ${esc(proposalIdLabel)}` : ''} · mfcalc.getabundance.in/proposal-studio</div>
 </body></html>`);
   win.document.close();
-  win.onload = () => setTimeout(() => { win.focus(); win.print(); }, 600);
-  setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} }, 1400);
+  // onload (fires once fonts/images finish) and the fixed-delay fallback
+  // (in case onload never fires -- some browser/extension edge cases) used
+  // to BOTH call win.print() unconditionally, so a user who saved from the
+  // first dialog would immediately see a second one pop up. printTriggered
+  // guarantees only whichever fires first actually opens the dialog.
+  let printTriggered = false;
+  function triggerPrint() {
+    if (printTriggered) return;
+    printTriggered = true;
+    try { win.focus(); win.print(); } catch (e) {}
+  }
+  win.onload = () => setTimeout(triggerPrint, 600);
+  setTimeout(triggerPrint, 1400);
 }
 
 function ExposureTable({ title, rows, fullRows, chart }) {
