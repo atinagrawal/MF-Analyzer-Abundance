@@ -18,6 +18,7 @@
  */
 
 import amfiAum from '@/data/amfi-aum.json';
+import sifAum from '@/data/sif-aum.json';
 import amfiSchemeRisk from '@/data/amfi-scheme-risk.json';
 import { fetchRiskometer, matchBenchmarkRisk, matchOwnSchemeRisk } from '@/lib/riskometer';
 
@@ -185,7 +186,9 @@ async function fetchFresh(amfiCode, schemeName) {
   if (!detail || !Array.isArray(detail.holdings)) return null;
   if (!schemeIdentityMatches(detail, amfiCode, schemeName)) return null;
 
-  const aumRecord = amfiAum[amfiCode] || null;
+  // amfiAum is keyed by plain numeric AMFI codes, sifAum by "SIF-XXX" --
+  // the two key spaces never overlap, so a plain fallback is safe.
+  const aumRecord = amfiAum[amfiCode] || sifAum[amfiCode] || null;
   const resolvedSchemeName = detail.scheme_name || schemeName;
 
   // Priority: (1) the vendor's own per-scheme risk field, if it's ever

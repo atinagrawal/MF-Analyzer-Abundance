@@ -1,0 +1,42 @@
+name: Monthly SIF AUM Sync
+
+on:
+  schedule:
+    # Run on the 15th of every month at 05:00 UTC -- staggered two hours
+    # after the AMFI AUM sync (03:00) and one hour after the scheme
+    # riskometer sync (04:00) so the three workflows don't hit AMFI's site
+    # concurrently. SIF Average AUM is a quarterly disclosure, but the exact
+    # publish day isn't documented, so a monthly run (matching this
+    # project's other AMFI syncs) picks up a new quarter within 15 days.
+    - cron: '0 5 15 * *'
+  workflow_dispatch:
+
+jobs:
+  sync-sif-aum:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run SIF AUM Sync
+        run: node scripts/sync_sif_aum.js
+
+      - name: Commit and push changes if updated
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/sif-aum.json
+          if git diff --staged --quiet; then
+            echo "No changes to SIF AUM data."
+          else
+            git commit -m "chore: monthly sync of SIF scheme AUM data"
+            git push
+          fi
