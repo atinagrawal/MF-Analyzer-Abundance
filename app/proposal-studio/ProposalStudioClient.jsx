@@ -486,7 +486,7 @@ function exportProposalPDF({
   const exposureSection = (title, rows, chartType) => rows.length === 0 ? '' : `
     <div class="sec-block">
     <div class="sec">${title}</div>
-    ${chartType === 'donut' ? donutChartSvg(rows) : chartType === 'bars' ? barRankingSvg(rows.slice(0, 10)) : ''}
+    ${chartType === 'donut' ? `<div class="chart-center">${donutChartSvg(rows)}</div>` : chartType === 'bars' ? barRankingSvg(rows.slice(0, 10)) : ''}
     <table class="ptable"><tbody>${pctRows(rows)}</tbody></table>
     </div>`;
 
@@ -556,7 +556,7 @@ function exportProposalPDF({
     const d = holdingsByFund[f.amfiCode];
     if (!d) return '';
     const aum = d.aumCr != null ? d.aumCr.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—';
-    const aumWithAsOf = d.aumCr != null && d.aumAsOf ? `${aum} <span style="font-size:.85em;color:#5e8a5e">(${esc(d.aumAsOf)})</span>` : aum;
+    const aumWithAsOf = d.aumCr != null && d.aumAsOf ? `${aum}<br/><span style="font-size:.7em;font-weight:400;color:#8fae8f">${esc(d.aumAsOf)}</span>` : aum;
     const riskLabel = d.risk ? esc(d.risk) + (d.riskSource === 'benchmark' ? ' (benchmark)' : '') : '—';
     return `<tr><td>${esc(f.schemeName)}</td><td>${esc(d.category || '—')}</td><td>${riskLabel}</td><td class="num">${aumWithAsOf}</td><td>${esc(d.launchDate || '—')}</td></tr>`;
   }).join('');
@@ -570,7 +570,7 @@ function exportProposalPDF({
   const win = window.open('', '_blank', 'width=960,height=760');
   if (!win) return;
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-<title>Investment Proposal | Abundance Financial Services</title>
+<title>Investment Proposal${clientName ? ' - ' + esc(clientName) : ''} | Abundance Financial Services</title>
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -593,6 +593,8 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 .ptable .diag{background:#dcedc8;font-weight:800}
 .ptable tr.avg td{background:#edf6ed;font-weight:800}
 .num{text-align:right}
+svg{max-width:100%;height:auto;display:block;margin-bottom:8px}
+.chart-center{display:flex;justify-content:center}
 .dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:14px}
 .meta{font-size:.55rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:6px}
 @media print{body{padding:16px 20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:.8cm;size:A4 portrait}}
@@ -617,7 +619,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 </style></head><body>
 <div class="running-header"><img src="/logo-og.png" onerror="this.style.display='none'">Abundance Financial Services</div>
 <div class="cover">
-  <div class="cover-logo"><img src="/logo-og.png" onerror="this.style.display='none'"></div>
+  <div class="cover-logo"><img src="/logo-mark-white.png" onerror="this.style.display='none'"></div>
   <div class="cover-title">Investment Proposal</div>
   <div class="cover-blocks">
     <div class="cover-block">
@@ -666,7 +668,7 @@ function ExposureTable({ title, rows, fullRows, chart }) {
   const displayRows = showAll && fullRows ? fullRows : rows;
   return (
     <CollapsibleSection title={title}>
-      {chart === 'donut' && <InlineSvg className="pfc-chart" svg={donutChartSvg(rows)} />}
+      {chart === 'donut' && <InlineSvg className="pfc-chart pfc-chart-center" svg={donutChartSvg(rows)} />}
       {chart === 'bars' && <InlineSvg className="pfc-chart" svg={barRankingSvg(rows.slice(0, 10))} />}
       <div className="pfc-table-wrap">
         <table className="pfc-table">
@@ -732,8 +734,10 @@ function SchemeDetailsTable({ selectedFunds, holdingsByFund }) {
                     {d.riskSource === 'benchmark' && <span className="pfc-risk-benchmark-note"> (benchmark)</span>}
                   </td>
                   <td className="pfc-table-pct">
-                    {d.aumCr != null ? d.aumCr.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—'}
-                    {d.aumCr != null && d.aumAsOf && <span style={{ fontSize: '0.75em', color: 'var(--muted)' }}> ({d.aumAsOf})</span>}
+                    <div className="pfc-aum-cell">
+                      <span>{d.aumCr != null ? d.aumCr.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : '—'}</span>
+                      {d.aumCr != null && d.aumAsOf && <span className="pfc-aum-asof">{d.aumAsOf}</span>}
+                    </div>
                   </td>
                   <td>{d.launchDate || '—'}</td>
                   <td className="pfc-table-pct">{equityCount}</td>

@@ -43,6 +43,25 @@ test('barRankingSvg produces one bar per row, widths proportional to pct', () =>
   assert.ok(rectCount >= 2); // at least one fill-bar per row (track background may add more)
 });
 
+test('barRankingSvg truncates a label long enough to overflow into the bar track, instead of overlapping it', () => {
+  const svg = barRankingSvg([{ name: 'A Very Long Security Name That Would Otherwise Overlap The Bar', pct: 50 }], { labelWidth: 100 });
+  const labelText = svg.match(/<text x="0"[^>]*>([^<]+)<\/text>/)[1];
+  assert.ok(labelText.length < 'A Very Long Security Name That Would Otherwise Overlap The Bar'.length);
+  assert.ok(labelText.endsWith('…'));
+});
+
+test('barRankingSvg places the percentage label just past its own bar, not at a fixed far-right edge', () => {
+  const svgShort = barRankingSvg([{ name: 'Tiny', pct: 1 }, { name: 'Big', pct: 99 }]);
+  const matches = [...svgShort.matchAll(/<text x="([\d.]+)"[^>]*>[\d.]+%<\/text>/g)];
+  assert.strictEqual(matches.length, 2);
+  const [tinyPctX, bigPctX] = matches.map((m) => parseFloat(m[1]));
+  // The 1% row's bar is far shorter than the 99% row's bar, so its
+  // percentage label must sit much further left (closer to the label
+  // column) than the 99% row's -- proving the label follows the bar's own
+  // end rather than both landing at the same fixed right-hand column.
+  assert.ok(tinyPctX < bigPctX - 100);
+});
+
 test('overlapHeatmapSvg produces an svg sized to the grid dimensions', () => {
   const svg = overlapHeatmapSvg(['Fund A', 'Fund B'], [[100, 25], [25, 100]]);
   assert.ok(svg.startsWith('<svg'));
@@ -59,10 +78,17 @@ test('overlapHeatmapSvg cell color intensity increases with overlap %', () => {
   assert.notDeepStrictEqual(highFill, lowFill);
 });
 
-test('stackedBarSvg produces 4 segments per fund row (large/mid/small/unclassified)', () => {
+test('stackedBarSvg produces 4 segments per fund row, plus a legend and a track background', () => {
   const svg = stackedBarSvg([{ name: 'Fund A', large: 50, mid: 30, small: 15, unclassified: 5 }]);
   const rectCount = (svg.match(/<rect/g) || []).length;
-  assert.strictEqual(rectCount, 4);
+  // 4 legend swatches + 1 track background + 4 segments = 9
+  assert.strictEqual(rectCount, 9);
+  assert.ok(svg.includes('Large Cap') && svg.includes('Unclassified'));
+});
+
+test('stackedBarSvg truncates a long fund name instead of letting it run into the bar', () => {
+  const svg = stackedBarSvg([{ name: 'A Very Long Fund Name That Would Otherwise Overlap The Stacked Bar', large: 100, mid: 0, small: 0, unclassified: 0 }]);
+  assert.ok(svg.includes('…'));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
