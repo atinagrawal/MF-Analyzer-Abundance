@@ -18,7 +18,8 @@
  */
 
 import amfiAum from '@/data/amfi-aum.json';
-import { fetchRiskometer, matchBenchmarkRisk } from '@/lib/riskometer';
+import amfiSchemeRisk from '@/data/amfi-scheme-risk.json';
+import { fetchRiskometer, matchBenchmarkRisk, matchOwnSchemeRisk } from '@/lib/riskometer';
 
 const CACHE_PREFIX = 'portfolio-creator-holdings/';
 const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -185,9 +186,24 @@ async function fetchFresh(amfiCode, schemeName) {
   if (!schemeIdentityMatches(detail, amfiCode, schemeName)) return null;
 
   const aumRecord = amfiAum[amfiCode] || null;
+  const resolvedSchemeName = detail.scheme_name || schemeName;
 
+  // Priority: (1) the vendor's own per-scheme risk field, if it's ever
+  // populated -- confirmed live (2026-08) that it never is, kept as the
+  // first check anyway in case that changes; (2) AMFI's own OFFICIAL
+  // per-scheme riskometer (scripts/sync_scheme_riskometer.js), the real
+  // SEBI-mandated rating; (3) the benchmark-inferred fallback, for the
+  // minority of schemes not yet in AMFI's fund-performance gateway (e.g.
+  // very recently launched) or whose name didn't normalize to a match.
   let risk = detail.risk ?? null;
   let riskSource = risk ? 'own' : null;
+  if (!risk) {
+    const ownSchemeRisk = matchOwnSchemeRisk(resolvedSchemeName, amfiSchemeRisk.risk);
+    if (ownSchemeRisk) {
+      risk = ownSchemeRisk;
+      riskSource = 'amfi';
+    }
+  }
   if (!risk && detail.benchmark_name) {
     const riskMap = await fetchRiskometer();
     const benchmarkRisk = matchBenchmarkRisk(detail.benchmark_name, riskMap);
@@ -198,7 +214,7 @@ async function fetchFresh(amfiCode, schemeName) {
   }
 
   return {
-    schemeName: detail.scheme_name || schemeName,
+    schemeName: resolvedSchemeName,
     aum: detail.aum ?? null,
     aumCr: aumRecord?.aumCr ?? null,
     aumAsOf: aumRecord?.asOf ?? null,

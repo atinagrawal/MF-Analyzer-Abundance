@@ -10,7 +10,7 @@
 const assert = require('assert');
 
 (async () => {
-  const { matchBenchmarkRisk } = await import('../lib/riskometer.js');
+  const { matchBenchmarkRisk, matchOwnSchemeRisk, normalizeSchemeFamilyName } = await import('../lib/riskometer.js');
 
   console.log('=== Running Riskometer Unit Tests ===\n');
 
@@ -55,6 +55,31 @@ const assert = require('assert');
   test('matchBenchmarkRisk returns null for empty/missing input', () => {
     assert.strictEqual(matchBenchmarkRisk('', SAMPLE_MAP), null);
     assert.strictEqual(matchBenchmarkRisk(null, SAMPLE_MAP), null);
+  });
+
+  const SCHEME_RISK_MAP = {
+    'hdfc flexi cap': 'Very High',
+    'hdfc liquid': 'Moderate',
+  };
+
+  test('normalizeSchemeFamilyName strips Direct/Regular/Plan/Growth/IDCW/Fund noise down to the bare family name', () => {
+    assert.strictEqual(normalizeSchemeFamilyName('HDFC Flexi Cap Fund - Direct Plan - Growth'), 'hdfc flexi cap');
+    assert.strictEqual(normalizeSchemeFamilyName('HDFC Flexi Cap Fund - Growth Plan'), 'hdfc flexi cap');
+    assert.strictEqual(normalizeSchemeFamilyName('HDFC Flexi Cap Fund - IDCW Plan'), 'hdfc flexi cap');
+  });
+
+  test('matchOwnSchemeRisk matches regardless of plan/option suffix variant', () => {
+    assert.strictEqual(matchOwnSchemeRisk('HDFC Flexi Cap Fund - Direct Plan - Growth', SCHEME_RISK_MAP), 'Very High');
+    assert.strictEqual(matchOwnSchemeRisk('HDFC Liquid Fund - Regular Plan - Growth', SCHEME_RISK_MAP), 'Moderate');
+  });
+
+  test('matchOwnSchemeRisk returns null for an unmatched scheme, never a wrong guess', () => {
+    assert.strictEqual(matchOwnSchemeRisk('Some Unknown New Fund - Direct Plan - Growth', SCHEME_RISK_MAP), null);
+  });
+
+  test('matchOwnSchemeRisk returns null for empty/missing input', () => {
+    assert.strictEqual(matchOwnSchemeRisk('', SCHEME_RISK_MAP), null);
+    assert.strictEqual(matchOwnSchemeRisk(null, SCHEME_RISK_MAP), null);
   });
 
   console.log(`\n${passed} passed, ${failed} failed`);

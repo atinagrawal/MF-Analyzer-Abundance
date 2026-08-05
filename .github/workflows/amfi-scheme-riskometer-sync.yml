@@ -1,0 +1,42 @@
+name: Monthly AMFI Scheme Riskometer Sync
+
+on:
+  schedule:
+    # Run on the 15th of every month at 04:00 UTC -- staggered an hour after
+    # the AMFI AUM sync (03:00) so the two workflows don't hit AMFI's site
+    # concurrently. Riskometer ratings change infrequently, but AMFI's
+    # fund-performance gateway is itself refreshed on each NAV business day,
+    # so a monthly cadence (matching the AUM sync's own reasoning) is a safe,
+    # simple choice without trying to detect exactly when a rating changes.
+    - cron: '0 4 15 * *'
+  workflow_dispatch:
+
+jobs:
+  sync-scheme-riskometer:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run AMFI Scheme Riskometer Sync
+        run: node scripts/sync_scheme_riskometer.js
+
+      - name: Commit and push changes if updated
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/amfi-scheme-risk.json
+          if git diff --staged --quiet; then
+            echo "No changes to AMFI scheme riskometer data."
+          else
+            git commit -m "chore: monthly sync of AMFI scheme riskometer data"
+            git push
+          fi
