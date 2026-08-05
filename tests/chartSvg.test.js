@@ -69,6 +69,12 @@ test('overlapHeatmapSvg produces an svg sized to the grid dimensions', () => {
   assert.strictEqual(rectCount, 4); // 2x2 grid
 });
 
+test('overlapHeatmapSvg uses numbered column headers, not truncated names, and numbers row labels to match', () => {
+  const svg = overlapHeatmapSvg(['A Very Long Fund Name That Would Overflow A Cell', 'Another Long Fund Name'], [[100, 25], [25, 100]]);
+  assert.ok(svg.includes('>1<') && svg.includes('>2<')); // column headers are bare numbers
+  assert.ok(svg.includes('1. A Very Long') && svg.includes('2. Another Long')); // row labels numbered to match
+});
+
 test('overlapHeatmapSvg cell color intensity increases with overlap %', () => {
   const svg = overlapHeatmapSvg(['A', 'B'], [[100, 90], [90, 100]]);
   // A 90% overlap cell must not use the same fill as a hypothetical near-0% cell
@@ -83,7 +89,7 @@ test('stackedBarSvg produces 4 segments per fund row, plus a legend and a track 
   const rectCount = (svg.match(/<rect/g) || []).length;
   // 4 legend swatches + 1 track background + 4 segments = 9
   assert.strictEqual(rectCount, 9);
-  assert.ok(svg.includes('Large Cap') && svg.includes('Unclassified'));
+  assert.ok(svg.includes('Large Cap') && svg.includes('Others'));
 });
 
 test('stackedBarSvg truncates a long fund name instead of letting it run into the bar', () => {

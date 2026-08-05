@@ -664,6 +664,20 @@ function exportProposalPDF({
     kpi('Type', typeLabel),
   ].join('');
 
+  // Cover "what's inside" preview -- only lists sections this specific
+  // proposal actually includes (Portfolio Overlap needs 2+ funds, M-Cap
+  // needs the AMFI categorization index to have loaded), so it never
+  // promises a section that isn't there.
+  const coverToc = [
+    'Selected Funds & Scheme Details',
+    'Asset Allocation',
+    'Sector & Security Exposure',
+    readyFunds.length >= 2 ? 'Portfolio Overlap' : null,
+    mCapIndex ? 'M-Cap Allocation' : null,
+    'Growth Projection',
+  ].filter(Boolean);
+  const coverTocHTML = coverToc.map((item) => `<span>${esc(item)}</span>`).join('');
+
   const fundRows = selectedFunds.map((f) => {
     const logo = getMFLogoFromSchemeName(f.schemeName);
     const logoImg = logo
@@ -723,7 +737,7 @@ function exportProposalPDF({
       <div class="sec-block">
       <div class="sec">Scheme M-Cap Allocation</div>
       ${stackedBarSvg(rows)}
-      <table class="ptable"><thead><tr><th style="text-align:left">Fund</th><th class="num">Large Cap</th><th class="num">Mid Cap</th><th class="num">Small Cap</th><th class="num">Unclassified</th></tr></thead>
+      <table class="ptable"><thead><tr><th style="text-align:left">Fund</th><th class="num">Large Cap</th><th class="num">Mid Cap</th><th class="num">Small Cap</th><th class="num">Others</th></tr></thead>
       <tbody>${rows.map((r) => `<tr><td>${esc(r.name)}</td><td class="num">${r.large.toFixed(1)}%</td><td class="num">${r.mid.toFixed(1)}%</td><td class="num">${r.small.toFixed(1)}%</td><td class="num">${r.unclassified.toFixed(1)}%</td></tr>`).join('')}
       <tr class="avg"><td>Portfolio (weighted avg)</td><td class="num">${weightedAvg.large.toFixed(1)}%</td><td class="num">${weightedAvg.mid.toFixed(1)}%</td><td class="num">${weightedAvg.small.toFixed(1)}%</td><td class="num">${weightedAvg.unclassified.toFixed(1)}%</td></tr>
       </tbody></table>
@@ -794,7 +808,7 @@ svg{max-width:100%;height:auto;display:block;margin-bottom:8px}
 .closing-list{margin:0;padding-left:16px;font-size:.62rem;line-height:1.6;color:#333}
 .closing-list li{margin-bottom:4px}
 .meta{font-size:.55rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:6px}
-@media print{body{padding:16px 20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:.8cm;size:A4 portrait}}
+@media print{body{padding:0 20px 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:1.6cm .8cm .8cm .8cm;size:A4 portrait}}
 .cover { min-height: 700px; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, #0a2e0a 0%, #1b5e20 50%, #2e7d32 100%); color: #fff; padding: 60px 50px; margin: -30px -36px 0; }
 .cover-logo img { height: 48px; object-fit: contain; margin-bottom: 30px; }
 .cover-title { font-size: 2.2rem; font-weight: 800; margin-bottom: 30px; }
@@ -803,14 +817,29 @@ svg{max-width:100%;height:auto;display:block;margin-bottom:8px}
 .cover-name { font-size: 1.1rem; font-weight: 700; }
 .cover-detail { font-size: .8rem; opacity: .8; margin-top: 2px; }
 .cover-stats { margin-bottom: 20px; }
+.cover-toc { margin-bottom: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.18); }
+.cover-toc-label { font-size: .6rem; letter-spacing: 1.5px; text-transform: uppercase; opacity: .55; margin-bottom: 10px; }
+.cover-toc-list { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.cover-toc-list span { font-size: .78rem; font-weight: 600; opacity: .88; display: inline-flex; align-items: center; gap: 7px; }
+.cover-toc-list span::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #fff; opacity: .55; }
 .cover-date { opacity: .55; font-size: .75rem; }
 .page-break { page-break-after: always; }
 .running-header { display: none; }
 @media print {
+  /* The running header is position:fixed so Chrome repeats it on every
+     physical page -- but CSS padding on the body element only reserves
+     space ONCE, at the very start of the document's content flow (page 1),
+     not per-page: a paginated box's own padding doesn't repeat at each
+     fragment boundary. That meant every page after page 1 had its actual
+     first ~34px of content (a section title, the first chart row) rendered
+     directly under the fixed header and visually cropped/hidden behind it.
+     @page margin, unlike body padding, DOES apply consistently on every
+     physical page -- so the header's clearance now lives there (the
+     print @page rule above, margin: 1.6cm .8cm .8cm .8cm) instead of in
+     body's padding-top, which is removed here. */
   .running-header { display: flex; align-items: center; gap: 8px; position: fixed; top: 0; left: 0; right: 0; padding: 8px 36px; background: #fff; border-bottom: 1px solid #e8f5e9; font-size: .6rem; color: #5e8a5e; font-weight: 700; z-index: 10; }
   .running-header img { height: 16px; }
-  body { padding-top: 34px; }
-  .cover { margin: -16px -20px 0; }
+  .cover { margin: 0 -20px 0; }
 }
 .sec-block { page-break-inside: avoid; }
 </style></head><body>
@@ -832,6 +861,10 @@ svg{max-width:100%;height:auto;display:block;margin-bottom:8px}
     </div>
   </div>
   <div class="cover-stats banner-grid">${banner}</div>
+  <div class="cover-toc">
+    <div class="cover-toc-label">What's Inside</div>
+    <div class="cover-toc-list">${coverTocHTML}</div>
+  </div>
   <div class="cover-date">${esc(dateStr)}${proposalIdLabel ? ` · Proposal ID: ${esc(proposalIdLabel)}` : ''}</div>
 </div>
 <div class="page-break"></div>
@@ -875,7 +908,7 @@ ${projectionHTML}
       </ul>
     </div>
   </div>
-  <div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> This investment proposal has been prepared by Atin Kumar Agrawal, an AMFI-registered Mutual Fund and SIF Distributor, based on the information and preferences you've shared with us. It illustrates a possible portfolio for your reference — it is not investment advice, a recommendation, or a solicitation to invest in any specific fund, and there is no assurance the allocation or funds shown will achieve any particular outcome. Mutual fund and SIF investments are subject to market risks, including possible loss of principal; past performance is not indicative of future results, and the Growth Projection above uses AMFI's own prescribed assumed rates, not a fund-specific forecast. Please read the Scheme Information Document, Statement of Additional Information, and Key Information Memorandum of each scheme carefully before investing. This proposal is non-binding — you are under no obligation to act on it, and we encourage you to seek independent financial, tax, or legal advice where needed. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
+  <div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> This investment proposal has been prepared by Atin Kumar Agrawal, an AMFI-registered Mutual Fund and SIF Distributor, based on the information and preferences you've shared with us. It illustrates a possible portfolio for your reference — it is not investment advice, a recommendation, or a solicitation to invest in any specific fund, and there is no assurance the allocation or funds shown will achieve any particular outcome. Mutual fund and SIF investments are subject to market risks, including possible loss of principal; past performance is not indicative of future results, and the Growth Projection above uses AMFI's own prescribed assumed rates, not a fund-specific forecast. Please read the Scheme Information Document, Statement of Additional Information, and Key Information Memorandum of each scheme carefully before investing. This proposal is non-binding — you are under no obligation to act on it, and we encourage you to seek independent financial, tax, or legal advice where needed. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. | Atin Kumar Agrawal | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
 </div>
 <div class="meta">Generated ${esc(dateStr)}${proposalIdLabel ? ` · Proposal ID: ${esc(proposalIdLabel)}` : ''} · mfcalc.getabundance.in/proposal-studio</div>
 </body></html>`);
@@ -1077,7 +1110,7 @@ function ClosingSection() {
         </div>
       </div>
       <p className="pfc-closing-disclaimer">
-        This investment proposal has been prepared by Atin Kumar Agrawal, an AMFI-registered Mutual Fund and SIF Distributor, based on the information and preferences you've shared with us. It illustrates a possible portfolio for your reference — it is not investment advice, a recommendation, or a solicitation to invest in any specific fund, and there is no assurance the allocation or funds shown will achieve any particular outcome. Mutual fund and SIF investments are subject to market risks, including possible loss of principal; past performance is not indicative of future results, and the Growth Projection above uses AMFI's own prescribed assumed rates, not a fund-specific forecast. Please read the Scheme Information Document, Statement of Additional Information, and Key Information Memorandum of each scheme carefully before investing. This proposal is non-binding — you are under no obligation to act on it, and we encourage you to seek independent financial, tax, or legal advice where needed. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. | ARN-251838 | Abundance Financial Services | EUIN: E334718
+        This investment proposal has been prepared by Atin Kumar Agrawal, an AMFI-registered Mutual Fund and SIF Distributor, based on the information and preferences you've shared with us. It illustrates a possible portfolio for your reference — it is not investment advice, a recommendation, or a solicitation to invest in any specific fund, and there is no assurance the allocation or funds shown will achieve any particular outcome. Mutual fund and SIF investments are subject to market risks, including possible loss of principal; past performance is not indicative of future results, and the Growth Projection above uses AMFI's own prescribed assumed rates, not a fund-specific forecast. Please read the Scheme Information Document, Statement of Additional Information, and Key Information Memorandum of each scheme carefully before investing. This proposal is non-binding — you are under no obligation to act on it, and we encourage you to seek independent financial, tax, or legal advice where needed. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. | Atin Kumar Agrawal | ARN-251838 | Abundance Financial Services | EUIN: E334718
       </p>
     </CollapsibleSection>
   );
@@ -1116,7 +1149,7 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex, allocations }) {
               <th className="pfc-table-pct">Large Cap</th>
               <th className="pfc-table-pct">Mid Cap</th>
               <th className="pfc-table-pct">Small Cap</th>
-              <th className="pfc-table-pct">Unclassified</th>
+              <th className="pfc-table-pct">Others</th>
             </tr>
           </thead>
           <tbody>
