@@ -3,6 +3,7 @@ import Script from 'next/script';
 import { SITE, SITE_NAME, THEME_COLOR } from '@/lib/metadata';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import AuthProvider from '@/components/AuthProvider';
+import ProfileCompletionGate from '@/components/ProfileCompletionGate';
 
 /**
  * app/layout.js — Root layout for the entire application
@@ -87,6 +88,7 @@ export default function RootLayout({ children }) {
       <body>
         {/* AuthProvider makes useSession() available in all client components */}
         <AuthProvider>
+          <ProfileCompletionGate />
           {children}
         </AuthProvider>
         <SpeedInsights />

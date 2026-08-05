@@ -86,9 +86,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   providers: [
     // 1. Google OAuth
+    //
+    // allowDangerousEmailAccountLinking: without this, @auth/core's
+    // handleLoginOrRegister refuses to link a Google sign-in to any
+    // existing users row with the same email (admin-invited placeholder
+    // rows from app/api/admin/clients, or an account that first signed up
+    // via the Resend email/OTP provider below) -- it throws
+    // OAuthAccountNotLinked instead. That's the opposite of this app's own
+    // stated intent (see the comment in app/api/admin/clients/route.js).
+    // Traced this precisely through node_modules/@auth/core/src/lib/actions/
+    // callback/handle-login.js (2026-08): the OTHER direction -- an
+    // existing Google/placeholder account signing in via email/OTP later --
+    // always works unconditionally, since Auth.js trusts the email
+    // provider's own verification step. This flag only affects the
+    // OAuth-arrives-second direction.
+    //
+    // Safe to enable here specifically because the signIn callback below
+    // requires Google's own `email_verified` claim before allowing the
+    // link -- Auth.js's own docs recommend exactly this pairing. Without
+    // that check, "dangerous" would mean trusting any OAuth provider's
+    // email claim; with it, we're only trusting Google's claim after Google
+    // itself has confirmed the address, which is the standard safe usage.
     Google({
       clientId:     process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      allowDangerousEmailAccountLinking: true,
     }),
 
     // 2. Email sign-in via Resend — sends BOTH a 6-digit code and a magic
@@ -151,6 +173,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: 'database' },
 
   callbacks: {
+    // Only Google needs a check here: the Resend/email provider's own
+    // token-verification step (consuming a one-time link/code) is already
+    // this app's proof of email ownership. Google separately verifies
+    // email ownership itself and reports it via `profile.email_verified` --
+    // required here since allowDangerousEmailAccountLinking above trusts
+    // that claim to link into an existing account. Every real Google
+    // consumer account has this set true; false/missing would mean a
+    // non-compliant or misconfigured OAuth response, not a real user.
+    async signIn({ account, profile }) {
+      if (account?.provider === 'google') {
+        return profile?.email_verified === true;
+      }
+      return true;
+    },
+
     async session({ session, user }) {
       if (session?.user) {
         session.user.id   = user.id;
@@ -165,6 +202,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.planExpiresAt = isProAnnual ? expires.toISOString() : null;
       }
       return session;
+    },
+  },
+
+  events: {
+    // When allowDangerousEmailAccountLinking links a Google sign-in to a
+    // PRE-EXISTING nameless row (an admin-invited placeholder from
+    // app/api/admin/clients, or an account that first signed up via
+    // email/OTP), @auth/core's handleLoginOrRegister links the account but
+    // never copies over the Google profile's name/image -- it only does
+    // that for a brand-new user via createUser(). Without this, that user
+    // would be sent to /complete-profile (components/ProfileCompletionGate)
+    // despite Google having already given us a name. Only touches columns
+    // that are still empty (COALESCE), so it never overwrites a name the
+    // user already set via /complete-profile.
+    async linkAccount({ user, account, profile }) {
+      if (account.provider !== 'google' || user.name) return;
+      const name = profile?.name || null;
+      const image = profile?.picture || null;
+      if (!name && !image) return;
+      await pool.query(
+        'UPDATE users SET name = COALESCE(name, $1), image = COALESCE(image, $2) WHERE id = $3',
+        [name, image, user.id]
+      );
     },
   },
 
