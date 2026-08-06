@@ -27,6 +27,32 @@ export function formatProposalId(id) {
   return 'PROP-' + String(id).replace(/-/g, '').slice(0, 8).toUpperCase();
 }
 
+// Some data sources (CAS registrar exports especially) render scheme names
+// in ALL CAPS, which looks visually jarring sitting next to a normally-cased
+// name from another source in the same table or PDF (e.g. "BANDHAN SMALL CAP
+// FUND - REGULAR PLAN GROWTH" next to "HDFC Defence Fund - Growth Option").
+// Only touches a string that is ENTIRELY uppercase -- a strong signal it's a
+// formatting artifact rather than a deliberately-capitalized name -- so an
+// already well-formatted name (including one that legitimately keeps just
+// its AMC name in caps, e.g. "BANK OF INDIA Flexi Cap Fund") is never
+// touched at all. Shared by the editable tool (ProposalStudioClient.jsx,
+// applied when funds are added/loaded) and the read-only view
+// (ProposalReadOnlyView.jsx, applied to the loaded selectedFunds array) so
+// the same proposal shows identically-cased names on both paths.
+const SCHEME_NAME_ACRONYMS = new Set(['SBI', 'ICICI', 'HDFC', 'LIC', 'UTI', 'ITI', 'JM', 'DSP', 'PGIM', 'PPFAS', 'HSBC', 'ESG', 'IDCW', 'ELSS', 'SIP', 'NFO', 'NJ', 'BOI', 'PNB', 'IDBI', 'IDFC', 'ETF', 'FOF', 'FMP', 'PSU', 'NAV', 'AMC']);
+const SCHEME_NAME_LOWERCASE_WORDS = new Set(['of', 'and', 'the', 'in', 'for', 'to', 'a', 'an', '&']);
+export function prettifySchemeName(name) {
+  const s = String(name || '');
+  if (!s || !/[A-Z]/.test(s) || s !== s.toUpperCase()) return s;
+  return s.replace(/[A-Za-z']+/g, (word) => {
+    const upper = word.toUpperCase();
+    if (SCHEME_NAME_ACRONYMS.has(upper)) return upper;
+    const lower = word.toLowerCase();
+    if (SCHEME_NAME_LOWERCASE_WORDS.has(lower)) return lower;
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  });
+}
+
 // Loads the AMFI M-Cap categorization index once -- shared by the editable
 // tool and the read-only view so both compute M-Cap Allocation identically.
 export function useMCapIndex() {
