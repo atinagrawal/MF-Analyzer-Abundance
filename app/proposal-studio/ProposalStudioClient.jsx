@@ -336,7 +336,7 @@ function ProposalStudioTool() {
   // preserve today's zero-typing experience for the current sole user.
   const [advisorName, setAdvisorName] = useState('Atin Kumar Agrawal');
   const [advisorPhone, setAdvisorPhone] = useState('9808105923');
-  const [advisorEmail, setAdvisorEmail] = useState('');
+  const [advisorEmail, setAdvisorEmail] = useState('atin@getabundance.in');
   const [advisorArn, setAdvisorArn] = useState('ARN-251838');
   const [advisorEuin, setAdvisorEuin] = useState('E468841');
   const [advisorFieldsTouched, setAdvisorFieldsTouched] = useState(false);
@@ -365,14 +365,14 @@ function ProposalStudioTool() {
     if (session?.user?.email) setClientEmail(session.user.email);
   }, [session, clientFieldsTouched]);
 
-  // Prefill advisor name/email from the signed-in user's own session --
-  // they ARE the advisor using this tool -- only until they edit it
-  // themselves. ARN/EUIN/phone have no session source, so they keep their
-  // hardcoded defaults (today's real, sole user) until edited.
+  // Prefill advisor name from the signed-in user's own session -- they ARE
+  // the advisor using this tool -- only until they edit it themselves.
+  // Email/ARN/EUIN/phone have no reliable session source (a signed-in
+  // user's session email may not be their professional one), so they keep
+  // their own hardcoded defaults (today's real, sole user) until edited.
   useEffect(() => {
     if (advisorFieldsTouched) return;
     if (session?.user?.name) setAdvisorName(session.user.name);
-    if (session?.user?.email) setAdvisorEmail(session.user.email);
   }, [session, advisorFieldsTouched]);
 
   // Load the user's CAS-derived fund list once on mount, including each
@@ -514,7 +514,7 @@ function ProposalStudioTool() {
       setAdvisorFieldsTouched(true);
       setAdvisorName(data.advisorName || 'Atin Kumar Agrawal');
       setAdvisorPhone(data.advisorPhone || '9808105923');
-      setAdvisorEmail(data.advisorEmail || '');
+      setAdvisorEmail(data.advisorEmail || 'atin@getabundance.in');
       setAdvisorArn(data.advisorArn || 'ARN-251838');
       setAdvisorEuin(data.advisorEuin || 'E468841');
       setProposalType(data.proposalType || 'lumpsum');
