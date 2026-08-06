@@ -32,8 +32,12 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
-data/
+
+# Local/generated data -- most of data/ IS meant to be tracked (synced
+# JSON files committed by scripts/sync_*.js), only these specific ones
+# aren't.
 data/screener.json
+data/portfolios/
 
 .superpowers/
 
