@@ -197,6 +197,27 @@ function ClientDetailsCard({ clientName, setClientName, clientEmail, setClientEm
   );
 }
 
+// Editable so any distributor can use this tool for their own clients --
+// prints on the proposal in place of a hardcoded name/ARN. Abundance's own
+// branding (the running header, and the cover's "Powered by" mark) isn't
+// touched by these fields, so the platform stays attributed regardless of
+// who fills them in.
+function AdvisorDetailsCard({ advisorName, setAdvisorName, advisorPhone, setAdvisorPhone, advisorEmail, setAdvisorEmail, advisorArn, setAdvisorArn, advisorEuin, setAdvisorEuin, onTouched }) {
+  const handleChange = (setter) => (e) => { onTouched(); setter(e.target.value); };
+  return (
+    <section className="pfc-client-details">
+      <h3>Prepared By (Your Details)</h3>
+      <div className="pfc-client-fields">
+        <input className="pfc-client-input" placeholder="Your name" value={advisorName} onChange={handleChange(setAdvisorName)} />
+        <input className="pfc-client-input" type="tel" placeholder="Your phone" value={advisorPhone} onChange={handleChange(setAdvisorPhone)} />
+        <input className="pfc-client-input" type="email" placeholder="Your email" value={advisorEmail} onChange={handleChange(setAdvisorEmail)} />
+        <input className="pfc-client-input" placeholder="ARN number" value={advisorArn} onChange={handleChange(setAdvisorArn)} />
+        <input className="pfc-client-input" placeholder="EUIN" value={advisorEuin} onChange={handleChange(setAdvisorEuin)} />
+      </div>
+    </section>
+  );
+}
+
 // Inline collapsible list of the signed-in user's previously saved proposals,
 // with client-side search (list can grow large over time -- searching beats
 // scrolling) and a per-row two-step delete confirm, matching the inline
@@ -308,6 +329,17 @@ function ProposalStudioTool() {
   const [clientEmail, setClientEmail] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientFieldsTouched, setClientFieldsTouched] = useState(false);
+  // "Prepared By" -- editable so a distributor other than Atin can use this
+  // tool for their own clients (their name/ARN/etc, not hardcoded ones),
+  // while Abundance's own brand stays visible via the fixed "Powered by"
+  // mark and running header, which these fields don't touch. Defaults
+  // preserve today's zero-typing experience for the current sole user.
+  const [advisorName, setAdvisorName] = useState('Atin Kumar Agrawal');
+  const [advisorPhone, setAdvisorPhone] = useState('');
+  const [advisorEmail, setAdvisorEmail] = useState('');
+  const [advisorArn, setAdvisorArn] = useState('ARN-251838');
+  const [advisorEuin, setAdvisorEuin] = useState('E468841');
+  const [advisorFieldsTouched, setAdvisorFieldsTouched] = useState(false);
   const [savedProposalId, setSavedProposalId] = useState(null);
   const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
   const [saveError, setSaveError] = useState('');
@@ -332,6 +364,16 @@ function ProposalStudioTool() {
     if (session?.user?.name) setClientName(session.user.name);
     if (session?.user?.email) setClientEmail(session.user.email);
   }, [session, clientFieldsTouched]);
+
+  // Prefill advisor name/email from the signed-in user's own session --
+  // they ARE the advisor using this tool -- only until they edit it
+  // themselves. ARN/EUIN/phone have no session source, so they keep their
+  // hardcoded defaults (today's real, sole user) until edited.
+  useEffect(() => {
+    if (advisorFieldsTouched) return;
+    if (session?.user?.name) setAdvisorName(session.user.name);
+    if (session?.user?.email) setAdvisorEmail(session.user.email);
+  }, [session, advisorFieldsTouched]);
 
   // Load the user's CAS-derived fund list once on mount, including each
   // fund's real current value (units x NAV, same computation app/portfolio/page.jsx
@@ -444,6 +486,7 @@ function ProposalStudioTool() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientName, clientEmail, clientPhone, proposalType, sipFrequency, totalAmount,
+          advisorName, advisorPhone, advisorEmail, advisorArn, advisorEuin,
           selectedFunds: selectedFunds.map((f) => ({ amfiCode: f.amfiCode, schemeName: f.schemeName, amount: f.amount, source: f.source })),
         }),
       });
@@ -468,6 +511,12 @@ function ProposalStudioTool() {
       setClientName(data.clientName || '');
       setClientEmail(data.clientEmail || '');
       setClientPhone(data.clientPhone || '');
+      setAdvisorFieldsTouched(true);
+      setAdvisorName(data.advisorName || 'Atin Kumar Agrawal');
+      setAdvisorPhone(data.advisorPhone || '');
+      setAdvisorEmail(data.advisorEmail || '');
+      setAdvisorArn(data.advisorArn || 'ARN-251838');
+      setAdvisorEuin(data.advisorEuin || 'E468841');
       setProposalType(data.proposalType || 'lumpsum');
       setSipFrequency(data.sipFrequency || 'monthly');
       setSelectedFunds((data.selectedFunds || []).map((f) => ({
@@ -489,6 +538,14 @@ function ProposalStudioTool() {
         clientEmail={clientEmail} setClientEmail={setClientEmail}
         clientPhone={clientPhone} setClientPhone={setClientPhone}
         onTouched={() => setClientFieldsTouched(true)}
+      />
+      <AdvisorDetailsCard
+        advisorName={advisorName} setAdvisorName={setAdvisorName}
+        advisorPhone={advisorPhone} setAdvisorPhone={setAdvisorPhone}
+        advisorEmail={advisorEmail} setAdvisorEmail={setAdvisorEmail}
+        advisorArn={advisorArn} setAdvisorArn={setAdvisorArn}
+        advisorEuin={advisorEuin} setAdvisorEuin={setAdvisorEuin}
+        onTouched={() => setAdvisorFieldsTouched(true)}
       />
       <FundPicker
         selectedFunds={selectedFunds}
@@ -552,6 +609,7 @@ function ProposalStudioTool() {
                   proposalType, sipFrequency, totalAmount, selectedFunds,
                   assetAllocation, sectorExposure, stockExposure, readyFunds, allocations, mCapIndex,
                   erroredFunds, clientName, clientEmail, clientPhone, holdingsByFund, proposalId: savedProposalId,
+                  advisorName, advisorPhone, advisorEmail, advisorArn, advisorEuin,
                 })}
               >
                 {pendingCount > 0 ? 'Export / Print Proposal (loading…)' : 'Export / Print Proposal'}
@@ -582,7 +640,7 @@ function ProposalStudioTool() {
 
             <GrowthProjectionTable proposalType={proposalType} totalAmount={totalAmount} sipFrequency={sipFrequency} assetAllocation={assetAllocation} />
 
-            <ClosingSection />
+            <ClosingSection advisorName={advisorName} advisorArn={advisorArn} advisorEuin={advisorEuin} />
 
             {/* BenchmarkSection hidden for launch: it only matches funds benchmarked
                 directly to a BSE index, which excludes most real funds. Revisit once
@@ -650,6 +708,7 @@ function exportProposalPDF({
   proposalType, sipFrequency, totalAmount, selectedFunds,
   assetAllocation, sectorExposure, stockExposure, readyFunds, allocations, mCapIndex,
   erroredFunds, clientName, clientEmail, clientPhone, holdingsByFund, proposalId,
+  advisorName, advisorPhone, advisorEmail, advisorArn, advisorEuin,
 }) {
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
@@ -823,6 +882,9 @@ svg{max-width:100%;height:auto;display:block;margin-bottom:8px}
 .cover-toc-list span { font-size: .78rem; font-weight: 600; opacity: .88; display: inline-flex; align-items: center; gap: 7px; }
 .cover-toc-list span::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #fff; opacity: .55; }
 .cover-date { opacity: .55; font-size: .75rem; }
+.cover-powered-by { margin-top: 14px; display: flex; align-items: center; gap: 7px; opacity: .5; font-size: .65rem; letter-spacing: .2px; }
+.cover-powered-by img { height: 12px; width: auto; object-fit: contain; opacity: .9; }
+.cover-powered-by b { font-weight: 700; }
 .page-break { page-break-after: always; }
 .running-header { display: none; }
 @media print {
@@ -856,8 +918,10 @@ svg{max-width:100%;height:auto;display:block;margin-bottom:8px}
     </div>
     <div class="cover-block">
       <div class="cover-label">Prepared By</div>
-      <div class="cover-name">Atin Kumar Agrawal</div>
-      <div class="cover-detail">ARN-251838</div>
+      <div class="cover-name">${esc(advisorName || 'Advisor')}</div>
+      ${advisorPhone ? `<div class="cover-detail">${esc(advisorPhone)}</div>` : ''}
+      ${advisorEmail ? `<div class="cover-detail">${esc(advisorEmail)}</div>` : ''}
+      <div class="cover-detail">${esc(advisorArn)}</div>
     </div>
   </div>
   <div class="cover-stats banner-grid">${banner}</div>
@@ -866,11 +930,12 @@ svg{max-width:100%;height:auto;display:block;margin-bottom:8px}
     <div class="cover-toc-list">${coverTocHTML}</div>
   </div>
   <div class="cover-date">${esc(dateStr)}${proposalIdLabel ? ` · Proposal ID: ${esc(proposalIdLabel)}` : ''}</div>
+  <div class="cover-powered-by"><img src="/logo-mark-white.png" onerror="this.style.display='none'"> Powered by <b>Abundance Financial Services</b></div>
 </div>
 <div class="page-break"></div>
 <div class="ph">
   <div><div class="pt">Investment Proposal — ${esc(typeLabel)}</div>
-  <div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Fund &amp; SIF Distributor</div></div>
+  <div class="pa">Abundance Financial Services® · ${esc(advisorArn)} · AMFI Registered Mutual Fund &amp; SIF Distributor</div></div>
   <img class="logo" src="/logo-og.png" onerror="this.style.display='none'">
 </div>
 <div class="sec-block">
@@ -908,7 +973,7 @@ ${projectionHTML}
       </ul>
     </div>
   </div>
-  <div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> This investment proposal has been prepared by Atin Kumar Agrawal, an AMFI-registered Mutual Fund and SIF Distributor, based on the information and preferences you've shared with us. It illustrates a possible portfolio for your reference — it is not investment advice, a recommendation, or a solicitation to invest in any specific fund, and there is no assurance the allocation or funds shown will achieve any particular outcome. Mutual fund and SIF investments are subject to market risks, including possible loss of principal; past performance is not indicative of future results, and the Growth Projection above uses AMFI's own prescribed assumed rates, not a fund-specific forecast. Please read the Scheme Information Document, Statement of Additional Information, and Key Information Memorandum of each scheme carefully before investing. This proposal is non-binding — you are under no obligation to act on it, and we encourage you to seek independent financial, tax, or legal advice where needed. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. | Atin Kumar Agrawal | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
+  <div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> This investment proposal has been prepared by ${esc(advisorName || 'the preparer')}, an AMFI-registered Mutual Fund and SIF Distributor, based on the information and preferences you've shared with us. It illustrates a possible portfolio for your reference — it is not investment advice, a recommendation, or a solicitation to invest in any specific fund, and there is no assurance the allocation or funds shown will achieve any particular outcome. Mutual fund and SIF investments are subject to market risks, including possible loss of principal; past performance is not indicative of future results, and the Growth Projection above uses AMFI's own prescribed assumed rates, not a fund-specific forecast. Please read the Scheme Information Document, Statement of Additional Information, and Key Information Memorandum of each scheme carefully before investing. This proposal is non-binding — you are under no obligation to act on it, and we encourage you to seek independent financial, tax, or legal advice where needed. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. | ${esc(advisorName || '')} | ${esc(advisorArn)} | Abundance Financial Services | EUIN: ${esc(advisorEuin)}</div>
 </div>
 <div class="meta">Generated ${esc(dateStr)}${proposalIdLabel ? ` · Proposal ID: ${esc(proposalIdLabel)}` : ''} · mfcalc.getabundance.in/proposal-studio</div>
 </body></html>`);
@@ -1087,7 +1152,7 @@ function GrowthProjectionTable({ proposalType, totalAmount, sipFrequency, assetA
   );
 }
 
-function ClosingSection() {
+function ClosingSection({ advisorName, advisorArn, advisorEuin }) {
   return (
     <CollapsibleSection title="Expectations, Next Steps & Disclaimer">
       <div className="pfc-closing-cols">
@@ -1112,7 +1177,7 @@ function ClosingSection() {
         </div>
       </div>
       <p className="pfc-closing-disclaimer">
-        This investment proposal has been prepared by Atin Kumar Agrawal, an AMFI-registered Mutual Fund and SIF Distributor, based on the information and preferences you've shared with us. It illustrates a possible portfolio for your reference — it is not investment advice, a recommendation, or a solicitation to invest in any specific fund, and there is no assurance the allocation or funds shown will achieve any particular outcome. Mutual fund and SIF investments are subject to market risks, including possible loss of principal; past performance is not indicative of future results, and the Growth Projection above uses AMFI's own prescribed assumed rates, not a fund-specific forecast. Please read the Scheme Information Document, Statement of Additional Information, and Key Information Memorandum of each scheme carefully before investing. This proposal is non-binding — you are under no obligation to act on it, and we encourage you to seek independent financial, tax, or legal advice where needed. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. | Atin Kumar Agrawal | ARN-251838 | Abundance Financial Services | EUIN: E334718
+        This investment proposal has been prepared by {advisorName || 'the preparer'}, an AMFI-registered Mutual Fund and SIF Distributor, based on the information and preferences you've shared with us. It illustrates a possible portfolio for your reference — it is not investment advice, a recommendation, or a solicitation to invest in any specific fund, and there is no assurance the allocation or funds shown will achieve any particular outcome. Mutual fund and SIF investments are subject to market risks, including possible loss of principal; past performance is not indicative of future results, and the Growth Projection above uses AMFI's own prescribed assumed rates, not a fund-specific forecast. Please read the Scheme Information Document, Statement of Additional Information, and Key Information Memorandum of each scheme carefully before investing. This proposal is non-binding — you are under no obligation to act on it, and we encourage you to seek independent financial, tax, or legal advice where needed. Figures are based on each fund's most recently disclosed portfolio and AMFI's own Large/Mid/Small-cap categorization. | {advisorName || ''} | {advisorArn} | Abundance Financial Services | EUIN: {advisorEuin}
       </p>
     </CollapsibleSection>
   );

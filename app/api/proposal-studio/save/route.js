@@ -3,7 +3,8 @@
  *
  * POST /api/proposal-studio/save
  * Body (JSON): { clientName, clientEmail, clientPhone, proposalType,
- *                sipFrequency, totalAmount, selectedFunds }
+ *                sipFrequency, totalAmount, selectedFunds,
+ *                advisorName, advisorPhone, advisorEmail, advisorArn, advisorEuin }
  *
  * Saves the full proposal payload to Cloudflare R2, then logs it in the
  * proposals table so the owning user can list and reload it later.
@@ -26,6 +27,7 @@ export async function POST(req) {
     const {
       clientName, clientEmail, clientPhone,
       proposalType, sipFrequency, totalAmount, selectedFunds,
+      advisorName, advisorPhone, advisorEmail, advisorArn, advisorEuin,
     } = await req.json();
 
     if (!proposalType || !Array.isArray(selectedFunds) || selectedFunds.length === 0) {
@@ -38,6 +40,16 @@ export async function POST(req) {
       clientName: clientName || '',
       clientEmail: clientEmail || '',
       clientPhone: clientPhone || '',
+      // Advisor ("Prepared By") details -- editable per-proposal so any
+      // distributor can use this tool for their own clients. Only lives in
+      // the R2 payload, not a dedicated proposals table column, since the
+      // saved-proposals list (app/api/proposal-studio/list) doesn't need
+      // to search/display by advisor.
+      advisorName: advisorName || '',
+      advisorPhone: advisorPhone || '',
+      advisorEmail: advisorEmail || '',
+      advisorArn: advisorArn || '',
+      advisorEuin: advisorEuin || '',
       proposalType,
       sipFrequency: sipFrequency || 'monthly',
       totalAmount: totalAmount || 0,
