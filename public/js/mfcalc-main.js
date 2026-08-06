@@ -898,7 +898,7 @@ ${chipsHTML}
 <div class="sec">Performance &amp; Risk</div>
 ${mainHTML}
 ${chartImg?`<div class="sec">NAV Chart</div><div class="ci"><img src="${chartImg}"></div>`:''}
-<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. Data sourced from AMFI / mfapi.in. This is for illustrative purposes only and does not constitute financial advice. Consult your financial advisor before investing. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
+<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. Data sourced from AMFI / mfapi.in. This is for illustrative purposes only and does not constitute financial advice. Consult your financial advisor before investing. | ARN-251838 | Abundance Financial Services | EUIN: E468841</div>
 <script src="/api/picks-js" defer><\/script>
 </body></html>`);
   win.document.close();
@@ -1022,7 +1022,7 @@ function _makePDF(){
     doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(...MUT);
     doc.text('ARN-251838  ·  AMFI Registered MFD',ML+66,11);
     doc.setFont('helvetica','normal');
-    doc.text('EUIN: E334718  ·  GST: 05AXYPA6954G1Z3',ML+66,15.5);
+    doc.text('EUIN: E468841  ·  GST: 05AXYPA6954G1Z3',ML+66,15.5);
     // Date
     doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(...MUT);
     doc.text('Generated: '+dateStr+', '+timeStr,PW-MR,13,{align:'right'});
@@ -1094,7 +1094,7 @@ function _makePDF(){
     doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(93,64,55);
     doc.text('DISCLAIMER',ML+5,y+5.5);
     doc.setFont('helvetica','normal');doc.setFontSize(6.5);
-    const txt='Mutual Fund investments are subject to market risks. Please read all scheme-related documents carefully before investing. Past performance is not indicative of future results. This calculator is for illustrative purposes only and does not constitute financial advice. Please consult a SEBI-registered investment advisor before making any investment decision. | ARN-251838 | Abundance Financial Services | AMFI-Registered MFD | EUIN: E334718';
+    const txt='Mutual Fund investments are subject to market risks. Please read all scheme-related documents carefully before investing. Past performance is not indicative of future results. This calculator is for illustrative purposes only and does not constitute financial advice. Please consult a SEBI-registered investment advisor before making any investment decision. | ARN-251838 | Abundance Financial Services | AMFI-Registered MFD | EUIN: E468841';
     const lines=doc.splitTextToSize(txt,CW-8);
     doc.text(lines,ML+5,y+9.5);
     return y+26;
@@ -1105,7 +1105,7 @@ function _makePDF(){
     doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(...WHT);
     doc.text('Abundance Financial Services',ML+4,barY+7);
     doc.setFontSize(7);doc.setFont('helvetica','normal');
-    doc.text('ARN-251838  |  EUIN: E334718  |  AMFI-Registered Mutual Fund Distributor',ML+4,barY+12.5);
+    doc.text('ARN-251838  |  EUIN: E468841  |  AMFI-Registered Mutual Fund Distributor',ML+4,barY+12.5);
     doc.text('www.getabundance.in  |  +91 98081 05923  |  Moradabad, Uttar Pradesh',ML+4,barY+17);
     doc.setTextColor(190,225,190);
     doc.text('GST: 05AXYPA6954G1Z3',PW-MR-2,barY+17,{align:'right'});
@@ -1191,7 +1191,7 @@ ${summaryHTML}
 ${chartImg?`<div class="sec">Growth Chart</div><div class="ci"><img src="${chartImg}"></div>`:''}
 <div class="sec">Scenarios</div>
 ${cardsHTML}
-<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Projections are illustrative only and do not constitute financial advice. Consult your financial advisor before investing. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
+<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Projections are illustrative only and do not constitute financial advice. Consult your financial advisor before investing. | ARN-251838 | Abundance Financial Services | EUIN: E468841</div>
 </body></html>`);
   win.document.close();
   win.onload = ()=>setTimeout(()=>{win.focus();win.print();},600);
@@ -3096,7 +3096,7 @@ tr:nth-child(even) td{background:#f5faf5}
     + '<div class="sec">Result Cards</div>' + cardsHTML
     + (whatifHTML ? '<div class="sec">What-if Comparison</div>' + whatifHTML : '')
     + (chartImg ? '<div class="sec">NAV Chart</div><div class="ci"><img src="' + chartImg + '"></div>' : '')
-    + '<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. Backtested results use actual historical NAV data from AMFI / mfapi.in but do not guarantee future performance. This is for illustrative purposes only. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>';
+    + '<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. Backtested results use actual historical NAV data from AMFI / mfapi.in but do not guarantee future performance. This is for illustrative purposes only. | ARN-251838 | Abundance Financial Services | EUIN: E468841</div>';
 
   const win = window.open('','_blank','width=960,height=760');
   win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SWP Backtest | Abundance Financial Services</title>'
@@ -3666,7 +3666,7 @@ tr:nth-child(even) td{background:#f5faf5}
 <div class="sec">Result Cards</div>${cardsHTML}
 ${whatifHTML ? '<div class="sec">What-If Comparison</div>' + whatifHTML : ''}
 ${chartImg ? '<div class="sec">Corpus Growth Chart</div><div class="ci"><img src="' + chartImg + '"></div>' : ''}
-<div class="dis">⚠️ <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. SIP backtest uses actual historical NAV data from AMFI / mfapi.in but does not guarantee future performance. For illustrative purposes only. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
+<div class="dis">⚠️ <strong style="color:#e65100">Disclaimer:</strong> Mutual fund investments are subject to market risks. Past performance is not indicative of future returns. SIP backtest uses actual historical NAV data from AMFI / mfapi.in but does not guarantee future performance. For illustrative purposes only. | ARN-251838 | Abundance Financial Services | EUIN: E468841</div>
 </body></html>`);
   win.document.close();
   win.onload = () => setTimeout(() => { win.focus(); win.print(); }, 600);

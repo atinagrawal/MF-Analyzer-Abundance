@@ -551,7 +551,7 @@ export default function BacktestPage() {
 
         <div className="bt-disc">
           <strong>Important:</strong> This is a <b>hypothetical, back-tested illustration</b> built from historical NAVs for education only — it is <b>not investment advice</b> and not a recommendation of any scheme. <b>Past performance is not indicative of future results.</b> Mutual fund investments are subject to market risks; read all scheme-related documents carefully. SIFs are a newer, higher-risk category with limited live history, so their back-tests cover short periods only. Figures exclude exit loads, stamp duty, STT, expense-ratio changes and taxes, and execute each instalment at the next available trading-day NAV.
-          <div className="bt-arn">Abundance Financial Services® · ARN-251838 · EUIN: E334718 · AMFI-Registered Mutual Fund &amp; SIF Distributor</div>
+          <div className="bt-arn">Abundance Financial Services® · ARN-251838 · EUIN: E468841 · AMFI-Registered Mutual Fund &amp; SIF Distributor</div>
         </div>
       </div>
 
@@ -893,7 +893,7 @@ ${stitchHTML}
 <table class="risk-table"><thead><tr><th>Holding</th><th style="text-align:left">Strategy</th><th style="text-align:left">Start</th><th>Invested</th><th>Value</th><th>XIRR</th></tr></thead><tbody>${rowsHTML}</tbody></table>
 ${benchHTML}
 <div class="meta">SIP date: ${sipDay}${sipDay === 1 ? "st" : "th"} of month · Generated ${esc(dateStr)} · mfcalc.getabundance.in/backtest</div>
-<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> Hypothetical back-tested illustration from historical NAVs, for education only — not investment advice. Past performance is not indicative of future results. Mutual fund investments are subject to market risks; read all scheme-related documents carefully. Figures exclude exit loads, STT, stamp duty, expense-ratio changes and taxes. Data: AMFI / mfapi.in. | ARN-251838 | Abundance Financial Services | EUIN: E334718</div>
+<div class="dis">&#9888;&#65039; <strong style="color:#e65100">Disclaimer:</strong> Hypothetical back-tested illustration from historical NAVs, for education only — not investment advice. Past performance is not indicative of future results. Mutual fund investments are subject to market risks; read all scheme-related documents carefully. Figures exclude exit loads, STT, stamp duty, expense-ratio changes and taxes. Data: AMFI / mfapi.in. | ARN-251838 | Abundance Financial Services | EUIN: E468841</div>
 </body></html>`);
   win.document.close();
   win.onload = () => setTimeout(() => { win.focus(); win.print(); }, 600);
