@@ -170,6 +170,10 @@
   .pfc-amount-input input { width: 72px; }
 }
 
+.pfc-share-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pfc-share-link-input { flex: 1 1 220px; max-width: 360px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); background: var(--surface2, #edf6ed); }
+.pfc-send-email-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: 4px; }
+
 @media print {
   .navbar, .dark-footer, .pfc-picker, .pfc-explainer, .pfc-faq, .pfc-actions, .brd-gate { display: none; }
 }
