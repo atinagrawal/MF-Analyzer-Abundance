@@ -14,7 +14,7 @@
  *     type, category, nav, nav_date }
  */
 
-import { list, put } from '@vercel/blob';
+import { r2Get, r2Put } from '@/lib/r2';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -60,46 +60,32 @@ async function fetchFromAMFI() {
 
 // ── Blob helpers ─────────────────────────────────────────────────────────────
 
-async function blobGet(token) {
+async function blobGet() {
   try {
-    const { blobs } = await list({ prefix: BLOB_KEY, token, limit: 1 });
-    if (!blobs.length) return null;
-    const r = await fetch(blobs[0].downloadUrl || blobs[0].url, {
-      headers: { Authorization: `Bearer ${token}`, 'Cache-Control': 'no-store' },
-    });
-    return r.ok ? r.json() : null;
+    return await r2Get(BLOB_KEY);
   } catch { return null; }
 }
 
-async function blobPut(token, payload) {
+async function blobPut(payload) {
   try {
-    await put(BLOB_KEY, JSON.stringify(payload), {
-      access:           'private',
-      token,
-      addRandomSuffix:  false,
-      contentType:      'application/json',
-    });
+    await r2Put(BLOB_KEY, JSON.stringify(payload));
   } catch { /* fire-and-forget */ }
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────────
 
 export async function GET() {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-
   // 1. Try cache
-  if (token) {
-    const cached = await blobGet(token);
-    if (cached?.cached_at) {
-      const age = Date.now() - new Date(cached.cached_at).getTime();
-      if (age < TTL_MS) {
-        return Response.json(cached, {
-          headers: {
-            'X-Cache':       'HIT',
-            'Cache-Control': `max-age=${Math.floor((TTL_MS - age) / 1000)}`,
-          },
-        });
-      }
+  const cached = await blobGet();
+  if (cached?.cached_at) {
+    const age = Date.now() - new Date(cached.cached_at).getTime();
+    if (age < TTL_MS) {
+      return Response.json(cached, {
+        headers: {
+          'X-Cache':       'HIT',
+          'Cache-Control': `max-age=${Math.floor((TTL_MS - age) / 1000)}`,
+        },
+      });
     }
   }
 
@@ -113,7 +99,7 @@ export async function GET() {
       cached_at: new Date().toISOString(),
     };
 
-    if (token) blobPut(token, payload); // fire-and-forget
+    blobPut(payload); // fire-and-forget
 
     return Response.json(payload, {
       headers: {

@@ -20,6 +20,7 @@
 import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 import { getApmiProviderId } from '@/lib/apmiProviderMap';
+import { r2Get, r2Put } from '@/lib/r2';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,19 +42,10 @@ function cacheKey(iaid, strategy, year, month) {
     return `${iaid}-${strategy.toLowerCase().replace(/\s+/g, '-')}-${year}-${String(month).padStart(2, '0')}`;
 }
 
-const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
-
 async function readFromBlob(key) {
-    if (!BLOB_TOKEN) return null;
     try {
-        const { list } = await import('@vercel/blob');
-        const { blobs } = await list({ prefix: `${BLOB_BASE}/${key}.json`, token: BLOB_TOKEN, limit: 1 });
-        if (!blobs.length) return null;
-        const res = await fetch(blobs[0].downloadUrl || blobs[0].url, {
-            headers: { Authorization: `Bearer ${BLOB_TOKEN}`, 'Cache-Control': 'no-store' },
-        });
-        if (!res.ok) return null;
-        const payload = await res.json();
+        const payload = await r2Get(`${BLOB_BASE}/${key}.json`);
+        if (!payload) return null;
         if (!isFresh(payload.ts, BLOB_TTL_MS)) return null;
         return payload;
     } catch (err) {
@@ -63,16 +55,9 @@ async function readFromBlob(key) {
 }
 
 async function writeToBlob(key, data) {
-    if (!BLOB_TOKEN) return;
     try {
-        const { put } = await import('@vercel/blob');
         const payload = JSON.stringify({ data, ts: Date.now() });
-        await put(`${BLOB_BASE}/${key}.json`, payload, {
-            access: 'private',
-            contentType: 'application/json',
-            addRandomSuffix: false,
-            token: BLOB_TOKEN,
-        });
+        await r2Put(`${BLOB_BASE}/${key}.json`, payload);
     } catch (err) {
         console.warn('[pms-quartile] Blob write error:', err.message);
     }

@@ -25,12 +25,12 @@
 // used elsewhere on the site.
 
 import { fetchBseSymbolList, findBseSymbol, fetchBseDailySeries } from '../../lib/bseIndex';
+import { r2Get, r2Put } from '../../lib/r2';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const CACHE_PRE = 'bse-tri-cache/';
 const SYMBOL_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const SERIES_TTL_MS = 24 * 60 * 60 * 1000;      // 1 day
-const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 
 function isFresh(ts, ttlMs) {
     return ts && Date.now() - ts < ttlMs;
@@ -56,16 +56,9 @@ async function getSymbolList() {
 }
 
 async function blobGet(slugName) {
-    if (!BLOB_TOKEN) return null;
     try {
-        const { list } = await import('@vercel/blob');
-        const { blobs } = await list({ prefix: `${CACHE_PRE}${slugName}.json`, token: BLOB_TOKEN, limit: 1 });
-        if (!blobs.length) return null;
-        const res = await fetch(blobs[0].downloadUrl || blobs[0].url, {
-            headers: { Authorization: `Bearer ${BLOB_TOKEN}`, 'Cache-Control': 'no-store' },
-        });
-        if (!res.ok) return null;
-        const payload = await res.json();
+        const payload = await r2Get(`${CACHE_PRE}${slugName}.json`);
+        if (!payload) return null;
         if (!isFresh(payload.ts, SERIES_TTL_MS)) return null;
         return payload;
     } catch {
@@ -74,15 +67,8 @@ async function blobGet(slugName) {
 }
 
 async function blobPut(slugName, indexName, data) {
-    if (!BLOB_TOKEN) return;
     try {
-        const { put } = await import('@vercel/blob');
-        await put(`${CACHE_PRE}${slugName}.json`, JSON.stringify({ index: indexName, data, ts: Date.now() }), {
-            access: 'private',
-            contentType: 'application/json',
-            addRandomSuffix: false,
-            token: BLOB_TOKEN,
-        });
+        await r2Put(`${CACHE_PRE}${slugName}.json`, JSON.stringify({ index: indexName, data, ts: Date.now() }));
     } catch (e) {
         console.error('[nifty-tri] Blob write FAILED:', e.message);
     }
@@ -97,7 +83,7 @@ export default async function handler(req, res) {
     // Diagnostic endpoint: /api/nifty-tri?health=1
     if (req.query.health) {
         return res.status(200).json({
-            hasBlobToken: !!BLOB_TOKEN,
+            hasR2Config: !!(process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID),
             source: 'api.bseindia.com (via lib/bseIndex.js)',
             node: process.version,
         });

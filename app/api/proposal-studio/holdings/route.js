@@ -21,10 +21,10 @@ import amfiAum from '@/data/amfi-aum.json';
 import sifAum from '@/data/sif-aum.json';
 import amfiSchemeRisk from '@/data/amfi-scheme-risk.json';
 import { fetchRiskometer, matchBenchmarkRisk, matchOwnSchemeRisk } from '@/lib/riskometer';
+import { r2Get, r2Put } from '@/lib/r2';
 
 const CACHE_PREFIX = 'portfolio-creator-holdings/';
 const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 
 const memCache = new Map(); // amfiCode -> { data, ts }
 const inflight = new Map();
@@ -107,17 +107,9 @@ function normalizeHoldings(rawHoldings) {
 }
 
 async function blobGet(amfiCode) {
-  if (!BLOB_TOKEN) return null;
   try {
-    const { list } = await import('@vercel/blob');
-    const { blobs } = await list({ prefix: `${CACHE_PREFIX}${amfiCode}.json`, token: BLOB_TOKEN, limit: 1 });
-    if (!blobs.length) return null;
-    const res = await fetch(blobs[0].downloadUrl || blobs[0].url, {
-      headers: { Authorization: `Bearer ${BLOB_TOKEN}`, 'Cache-Control': 'no-store' },
-    });
-    if (!res.ok) return null;
-    const payload = await res.json();
-    if (!isFresh(payload.ts)) return null;
+    const payload = await r2Get(`${CACHE_PREFIX}${amfiCode}.json`);
+    if (!payload || !isFresh(payload.ts)) return null;
     return payload.data;
   } catch {
     return null;
@@ -125,15 +117,8 @@ async function blobGet(amfiCode) {
 }
 
 async function blobPut(amfiCode, data) {
-  if (!BLOB_TOKEN) return;
   try {
-    const { put } = await import('@vercel/blob');
-    await put(`${CACHE_PREFIX}${amfiCode}.json`, JSON.stringify({ data, ts: Date.now() }), {
-      access: 'private',
-      contentType: 'application/json',
-      addRandomSuffix: false,
-      token: BLOB_TOKEN,
-    });
+    await r2Put(`${CACHE_PREFIX}${amfiCode}.json`, JSON.stringify({ data, ts: Date.now() }));
   } catch (e) {
     console.error('[proposal-studio/holdings] Blob write failed:', e.message);
   }

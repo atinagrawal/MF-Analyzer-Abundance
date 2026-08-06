@@ -7,6 +7,7 @@
 // Cached 12 hours (data is monthly, no point hitting PDF on every request)
 
 import { fetchPdfText, fetchRiskometer } from '../../lib/riskometer';
+import { r2Get, r2Put } from '../../lib/r2';
 
 const MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 const MONTH_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -362,31 +363,16 @@ function getCurrentPdfUrl() {
 // Prefix bumped from idx-dashboard- → idx-dashboard2- to orphan blobs with stale asOf=28.
 
 async function dashboardCacheGet(year, month) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
   try {
-    const { list } = await import('@vercel/blob');
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
     const key = `idx-dashboard2-${year}-${String(month+1).padStart(2,'0')}.json`;
-    const { blobs } = await list({ prefix: key, limit: 1, token });
-    if (!blobs.length) return null;
-    // Private blobs require Authorization header to read
-    const r = await fetch(blobs[0].downloadUrl || blobs[0].url, {
-      headers: { 'Authorization': `Bearer ${token}`, 'Cache-Control': 'no-store' }
-    });
-    if (!r.ok) return null;
-    return await r.json();
+    return await r2Get(key);
   } catch { return null; }
 }
 
 async function dashboardCachePut(year, month, payload) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return;
   try {
-    const { put } = await import('@vercel/blob');
     const key = `idx-dashboard2-${year}-${String(month+1).padStart(2,'0')}.json`;
-    await put(key, JSON.stringify(payload), {
-      access: 'private', contentType: 'application/json',
-      addRandomSuffix: false, token: process.env.BLOB_READ_WRITE_TOKEN,
-    });
+    await r2Put(key, JSON.stringify(payload));
   } catch(e) {
     console.error('[index-dashboard] blob write FAILED — name:', e.name, 'msg:', e.message);
   }

@@ -18,6 +18,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { r2Get, r2Put } from '@/lib/r2';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,19 +37,10 @@ function isFresh(ts, ttlMs) {
     return ts && Date.now() - ts < ttlMs;
 }
 
-const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
-
 async function readFromBlob(iaid) {
-    if (!BLOB_TOKEN) return null;
     try {
-        const { list } = await import('@vercel/blob');
-        const { blobs } = await list({ prefix: `${BLOB_BASE}/${iaid}.json`, token: BLOB_TOKEN, limit: 1 });
-        if (!blobs.length) return null;
-        const res = await fetch(blobs[0].downloadUrl || blobs[0].url, {
-            headers: { Authorization: `Bearer ${BLOB_TOKEN}`, 'Cache-Control': 'no-store' },
-        });
-        if (!res.ok) return null;
-        const payload = await res.json();
+        const payload = await r2Get(`${BLOB_BASE}/${iaid}.json`);
+        if (!payload) return null;
         if (!isFresh(payload.ts, BLOB_TTL_MS)) return null;
         return payload;
     } catch (err) {
@@ -58,16 +50,9 @@ async function readFromBlob(iaid) {
 }
 
 async function writeToBlob(iaid, benchmark) {
-    if (!BLOB_TOKEN) return;
     try {
-        const { put } = await import('@vercel/blob');
         const payload = JSON.stringify({ benchmark, ts: Date.now() });
-        await put(`${BLOB_BASE}/${iaid}.json`, payload, {
-            access: 'private',
-            contentType: 'application/json',
-            addRandomSuffix: false,
-            token: BLOB_TOKEN,
-        });
+        await r2Put(`${BLOB_BASE}/${iaid}.json`, payload);
     } catch (err) {
         console.warn('[pms-benchmark] Blob write error:', err.message);
     }

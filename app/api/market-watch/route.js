@@ -8,7 +8,7 @@
  *   indices, nifty50, currency, fiiDii, gainers, losers, stale }
  */
 
-import { list, put } from '@vercel/blob';
+import { r2Get, r2Put } from '@/lib/r2';
 
 export const runtime  = 'nodejs';
 export const dynamic  = 'force-dynamic';
@@ -198,31 +198,23 @@ async function fetchFromNSE() {
   };
 }
 
-async function blobGet(token) {
+async function blobGet() {
   try {
-    const { blobs } = await list({ prefix: BLOB_KEY, token, limit: 1 });
-    if (!blobs.length) return null;
-    const r = await fetch(blobs[0].downloadUrl || blobs[0].url, {
-      headers: { Authorization: `Bearer ${token}`, 'Cache-Control': 'no-store' },
-    });
-    return r.ok ? r.json() : null;
+    return await r2Get(BLOB_KEY);
   } catch { return null; }
 }
 
-async function blobPut(token, payload) {
+async function blobPut(payload) {
   try {
-    await put(BLOB_KEY, JSON.stringify(payload), {
-      access: 'private', token, addRandomSuffix: false, contentType: 'application/json',
-    });
+    await r2Put(BLOB_KEY, JSON.stringify(payload));
   } catch {}
 }
 
 export async function GET(req) {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  const bust  = new URL(req.url).searchParams.has('bust');
+  const bust = new URL(req.url).searchParams.has('bust');
 
-  if (token && !bust) {
-    const cached = await blobGet(token);
+  if (!bust) {
+    const cached = await blobGet();
     if (cached?.cached_at && (Date.now() - new Date(cached.cached_at).getTime()) < TTL_MS) {
       return Response.json(cached, { headers: { 'X-Cache': 'HIT', 'Cache-Control': 'no-store' } });
     }
@@ -230,14 +222,12 @@ export async function GET(req) {
 
   try {
     const data = await fetchFromNSE();
-    if (token) blobPut(token, data);
+    blobPut(data);
     return Response.json(data, { headers: { 'X-Cache': 'MISS', 'Cache-Control': 'no-store' } });
   } catch (err) {
     console.error('[market-watch]', err.name, err.message);
-    if (token) {
-      const stale = await blobGet(token);
-      if (stale) return Response.json({ ...stale, stale: true }, { headers: { 'X-Cache': 'STALE', 'Cache-Control': 'no-store' } });
-    }
+    const stale = await blobGet();
+    if (stale) return Response.json({ ...stale, stale: true }, { headers: { 'X-Cache': 'STALE', 'Cache-Control': 'no-store' } });
     return Response.json({ error: err.message }, { status: 503 });
   }
 }

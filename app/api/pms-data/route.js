@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
+import { r2Get, r2Put } from '@/lib/r2';
 
 // ══════════════════════════════════════════════════════════════════════════
 //  PMS Data API — Three-layer cache
@@ -51,24 +52,14 @@ function parseVal(str) {
     return parseFloat(str.trim().replace(/[₹,]/g, ''));
 }
 
-// ── Blob helpers (gracefully no-op when token not set) ────────────────────
-const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
-const BLOB_BASE  = 'pms-cache';
+// ── R2 helpers (gracefully no-op on failure) ───────────────────────────────
+const BLOB_BASE = 'pms-cache';
 
 async function readFromBlob(key, ttlMs = BLOB_TTL_MS) {
-    if (!BLOB_TOKEN) return null;
     try {
-        const { list } = await import('@vercel/blob');
-        const { blobs } = await list({ prefix: `${BLOB_BASE}/${key}`, token: BLOB_TOKEN });
-        if (!blobs.length) return null;
-
-        // blobs are sorted newest first
-        const newest = blobs[0];
-        const res = await fetch(newest.url);
-        if (!res.ok) return null;
-
-        const payload = await res.json();
-        // Check blob TTL (shorter during reporting window)
+        const payload = await r2Get(`${BLOB_BASE}/${key}.json`);
+        if (!payload) return null;
+        // Check TTL (shorter during reporting window)
         if (!isFresh(payload.ts, ttlMs)) {
             console.log(`[PMS cache] Blob STALE for ${key}`);
             return null;
@@ -82,17 +73,9 @@ async function readFromBlob(key, ttlMs = BLOB_TTL_MS) {
 }
 
 async function writeToBlob(key, data) {
-    if (!BLOB_TOKEN) return;
     try {
-        const { put } = await import('@vercel/blob');
         const payload = JSON.stringify({ data, ts: Date.now(), key });
-        await put(`${BLOB_BASE}/${key}.json`, payload, {
-            access: 'public',
-            token: BLOB_TOKEN,
-            contentType: 'application/json',
-            // Vercel Blob doesn't support TTL natively — we enforce it via ts check on read
-            cacheControlMaxAge: 60 * 60 * 24 * 31, // hint CDN: 31 days
-        });
+        await r2Put(`${BLOB_BASE}/${key}.json`, payload);
         console.log(`[PMS cache] Blob WRITE OK for ${key}`);
     } catch (err) {
         // Non-fatal: app still works via memory cache

@@ -20,7 +20,7 @@
  */
 
 import pool from '@/lib/db';
-import { list, put } from '@vercel/blob';
+import { r2Get, r2Put } from '@/lib/r2';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -61,22 +61,15 @@ const VALID_INDICES = new Set([
   'NIFTY HOUSING', 'NIFTY INDIA RAILWAYS PSU',
 ]);
 
-async function blobGet(token, key) {
+async function blobGet(key) {
   try {
-    const { blobs } = await list({ prefix: key, token, limit: 1 });
-    if (!blobs.length) return null;
-    const r = await fetch(blobs[0].downloadUrl || blobs[0].url, {
-      headers: { Authorization: `Bearer ${token}`, 'Cache-Control': 'no-store' },
-    });
-    return r.ok ? r.json() : null;
+    return await r2Get(key);
   } catch { return null; }
 }
 
-async function blobPut(token, key, payload) {
+async function blobPut(key, payload) {
   try {
-    await put(key, JSON.stringify(payload), {
-      access: 'private', token, addRandomSuffix: false, contentType: 'application/json',
-    });
+    await r2Put(key, JSON.stringify(payload));
   } catch {}
 }
 
@@ -182,15 +175,12 @@ export async function GET(req) {
     return Response.json({ error: 'Invalid or missing index parameter' }, { status: 400 });
   }
 
-  const token   = process.env.BLOB_READ_WRITE_TOKEN;
   const blobKey = `sector-detail/${encodeURIComponent(index)}.json`;
 
   // 1. Blob cache (5-min TTL)
-  if (token) {
-    const cached = await blobGet(token, blobKey);
-    if (cached?.cached_at && (Date.now() - new Date(cached.cached_at).getTime()) < TTL_MS) {
-      return Response.json(cached, { headers: { 'X-Cache': 'HIT', 'Cache-Control': 'no-store' } });
-    }
+  const cached = await blobGet(blobKey);
+  if (cached?.cached_at && (Date.now() - new Date(cached.cached_at).getTime()) < TTL_MS) {
+    return Response.json(cached, { headers: { 'X-Cache': 'HIT', 'Cache-Control': 'no-store' } });
   }
 
   const sectorName = INDEX_TO_SECTOR[index];
@@ -237,7 +227,7 @@ export async function GET(req) {
         source: 'db',
       };
 
-      if (token) blobPut(token, blobKey, payload);
+      blobPut(blobKey, payload);
 
       return Response.json(payload, {
         headers: { 'X-Cache': 'MISS', 'X-Source': 'db', 'Cache-Control': 'no-store' },
@@ -289,7 +279,7 @@ export async function GET(req) {
       source: 'nse',
     };
 
-    if (token) blobPut(token, blobKey, payload);
+    blobPut(blobKey, payload);
 
     return Response.json(payload, {
       headers: { 'X-Cache': 'MISS', 'X-Source': 'nse', 'Cache-Control': 'no-store' },
@@ -298,12 +288,10 @@ export async function GET(req) {
     console.error('[sector-detail]', index, err.name, err.message);
 
     // Stale blob — last resort
-    if (token) {
-      const stale = await blobGet(token, blobKey);
-      if (stale) return Response.json({ ...stale, stale: true }, {
-        headers: { 'X-Cache': 'STALE', 'Cache-Control': 'no-store' },
-      });
-    }
+    const stale = await blobGet(blobKey);
+    if (stale) return Response.json({ ...stale, stale: true }, {
+      headers: { 'X-Cache': 'STALE', 'Cache-Control': 'no-store' },
+    });
     return Response.json({ error: err.message }, { status: 503 });
   }
 }

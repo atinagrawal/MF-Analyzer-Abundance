@@ -28,6 +28,7 @@
 
 import { NextResponse } from 'next/server';
 import { fetchBseSymbolList, findBseSymbol, fetchBseDailySeries } from '@/lib/bseIndex';
+import { r2Get, r2Put } from '@/lib/r2';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,7 +36,6 @@ export const dynamic = 'force-dynamic';
 const SYMBOL_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const SERIES_TTL_MS = 24 * 60 * 60 * 1000;      // 1 day
 const BLOB_BASE = 'bse-index-cache';
-const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 
 let symbolListCache = null; // { list, ts }
 const seriesCache = new Map(); // symbol -> { returns, ts }
@@ -79,16 +79,9 @@ function computeReturns(rows) {
 }
 
 async function readFromBlob(symbol) {
-    if (!BLOB_TOKEN) return null;
     try {
-        const { list } = await import('@vercel/blob');
-        const { blobs } = await list({ prefix: `${BLOB_BASE}/${symbol}.json`, token: BLOB_TOKEN, limit: 1 });
-        if (!blobs.length) return null;
-        const res = await fetch(blobs[0].downloadUrl || blobs[0].url, {
-            headers: { Authorization: `Bearer ${BLOB_TOKEN}`, 'Cache-Control': 'no-store' },
-        });
-        if (!res.ok) return null;
-        const payload = await res.json();
+        const payload = await r2Get(`${BLOB_BASE}/${symbol}.json`);
+        if (!payload) return null;
         if (!isFresh(payload.ts, SERIES_TTL_MS)) return null;
         return payload;
     } catch (err) {
@@ -98,15 +91,8 @@ async function readFromBlob(symbol) {
 }
 
 async function writeToBlob(symbol, returns) {
-    if (!BLOB_TOKEN) return;
     try {
-        const { put } = await import('@vercel/blob');
-        await put(`${BLOB_BASE}/${symbol}.json`, JSON.stringify({ returns, ts: Date.now() }), {
-            access: 'private',
-            contentType: 'application/json',
-            addRandomSuffix: false,
-            token: BLOB_TOKEN,
-        });
+        await r2Put(`${BLOB_BASE}/${symbol}.json`, JSON.stringify({ returns, ts: Date.now() }));
     } catch (err) {
         console.warn('[bse-index] Blob write error:', err.message);
     }
