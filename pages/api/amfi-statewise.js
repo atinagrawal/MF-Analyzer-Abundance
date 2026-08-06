@@ -12,14 +12,14 @@
 import https from 'https';
 import zlib from 'zlib';
 
-const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function amfiDate(year, month) {
   return `01-${MONTHS[month - 1]}-${year}`;
 }
 
 function fetchAMFI(date) {
-  const url = `https://www.amfiindia.com/api/statewise-data?MF_ID=0&date=${date}`;
+  const url = `https://www.amfiindia.com/api/statewise-data?MF_ID=3&date=${date}`;
   return new Promise((resolve, reject) => {
     const req = https.request(url, {
       headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Accept-Encoding': 'gzip, deflate, br' },
