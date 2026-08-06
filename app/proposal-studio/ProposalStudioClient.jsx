@@ -335,7 +335,7 @@ function ProposalStudioTool() {
   // mark and running header, which these fields don't touch. Defaults
   // preserve today's zero-typing experience for the current sole user.
   const [advisorName, setAdvisorName] = useState('Atin Kumar Agrawal');
-  const [advisorPhone, setAdvisorPhone] = useState('');
+  const [advisorPhone, setAdvisorPhone] = useState('9808105923');
   const [advisorEmail, setAdvisorEmail] = useState('');
   const [advisorArn, setAdvisorArn] = useState('ARN-251838');
   const [advisorEuin, setAdvisorEuin] = useState('E468841');
@@ -513,7 +513,7 @@ function ProposalStudioTool() {
       setClientPhone(data.clientPhone || '');
       setAdvisorFieldsTouched(true);
       setAdvisorName(data.advisorName || 'Atin Kumar Agrawal');
-      setAdvisorPhone(data.advisorPhone || '');
+      setAdvisorPhone(data.advisorPhone || '9808105923');
       setAdvisorEmail(data.advisorEmail || '');
       setAdvisorArn(data.advisorArn || 'ARN-251838');
       setAdvisorEuin(data.advisorEuin || 'E468841');
