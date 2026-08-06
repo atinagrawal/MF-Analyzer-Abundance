@@ -1,0 +1,42 @@
+name: Daily MF Scheme List Sync
+
+on:
+  schedule:
+    # Daily (unlike this project's other AMFI syncs, which are monthly --
+    # AUM/risk-o-meter data is only disclosed monthly, but new mutual fund
+    # scheme launches/renames can happen any day, and the whole point of
+    # this sync is for search to be instant on the very first request
+    # after a deploy). 20:00 UTC = 1:30 AM IST, well after AMFI's NAVAll.txt
+    # publishes for the day.
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync-mf-scheme-list:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run MF Scheme List Sync
+        run: node scripts/sync_mf_scheme_list.js
+
+      - name: Commit and push changes if updated
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/mf-scheme-list.json
+          if git diff --staged --quiet; then
+            echo "No changes to MF scheme list."
+          else
+            git commit -m "chore: daily sync of MF scheme list"
+            git push
+          fi
