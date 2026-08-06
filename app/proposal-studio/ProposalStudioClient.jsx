@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -9,6 +9,8 @@ import { startCheckout } from '@/lib/checkoutClient';
 import { getMFLogoFromSchemeName } from '@/lib/providerLogos';
 import { PROPOSAL_STUDIO_FAQ } from '@/lib/proposalStudioFaq';
 import { formatProposalId, useMCapIndex, CollapsibleSection, ProposalAnalysisBlock } from './ProposalSections';
+import { useSearchParams } from 'next/navigation';
+import ShareControls from './ShareControls';
 
 export default function ProposalStudioClient() {
   const { data: session, status } = useSession();
@@ -26,7 +28,11 @@ export default function ProposalStudioClient() {
 
         {status !== 'loading' && !isAuthed && <PfcSignInGate />}
         {status !== 'loading' && isAuthed && !isPro && <PfcProGate session={session} />}
-        {isAuthed && isPro && <ProposalStudioTool />}
+        {isAuthed && isPro && (
+          <Suspense fallback={<div className="pfc-hint">Loading…</div>}>
+            <ProposalStudioTool />
+          </Suspense>
+        )}
 
         <PfcFaq />
       </main>
@@ -291,6 +297,7 @@ function SavedProposalsSection({ onLoad, refreshKey }) {
                         {p.proposal_type === 'sip' ? 'SIP' : 'Lumpsum'} · ₹{Number(p.total_amount).toLocaleString('en-IN')} · {p.fund_count} fund{p.fund_count === 1 ? '' : 's'} · {new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                     </button>
+                    <a className="pfc-saved-view" href={`/proposal-studio/mine/${p.id}`}>View</a>
                     <button className="pfc-saved-delete" onClick={() => setDeletingId(p.id)}>Delete</button>
                   </>
                 )}
@@ -390,6 +397,17 @@ function ProposalStudioTool() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Lets app/proposal-studio/mine/[id]/page.js's "Edit this proposal"
+  // button navigate here and have that proposal load automatically,
+  // reusing the same loadSavedProposal flow a saved-list row click already
+  // triggers.
+  const searchParams = useSearchParams();
+  const loadParam = searchParams.get('load');
+  useEffect(() => {
+    if (loadParam) loadSavedProposal(loadParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadParam]);
 
   function addCasFund(amfiCode, schemeName, value) {
     if (selectedFunds.some((f) => f.amfiCode === amfiCode)) return;
@@ -570,6 +588,9 @@ function ProposalStudioTool() {
                 <span className="pfc-proposal-id">Saved · Proposal ID: {formatProposalId(savedProposalId)}</span>
               )}
               {saveStatus === 'error' && <span className="pfc-error-hint">{saveError}</span>}
+              {saveStatus === 'saved' && savedProposalId && (
+                <ShareControls key={savedProposalId} proposalId={savedProposalId} initialShareToken={null} clientEmail={clientEmail} />
+              )}
             </>
           }
         />

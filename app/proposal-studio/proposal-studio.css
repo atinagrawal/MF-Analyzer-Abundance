@@ -184,3 +184,6 @@
 .pfc-readonly-name { font: 700 15px Raleway, sans-serif; color: var(--text, #1e293b); margin-bottom: 2px; }
 .pfc-readonly-detail { font: 400 13px Raleway, sans-serif; color: var(--muted); }
 .pfc-readonly-notfound { text-align: center; padding: 80px 20px; color: var(--muted); font: 500 15px Raleway, sans-serif; }
+
+.pfc-saved-view { flex-shrink: 0; display: flex; align-items: center; border: none; background: transparent; color: var(--g2); cursor: pointer; font: 500 12px Raleway, sans-serif; padding: 8px 12px; align-self: stretch; text-decoration: none; transition: background 0.15s; }
+.pfc-saved-view:hover { background: var(--surface2, #edf6ed); }
