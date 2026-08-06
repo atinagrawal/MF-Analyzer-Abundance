@@ -177,3 +177,10 @@
 @media print {
   .navbar, .dark-footer, .pfc-picker, .pfc-explainer, .pfc-faq, .pfc-actions, .brd-gate { display: none; }
 }
+
+.pfc-readonly-parties { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.pfc-readonly-party { flex: 1 1 220px; background: var(--surface, #fff); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
+.pfc-readonly-label { font: 600 11px Raleway, sans-serif; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.pfc-readonly-name { font: 700 15px Raleway, sans-serif; color: var(--text, #1e293b); margin-bottom: 2px; }
+.pfc-readonly-detail { font: 400 13px Raleway, sans-serif; color: var(--muted); }
+.pfc-readonly-notfound { text-align: center; padding: 80px 20px; color: var(--muted); font: 500 15px Raleway, sans-serif; }
