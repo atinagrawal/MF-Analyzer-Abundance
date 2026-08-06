@@ -337,6 +337,7 @@ function ProposalStudioTool() {
   const [advisorEuin, setAdvisorEuin] = useState('E468841');
   const [advisorFieldsTouched, setAdvisorFieldsTouched] = useState(false);
   const [savedProposalId, setSavedProposalId] = useState(null);
+  const [loadedShareToken, setLoadedShareToken] = useState(null);
   const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
   const [saveError, setSaveError] = useState('');
   const [savedListRefresh, setSavedListRefresh] = useState(0);
@@ -493,6 +494,7 @@ function ProposalStudioTool() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Save failed.');
       setSavedProposalId(data.id);
+      setLoadedShareToken(null); // a freshly-saved row is always a brand-new proposal, never already shared
       setSaveStatus('saved');
       setSavedListRefresh((n) => n + 1);
     } catch (err) {
@@ -523,6 +525,7 @@ function ProposalStudioTool() {
         amfiCode: f.amfiCode, schemeName: prettifySchemeName(f.schemeName), amount: f.amount || 0, source: f.source || 'manual', amountTouched: true,
       })));
       setSavedProposalId(id);
+      setLoadedShareToken(data.shareToken || null);
       setSaveStatus('saved');
     } catch (err) {
       setSaveError(err.message);
@@ -589,7 +592,7 @@ function ProposalStudioTool() {
               )}
               {saveStatus === 'error' && <span className="pfc-error-hint">{saveError}</span>}
               {saveStatus === 'saved' && savedProposalId && (
-                <ShareControls key={savedProposalId} proposalId={savedProposalId} initialShareToken={null} clientEmail={clientEmail} />
+                <ShareControls key={savedProposalId} proposalId={savedProposalId} initialShareToken={loadedShareToken} clientEmail={clientEmail} />
               )}
             </>
           }
