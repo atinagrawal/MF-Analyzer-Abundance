@@ -191,7 +191,27 @@ export default async function handler(req, res) {
 
   // ── SEARCH ──
   if (q !== null) {
-    // Try mfapi first
+    // Try AMFI's own NAVAll.txt-backed search FIRST -- fast and reliable,
+    // no live external dependency once the 30-min in-memory cache is warm.
+    // mfapi.in used to be tried first here, but live testing (2026-08)
+    // showed it's highly inconsistent -- the SAME query took anywhere from
+    // 0.5s to a full 10s timeout across 3 consecutive tries -- meaning
+    // every search was frequently waiting out this route's 4s timeout
+    // before even reaching the AMFI fallback below. Flipping the order
+    // makes MF search feel as instant as SIF search (which was never
+    // depending on mfapi.in to begin with).
+    try {
+      const amfi    = await getAmfiMap();
+      const results = searchAmfi(amfi, q);
+      if (results.length > 0) {
+        return sendOk(res, results, 's-maxage=86400, stale-while-revalidate=172800');
+      }
+    } catch (_) { /* fall through to mfapi */ }
+
+    // mfapi.in fallback: only reached if AMFI's own data is unavailable or
+    // its simple substring match came up empty (mfapi's own search may
+    // catch a fuzzier query AMFI's did not) -- rare, since AMFI's NAVAll.txt
+    // is the ground truth for every registered scheme.
     try {
       const r = await fetch(
         `https://api.mfapi.in/mf/search?q=${encodeURIComponent(q)}`,
@@ -203,14 +223,7 @@ export default async function handler(req, res) {
       }
     } catch (_) { /* fall through */ }
 
-    // AMFI fallback: parse NAVAll.txt and search by name
-    try {
-      const amfi    = await getAmfiMap();
-      const results = searchAmfi(amfi, q);
-      return sendOk(res, results, 's-maxage=86400, stale-while-revalidate=172800');
-    } catch (e) {
-      return sendError(res, 502, 'Search unavailable — both mfapi.in and AMFI fallback failed: ' + e.message, 'UPSTREAM_DOWN');
-    }
+    return sendError(res, 502, 'Search unavailable — both AMFI and mfapi.in failed', 'UPSTREAM_DOWN');
   }
 
   // ── LATEST NAV only ──
