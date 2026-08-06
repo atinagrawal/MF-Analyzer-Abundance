@@ -13,7 +13,16 @@
  * matching what /api/sif-nav exposes as scheme_id and what
  * /api/proposal-studio/holdings already accepts as `amfiCode` for a SIF) --
  * no fuzzy name matching needed, unlike scripts/sync_scheme_riskometer.js's
- * mutual-fund equivalent (AMFI has no SIF category in that other API at all).
+ * mutual-fund equivalent (AMFI has no per-scheme SIF riskometer at all).
+ *
+ * Each response group is also keyed by SchemeCat_Desc (AMFI's own
+ * SEBI-mandated category description, e.g. "Equity Oriented Investment
+ * Strategies - Equity Ex-Top 100 Long-Short Fund") -- captured below as each
+ * scheme's `category`, since the underlying holdings vendor has never
+ * classified SIFs into its own category taxonomy at all (confirmed live,
+ * 2026-08: null for real SIFs across multiple fund houses). See
+ * app/api/proposal-studio/holdings/route.js's fetchFresh(), which falls back
+ * to this field.
  *
  * fyId=1/periodId=1 is assumed to always mean "the most recently published
  * quarter" -- matches the page's dropdowns, which live-tested only offered
@@ -88,6 +97,13 @@ async function run() {
         schemeName: scheme.SchemeNAVName,
         aumCr: Math.round((scheme.AverageAumForTheMonth / 100) * 100) / 100,
         asOf,
+        // The underlying holdings vendor has never classified SIFs into its
+        // own category taxonomy (confirmed live, 2026-08: null for real
+        // SIFs across multiple fund houses) -- AMFI's own SEBI-mandated
+        // category description for this scheme's group is the only
+        // reliable source, so it's captured here for
+        // app/api/proposal-studio/holdings/route.js to fall back to.
+        category: group.SchemeCat_Desc || null,
       };
       written++;
     }

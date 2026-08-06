@@ -63,6 +63,20 @@ function cleanSearchTerm(schemeName) {
     .trim();
 }
 
+// The underlying holdings vendor's own detail payload gives launch_date as
+// "DD-Mon-YYYY" (e.g. "08-Jun-2026"), unlike data/amfi-aum.json's ISO
+// YYYY-MM-DD (scripts/sync_amfi_aum.js's own Launch_Date.split('T')[0]) --
+// normalized here so a SIF's launchDate (see fetchFresh's fallback below)
+// displays consistently with every MF's.
+const MONTH_ABBR = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
+function parseVendorLaunchDate(raw) {
+  const m = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/.exec((raw || '').trim());
+  if (!m) return null;
+  const month = MONTH_ABBR[m[2].toLowerCase()];
+  if (!month) return null;
+  return `${m[3]}-${month}-${m[1].padStart(2, '0')}`;
+}
+
 async function resolveSearchId(amfiCode, schemeName) {
   const term = cleanSearchTerm(schemeName);
   const url = `https://groww.in/v1/api/search/v1/entity?app=false&entity_type=scheme&q=${encodeURIComponent(term)}&page=0&size=5`;
@@ -206,11 +220,25 @@ async function fetchFresh(amfiCode, schemeName) {
     aum: detail.aum ?? null,
     aumCr: aumRecord?.aumCr ?? null,
     aumAsOf: aumRecord?.asOf ?? null,
-    launchDate: aumRecord?.launchDate ?? null,
+    // AMFI's SIF Average AUM API (scripts/sync_sif_aum.js's source) has no
+    // launch-date field at all, so sifAum records never carry one -- fall
+    // back to the vendor's own per-scheme launch_date (confirmed live,
+    // 2026-08: present for real SIFs even when every other classification
+    // field below is null). amfiAum records already have launchDate from
+    // AMFI's dedicated scheme-details endpoint, so this fallback is a
+    // no-op for regular MFs.
+    launchDate: aumRecord?.launchDate ?? parseVendorLaunchDate(detail.launch_date),
     expenseRatio: detail.expense_ratio ?? null,
     risk,
     riskSource,
-    category: detail.category ?? null,
+    // The vendor has not classified SIFs into its own category taxonomy at
+    // all (confirmed live, 2026-08: null for real SIFs across multiple
+    // fund houses) -- fall back to AMFI's own SEBI-mandated category
+    // description (scripts/sync_sif_aum.js's SchemeCat_Desc, stored on
+    // sifAum records as `category`). No-op for regular MFs, whose
+    // amfiAum records have no `category` field and whose vendor category
+    // is reliably populated anyway.
+    category: detail.category ?? aumRecord?.category ?? null,
     subCategory: detail.sub_category ?? null,
     benchmarkName: detail.benchmark_name ?? null,
     minInvestment: detail.min_investment_amount ?? null,
