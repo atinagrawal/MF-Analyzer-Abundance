@@ -41,7 +41,7 @@ export async function GET(req) {
       return Response.json({ error: 'Saved payload missing from storage' }, { status: 404 });
     }
 
-    return Response.json({ id, shareToken: row.share_token, ...payload });
+    return Response.json({ ...payload, id, shareToken: row.share_token });
 
   } catch (err) {
     console.error('[proposal-studio/load]', err.name, err.message);

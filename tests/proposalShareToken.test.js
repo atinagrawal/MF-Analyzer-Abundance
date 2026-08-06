@@ -44,13 +44,15 @@ async function main() {
     const fakePool = {
       query: async (sql, params) => {
         calls.push({ sql, params });
-        if (sql.trim().startsWith('SELECT')) return { rows: [{ share_token: 'existing-token' }] };
-        throw new Error('UPDATE should not have been called when a token already exists');
+        // COALESCE keeps the pre-existing value in the DB and returns it,
+        // regardless of the candidate token passed in as $1.
+        return { rows: [{ share_token: 'existing-token' }] };
       },
     };
     const token = await ensureShareToken(fakePool, 'proposal-1');
     assert.strictEqual(token, 'existing-token');
     assert.strictEqual(calls.length, 1);
+    assert.ok(calls[0].sql.trim().startsWith('UPDATE'));
   });
 
   await test('ensureShareToken generates and persists a new token when none is set', async () => {
@@ -58,16 +60,17 @@ async function main() {
     const fakePool = {
       query: async (sql, params) => {
         calls.push({ sql, params });
-        if (sql.trim().startsWith('SELECT')) return { rows: [{ share_token: null }] };
-        if (sql.trim().startsWith('UPDATE')) return { rows: [] };
-        throw new Error(`Unexpected query: ${sql}`);
+        // COALESCE(share_token, $1) writes and returns the newly-generated
+        // candidate token ($1) when the column was NULL.
+        return { rows: [{ share_token: params[0] }] };
       },
     };
     const token = await ensureShareToken(fakePool, 'proposal-2');
     assert.ok(/^[A-Za-z0-9_-]+$/.test(token));
-    assert.strictEqual(calls.length, 2);
-    assert.ok(calls[1].sql.trim().startsWith('UPDATE'));
-    assert.deepStrictEqual(calls[1].params, [token, 'proposal-2']);
+    assert.strictEqual(calls.length, 1);
+    assert.ok(calls[0].sql.includes('COALESCE'));
+    assert.strictEqual(calls[0].params[0], token);
+    assert.strictEqual(calls[0].params[1], 'proposal-2');
   });
 
   console.log(`\n${passed} passed, ${failed} failed`);
