@@ -8,7 +8,7 @@ import ProviderAvatar from '@/components/ProviderAvatar';
 import { startCheckout } from '@/lib/checkoutClient';
 import { getMFLogoFromSchemeName } from '@/lib/providerLogos';
 import { PROPOSAL_STUDIO_FAQ } from '@/lib/proposalStudioFaq';
-import { formatProposalId, useMCapIndex, CollapsibleSection, ProposalAnalysisBlock } from './ProposalSections';
+import { formatProposalId, useMCapIndex, CollapsibleSection, ProposalAnalysisBlock, prettifySchemeName } from './ProposalSections';
 import { useSearchParams } from 'next/navigation';
 import ShareControls from './ShareControls';
 
@@ -27,10 +27,9 @@ export default function ProposalStudioClient() {
         <PfcExplainer />
 
         {status !== 'loading' && !isAuthed && <PfcSignInGate />}
-        {status !== 'loading' && isAuthed && !isPro && <PfcProGate session={session} />}
-        {isAuthed && isPro && (
+        {status !== 'loading' && isAuthed && (
           <Suspense fallback={<div className="pfc-hint">Loading…</div>}>
-            <ProposalStudioTool />
+            <ProposalStudioGateOrTool session={session} isPro={isPro} />
           </Suspense>
         )}
 
@@ -156,27 +155,19 @@ function PfcProGate({ session }) {
   );
 }
 
-// Some data sources (CAS registrar exports especially) render scheme names
-// in ALL CAPS, which looks visually jarring sitting next to a normally-cased
-// name from another source in the same table or PDF (e.g. "BANDHAN SMALL CAP
-// FUND - REGULAR PLAN GROWTH" next to "HDFC Defence Fund - Growth Option").
-// Only touches a string that is ENTIRELY uppercase -- a strong signal it's a
-// formatting artifact rather than a deliberately-capitalized name -- so an
-// already well-formatted name (including one that legitimately keeps just
-// its AMC name in caps, e.g. "BANK OF INDIA Flexi Cap Fund") is never
-// touched at all.
-const SCHEME_NAME_ACRONYMS = new Set(['SBI', 'ICICI', 'HDFC', 'LIC', 'UTI', 'ITI', 'JM', 'DSP', 'PGIM', 'PPFAS', 'HSBC', 'ESG', 'IDCW', 'ELSS', 'SIP', 'NFO', 'NJ', 'BOI', 'PNB', 'IDBI', 'IDFC', 'ETF', 'FOF', 'FMP', 'PSU', 'NAV', 'AMC']);
-const SCHEME_NAME_LOWERCASE_WORDS = new Set(['of', 'and', 'the', 'in', 'for', 'to', 'a', 'an', '&']);
-function prettifySchemeName(name) {
-  const s = String(name || '');
-  if (!s || !/[A-Z]/.test(s) || s !== s.toUpperCase()) return s;
-  return s.replace(/[A-Za-z']+/g, (word) => {
-    const upper = word.toUpperCase();
-    if (SCHEME_NAME_ACRONYMS.has(upper)) return upper;
-    const lower = word.toLowerCase();
-    if (SCHEME_NAME_LOWERCASE_WORDS.has(lower)) return lower;
-    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-  });
+// Creating a brand-new proposal (no ?load=) still requires Pro (unchanged),
+// but opening an already-saved one via ?load=<id> (e.g. from mine/[id]'s
+// "Edit this proposal" button) bypasses the Pro check -- per spec decision 8,
+// managing a proposal you already own is gated on ownership alone, not
+// current plan status, so a lapsed subscription shouldn't lock a distributor
+// out of proposals they already legitimately created. This isn't a security
+// relaxation: /api/proposal-studio/load's own 403 check inside
+// loadSavedProposal still enforces ownership regardless of Pro status.
+function ProposalStudioGateOrTool({ session, isPro }) {
+  const searchParams = useSearchParams();
+  const hasLoadParam = Boolean(searchParams.get('load'));
+  if (!isPro && !hasLoadParam) return <PfcProGate session={session} />;
+  return <ProposalStudioTool />;
 }
 
 function ClientDetailsCard({ clientName, setClientName, clientEmail, setClientEmail, clientPhone, setClientPhone, onTouched }) {
@@ -564,6 +555,9 @@ function ProposalStudioTool() {
         onRemove={removeFund}
         onAmountChange={setFundAmount}
       />
+      {saveStatus === 'error' && selectedFunds.length === 0 && (
+        <div className="pfc-error-hint">{saveError}</div>
+      )}
       {selectedFunds.length > 0 && (
         <ProposalAnalysisBlock
           selectedFunds={selectedFunds}
