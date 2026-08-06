@@ -25,7 +25,7 @@ export async function GET(req) {
     }
 
     const result = await pool.query(
-      `SELECT user_id, blob_key FROM proposals WHERE id = $1`,
+      `SELECT user_id, blob_key, share_token FROM proposals WHERE id = $1`,
       [id]
     );
     const row = result.rows[0];
@@ -41,7 +41,7 @@ export async function GET(req) {
       return Response.json({ error: 'Saved payload missing from storage' }, { status: 404 });
     }
 
-    return Response.json({ id, ...payload });
+    return Response.json({ id, shareToken: row.share_token, ...payload });
 
   } catch (err) {
     console.error('[proposal-studio/load]', err.name, err.message);
