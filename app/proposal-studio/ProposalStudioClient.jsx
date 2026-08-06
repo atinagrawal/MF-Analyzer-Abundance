@@ -797,15 +797,19 @@ function exportProposalPDF({
           mid: rows.reduce((s, r) => s + r.mid * r.allocationPct, 0) / totalAllocation,
           small: rows.reduce((s, r) => s + r.small * r.allocationPct, 0) / totalAllocation,
           unclassified: rows.reduce((s, r) => s + r.unclassified * r.allocationPct, 0) / totalAllocation,
+          derivatives: rows.reduce((s, r) => s + r.derivatives * r.allocationPct, 0) / totalAllocation,
         }
-      : { large: 0, mid: 0, small: 0, unclassified: 0 };
+      : { large: 0, mid: 0, small: 0, unclassified: 0, derivatives: 0 };
     mcapHTML = `
       <div class="sec-block">
       <div class="sec">Scheme M-Cap Allocation</div>
       ${stackedBarSvg(rows)}
-      <table class="ptable"><thead><tr><th style="text-align:left">Fund</th><th class="num">Large Cap</th><th class="num">Mid Cap</th><th class="num">Small Cap</th><th class="num">Others</th></tr></thead>
-      <tbody>${rows.map((r) => `<tr><td>${esc(r.name)}</td><td class="num">${r.large.toFixed(1)}%</td><td class="num">${r.mid.toFixed(1)}%</td><td class="num">${r.small.toFixed(1)}%</td><td class="num">${r.unclassified.toFixed(1)}%</td></tr>`).join('')}
-      <tr class="avg"><td>Portfolio (weighted avg)</td><td class="num">${weightedAvg.large.toFixed(1)}%</td><td class="num">${weightedAvg.mid.toFixed(1)}%</td><td class="num">${weightedAvg.small.toFixed(1)}%</td><td class="num">${weightedAvg.unclassified.toFixed(1)}%</td></tr>
+      <p style="font-size:.62rem;color:#5e8a5e;margin-bottom:8px;line-height:1.5;">
+        Large Cap/Mid Cap/Small Cap/Others always sum to 100% of the fund's cash-equity holdings. <b>Derivatives</b> is a separate figure -- net futures exposure as a % of the fund's total assets, shown alongside rather than folded into that 100%.
+      </p>
+      <table class="ptable"><thead><tr><th style="text-align:left">Fund</th><th class="num">Large Cap</th><th class="num">Mid Cap</th><th class="num">Small Cap</th><th class="num">Others</th><th class="num">Derivatives</th></tr></thead>
+      <tbody>${rows.map((r) => `<tr><td>${esc(r.name)}</td><td class="num">${r.large.toFixed(1)}%</td><td class="num">${r.mid.toFixed(1)}%</td><td class="num">${r.small.toFixed(1)}%</td><td class="num">${r.unclassified.toFixed(1)}%</td><td class="num">${r.derivatives.toFixed(1)}%</td></tr>`).join('')}
+      <tr class="avg"><td>Portfolio (weighted avg)</td><td class="num">${weightedAvg.large.toFixed(1)}%</td><td class="num">${weightedAvg.mid.toFixed(1)}%</td><td class="num">${weightedAvg.small.toFixed(1)}%</td><td class="num">${weightedAvg.unclassified.toFixed(1)}%</td><td class="num">${weightedAvg.derivatives.toFixed(1)}%</td></tr>
       </tbody></table>
       </div>`;
   }
@@ -1199,9 +1203,9 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex, allocations }) {
   });
 
   // Portfolio-weighted average row: weight each fund's Large/Mid/Small/
-  // Unclassified % by that fund's allocation %, summed and divided by the
-  // total allocation actually represented by readyFunds (not a hardcoded
-  // 100, since some selected funds may still be loading).
+  // Others/Derivatives % by that fund's allocation %, summed and divided
+  // by the total allocation actually represented by readyFunds (not a
+  // hardcoded 100, since some selected funds may still be loading).
   const totalAllocation = rows.reduce((s, r) => s + r.allocationPct, 0);
   const weightedAvg = totalAllocation > 0
     ? {
@@ -1209,12 +1213,16 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex, allocations }) {
         mid: rows.reduce((s, r) => s + r.mid * r.allocationPct, 0) / totalAllocation,
         small: rows.reduce((s, r) => s + r.small * r.allocationPct, 0) / totalAllocation,
         unclassified: rows.reduce((s, r) => s + r.unclassified * r.allocationPct, 0) / totalAllocation,
+        derivatives: rows.reduce((s, r) => s + r.derivatives * r.allocationPct, 0) / totalAllocation,
       }
-    : { large: 0, mid: 0, small: 0, unclassified: 0 };
+    : { large: 0, mid: 0, small: 0, unclassified: 0, derivatives: 0 };
 
   return (
     <CollapsibleSection title="Scheme M-Cap Allocation">
       <InlineSvg className="pfc-chart pfc-chart-scroll" svg={stackedBarSvg(rows)} />
+      <p className="pfc-projection-note">
+        Large Cap/Mid Cap/Small Cap/Others always sum to 100% of the fund's cash-equity holdings. <b>Derivatives</b> is a separate figure — net futures exposure as a % of the fund's total assets, shown alongside rather than folded into that 100%, since a short position should reduce it rather than vanish.
+      </p>
       <div className="pfc-table-wrap">
         <table className="pfc-table pfc-table-wide">
           <thead>
@@ -1224,6 +1232,7 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex, allocations }) {
               <th className="pfc-table-pct">Mid Cap</th>
               <th className="pfc-table-pct">Small Cap</th>
               <th className="pfc-table-pct">Others</th>
+              <th className="pfc-table-pct">Derivatives</th>
             </tr>
           </thead>
           <tbody>
@@ -1234,6 +1243,7 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex, allocations }) {
                 <td className="pfc-table-pct">{r.mid.toFixed(1)}%</td>
                 <td className="pfc-table-pct">{r.small.toFixed(1)}%</td>
                 <td className="pfc-table-pct">{r.unclassified.toFixed(1)}%</td>
+                <td className="pfc-table-pct">{r.derivatives.toFixed(1)}%</td>
               </tr>
             ))}
             <tr className="pfc-mcap-avg">
@@ -1242,6 +1252,7 @@ function MCapTable({ selectedFunds, readyFunds, mCapIndex, allocations }) {
               <td className="pfc-table-pct">{weightedAvg.mid.toFixed(1)}%</td>
               <td className="pfc-table-pct">{weightedAvg.small.toFixed(1)}%</td>
               <td className="pfc-table-pct">{weightedAvg.unclassified.toFixed(1)}%</td>
+              <td className="pfc-table-pct">{weightedAvg.derivatives.toFixed(1)}%</td>
             </tr>
           </tbody>
         </table>

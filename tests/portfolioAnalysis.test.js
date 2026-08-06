@@ -4,7 +4,7 @@
 // Run with: node tests/portfolioAnalysis.test.js
 
 const assert = require('assert');
-const { normalizeName, combineExposure, computeOverlap, computeMCapAllocation, isComparableHolding } = require('../lib/portfolioAnalysis');
+const { normalizeName, combineExposure, computeOverlap, computeMCapAllocation, isComparableHolding, isDerivativeHolding } = require('../lib/portfolioAnalysis');
 
 console.log('=== Running Portfolio Analysis Unit Tests ===\n');
 
@@ -168,6 +168,33 @@ test('computeMCapAllocation buckets by the provided M-Cap index and reports Uncl
   assert.strictEqual(result.unclassified, 37.5);
   assert.strictEqual(result.mid, 0);
   assert.strictEqual(result.small, 0);
+  assert.strictEqual(result.derivatives, 0);
+});
+
+test('isDerivativeHolding recognizes every real naming convention found live (Futures suffix, $$ suffix, trailing expiry-date token)', () => {
+  assert.strictEqual(isDerivativeHolding({ assetClass: 'EQUITY', securityName: 'Suzlon Energy Ltd Futures' }), true);
+  assert.strictEqual(isDerivativeHolding({ assetClass: 'EQUITY', securityName: 'MAX Healthcare Institute Ltd $$' }), true);
+  assert.strictEqual(isDerivativeHolding({ assetClass: 'EQUITY', securityName: 'Central Depository Services (India) Limited Dec24**' }), true);
+  assert.strictEqual(isDerivativeHolding({ assetClass: 'EQUITY', securityName: 'Adani Enterprises Ltd. 30-JUN-26' }), true);
+  assert.strictEqual(isDerivativeHolding({ assetClass: 'EQUITY', securityName: 'Kfin Technologies Limited Jul25' }), true);
+  // Plain cash-equity holdings must never match
+  assert.strictEqual(isDerivativeHolding({ assetClass: 'EQUITY', securityName: 'Suzlon Energy Ltd' }), false);
+  assert.strictEqual(isDerivativeHolding({ assetClass: 'EQUITY', securityName: 'HDFC Bank Ltd' }), false);
+  // A DEBT instrument's own maturity date is normal, not a derivative marker
+  assert.strictEqual(isDerivativeHolding({ assetClass: 'DEBT', securityName: 'INDIAN OVERSEAS BANK CD 26FEB27' }), false);
+});
+
+test('computeMCapAllocation reports net (unclamped) derivative exposure separately, excluded from the Large/Mid/Small/Others 100%', () => {
+  const fund = { amfiCode: 'A', holdings: [
+    { securityName: 'HDFC Bank Ltd', assetClass: 'EQUITY', sector: 'Banks', weightagePct: 50 },
+    { securityName: 'ICICI Bank Ltd', assetClass: 'EQUITY', sector: 'Banks', weightagePct: 50 },
+    { securityName: 'Suzlon Energy Ltd Futures', assetClass: 'EQUITY', sector: 'Derivatives', weightagePct: -8 },
+    { securityName: 'Adani Enterprises Ltd. 30-JUN-26', assetClass: 'EQUITY', sector: 'Derivatives', weightagePct: 5 },
+  ] };
+  const mCapIndex = new Map([['hdfc bank', 'Large Cap'], ['icici bank', 'Large Cap']]);
+  const result = computeMCapAllocation(fund, mCapIndex);
+  assert.strictEqual(result.large, 100);       // 50+50 over an equity-only denominator that excludes both derivative rows
+  assert.strictEqual(result.derivatives, -3);  // -8 + 5, net, as a % of total fund assets -- not divided by totalEquity
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
