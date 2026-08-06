@@ -752,8 +752,8 @@ function exportProposalPDF({
     <p style="font-size:.62rem;color:#5e8a5e;margin-bottom:8px;line-height:1.5;">
       Assumed return: <b>${(projectionRate * 100).toFixed(2)}% p.a.</b>, blended from this portfolio's asset mix per AMFI Best Practices Guidelines Circular No. 109 (Equity ${(ASSUMED_CAGR.EQUITY * 100).toFixed(2)}%, Debt ${(ASSUMED_CAGR.DEBT * 100).toFixed(2)}%, Gold ${(ASSUMED_CAGR.GOLD * 100).toFixed(2)}%).
     </p>
-    <table class="ptable"><thead><tr><th style="text-align:left">Year</th><th class="num">Total Invested</th><th class="num">Projected Value</th></tr></thead>
-    <tbody>${projectionRows.map((r) => `<tr><td>${r.year}</td><td class="num">${inr(r.totalInvested)}</td><td class="num">${inr(r.projectedValue)}</td></tr>`).join('')}</tbody></table>
+    <table class="ptable"><thead><tr><th style="text-align:left">Year</th><th class="num">Total Invested</th><th class="num">Projected Value</th><th class="num">Gain</th></tr></thead>
+    <tbody>${projectionRows.map((r) => `<tr><td>${r.year}</td><td class="num">${inr(r.totalInvested)}</td><td class="num">${inr(r.projectedValue)}</td><td class="num">${inr(r.projectedValue - r.totalInvested)}</td></tr>`).join('')}</tbody></table>
     <p style="font-size:.55rem;color:#5e8a5e;margin-top:6px;">Past performance may or may not be sustained in future and is not a guarantee of any future returns. This is an illustration using AMFI's prescribed assumed rates, not a projection specific to the funds in this proposal.</p>
     </div>`;
 
@@ -1065,6 +1065,7 @@ function GrowthProjectionTable({ proposalType, totalAmount, sipFrequency, assetA
               <th>Year</th>
               <th className="pfc-table-pct">Total Invested</th>
               <th className="pfc-table-pct">Projected Value</th>
+              <th className="pfc-table-pct">Gain</th>
             </tr>
           </thead>
           <tbody>
@@ -1073,6 +1074,7 @@ function GrowthProjectionTable({ proposalType, totalAmount, sipFrequency, assetA
                 <td>{r.year}</td>
                 <td className="pfc-table-pct">{inr(r.totalInvested)}</td>
                 <td className="pfc-table-pct">{inr(r.projectedValue)}</td>
+                <td className="pfc-table-pct">{inr(r.projectedValue - r.totalInvested)}</td>
               </tr>
             ))}
           </tbody>
