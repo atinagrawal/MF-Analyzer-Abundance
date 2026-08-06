@@ -165,6 +165,15 @@ CREATE TABLE IF NOT EXISTS proposals (
 
 CREATE INDEX IF NOT EXISTS idx_proposals_user ON proposals(user_id);
 
+-- Public share links (docs/superpowers/specs/2026-08-06-proposal-studio-sharing-design.md).
+-- NULL = not currently shared. A non-null value is a high-entropy random
+-- token (lib/proposalShareToken.js), distinct from the proposal's own id,
+-- generated only when sharing is turned on. UNIQUE so a token can never
+-- collide across proposals; the partial index keeps the index small since
+-- most rows will have share_token = NULL.
+ALTER TABLE proposals ADD COLUMN IF NOT EXISTS share_token TEXT UNIQUE;
+CREATE INDEX IF NOT EXISTS idx_proposals_share_token ON proposals(share_token) WHERE share_token IS NOT NULL;
+
 -- =============================================================================
 -- Role values: 'client' | 'distributor' | 'admin'
 -- Promote a user manually:
