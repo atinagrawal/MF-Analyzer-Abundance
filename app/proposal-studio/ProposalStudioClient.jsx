@@ -686,7 +686,14 @@ function fullSecurityExposure(funds, allocations) {
     const fundWeight = (allocations[fund.amfiCode] || 0) / 100;
     for (const h of fund.holdings) {
       if (!isComparableHolding(h)) continue;
-      const w = Math.max(0, h.weightagePct || 0) * fundWeight;
+      // Unclamped -- a short futures position (negative weightagePct, e.g.
+      // in a long-short SIF strategy) must show its true negative weight,
+      // not get floored to 0. Clamping here previously made a short
+      // position appear as a phantom "0.00%" holding instead of what it
+      // actually is, and silently broke the list's total (verified live,
+      // 2026-08: a real long-short SIF's holdings summed to 112% instead
+      // of 100% because of this).
+      const w = (h.weightagePct || 0) * fundWeight;
       const key = normalizeName(h.securityName);
       const existing = security.get(key) || { name: h.securityName, pct: 0 };
       existing.pct += w;

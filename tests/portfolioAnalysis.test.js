@@ -47,16 +47,21 @@ test('combineExposure sums asset allocation across two equal-weighted funds', ()
   assert.strictEqual(Math.round(cash * 100) / 100, 10);   // 20*0.5
 });
 
-test('combineExposure clamps negative (short) weightage to 0', () => {
+test('combineExposure nets a negative (short) weightage into its true total instead of clamping to 0', () => {
+  // A short futures position (or a negative cash-equivalent line like "Net
+  // Payables") must reduce its asset class's total -- flooring it to 0
+  // instead double-counts every positive holding without the offsetting
+  // short, which is exactly what made a real long-short SIF's Asset
+  // Allocation sum to 112% instead of ~100% (verified live, 2026-08).
   const funds = [
     { amfiCode: 'A', holdings: [
-      { securityName: 'Nifty Futures', assetClass: 'EQUITY', sector: 'Derivatives', weightagePct: -15 },
+      { securityName: 'Nifty Futures 30-JUN-26', assetClass: 'EQUITY', sector: 'Derivatives', weightagePct: -15 },
       { securityName: 'HDFC Bank Ltd', assetClass: 'EQUITY', sector: 'Banks', weightagePct: 90 },
     ] },
   ];
   const result = combineExposure(funds, { A: 100 });
   const equity = result.assetAllocation.find((r) => r.name === 'Equity').pct;
-  assert.strictEqual(Math.round(equity * 100) / 100, 90); // the -15 contributes 0, not -15
+  assert.strictEqual(Math.round(equity * 100) / 100, 75); // 90 + (-15), not 90 (clamped)
 });
 
 test('isComparableHolding treats generic cash-equivalent names as non-comparable, everything else as comparable', () => {
