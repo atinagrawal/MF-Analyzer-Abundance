@@ -238,7 +238,16 @@ async function fetchFresh(amfiCode, schemeName) {
     // sifAum records as `category`). No-op for regular MFs, whose
     // amfiAum records have no `category` field and whose vendor category
     // is reliably populated anyway.
-    category: detail.category ?? aumRecord?.category ?? null,
+    //
+    // AMFI's own SchemeCat_Desc/category fields (confirmed live across
+    // both of AMFI's SIF APIs) are always a compound "<broad asset-class
+    // strategy> - <specific scheme strategy>" string, e.g. "Equity
+    // Oriented Investment Strategies - Equity Ex-Top 100 Long-Short
+    // Fund" -- the broad prefix is noise for this app's display purposes.
+    // .split(' - ').pop() keeps just the specific strategy name, matching
+    // the identical cleanup app/sifs/page.js:118 already applies to this
+    // exact same AMFI category shape.
+    category: detail.category ?? (aumRecord?.category ? aumRecord.category.split(' - ').pop() : null),
     subCategory: detail.sub_category ?? null,
     benchmarkName: detail.benchmark_name ?? null,
     minInvestment: detail.min_investment_amount ?? null,
