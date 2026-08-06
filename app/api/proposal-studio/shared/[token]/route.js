@@ -52,6 +52,6 @@ export async function GET(req, { params }) {
 
   } catch (err) {
     console.error('[proposal-studio/shared]', err.name, err.message);
-    return Response.json({ error: err.message }, { status: 500 });
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
