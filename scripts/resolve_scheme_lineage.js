@@ -79,25 +79,21 @@ const INPUT_PAIRS = [
   ['IDBI Equity Savings Fund', 'LIC MF Equity Savings Fund', '2023-07'],
   ['IDBI Hybrid Equity Fund', 'LIC MF Aggressive Hybrid Fund', '2023-07'],
 
-  // 7. Benchmark -> Goldman Sachs (2011) -> Reliance (2015) -> Nippon
-  // (2019). Each ETF's 3 hops are resolved independently; the runtime
-  // multi-hop walker (lib/schemeLineage.js's walkLineage) chains them
-  // automatically once all 3 verify against data/scheme-lineage.json.
+  // 7. Benchmark -> Goldman Sachs (2011) -> Reliance (2015). The final
+  // Reliance -> Nippon (2019) transition is a pure rename (confirmed in the
+  // reference file's section 2, "Renamed to") -- same AMFI code, no lineage
+  // entry needed; walkLineage's chain will already find continuous history
+  // straight through it once the two hops below verify.
   ['Benchmark Nifty BeES', 'Goldman Sachs Nifty BeES', '2011'],
   ['Goldman Sachs Nifty BeES', 'Reliance ETF Nifty BeES', '2015'],
-  ['Reliance ETF Nifty BeES', 'Nippon India ETF Nifty 50 BeES', '2019'],
   ['Benchmark Junior BeES', 'Goldman Sachs Junior BeES', '2011'],
   ['Goldman Sachs Junior BeES', 'Reliance ETF Junior BeES', '2015'],
-  ['Reliance ETF Junior BeES', 'Nippon India ETF Junior BeES', '2019'],
   ['Benchmark Gold BeES', 'Goldman Sachs Gold BeES', '2011'],
   ['Goldman Sachs Gold BeES', 'Reliance ETF Gold BeES', '2015'],
-  ['Reliance ETF Gold BeES', 'Nippon India ETF Gold BeES', '2019'],
   ['Benchmark Bank BeES', 'Goldman Sachs Bank BeES', '2011'],
   ['Goldman Sachs Bank BeES', 'Reliance ETF Bank BeES', '2015'],
-  ['Reliance ETF Bank BeES', 'Nippon India ETF Bank BeES', '2019'],
   ['Benchmark Liquid BeES', 'Goldman Sachs Liquid BeES', '2011'],
   ['Goldman Sachs Liquid BeES', 'Reliance ETF Liquid BeES', '2015'],
-  ['Reliance ETF Liquid BeES', 'Nippon India ETF Liquid BeES', '2019'],
 
   // 9. Escorts -> Quant (2018), labelled "Restructured into" in the source
   // -- treated as a merge-candidate per the spec's resolution rules.
