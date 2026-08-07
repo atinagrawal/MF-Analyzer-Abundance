@@ -8129,16 +8129,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 }
 
 .pricing-faq {
-  max-width: 820px;
+  max-width: 960px;
   margin: 0 auto 60px;
-}
-
-.pricing-faq h3 {
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--text);
-  margin: 0 0 20px;
-  letter-spacing: -.3px;
 }
 
 .faq-grid {
@@ -8148,31 +8140,120 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 }
 
 .faq-item {
-  padding: 16px 18px;
+  padding: 18px 20px;
   background: var(--s2);
   border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
-.faq-item strong {
-  display: block;
-  font-size: .78rem;
-  font-weight: 700;
+.faq-item h3 {
+  font-size: .88rem;
+  font-weight: 800;
   color: var(--text);
-  margin-bottom: 6px;
+  margin: 0 0 8px;
+  line-height: 1.35;
 }
 
 .faq-item p {
-  font-size: .72rem;
+  font-size: .78rem;
   color: var(--muted);
   margin: 0;
-  line-height: 1.55;
+  line-height: 1.6;
+}
+
+/* Pricing Feature Comparison Matrix */
+.pricing-matrix-wrap {
+  max-width: 1060px;
+  margin: 48px auto 64px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: var(--shadow);
+}
+.pricing-matrix-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 6px;
+  text-align: center;
+}
+.pricing-matrix-sub {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+  margin: 0 0 24px;
+}
+.pricing-matrix-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.pricing-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  min-width: 600px;
+}
+.pricing-matrix-table th {
+  padding: 12px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  border-bottom: 2px solid var(--border);
+  text-align: left;
+}
+.pricing-matrix-table th.col-free {
+  text-align: center;
+  width: 22%;
+}
+.pricing-matrix-table th.col-pro {
+  text-align: center;
+  width: 32%;
+  color: var(--g1);
+  background: var(--g-xlight);
+  border-radius: 8px 8px 0 0;
+}
+.pricing-matrix-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+}
+.pricing-matrix-table td.col-free {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.pricing-matrix-table td.col-pro {
+  text-align: center;
+  background: rgba(27, 94, 32, 0.03);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--g1);
+}
+.pricing-matrix-feat {
+  display: block;
+  font-weight: 700;
+  color: var(--text);
+  font-size: 0.85rem;
+}
+.pricing-matrix-desc {
+  font-size: 0.72rem;
+  color: var(--muted);
+  display: block;
+  margin-top: 2px;
+  line-height: 1.35;
 }
 
 @media (max-width: 640px) {
   .pricing-grid { grid-template-columns: 1fr; gap: 32px; }
   .faq-grid     { grid-template-columns: 1fr; }
   .pricing-amount { font-size: 1.9rem; }
+  .pricing-matrix-wrap { padding: 18px 14px; }
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
