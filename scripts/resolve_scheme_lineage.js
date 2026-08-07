@@ -79,21 +79,17 @@ const INPUT_PAIRS = [
   ['IDBI Equity Savings Fund', 'LIC MF Equity Savings Fund', '2023-07'],
   ['IDBI Hybrid Equity Fund', 'LIC MF Aggressive Hybrid Fund', '2023-07'],
 
-  // 7. Benchmark -> Goldman Sachs (2011) -> Reliance (2015). The final
-  // Reliance -> Nippon (2019) transition is a pure rename (confirmed in the
-  // reference file's section 2, "Renamed to") -- same AMFI code, no lineage
-  // entry needed; walkLineage's chain will already find continuous history
-  // straight through it once the two hops below verify.
-  ['Benchmark Nifty BeES', 'Goldman Sachs Nifty BeES', '2011'],
-  ['Goldman Sachs Nifty BeES', 'Reliance ETF Nifty BeES', '2015'],
-  ['Benchmark Junior BeES', 'Goldman Sachs Junior BeES', '2011'],
-  ['Goldman Sachs Junior BeES', 'Reliance ETF Junior BeES', '2015'],
-  ['Benchmark Gold BeES', 'Goldman Sachs Gold BeES', '2011'],
-  ['Goldman Sachs Gold BeES', 'Reliance ETF Gold BeES', '2015'],
-  ['Benchmark Bank BeES', 'Goldman Sachs Bank BeES', '2011'],
-  ['Goldman Sachs Bank BeES', 'Reliance ETF Bank BeES', '2015'],
-  ['Benchmark Liquid BeES', 'Goldman Sachs Liquid BeES', '2011'],
-  ['Goldman Sachs Liquid BeES', 'Reliance ETF Liquid BeES', '2015'],
+  // 7. Benchmark -> Goldman Sachs (2011) -> Reliance (2015) -> Nippon (2019).
+  // Not included in INPUT_PAIRS at all: the final 2019 hop is confirmed a
+  // pure rename (source file's section 2 explicitly labels it "Renamed
+  // to"), and the same is very likely true of the 2011 and 2015 hops too --
+  // ETF products like these are typically relabeled by the acquiring AMC
+  // rather than merged into a separate pre-existing scheme. Before adding
+  // rows here, first check live whether Nippon India's current BeES codes
+  // already have continuous history back to Benchmark's original launch
+  // (the same way Bandhan Flexi Cap Fund's current code already carries
+  // continuous history straight through its own 2023 IDFC-era rename) --
+  // if so, no lineage entry is needed for this chain at all.
 
   // 9. Escorts -> Quant (2018), labelled "Restructured into" in the source
   // -- treated as a merge-candidate per the spec's resolution rules.
@@ -284,6 +280,17 @@ async function run() {
         results.push({ oldName, newName, date, status: 'UNRESOLVED', reason: 'Old scheme name not found in the AMFI historical window' });
         continue;
       }
+      // The AMFI historical report has one row per scheme PER TRADING DAY,
+      // so oldMatches typically has ~15-20 near-duplicate rows sharing the
+      // same code. Dedupe to one representative row per code -- which
+      // specific date-row survives doesn't matter, since verifyStillLive
+      // below re-fetches the fund's full current series by code regardless.
+      const seenCodes = new Set();
+      const dedupedOldMatches = oldMatches.filter((m) => {
+        if (seenCodes.has(m.code)) return false;
+        seenCodes.add(m.code);
+        return true;
+      });
 
       let survivingCandidates;
       try {
@@ -300,7 +307,7 @@ async function run() {
       // Match old/new plan variants (Direct-Growth, Regular-Growth, etc.)
       // by whether each name looks Direct/Regular and Growth/IDCW, since
       // AMFI's and mfapi.in's naming isn't perfectly consistent otherwise.
-      for (const oldRec of oldMatches) {
+      for (const oldRec of dedupedOldMatches) {
         const wantRegular = isRegularPlan(oldRec.name);
         const wantGrowth = isGrowthPlan(oldRec.name);
         const newRec = survivingCandidates.find((c) => isRegularPlan(c.schemeName) === wantRegular && isGrowthPlan(c.schemeName) === wantGrowth);
@@ -345,9 +352,19 @@ async function run() {
 
   const lines = ['# Scheme Lineage Resolution — Review', '', `Generated ${new Date().toISOString()}`, ''];
   lines.push(`## Candidates to review (${candidates.length}) — boundary check passed`, '');
-  lines.push('Copy the ones you confirm into data/scheme-lineage.json:', '');
+  lines.push('Copy the ones you confirm into data/scheme-lineage.json. data/scheme-lineage.json only supports ONE predecessor per surviving code -- if a group below is marked COLLISION, pick exactly one, or research whether the underlying schemes actually chained sequentially instead of merging in parallel.', '');
+  const byNewCode = new Map();
   for (const c of candidates) {
-    lines.push(`- \`"${c.newCode}": { "pred": ${c.oldCode}, "from": "${c.oldName}" }\`  — ${c.oldName} → ${c.newName}, spliced at ${c.spliceDate}`);
+    if (!byNewCode.has(c.newCode)) byNewCode.set(c.newCode, []);
+    byNewCode.get(c.newCode).push(c);
+  }
+  for (const [newCode, group] of byNewCode) {
+    if (group.length > 1) {
+      lines.push(`### ⚠ COLLISION — ${group.length} candidate predecessors resolve to the same surviving code "${newCode}"`, '');
+    }
+    for (const c of group) {
+      lines.push(`- \`"${c.newCode}": { "pred": ${c.oldCode}, "from": "${c.oldName}" }\`  — ${c.oldName} → ${c.newName}, spliced at ${c.spliceDate}`);
+    }
   }
   lines.push('', `## Rejected (${rejected.length}) — resolved but failed the boundary check, NOT safe to add`, '');
   for (const r of rejected) lines.push(`- ${r.oldName} → ${r.newName}: ${r.reason}`);
