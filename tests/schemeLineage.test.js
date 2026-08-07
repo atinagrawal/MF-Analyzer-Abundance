@@ -138,6 +138,30 @@ async function main() {
     assert.strictEqual(resolved, null);
   });
 
+  await test('walkLineage breaks on a cycle instead of looping forever', async () => {
+    const current = series([[200, 30]]);
+    const bRaw = [{ t: 195, nav: 29.4 }, { t: 199, nav: 29.7 }]; // A <- B: clean hop
+    const aRawAsPred = [{ t: 190, nav: 29.1 }, { t: 194, nav: 29.3 }]; // B <- A: clean hop, but A was already visited
+    const lineage = {
+      A: { pred: 'B', from: 'Fund B' },
+      B: { pred: 'A', from: 'Fund A (cycle)' },
+    };
+    const resolved = await walkLineage({
+      series: current,
+      code: 'A',
+      lineage,
+      fetchPredecessor: async (code) => {
+        if (code === 'B') return bRaw;
+        if (code === 'A') return aRawAsPred;
+        return null;
+      },
+      normalize: (raw) => raw.map((r) => ({ t: r.t * DAY, nav: r.nav })),
+    });
+    assert.ok(resolved);
+    assert.strictEqual(resolved.stitchInfo.hops.length, 1);
+    assert.strictEqual(resolved.stitchInfo.fromName, 'Fund B');
+  });
+
   await test('walkLineage returns null when the starting code has no lineage entry', async () => {
     const resolved = await walkLineage({
       series: series([[100, 20]]),
