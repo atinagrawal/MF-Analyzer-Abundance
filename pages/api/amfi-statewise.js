@@ -6,6 +6,13 @@ import zlib from 'zlib';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+const ALL_AMC_FALLBACK = [
+  '62','85','3','86','80','87','53','75','48','46','4','32','81','91','84','6',
+  '47','27','63','9','76','37','20','65','42','70','82','16','17','88','18','69',
+  '45','89','55','54','21','73','90','78','58','64','13','41','74','22','67','33',
+  '25','26','83','72','79','61','28','71','77'
+];
+
 function amfiDate(year, month) {
   return `01-${MONTHS[month - 1]}-${year}`;
 }
@@ -38,6 +45,29 @@ function httpGetJson(url) {
   });
 }
 
+async function fetchWithRetry(url, retries = 3, delayMs = 250) {
+  for (let i = 0; i < retries; i++) {
+    const res = await httpGetJson(url);
+    if (res && Array.isArray(res.data) && res.data.length > 0) return res;
+    if (i < retries - 1) await new Promise(r => setTimeout(r, delayMs));
+  }
+  return null;
+}
+
+async function mapConcurrent(items, limit, fn) {
+  const results = new Array(items.length);
+  let index = 0;
+  async function worker() {
+    while (index < items.length) {
+      const i = index++;
+      results[i] = await fn(items[i], i);
+    }
+  }
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
 let cachedAmcIds = null;
 let amcFetchTime = 0;
 
@@ -51,7 +81,7 @@ async function getAmcIds() {
     amcFetchTime = Date.now();
     return cachedAmcIds;
   }
-  return ['3', '4', '9', '28', '32', '46', '48', '53', '62', '75', '80', '81', '84', '85', '86', '87', '91'];
+  return ALL_AMC_FALLBACK;
 }
 
 function candidateMonths() {
@@ -59,7 +89,7 @@ function candidateMonths() {
   const mon = now.getUTCMonth() + 1;
   const year = now.getUTCFullYear();
   const out = [];
-  for (let offset = 1; offset <= 3; offset++) {
+  for (let offset = 1; offset <= 4; offset++) {
     let m = mon - offset, y = year;
     while (m <= 0) { m += 12; y--; }
     out.push({ year: y, month: m });
@@ -69,11 +99,20 @@ function candidateMonths() {
 
 function r2(v) { return Math.round((v || 0) * 100) / 100; }
 
+const RESPONSE_CACHE = new Map();
+const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours in-memory cache
+
 async function fetchIndustryStatewise(date) {
+  const cacheKey = date;
+  const cached = RESPONSE_CACHE.get(cacheKey);
+  if (cached && Date.now() - cached.time < CACHE_TTL) {
+    return cached.data;
+  }
+
   const amcIds = await getAmcIds();
   
   // Probe first AMC to check if date has data + fetch monthYear list
-  const firstAmcData = await httpGetJson(`https://www.amfiindia.com/api/statewise-data?MF_ID=${amcIds[0]}&date=${date}`);
+  const firstAmcData = await fetchWithRetry(`https://www.amfiindia.com/api/statewise-data?MF_ID=${amcIds[0]}&date=${date}`, 2, 200);
   if (!firstAmcData || !Array.isArray(firstAmcData.data) || !firstAmcData.data.length) {
     return null;
   }
@@ -82,12 +121,11 @@ async function fetchIndustryStatewise(date) {
     .map(m => (typeof m === 'string' ? m : m.date || ''))
     .filter(Boolean);
 
-  // Fetch all AMCs in parallel
-  const fetchPromises = amcIds.map(mfId =>
-    httpGetJson(`https://www.amfiindia.com/api/statewise-data?MF_ID=${mfId}&date=${date}`)
+  // Fetch all AMCs using controlled concurrency (6 workers) with retries
+  const responses = await mapConcurrent(amcIds, 6, (mfId) =>
+    fetchWithRetry(`https://www.amfiindia.com/api/statewise-data?MF_ID=${mfId}&date=${date}`)
   );
 
-  const responses = await Promise.all(fetchPromises);
   const stateMap = new Map();
 
   for (const resp of responses) {
@@ -166,7 +204,7 @@ async function fetchIndustryStatewise(date) {
   const equityTotal       = enriched.reduce((a, s) => a + s.equity, 0);
   const equityPctIndustry = grandTotal > 0 ? Math.round(equityTotal / grandTotal * 1000) / 10 : 0;
 
-  return {
+  const resultData = {
     date,
     grandTotal:         Math.round(grandTotal),
     top5SharePct:       Math.round(top5Share * 10) / 10,
@@ -175,6 +213,9 @@ async function fetchIndustryStatewise(date) {
     states:             [...named, ...others],
     availableMonths,
   };
+
+  RESPONSE_CACHE.set(cacheKey, { time: Date.now(), data: resultData });
+  return resultData;
 }
 
 export default async function handler(req, res) {
