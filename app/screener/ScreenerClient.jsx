@@ -412,11 +412,22 @@ export default function ScreenerClient({ initialCategory }) {
 
   const router = useRouter();
   const changeCat = useCallback((newCat) => {
+    if (!newCat) return;
     setCat(newCat);
+    const grp = assetClass(newCat);
+    if (grp && grp !== 'Other') setGroup(grp);
     const slug = categoryToSlug(newCat);
-    router.replace(slug ? `/screener?category=${slug}` : '/screener', { scroll: false });
+    if (slug) {
+      router.replace(`/screener?category=${slug}`, { scroll: false });
+    }
   }, [router]);
-  const jumpTo = (f) => { changeCat(f.category); setSort({ key: 'ret_3y', dir: -1 }); };
+  const jumpTo = (f) => {
+    const targetCat = typeof f === 'string' ? f : f?.category;
+    if (targetCat) {
+      changeCat(targetCat);
+      setSort({ key: 'ret_3y', dir: -1 });
+    }
+  };
 
   // pick a sensible default category when a type is chosen
   const defaultCatFor = (g) => {

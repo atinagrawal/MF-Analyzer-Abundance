@@ -57,13 +57,23 @@ export const CURATED_CATEGORIES = [
 ];
 
 export function slugToCategory(slug) {
+  if (!slug) return null;
   const entry = CURATED_CATEGORIES.find((c) => c.slug === slug);
   return entry ? entry.category : null;
 }
 
 export function categoryToSlug(category) {
-  const entry = CURATED_CATEGORIES.find((c) => c.category === category);
-  return entry ? entry.slug : null;
+  if (!category || category === 'All') return null;
+  const entry = CURATED_CATEGORIES.find(
+    (c) => c.category === category || c.category === category + ' Fund' || c.category + ' Fund' === category
+  );
+  if (entry) return entry.slug;
+
+  return category
+    .toLowerCase()
+    .replace(/^(equity|debt|hybrid|other|solution oriented)\s*scheme\s*-\s*/i, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 export const GLOSSARY_ITEMS = [
