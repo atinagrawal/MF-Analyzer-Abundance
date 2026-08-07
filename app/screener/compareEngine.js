@@ -11,6 +11,7 @@
 // scoped equivalents, sharing only lib/xirr.js's xirr() solver.
 
 import { xirr } from '@/lib/xirr';
+import { matchCategory } from './screenerContent';
 
 const DAY_MS = 86400000;
 
@@ -361,7 +362,7 @@ export function applyDerivedStats(normalized, series, asOfMs = Date.now()) {
 // for SIF funds — rendered as "—", identically to any other unavailable stat.
 export function categoryPeerRank(normalizedFund, allMfFunds, periodKey = 'ret_3y') {
   if (normalizedFund.type !== 'mf') return null;
-  const peers = allMfFunds.filter((f) => f.category === normalizedFund.category && f[periodKey] != null);
+  const peers = allMfFunds.filter((f) => matchCategory(f.category, normalizedFund.category) && f[periodKey] != null);
   if (peers.length < 2) return null;
   const sorted = [...peers].sort((a, b) => b[periodKey] - a[periodKey]);
   const rank = sorted.findIndex((f) => f.code === normalizedFund.navFetchKey) + 1;
