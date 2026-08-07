@@ -34,7 +34,7 @@ export const PRICING_FAQ = [
   },
   {
     q: 'What is your refund policy?',
-    a: 'If you are not completely satisfied with Abundance Pro, contact us within 7 days of purchase at support@getabundance.in or via phone/WhatsApp, and we will issue a full 100% refund.',
+    a: 'If you are not completely satisfied with Abundance Pro, contact us within 24 hours of purchase at support@getabundance.in or via phone/WhatsApp, and we will issue a full 100% refund.',
   },
   {
     q: 'Who operates Abundance Financial Services?',
