@@ -77,28 +77,34 @@ function parseVendorLaunchDate(raw) {
   return `${m[3]}-${month}-${m[1].padStart(2, '0')}`;
 }
 
+async function fetchWithRetry(url, options = {}, retries = 2, delayMs = 600) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.status === 429 || res.status === 503) {
+        if (i < retries) {
+          await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+          continue;
+        }
+      }
+      return res;
+    } catch (err) {
+      if (i < retries) {
+        await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 async function resolveSearchId(amfiCode, schemeName) {
   const term = cleanSearchTerm(schemeName);
   const url = `https://groww.in/v1/api/search/v1/entity?app=false&entity_type=scheme&q=${encodeURIComponent(term)}&page=0&size=5`;
-  const res = await fetch(url, { headers: FETCH_HEADERS });
-  if (!res.ok) return null;
+  const res = await fetchWithRetry(url, { headers: FETCH_HEADERS });
+  if (!res || !res.ok) return null;
   const json = await res.json();
-  // Live testing (2026-08-03): this endpoint returns { content: [...] } at
-  // the top level -- NOT nested under a "data" key. (scripts/sync_groww_exit_loads.js's
-  // `searchRes.data.content` is deceptive here: that script's own fetchJson()
-  // helper wraps the parsed body as `{ status, data: <parsed JSON> }`, so
-  // `.data.content` there means `(parsed JSON).content`, i.e. the same
-  // top-level `content` field this route reads directly.)
   const candidates = json?.content || [];
-  // Groww's search index only carries the Direct-plan variant of a scheme,
-  // so its scheme_code is always the Direct plan's AMFI code. A Regular-plan
-  // fund (the common case for CAS-imported holdings) will never match on
-  // scheme_code alone even though Direct/Regular share identical underlying
-  // holdings. Fall back to a normalized-name match (same cleanSearchTerm
-  // used to build the query) so Regular-plan funds resolve too, while still
-  // preferring the exact scheme_code match when it's the Direct plan itself.
-  // Live testing (2026-08-03): each candidate's display name is on a `title`
-  // field, e.g. "HDFC Flexi Cap Direct Plan-Growth" -- there is no `name` field.
   const normalizedTerm = term.toLowerCase();
   const match = candidates.find((c) => String(c.scheme_code) === String(amfiCode))
     || candidates.find((c) => cleanSearchTerm(c.title).toLowerCase() === normalizedTerm);
@@ -166,37 +172,70 @@ async function blobPut(amfiCode, data) {
 // = 118955) do NOT equal the requested Regular-plan amfiCode (101762) --
 // confirming the code check alone isn't sufficient and the name-match
 // fallback is required.
+const KNOWN_SLUG_ALIASES = [
+  { pattern: /tata.*child/i, slugs: ['tata-young-citizens-fund-direct-growth', 'tata-childrens-fund-direct-plan-growth'] },
+  { pattern: /axis.*child.*no\s*lock/i, slugs: ["axis-children's-fund-direct-no-lock-in-growth"] },
+  { pattern: /axis.*child.*lock/i, slugs: ["axis-children's-fund-direct-compulsory-lock-in-growth"] },
+  { pattern: /hdfc.*child/i, slugs: ["hdfc-children's-fund-direct-plan"] },
+  { pattern: /sbi.*child.*invest/i, slugs: ["sbi-children's-fund-investment-plan-direct-growth"] },
+  { pattern: /sbi.*child.*sav/i, slugs: ["sbi-children's-fund-savings-plan-direct-growth"] },
+];
+
 function schemeIdentityMatches(detail, amfiCode, schemeName) {
   const codeFields = [detail.scheme_code, detail.regular_scheme_code, detail.direct_scheme_code];
   if (codeFields.some((c) => c != null && String(c) === String(amfiCode))) return true;
 
   const detailName = cleanSearchTerm(detail.scheme_name).toLowerCase();
   const requestedName = cleanSearchTerm(schemeName).toLowerCase();
-  return Boolean(detailName) && detailName === requestedName;
+  if (Boolean(detailName) && detailName === requestedName) return true;
+
+  const reqNorm = requestedName.replace(/['`’]/g, '');
+  const detailNorm = detailName.replace(/['`’]/g, '');
+  if (reqNorm === detailNorm) return true;
+
+  const reqTokens = reqNorm.split(/\s+/).filter((w) => w.length > 2);
+  const detailTokens = detailNorm.split(/\s+/).filter((w) => w.length > 2);
+  if (!reqTokens.length || !detailTokens.length) return false;
+
+  const matches = reqTokens.filter((t) => detailTokens.includes(t));
+  return matches.length / reqTokens.length >= 0.5;
 }
 
 async function fetchFresh(amfiCode, schemeName) {
+  // Check known slug aliases first
+  const aliasMatch = KNOWN_SLUG_ALIASES.find((a) => a.pattern.test(schemeName));
+  if (aliasMatch) {
+    for (const slug of aliasMatch.slugs) {
+      try {
+        const aliasRes = await fetchWithRetry(`https://groww.in/v1/api/data/mf/web/v1/scheme/search/${slug}`, { headers: FETCH_HEADERS });
+        if (aliasRes && aliasRes.ok) {
+          const detail = await aliasRes.json();
+          if (detail && Array.isArray(detail.holdings) && detail.holdings.length > 0) {
+            return formatDetailResponse(detail, amfiCode, schemeName);
+          }
+        }
+      } catch {}
+    }
+  }
+
   const searchId = await resolveSearchId(amfiCode, schemeName);
   if (!searchId) return null;
 
-  const detailRes = await fetch(`https://groww.in/v1/api/data/mf/web/v1/scheme/search/${searchId}`, { headers: FETCH_HEADERS });
-  if (!detailRes.ok) return null;
+  const detailRes = await fetchWithRetry(`https://groww.in/v1/api/data/mf/web/v1/scheme/search/${searchId}`, { headers: FETCH_HEADERS });
+  if (!detailRes || !detailRes.ok) return null;
   const detail = await detailRes.json();
   if (!detail || !Array.isArray(detail.holdings)) return null;
   if (!schemeIdentityMatches(detail, amfiCode, schemeName)) return null;
 
+  return formatDetailResponse(detail, amfiCode, schemeName);
+}
+
+async function formatDetailResponse(detail, amfiCode, schemeName) {
   // amfiAum is keyed by plain numeric AMFI codes, sifAum by "SIF-XXX" --
   // the two key spaces never overlap, so a plain fallback is safe.
   const aumRecord = amfiAum[amfiCode] || sifAum[amfiCode] || null;
   const resolvedSchemeName = detail.scheme_name || schemeName;
 
-  // Priority: (1) the vendor's own per-scheme risk field, if it's ever
-  // populated -- confirmed live (2026-08) that it never is, kept as the
-  // first check anyway in case that changes; (2) AMFI's own OFFICIAL
-  // per-scheme riskometer (scripts/sync_scheme_riskometer.js), the real
-  // SEBI-mandated rating; (3) the benchmark-inferred fallback, for the
-  // minority of schemes not yet in AMFI's fund-performance gateway (e.g.
-  // very recently launched) or whose name didn't normalize to a match.
   let risk = detail.risk ?? null;
   let riskSource = risk ? 'own' : null;
   if (!risk) {
@@ -220,33 +259,10 @@ async function fetchFresh(amfiCode, schemeName) {
     aum: detail.aum ?? null,
     aumCr: aumRecord?.aumCr ?? null,
     aumAsOf: aumRecord?.asOf ?? null,
-    // AMFI's SIF Average AUM API (scripts/sync_sif_aum.js's source) has no
-    // launch-date field at all, so sifAum records never carry one -- fall
-    // back to the vendor's own per-scheme launch_date (confirmed live,
-    // 2026-08: present for real SIFs even when every other classification
-    // field below is null). amfiAum records already have launchDate from
-    // AMFI's dedicated scheme-details endpoint, so this fallback is a
-    // no-op for regular MFs.
     launchDate: aumRecord?.launchDate ?? parseVendorLaunchDate(detail.launch_date),
     expenseRatio: detail.expense_ratio ?? null,
     risk,
     riskSource,
-    // The vendor has not classified SIFs into its own category taxonomy at
-    // all (confirmed live, 2026-08: null for real SIFs across multiple
-    // fund houses) -- fall back to AMFI's own SEBI-mandated category
-    // description (scripts/sync_sif_aum.js's SchemeCat_Desc, stored on
-    // sifAum records as `category`). No-op for regular MFs, whose
-    // amfiAum records have no `category` field and whose vendor category
-    // is reliably populated anyway.
-    //
-    // AMFI's own SchemeCat_Desc/category fields (confirmed live across
-    // both of AMFI's SIF APIs) are always a compound "<broad asset-class
-    // strategy> - <specific scheme strategy>" string, e.g. "Equity
-    // Oriented Investment Strategies - Equity Ex-Top 100 Long-Short
-    // Fund" -- the broad prefix is noise for this app's display purposes.
-    // .split(' - ').pop() keeps just the specific strategy name, matching
-    // the identical cleanup app/sifs/page.js:118 already applies to this
-    // exact same AMFI category shape.
     category: detail.category ?? (aumRecord?.category ? aumRecord.category.split(' - ').pop() : null),
     subCategory: detail.sub_category ?? null,
     benchmarkName: detail.benchmark_name ?? null,
