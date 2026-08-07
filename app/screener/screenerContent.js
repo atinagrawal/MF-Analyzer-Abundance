@@ -76,6 +76,28 @@ export function categoryToSlug(category) {
     .replace(/^-+|-+$/g, '');
 }
 
+export function normalizeCategory(c = '') {
+  if (!c || c === 'All') return 'All';
+  return c
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/schemes/g, 'scheme')
+    .replace(/\s*-\s*tax saver fund/i, '')
+    .replace(/\s+fund$/i, '')
+    .replace(/balanced advantage fund\/\s*dynamic asset allocation/i, 'dynamic asset allocation or balanced advantage')
+    .trim();
+}
+
+export function matchCategory(fundCategory, selectedCategory) {
+  if (!selectedCategory || selectedCategory === 'All') return true;
+  if (!fundCategory) return false;
+  if (fundCategory === selectedCategory) return true;
+
+  const nFund = normalizeCategory(fundCategory);
+  const nSel = normalizeCategory(selectedCategory);
+  return nFund === nSel;
+}
+
 export const GLOSSARY_ITEMS = [
   { q: 'CAGR (Compound Annual Growth Rate)', a: 'The annualised rate at which an investment would have grown, assuming steady compounding, to get from its starting value to its ending value. It\'s the standard way to compare returns across different time periods on a like-for-like basis — a fund\'s 3-year and 5-year CAGR can be directly compared even though the underlying periods differ.' },
   { q: 'Volatility (Standard Deviation)', a: 'The annualised standard deviation of a fund\'s monthly returns — a measure of how much the fund\'s value swings up and down, not the direction of those swings. A higher volatility number means a bumpier ride, even if the long-term destination (the CAGR) ends up the same. Two funds with identical 5-year returns can have very different volatility, and the smoother one is almost always preferable for most investors.' },

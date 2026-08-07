@@ -10,7 +10,7 @@ import CompareGrowthChart from './CompareGrowthChart';
 import { useRouter } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import { startCheckout } from '@/lib/checkoutClient';
-import { shortCat, FAQ_ITEMS, GLOSSARY_ITEMS, CURATED_CATEGORIES, categoryToSlug } from './screenerContent';
+import { shortCat, FAQ_ITEMS, GLOSSARY_ITEMS, CURATED_CATEGORIES, categoryToSlug, matchCategory } from './screenerContent';
 import { normalizeSchemeName } from '@/lib/normalizeSchemeName';
 
 // Slim, server-fetched projection of data/isin-scheme-master.json (see
@@ -378,7 +378,7 @@ export default function ScreenerClient({ initialCategory }) {
     let r = funds;
     if (openOnly) r = r.filter((f) => /open/i.test(f.structure || ''));
     if (group !== 'All') r = r.filter((f) => assetClass(f.category) === group);
-    if (cat !== 'All') r = r.filter((f) => f.category === cat);
+    if (cat !== 'All') r = r.filter((f) => matchCategory(f.category, cat));
     if (q.trim()) { const t = q.toLowerCase().split(/\s+/); r = r.filter((f) => { const s = (f.name + ' ' + f.amc).toLowerCase(); return t.every((w) => s.includes(w)); }); }
     const { key, dir } = sort;
     r = [...r].sort((a, b) => {
