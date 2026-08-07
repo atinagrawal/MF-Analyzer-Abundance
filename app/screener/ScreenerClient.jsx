@@ -743,7 +743,7 @@ export default function ScreenerClient({ initialCategory }) {
           {GLOSSARY_ITEMS.map((g, i) => (
             <div className={`scr-faq-item ${glossaryOpen === i ? 'open' : ''}`} key={i}>
               <button className="scr-faq-q" onClick={() => setGlossaryOpen(glossaryOpen === i ? -1 : i)} aria-expanded={glossaryOpen === i}><span>{g.q}</span><span className="scr-faq-ic">{glossaryOpen === i ? '−' : '+'}</span></button>
-              <div className="scr-faq-a" style={{ maxHeight: glossaryOpen === i ? 800 : 0 }}><p>{g.a}</p></div>
+              <div className="scr-faq-a" style={{ maxHeight: glossaryOpen === i ? 2000 : 0 }}><p>{g.a}</p></div>
             </div>
           ))}
         </section>
@@ -756,7 +756,7 @@ export default function ScreenerClient({ initialCategory }) {
               {(i === 0 || FAQ_ITEMS[i - 1].group !== f.group) && <div className="scr-faq-group-h">{f.group}</div>}
               <div className={`scr-faq-item ${faq === i ? 'open' : ''}`}>
                 <button className="scr-faq-q" onClick={() => setFaq(faq === i ? -1 : i)} aria-expanded={faq === i}><span>{f.q}</span><span className="scr-faq-ic">{faq === i ? '−' : '+'}</span></button>
-                <div className="scr-faq-a" style={{ maxHeight: faq === i ? 800 : 0 }}><p>{f.a}</p></div>
+                <div className="scr-faq-a" style={{ maxHeight: faq === i ? 2000 : 0 }}><p>{f.a}</p></div>
               </div>
             </Fragment>
           ))}
@@ -792,15 +792,147 @@ export default function ScreenerClient({ initialCategory }) {
   );
 }
 
+/* ---------- reusable holdings & sector breakdown section ---------- */
+function HoldingsSection({ holdingsData, loading }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="scr-hold-section">
+        <div className="scr-hold-title">📊 Portfolio Holdings &amp; Sectors</div>
+        <div className="scr-spark-load" style={{ padding: '16px 0' }}>Loading portfolio holdings &amp; sectors…</div>
+      </div>
+    );
+  }
+
+  if (!holdingsData || !holdingsData.holdings) return null;
+
+  const holdings = holdingsData.holdings;
+  const equityHoldings = holdings.filter((h) => h.assetClass === 'EQUITY');
+
+  if (equityHoldings.length === 0) {
+    return (
+      <div className="scr-hold-section">
+        <div className="scr-hold-title">📊 Portfolio Holdings &amp; Sectors</div>
+        <div className="scr-hold-empty">This fund does not hold listed equities (debt / liquid / cash portfolio).</div>
+      </div>
+    );
+  }
+
+  const top5Pct = equityHoldings.slice(0, 5).reduce((a, h) => a + (h.weightagePct || 0), 0);
+  const top10Pct = equityHoldings.slice(0, 10).reduce((a, h) => a + (h.weightagePct || 0), 0);
+  const totalCount = equityHoldings.length;
+
+  const sectorMap = {};
+  equityHoldings.forEach((h) => {
+    const sec = h.sector || 'Unknown';
+    sectorMap[sec] = (sectorMap[sec] || 0) + (h.weightagePct || 0);
+  });
+  const sectors = Object.entries(sectorMap)
+    .map(([name, pct]) => ({ name, pct }))
+    .sort((a, b) => b.pct - a.pct);
+  const topSectors = sectors.slice(0, 6);
+  const maxSectorPct = topSectors[0]?.pct || 1;
+
+  const SECTOR_COLORS = ['#1b5e20', '#2e7d32', '#43a047', '#e65100', '#0288d1', '#5e35b1'];
+
+  const displayedHoldings = expanded ? equityHoldings : equityHoldings.slice(0, 10);
+
+  return (
+    <div className="scr-hold-section">
+      <div className="scr-hold-title">📊 Portfolio Holdings &amp; Sectors</div>
+
+      <div className="scr-drawer-kpis" style={{ marginBottom: '12px' }}>
+        <div className="scr-dk">
+          <span>Top 5 Conc.</span>
+          <b>{top5Pct.toFixed(1)}%</b>
+        </div>
+        <div className="scr-dk">
+          <span>Top 10 Conc.</span>
+          <b>{top10Pct.toFixed(1)}%</b>
+        </div>
+        <div className="scr-dk">
+          <span>Equity Stocks</span>
+          <b>{totalCount}</b>
+        </div>
+      </div>
+
+      {topSectors.length > 0 && (
+        <div className="scr-allocation-card">
+          <div className="scr-alloc-title">Top Sector Exposure</div>
+          <div className="scr-alloc-bars">
+            {topSectors.map((sec, idx) => (
+              <div className="scr-alloc-item" key={sec.name}>
+                <div className="scr-alloc-lbl">{sec.name} ({sec.pct.toFixed(1)}%)</div>
+                <div className="scr-alloc-bar-bg">
+                  <div
+                    className="scr-alloc-bar-fill"
+                    style={{
+                      width: `${Math.min(100, (sec.pct / maxSectorPct) * 100)}%`,
+                      backgroundColor: SECTOR_COLORS[idx % SECTOR_COLORS.length]
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="scr-hold-table-wrap">
+        <table className="scr-hold-table">
+          <thead>
+            <tr>
+              <th>Stock</th>
+              <th>Sector</th>
+              <th style={{ textAlign: 'right' }}>Weight</th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayedHoldings.map((h, i) => (
+              <tr key={i}>
+                <td className="scr-hold-stock" title={h.securityName}>{h.securityName}</td>
+                <td className="scr-hold-sector">{h.sector || '—'}</td>
+                <td className="scr-hold-pct">{(h.weightagePct || 0).toFixed(2)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {equityHoldings.length > 10 && (
+        <button className="scr-hold-toggle" onClick={() => setExpanded(!expanded)}>
+          {expanded ? '▲ Show Top 10' : `▼ Show All ${totalCount} Holdings`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* ---------- fund detail drawer (fetches NAV sparkline on open) ---------- */
 function Detail({ f, stress, onClose }) {
   const [nav, setNav] = useState(null);
   const [schemeFacts, setSchemeFacts] = useState(null);
+  const [holdingsData, setHoldingsData] = useState(null);
+  const [holdingsLoading, setHoldingsLoading] = useState(true);
+
   useEffect(() => {
     let alive = true;
     getSchemeMasterFacts().then(facts => { if (alive) setSchemeFacts(facts); });
     return () => { alive = false; };
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    setHoldingsLoading(true);
+    setHoldingsData(null);
+    fetch(`/api/proposal-studio/holdings?amfiCode=${encodeURIComponent(f.code)}&schemeName=${encodeURIComponent(f.name)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive) setHoldingsData(d); })
+      .catch(() => {})
+      .finally(() => { if (alive) setHoldingsLoading(false); });
+    return () => { alive = false; };
+  }, [f.code, f.name]);
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -940,6 +1072,8 @@ function Detail({ f, stress, onClose }) {
           </div>
         )}
 
+        <HoldingsSection holdingsData={holdingsData} loading={holdingsLoading} />
+
         <div className="scr-drawer-meta">
           <span>Latest NAV ₹{f.nav}</span>
           {f.inception_date && <span>Since {new Date(f.inception_date + 'T00:00:00Z').toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span>}
@@ -1027,6 +1161,21 @@ function Detail({ f, stress, onClose }) {
 function SifDetail({ s, onClose }) {
   const [pts, setPts] = useState(null);
   const [histLoading, setHistLoading] = useState(true);
+  const [holdingsData, setHoldingsData] = useState(null);
+  const [holdingsLoading, setHoldingsLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    setHoldingsLoading(true);
+    setHoldingsData(null);
+    fetch(`/api/proposal-studio/holdings?amfiCode=${encodeURIComponent(s.scheme_id)}&schemeName=${encodeURIComponent(s.nav_name)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive) setHoldingsData(d); })
+      .catch(() => {})
+      .finally(() => { if (alive) setHoldingsLoading(false); });
+    return () => { alive = false; };
+  }, [s.scheme_id, s.nav_name]);
+
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -1078,6 +1227,8 @@ function SifDetail({ s, onClose }) {
           <div className="scr-dk"><span>NAV Date</span><b style={{fontSize:'13px'}}>{s.nav_date}</b></div>
           <div className="scr-dk"><span>Data points</span><b>{pts ? pts.length : '—'}</b></div>
         </div>
+
+        <HoldingsSection holdingsData={holdingsData} loading={holdingsLoading} />
 
         <div className="scr-drawer-cta">
           <a className="scr-btn primary" href={backtestSifLink(s)}>⚗ Backtest this SIF</a>
@@ -1399,4 +1550,40 @@ h2 + .scr-faq-group-h{margin-top:0}
   border-top: 1px dashed var(--border);
   padding-top: 6px;
 }
+
+/* Holdings section in drawer */
+.scr-hold-section{border-top:1px solid var(--border);padding-top:16px;margin-top:16px}
+.scr-hold-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:12px}
+.scr-hold-table-wrap{overflow-x:auto;margin-bottom:12px;-webkit-overflow-scrolling:touch}
+.scr-hold-table{width:100%;border-collapse:collapse;font:500 12px Raleway,sans-serif}
+.scr-hold-table th{font:700 9px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:6px 8px;border-bottom:1.5px solid var(--border);text-align:left}
+.scr-hold-table td{padding:7px 8px;border-bottom:1px solid var(--border);color:var(--text);font-size:12px}
+.scr-hold-stock{font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scr-hold-sector{font:500 10px JetBrains Mono,monospace;color:var(--muted)}
+.scr-hold-pct{font:700 12px JetBrains Mono,monospace;text-align:right;color:var(--g1)}
+.scr-hold-toggle{display:block;width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--s2);color:var(--g1);font:700 11px JetBrains Mono,monospace;cursor:pointer;text-align:center;margin-bottom:12px;transition:background .15s}
+.scr-hold-toggle:hover{background:var(--g-xlight)}
+.scr-hold-empty{font:500 11px JetBrains Mono,monospace;color:var(--muted);text-align:center;padding:16px 0}
+
+@media(max-width:860px){
+  .scr-leaders-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:560px){
+  .scr-leaders-grid{grid-template-columns:1fr}
+  .scr-pager{justify-content:center}
+  .scr-pager-info{order:3;width:100%;text-align:center}
+  .scr-table{min-width:420px}
+  .scr-fundlink{max-width:132px}
+  .scr-fund-n{font-size:12px}
+  .scr-fund-sub{font-size:9.5px}
+  .scr-table th,.scr-table td{padding:9px 8px}
+  .scr-name,.scr-name-h{max-width:140px}
+  .scr-drawer-wrap{justify-content:center;align-items:flex-end}
+  .scr-drawer{width:100%;height:auto;max-height:90vh;border-radius:18px 18px 0 0;animation:scrup .3s cubic-bezier(.2,.7,.3,1)}
+  .scr-drawer-kpis{grid-template-columns:repeat(2,1fr)}
+  .scr-select{max-width:100%;flex:1}
+  .scr-hold-stock{max-width:120px}
+  .scr-hold-table th,.scr-hold-table td{padding:6px 6px}
+}
+@media (prefers-reduced-motion: reduce){ .scr-drawer,.scr-drawer-wrap{animation:none} .scr-btn:hover{transform:none} }
 `;

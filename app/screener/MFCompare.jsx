@@ -9,6 +9,7 @@ import { useState, useEffect, useMemo } from 'react';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
 import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank, pickCommonRankPeriod, computeWealthSimulation, seriesAsOf, computeVerdictScores, overallWinner, hasMixedInceptionMethod } from './compareEngine';
+import { computeMCapAllocation } from '@/lib/portfolioAnalysis';
 import CompareGrowthChart from './CompareGrowthChart';
 import './mf-compare.css';
 
@@ -45,6 +46,25 @@ function bestIndexFor(vals, lowerIsBetter) {
   const best = lowerIsBetter ? Math.min(...valid.map((p) => p.v)) : Math.max(...valid.map((p) => p.v));
   const match = valid.find((p) => p.v === best);
   return match ? match.i : -1;
+}
+
+function computePairwiseOverlap(hA, hB) {
+  if (!hA?.length || !hB?.length) return null;
+  const eqA = hA.filter((h) => h.assetClass === 'EQUITY');
+  const eqB = hB.filter((h) => h.assetClass === 'EQUITY');
+  if (!eqA.length || !eqB.length) return null;
+
+  const mapB = new Map();
+  eqB.forEach((h) => mapB.set((h.securityName || '').toLowerCase().trim(), h.weightagePct || 0));
+
+  let overlap = 0;
+  eqA.forEach((h) => {
+    const key = (h.securityName || '').toLowerCase().trim();
+    if (mapB.has(key)) {
+      overlap += Math.min(h.weightagePct || 0, mapB.get(key));
+    }
+  });
+  return Math.round(overlap * 10) / 10;
 }
 
 // compareList entries are raw fund objects (pre-normalizeFund) -- an MF row
@@ -136,6 +156,60 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
     });
     return () => { cancelled = true; };
   }, [normalized]);
+
+  // Fetch holdings data per selected fund for overlap & stock breakdown
+  const [holdingsByFund, setHoldingsByFund] = useState({});
+  const [holdingsLoading, setHoldingsLoading] = useState(true);
+  const [mCapMap, setMCapMap] = useState(null);
+
+  useEffect(() => {
+    fetch('/data/amfi-cap-categorization.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.categories) {
+          setMCapMap(new Map(Object.entries(d.categories)));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const fundIdsKey = useMemo(() => normalized.map((f) => f.id).join(','), [normalized]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setHoldingsLoading(true);
+    Promise.all(
+      normalized.map((f) => {
+        const code = f.type === 'sif' ? f.navFetchKey : f.navFetchKey;
+        const name = f.name;
+        return fetch(`/api/proposal-studio/holdings?amfiCode=${encodeURIComponent(code)}&schemeName=${encodeURIComponent(name)}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+          .then((data) => ({ id: f.id, data }));
+      })
+    ).then((results) => {
+      if (cancelled) return;
+      const map = {};
+      results.forEach((r) => {
+        if (r.data) map[r.id] = r.data;
+      });
+      setHoldingsByFund(map);
+      setHoldingsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [fundIdsKey]);
+
+  const mCapByFund = useMemo(() => {
+    if (!mCapMap) return {};
+    const res = {};
+    derived.forEach((f) => {
+      const hData = holdingsByFund[f.id];
+      if (hData && hData.holdings) {
+        res[f.id] = computeMCapAllocation(hData, mCapMap);
+      }
+    });
+    return res;
+  }, [derived, holdingsByFund, mCapMap]);
 
   const counts = useMemo(() => winCounts(derived), [derived]);
 
@@ -411,6 +485,167 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
                       ))}
                     </div>
                   )}
+                </>
+              );
+            })()}
+
+            {/* Portfolio Holdings, Market Cap & Sector Comparison Section */}
+            {(() => {
+              if (holdingsLoading) {
+                return (
+                  <>
+                    <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
+                      <span className="cmp-section-head-label">📊 Portfolio Overlap &amp; Structure</span>
+                    </div>
+                    <div className="cmp-row">
+                      <div className="cmp-cell" style={{ fontWeight: 700 }}>Portfolio Analysis</div>
+                      <div className="cmp-cell" style={{ gridColumn: `2 / span ${n}`, color: 'var(--muted)', fontStyle: 'italic' }}>
+                        Loading portfolio structure &amp; sector analysis…
+                      </div>
+                    </div>
+                  </>
+                );
+              }
+
+              const hasAnyHoldings = derived.some((f) => holdingsByFund[f.id]?.holdings?.length > 0);
+              if (!hasAnyHoldings) return null;
+
+              // Aggregate sectors across all funds
+              const sectorWeights = new Map();
+              derived.forEach((f) => {
+                const hList = (holdingsByFund[f.id]?.holdings || []).filter((h) => h.assetClass === 'EQUITY');
+                hList.forEach((h) => {
+                  const sec = h.sector || 'Unknown';
+                  if (sec === 'Unspecified' || sec === 'Unknown') return;
+                  if (!sectorWeights.has(sec)) {
+                    sectorWeights.set(sec, { name: sec, totalWt: 0, byFund: {} });
+                  }
+                  const entry = sectorWeights.get(sec);
+                  entry.totalWt += (h.weightagePct || 0);
+                  entry.byFund[f.id] = (entry.byFund[f.id] || 0) + (h.weightagePct || 0);
+                });
+              });
+
+              const sortedSectors = Array.from(sectorWeights.values())
+                .sort((a, b) => b.totalWt - a.totalWt)
+                .slice(0, 8);
+
+              return (
+                <>
+                  <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
+                    <span className="cmp-section-head-label">📊 Portfolio Overlap &amp; Structure</span>
+                  </div>
+
+                  {/* Overlap matrix row if n >= 2 */}
+                  {n >= 2 && (
+                    <div className="cmp-row">
+                      <div className="cmp-cell" style={{ fontWeight: 700 }}>Portfolio Overlap</div>
+                      {derived.map((f, i) => {
+                        const otherFunds = derived.filter((_, idx) => idx !== i);
+                        const overlaps = otherFunds.map((other) => {
+                          const ov = computePairwiseOverlap(
+                            holdingsByFund[f.id]?.holdings,
+                            holdingsByFund[other.id]?.holdings
+                          );
+                          return { otherName: other.name || other.nav_name, ov };
+                        }).filter((x) => x.ov != null);
+
+                        if (!overlaps.length) {
+                          return <div key={f.id} className="cmp-cell"><span className="cmp-ret neu">—</span></div>;
+                        }
+
+                        const maxOv = Math.max(...overlaps.map((x) => x.ov));
+                        return (
+                          <div key={f.id} className="cmp-cell">
+                            <span className="cmp-hold-overlap">
+                              {n === 2 ? `${maxOv}%` : `Up to ${maxOv}%`}
+                            </span>
+                            <div style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 2 }}>
+                              {n === 2 ? 'overlap' : 'vs peer funds'}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Market Cap Allocation Rows */}
+                  <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
+                    <span className="cmp-section-head-label">🏛 Market Cap Breakdown</span>
+                  </div>
+                  {[
+                    { label: 'Large Cap Equity', key: 'large' },
+                    { label: 'Mid Cap Equity', key: 'mid' },
+                    { label: 'Small Cap Equity', key: 'small' },
+                    { label: 'Debt / Cash / Other', key: 'unclassified' },
+                  ].map(({ label, key }) => {
+                    const vals = derived.map((f) => mCapByFund[f.id]?.[key]);
+                    const validVals = vals.filter((v) => v != null);
+                    if (validVals.length === 0) return null;
+                    const maxVal = Math.max(...validVals);
+                    return (
+                      <div key={key} className="cmp-row">
+                        <div className="cmp-cell" style={{ fontWeight: 700 }}>{label}</div>
+                        {derived.map((f) => {
+                          const val = mCapByFund[f.id]?.[key];
+                          const isMax = val != null && val > 0 && val === maxVal && n > 1 && key !== 'unclassified';
+                          return (
+                            <div key={f.id} className={`cmp-cell${isMax ? ' cmp-ret-best' : ''}`}>
+                              {val != null ? (
+                                <span className="cmp-ret neu" style={{ fontWeight: isMax ? 800 : 500 }}>
+                                  {val.toFixed(1)}%
+                                </span>
+                              ) : (
+                                <span className="cmp-ret neu">—</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+
+                  {/* Top Sectors per Fund (No direct comparison, just per-fund data) */}
+                  <div className="cmp-section-head" style={{ gridColumn: `1 / span ${n + 1}` }}>
+                    <span className="cmp-section-head-label">🏢 Top Sectors per Fund</span>
+                  </div>
+                  <div className="cmp-row">
+                    <div className="cmp-cell" style={{ fontWeight: 700 }}>
+                      Top Sector Allocation
+                    </div>
+                    {derived.map((f) => {
+                      const hList = (holdingsByFund[f.id]?.holdings || []).filter((h) => h.assetClass === 'EQUITY');
+                      const sMap = {};
+                      hList.forEach((h) => {
+                        const sec = h.sector || 'Unknown';
+                        if (sec === 'Unspecified' || sec === 'Unknown') return;
+                        sMap[sec] = (sMap[sec] || 0) + (h.weightagePct || 0);
+                      });
+                      const topSectors = Object.entries(sMap)
+                        .map(([name, pct]) => ({ name, pct }))
+                        .sort((a, b) => b.pct - a.pct)
+                        .slice(0, 5);
+
+                      if (topSectors.length === 0) {
+                        return <div key={f.id} className="cmp-cell"><span className="cmp-ret neu">—</span></div>;
+                      }
+
+                      return (
+                        <div key={f.id} className="cmp-cell">
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {topSectors.map((s) => (
+                              <div key={s.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', fontSize: '.72rem' }}>
+                                <span style={{ fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
+                                <span style={{ fontWeight: 700, color: 'var(--g1)', fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
+                                  {s.pct.toFixed(1)}%
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </>
               );
             })()}

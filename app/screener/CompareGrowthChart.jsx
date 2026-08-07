@@ -14,7 +14,7 @@
 // brainstorming — see docs/superpowers/specs/2026-07-29-mf-sif-comparison-design.md.
 import { useRef, useState, useMemo, useEffect } from 'react';
 
-const W = 760, H = 260, PAD_L = 44, PAD_R = 12, PAD_T = 10, PAD_B = 26;
+const W = 760, H = 170, PAD_L = 44, PAD_R = 12, PAD_T = 10, PAD_B = 26;
 
 function fmtDate(t) {
   return new Date(t).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });

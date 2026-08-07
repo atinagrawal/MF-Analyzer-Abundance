@@ -85,8 +85,8 @@
 }
 .cmp-modal.open { opacity: 1; pointer-events: auto; }
 .cmp-modal-inner {
-  background: var(--surface); border: 1.5px solid var(--border2); border-radius: 18px;
-  max-width: 1100px; width: calc(100vw - 40px); max-height: calc(100vh - 60px);
+  background: var(--surface); border: 1.5px solid var(--border2); border-radius: 16px;
+  max-width: 1560px; width: calc(100vw - 32px); max-height: calc(100vh - 32px);
   overflow-y: auto; box-shadow: 0 30px 80px rgba(0,0,0,0.6);
   animation: cmpSlideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -96,87 +96,77 @@
 }
 .cmp-modal-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 28px 16px; border-bottom: 1px solid var(--border);
+  padding: 12px 20px 8px; border-bottom: 1px solid var(--border);
   position: sticky; top: 0; background: var(--surface); z-index: 5;
 }
-.cmp-modal-title { font-size: 1rem; font-weight: 800; color: var(--g1); font-family: 'Raleway', sans-serif; }
-.cmp-modal-sub { font-size: .68rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+.cmp-modal-title { font-size: 0.95rem; font-weight: 800; color: var(--g1); font-family: 'Raleway', sans-serif; }
+.cmp-modal-sub { font-size: .65rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 1px; }
 .cmp-modal-close {
   background: var(--s2); border: 1.5px solid var(--border); border-radius: 50%;
-  width: 34px; height: 34px; font-size: 1.2rem; cursor: pointer; color: var(--muted);
+  width: 30px; height: 30px; font-size: 1.1rem; cursor: pointer; color: var(--muted);
   display: flex; align-items: center; justify-content: center; transition: 0.15s;
 }
 .cmp-modal-close:hover { border-color: var(--g3); color: var(--g1); background: var(--g-xlight); }
 
 /* Column grid: sticky name col + N data cols */
-.cmp-grid { display: grid; grid-template-columns: 200px repeat(var(--cols), 1fr); padding: 0; }
+.cmp-grid { display: grid; grid-template-columns: 180px repeat(var(--cols), 1fr); padding: 0; }
 .cmp-row { display: contents; }
 .cmp-cell {
-  padding: 13px 18px; border-bottom: 1px solid var(--border);
-  font-family: 'Raleway', sans-serif; font-size: .8rem; color: var(--text);
+  padding: 6px 12px; border-bottom: 1px solid var(--border);
+  font-family: 'Raleway', sans-serif; font-size: .78rem; color: var(--text);
 }
 .cmp-cell:first-child {
-  background: var(--s2); font-weight: 700; color: var(--muted); font-size: .7rem;
+  background: var(--s2); font-weight: 700; color: var(--muted); font-size: .68rem;
   letter-spacing: 0.5px; position: sticky; left: 0; border-right: 1px solid var(--border); z-index: 2;
 }
-/* The bar spans/scrolls with the full row so its background always covers
-   every column; the label INSIDE it is independently sticky so it stays
-   pinned to the visible left edge as the grid scrolls horizontally --
-   without this, scrolling right (e.g. on mobile, to see a 3rd fund's data)
-   pushes the section title off-screen, leaving a plain unlabeled bar. */
 .cmp-section-head {
-  background: var(--g1); color: white; font-size: .62rem; font-weight: 800;
-  letter-spacing: 1.4px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace;
+  background: var(--g1); color: white; font-size: .6rem; font-weight: 800;
+  letter-spacing: 1.2px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace;
 }
 .cmp-section-head-label {
-  display: inline-block; position: sticky; left: 0; padding: 8px 18px;
-  /* Guards against longer section titles being wider than a phone viewport
-     once the row spans 2-3 compared funds' columns -- without this, a
-     stuck sticky element's overflow is clipped and, unlike normal
-     scrolling text, never becomes reachable again since the box doesn't
-     move once pinned. Wraps onto multiple lines instead. */
+  display: inline-block; position: sticky; left: 0; padding: 5px 14px;
   max-width: calc(100vw - 60px);
 }
-.cmp-strat-header { padding: 20px 18px; border-bottom: 2px solid var(--g3); }
-.cmp-strat-name { font-weight: 800; font-size: .92rem; color: var(--g1); line-height: 1.3; margin-bottom: 4px; }
-.cmp-strat-mgr { font-size: .65rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }
+.cmp-strat-header { padding: 10px 12px; border-bottom: 2px solid var(--g3); }
+.cmp-strat-name { font-weight: 800; font-size: .88rem; color: var(--g1); line-height: 1.25; margin-bottom: 2px; }
+.cmp-strat-mgr { font-size: .62rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }
 .cmp-type-badge {
-  display: inline-block; font-size: .55rem; font-weight: 800; text-transform: uppercase;
-  padding: 2px 7px; border-radius: 5px; margin-top: 6px; font-family: 'JetBrains Mono', monospace;
+  display: inline-block; font-size: .52rem; font-weight: 800; text-transform: uppercase;
+  padding: 1px 6px; border-radius: 4px; margin-top: 4px; font-family: 'JetBrains Mono', monospace;
 }
 .cmp-type-badge.mf { background: var(--g-xlight); color: var(--g1); }
 .cmp-type-badge.sif { background: rgba(21, 101, 192, .1); color: #1565c0; }
 
 .cmp-ret {
   display: inline-flex; align-items: center; font-family: 'JetBrains Mono', monospace;
-  font-weight: 700; font-size: .82rem;
+  font-weight: 700; font-size: .8rem;
 }
 .cmp-ret.pos { color: var(--g2); }
 .cmp-ret.neg { color: var(--neg); }
 .cmp-ret.neu { color: var(--muted); }
 .cmp-ret-best {
-  background: var(--g-xlight); border-radius: 5px; padding: 2px 7px;
+  background: var(--g-xlight); border-radius: 5px; padding: 1px 6px;
   border: 1.5px solid var(--g3); color: var(--g1) !important;
 }
 
 /* Category peer-rank */
-.cmp-peer-rank { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: .78rem; color: var(--text); }
-.cmp-peer-rank-of { color: var(--muted); font-weight: 500; font-size: .68rem; }
+.cmp-peer-rank { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: .75rem; color: var(--text); }
+.cmp-peer-rank-of { color: var(--muted); font-weight: 500; font-size: .65rem; }
 
 .cmp-win-badge {
-  display: inline-block; background: var(--g2); color: white; font-size: .52rem; font-weight: 800;
-  padding: 2px 6px; border-radius: 8px; margin-left: 6px; font-family: 'JetBrains Mono', monospace;
+  display: inline-block; background: var(--g2); color: white; font-size: .5rem; font-weight: 800;
+  padding: 1px 5px; border-radius: 6px; margin-left: 4px; font-family: 'JetBrains Mono', monospace;
 }
 
 /* Wealth sim — Growth Journey Strip (1Y -> 3Y -> 5Y), used twice (lumpsum row + SIP row) */
-.cmp-wealth-strip { display: flex; align-items: stretch; gap: 4px; }
-.cmp-wealth-stop { flex: 1; min-width: 0; text-align: center; padding: 8px 4px; background: var(--s2); border-radius: 7px; border: 1.5px solid transparent; }
+.cmp-wealth-strip { display: flex; align-items: stretch; gap: 3px; }
+.cmp-wealth-stop { flex: 1; min-width: 0; text-align: center; padding: 4px 3px; background: var(--s2); border-radius: 6px; border: 1.5px solid transparent; }
 .cmp-wealth-stop-best { border-color: var(--g3); background: var(--g-xlight); }
-.cmp-wealth-stop-period { font-size: .58rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; }
-.cmp-wealth-stop-val { font-size: .78rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; margin: 3px 0 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cmp-wealth-stop-gain { font-size: .6rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
-.cmp-wealth-arrow { display: flex; align-items: center; color: var(--g3); font-size: .8rem; flex-shrink: 0; }
-.cmp-wealth-subhead { font-size: .58rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 6px; }
+.cmp-wealth-stop-period { font-size: .55rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .2px; }
+.cmp-wealth-stop-val { font-size: .74rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; margin: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmp-wealth-stop-gain { font-size: .58rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.cmp-wealth-arrow { display: flex; align-items: center; color: var(--g3); font-size: .75rem; flex-shrink: 0; }
+.cmp-wealth-subhead { font-size: .55rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 4px; }
 
 @media (max-width: 480px) {
   .cmp-wealth-strip { flex-direction: column; gap: 5px; }
@@ -189,25 +179,25 @@
 
 /* Verdict banner */
 .cmp-verdict {
-  margin: 20px 28px 28px; background: var(--g-xlight); border: 1.5px solid var(--g3);
-  border-radius: 12px; padding: 16px 20px; display: flex; align-items: flex-start; gap: 14px;
+  margin: 10px 20px 14px; background: var(--g-xlight); border: 1.5px solid var(--g3);
+  border-radius: 10px; padding: 10px 14px; display: flex; align-items: flex-start; gap: 10px;
 }
-.cmp-verdict-icon { font-size: 1.6rem; }
-.cmp-verdict-title { font-weight: 800; font-size: .88rem; color: var(--g1); margin-bottom: 4px; }
-.cmp-verdict-body { font-size: .75rem; color: var(--text); line-height: 1.6; }
+.cmp-verdict-icon { font-size: 1.3rem; }
+.cmp-verdict-title { font-weight: 800; font-size: .82rem; color: var(--g1); margin-bottom: 2px; }
+.cmp-verdict-body { font-size: .72rem; color: var(--text); line-height: 1.45; }
 .cmp-verdict-body strong { color: var(--g1); }
 
 .cmp-remove-btn {
-  margin-top: 8px; background: transparent; border: 1px solid var(--border); border-radius: 6px;
-  padding: 3px 10px; font-size: .6rem; color: var(--muted); cursor: pointer; transition: 0.15s;
+  margin-top: 4px; background: transparent; border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 8px; font-size: .58rem; color: var(--muted); cursor: pointer; transition: 0.15s;
   font-family: 'Raleway', sans-serif;
 }
 .cmp-remove-btn:hover { border-color: var(--neg); color: var(--neg); }
 
-.cmp-disclaimer { padding: 16px 28px 24px; font-size: .65rem; color: var(--muted); line-height: 1.6; border-top: 1px solid var(--border); }
+.cmp-disclaimer { padding: 8px 20px 12px; font-size: .62rem; color: var(--muted); line-height: 1.45; border-top: 1px solid var(--border); }
 
 /* ── Interactive growth chart (Task 4's CompareGrowthChart) ─────────────── */
-.cmp-chart-wrap { position: relative; padding: 20px 28px; }
+.cmp-chart-wrap { position: relative; padding: 10px 20px; }
 .cmp-chart-legend { display: flex; gap: 16px; margin-bottom: 10px; font-size: 12px; font-weight: 700; flex-wrap: wrap; font-family: 'Raleway', sans-serif; color: var(--text); }
 .cmp-chart-legend span { display: flex; align-items: center; gap: 6px; }
 .cmp-chart-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
@@ -269,3 +259,9 @@
   .cmp-drag-date { font-size: 9px; padding: 2px 6px; }
   .cmp-range-summary { margin: 10px 16px 0; }
 }
+
+/* Holdings overlap in compare modal */
+.cmp-hold-overlap { font: 800 14px JetBrains Mono, monospace; color: var(--g1); }
+.cmp-hold-stock { font: 600 11.5px Raleway, sans-serif; color: var(--text); line-height: 1.25; }
+.cmp-hold-sector-tag { display: inline-block; font: 600 9px JetBrains Mono, monospace; color: var(--muted); background: var(--s2); padding: 1px 5px; border-radius: 4px; margin-top: 2px; }
+
