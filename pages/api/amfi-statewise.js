@@ -1,13 +1,5 @@
-// api/amfi-statewise.js
-// Returns state-wise AUM data from AMFI with smart date resolution.
-// Caching strategy:
-//   - CDN: s-maxage=43200 (12hr), stale-while-revalidate=86400 (24hr)
-//   - Once a month is published it never changes, so 12hr is conservative
-//   - Date logic: AMFI usually publishes month N data by 10th-15th of month N+1
-//     We try N-1 first, fall back to N-2 if AMFI returns no data
-
-// FIXES: (1) s-maxage added → Vercel CDN now caches (was MISS every call)
-//        (2) All AUM values rounded to 2dp → no more 3424298.829999999 noise
+// pages/api/amfi-statewise.js
+// Returns state-wise AUM data from AMFI aggregated across all AMCs for true industry totals.
 
 import https from 'https';
 import zlib from 'zlib';
@@ -18,12 +10,15 @@ function amfiDate(year, month) {
   return `01-${MONTHS[month - 1]}-${year}`;
 }
 
-function fetchAMFI(date) {
-  const url = `https://www.amfiindia.com/api/statewise-data?MF_ID=3&date=${date}`;
-  return new Promise((resolve, reject) => {
+function httpGetJson(url) {
+  return new Promise((resolve) => {
     const req = https.request(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Accept-Encoding': 'gzip, deflate, br' },
-      timeout: 12000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Referer': 'https://www.amfiindia.com/'
+      },
+      timeout: 10000,
     }, (res) => {
       const chunks = [];
       let stream = res;
@@ -33,14 +28,30 @@ function fetchAMFI(date) {
       stream.on('data', c => chunks.push(c));
       stream.on('end', () => {
         try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); }
-        catch(e) { reject(new Error('JSON parse error')); }
+        catch(e) { resolve(null); }
       });
-      stream.on('error', reject);
+      stream.on('error', () => resolve(null));
     });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
     req.end();
   });
+}
+
+let cachedAmcIds = null;
+let amcFetchTime = 0;
+
+async function getAmcIds() {
+  if (cachedAmcIds && Date.now() - amcFetchTime < 24 * 60 * 60 * 1000) {
+    return cachedAmcIds;
+  }
+  const data = await httpGetJson('https://www.amfiindia.com/api/populate-mf');
+  if (Array.isArray(data) && data.length) {
+    cachedAmcIds = data.map(d => d.mfId).filter(Boolean);
+    amcFetchTime = Date.now();
+    return cachedAmcIds;
+  }
+  return ['3', '4', '9', '28', '32', '46', '48', '53', '62', '75', '80', '81', '84', '85', '86', '87', '91'];
 }
 
 function candidateMonths() {
@@ -56,38 +67,89 @@ function candidateMonths() {
   return out;
 }
 
-// Round to 2 decimal places — eliminates JS floating-point noise from summing
 function r2(v) { return Math.round((v || 0) * 100) / 100; }
 
-function processData(raw, date) {
-  const rows   = raw.data || [];
-  const states = rows.filter(d => d.State && d.State !== 'Grand Total');
-  if (!states.length) return null;
+async function fetchIndustryStatewise(date) {
+  const amcIds = await getAmcIds();
+  
+  // Probe first AMC to check if date has data + fetch monthYear list
+  const firstAmcData = await httpGetJson(`https://www.amfiindia.com/api/statewise-data?MF_ID=${amcIds[0]}&date=${date}`);
+  if (!firstAmcData || !Array.isArray(firstAmcData.data) || !firstAmcData.data.length) {
+    return null;
+  }
 
-  const gtRow     = rows.find(d => d.State === 'Grand Total');
-  const grandTotal = r2(gtRow ? parseFloat(gtRow.Total) : 0);
+  const availableMonths = (firstAmcData.monthYear || [])
+    .map(m => (typeof m === 'string' ? m : m.date || ''))
+    .filter(Boolean);
 
-  const enriched = states.map(s => {
-    const equitySchemes = r2(s.GrowthEquityOrientedSchemes || 0);
-    const balanced      = r2(s.BalancedSchemes             || 0);
-    const otherDebt     = r2(s.OtherDebtOrientedSchemes    || 0);
-    const liquid        = r2(s.LiquidSchemes               || 0);
-    const goldETF       = r2(s.GoldExchangeTradedFund      || 0);
-    const otherETF      = r2(s.OtherExchangeTradedFund     || 0);
-    const fofOverseas   = r2(s.FOFInvestionOverseas        || 0);
-    const fofDomestic   = r2(s.FOFInvestingDomestic        || 0);
+  // Fetch all AMCs in parallel
+  const fetchPromises = amcIds.map(mfId =>
+    httpGetJson(`https://www.amfiindia.com/api/statewise-data?MF_ID=${mfId}&date=${date}`)
+  );
+
+  const responses = await Promise.all(fetchPromises);
+  const stateMap = new Map();
+
+  for (const resp of responses) {
+    if (!resp || !Array.isArray(resp.data)) continue;
+    for (const r of resp.data) {
+      const stateName = r.State;
+      if (!stateName || stateName === 'Grand Total') continue;
+
+      if (!stateMap.has(stateName)) {
+        stateMap.set(stateName, {
+          state: stateName,
+          GrowthEquityOrientedSchemes: 0,
+          BalancedSchemes: 0,
+          OtherDebtOrientedSchemes: 0,
+          LiquidSchemes: 0,
+          GoldExchangeTradedFund: 0,
+          OtherExchangeTradedFund: 0,
+          FOFInvestionOverseas: 0,
+          FOFInvestingDomestic: 0,
+          Total: 0,
+        });
+      }
+
+      const st = stateMap.get(stateName);
+      st.GrowthEquityOrientedSchemes += parseFloat(r.GrowthEquityOrientedSchemes || 0);
+      st.BalancedSchemes             += parseFloat(r.BalancedSchemes || 0);
+      st.OtherDebtOrientedSchemes    += parseFloat(r.OtherDebtOrientedSchemes || 0);
+      st.LiquidSchemes               += parseFloat(r.LiquidSchemes || 0);
+      st.GoldExchangeTradedFund      += parseFloat(r.GoldExchangeTradedFund || 0);
+      st.OtherExchangeTradedFund     += parseFloat(r.OtherExchangeTradedFund || 0);
+      st.FOFInvestionOverseas        += parseFloat(r.FOFInvestionOverseas || 0);
+      st.FOFInvestingDomestic        += parseFloat(r.FOFInvestingDomestic || 0);
+      st.Total                       += parseFloat(r.Total || 0);
+    }
+  }
+
+  if (!stateMap.size) return null;
+
+  const aggregatedRows = Array.from(stateMap.values());
+  const grandTotal = r2(aggregatedRows.reduce((a, b) => a + b.Total, 0));
+
+  const enriched = aggregatedRows.map(s => {
+    const equitySchemes = r2(s.GrowthEquityOrientedSchemes);
+    const balanced      = r2(s.BalancedSchemes);
+    const otherDebt     = r2(s.OtherDebtOrientedSchemes);
+    const liquid        = r2(s.LiquidSchemes);
+    const goldETF       = r2(s.GoldExchangeTradedFund);
+    const otherETF      = r2(s.OtherExchangeTradedFund);
+    const fofOverseas   = r2(s.FOFInvestionOverseas);
+    const fofDomestic   = r2(s.FOFInvestingDomestic);
 
     const equity  = r2(equitySchemes + balanced);
     const debt    = r2(otherDebt + liquid);
     const etf     = r2(goldETF + otherETF);
     const fof     = r2(fofOverseas + fofDomestic);
-    const total   = r2(s.Total || 0);
+    const total   = r2(s.Total);
 
     const sharePct  = grandTotal > 0 ? Math.round(total   / grandTotal * 10000) / 100 : 0;
     const equityPct = total > 0      ? Math.round(equity  / total      * 1000)  / 10  : 0;
 
     return {
-      state: s.State, srno: s.srno,
+      state: s.state,
       total, equity, debt, etf, fof, liquid,
       sharePct, equityPct,
       equitySchemes, balanced, otherDebt,
@@ -103,10 +165,6 @@ function processData(raw, date) {
   const top5Share         = named.slice(0,5).reduce((a, s) => a + s.sharePct, 0);
   const equityTotal       = enriched.reduce((a, s) => a + s.equity, 0);
   const equityPctIndustry = grandTotal > 0 ? Math.round(equityTotal / grandTotal * 1000) / 10 : 0;
-
-  const availableMonths = (raw.monthYear || [])
-    .map(m => (typeof m === 'string' ? m : m.date || ''))
-    .filter(Boolean);
 
   return {
     date,
@@ -130,13 +188,13 @@ export default async function handler(req, res) {
     let result = null, usedDate = null;
 
     if (requestedDate) {
-      result   = processData(await fetchAMFI(requestedDate), requestedDate);
+      result   = await fetchIndustryStatewise(requestedDate);
       usedDate = requestedDate;
     } else {
       for (const { year, month } of candidateMonths()) {
         const date = amfiDate(year, month);
         try {
-          result = processData(await fetchAMFI(date), date);
+          result = await fetchIndustryStatewise(date);
           if (result) { usedDate = date; break; }
         } catch(e) { continue; }
       }
@@ -147,9 +205,6 @@ export default async function handler(req, res) {
       return;
     }
 
-    // KEY FIX: s-maxage tells Vercel CDN to cache. Without it every call was MISS.
-    // Historical months: 30 days (data never changes after AMFI publishes)
-    // Auto-resolved latest: 12 hours + 24hr stale-while-revalidate
     const maxAge = requestedDate ? 2592000 : 43200;
     res.setHeader('Cache-Control', `public, s-maxage=${maxAge}, stale-while-revalidate=86400`);
     res.setHeader('X-AMFI-Date', usedDate);
@@ -158,4 +213,4 @@ export default async function handler(req, res) {
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
-};
+}
