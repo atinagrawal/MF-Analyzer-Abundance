@@ -63,14 +63,14 @@ export default function PricingLayout({ children }) {
     "review": [
       {
         "@type": "Review",
-        "author": { "@type": "Person", "name": "Rajesh Kumar (MFD)" },
+        "author": { "@type": "Person", "name": "Verified MFD Partner" },
         "datePublished": "2026-01-15",
         "reviewBody": "Proposal Studio and Fund Overlap analysis saved me hours when creating mutual fund proposals for my clients.",
         "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" }
       },
       {
         "@type": "Review",
-        "author": { "@type": "Person", "name": "Ananya Sharma" },
+        "author": { "@type": "Person", "name": "Verified Abundance Pro User" },
         "datePublished": "2026-02-01",
         "reviewBody": "Seeing complete portfolio holdings beyond top 10 and CAS statement XIRR in one place is fantastic.",
         "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" }
