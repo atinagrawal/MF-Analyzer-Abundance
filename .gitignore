@@ -38,6 +38,7 @@ Thumbs.db
 # aren't.
 data/screener.json
 data/portfolios/
+data/scheme-lineage.review.md
 
 .superpowers/
 
