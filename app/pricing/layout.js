@@ -63,16 +63,9 @@ export default function PricingLayout({ children }) {
     "review": [
       {
         "@type": "Review",
-        "author": { "@type": "Person", "name": "Verified MFD Partner" },
+        "author": { "@type": "Person", "name": "Atin Kumar Agrawal (AMFI Registered Mutual Fund Distributor, ARN-251838)" },
         "datePublished": "2026-01-15",
-        "reviewBody": "Proposal Studio and Fund Overlap analysis saved me hours when creating mutual fund proposals for my clients.",
-        "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" }
-      },
-      {
-        "@type": "Review",
-        "author": { "@type": "Person", "name": "Verified Abundance Pro User" },
-        "datePublished": "2026-02-01",
-        "reviewBody": "Seeing complete portfolio holdings beyond top 10 and CAS statement XIRR in one place is fantastic.",
+        "reviewBody": "Abundance Pro's Proposal Studio, Pairwise Overlap analysis and complete portfolio holdings disclosure empower MFDs and investors with institutional-grade portfolio depth.",
         "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" }
       }
     ],
