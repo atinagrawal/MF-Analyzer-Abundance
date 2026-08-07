@@ -81,9 +81,13 @@ export function normalizeCategory(c = '') {
   return c
     .toLowerCase()
     .replace(/\s+/g, ' ')
-    .replace(/schemes/g, 'scheme')
+    .replace(/^(equity|debt|hybrid|other|solution oriented|income\/debt oriented)\s*schemes?\s*-\s*/i, '')
     .replace(/\s*-\s*tax saver fund/i, '')
     .replace(/\s+fund$/i, '')
+    .replace(/banking and psu debt/i, 'banking and psu')
+    .replace(/ultra short term|ultra short to short term/i, 'ultra short duration')
+    .replace(/short term/i, 'short duration')
+    .replace(/medium term/i, 'medium duration')
     .replace(/balanced advantage fund\/\s*dynamic asset allocation/i, 'dynamic asset allocation or balanced advantage')
     .trim();
 }
