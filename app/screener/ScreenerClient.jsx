@@ -10,7 +10,7 @@ import CompareGrowthChart from './CompareGrowthChart';
 import { useRouter } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import { startCheckout } from '@/lib/checkoutClient';
-import { shortCat, FAQ_ITEMS, GLOSSARY_ITEMS, CURATED_CATEGORIES, categoryToSlug, matchCategory } from './screenerContent';
+import { shortCat, FAQ_ITEMS, GLOSSARY_ITEMS, CURATED_CATEGORIES, categoryToSlug, matchCategory, normalizeCategory } from './screenerContent';
 import { normalizeSchemeName } from '@/lib/normalizeSchemeName';
 
 // Slim, server-fetched projection of data/isin-scheme-master.json (see
@@ -369,9 +369,17 @@ export default function ScreenerClient({ initialCategory }) {
     }).filter((c) => c.top.length > 0);
   }, [sifSchemes]);
   const cats = useMemo(() => {
-    const set = new Map();
-    funds.forEach((f) => { if (group === 'All' || assetClass(f.category) === group) set.set(f.category, (set.get(f.category) || 0) + 1); });
-    return [...set.entries()].sort((a, b) => b[1] - a[1]);
+    const map = new Map();
+    funds.forEach((f) => {
+      if (group === 'All' || assetClass(f.category) === group) {
+        const norm = normalizeCategory(f.category);
+        if (!map.has(norm)) {
+          map.set(norm, { cat: f.category, count: 0 });
+        }
+        map.get(norm).count += 1;
+      }
+    });
+    return [...map.values()].sort((a, b) => b.count - a.count).map((item) => [item.cat, item.count]);
   }, [funds, group]);
 
   const rows = useMemo(() => {
