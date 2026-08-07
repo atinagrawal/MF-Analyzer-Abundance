@@ -5,6 +5,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProviderAvatar from "@/components/ProviderAvatar";
 import { getMFLogo, getSIFLogo, getMFLogoFromSchemeName } from "@/lib/providerLogos";
+import LINEAGE from "@/data/scheme-lineage.json";
+import { walkLineage } from "@/lib/schemeLineage";
 
 /* ============================================================
    Abundance · Portfolio Backtester  (per-fund strategies)
@@ -175,31 +177,6 @@ async function fetchJSON(url, tries = 4) {
   throw lastErr || new Error("network error");
 }
 
-/* ---------------- predecessor lineage (verified 1:1 scheme transfers) ----------------
-   Keyed by CURRENT scheme code -> same-plan predecessor code. A curated map ensures
-   we never link unrelated funds; a runtime boundary check (below) then refuses any
-   splice that isn't actually continuous, so even a wrong entry can't fabricate history.
-   JPMorgan India AMC -> Edelweiss MF, schemes transferred 28-Nov-2016.            */
-const LINEAGE = {
-  140225: { pred: 107301, from: "JPMorgan India Mid and Small Cap Fund (Regular)" }, // Edelweiss Mid Cap Reg-Growth
-  140228: { pred: 119869, from: "JPMorgan India Mid and Small Cap Fund (Direct)" },  // Edelweiss Mid Cap Dir-Growth
-};
-
-// Return-link a predecessor series onto a current one: scale the predecessor so its
-// last NAV meets the current series' first NAV (preserving predecessor RETURNS, not
-// absolute NAV). Only applied if the boundary is genuinely continuous.
-function stitchSeries(current, pred) {
-  if (!pred || pred.length < 2 || !current.length) return null;
-  const cFirst = current[0], pLast = pred[pred.length - 1];
-  const gapDays = (cFirst.t - pLast.t) / DAY;
-  const ratio = cFirst.nav / pLast.nav;
-  if (!(gapDays > 0 && gapDays <= 12 && ratio > 0.85 && ratio < 1.2)) return null; // not a clean transfer
-  const k = cFirst.nav / pLast.nav;
-  const head = pred.filter((p) => p.t < cFirst.t).map((p) => ({ t: p.t, nav: p.nav * k }));
-  if (!head.length) return null;
-  return { series: [...head, ...current], spliceDate: cFirst.t, from: pred[0].t };
-}
-
 /* ---------------- shareable portfolio state (URL ?p=) ---------------- */
 function encodeState(s) {
   try {
@@ -352,14 +329,22 @@ export default function BacktestPage() {
       // Freshness guard on the CURRENT scheme (AMFI keeps merged/closed codes frozen).
       const lastNow = series[series.length - 1].t;
       if ((todayUTC() - lastNow) / DAY > 30) throw new Error(`"${authName}" looks discontinued or merged — its NAV history ends ${fmtDate(lastNow)} and is no longer updated. Merged/closed scheme codes stay searchable in the AMFI list but freeze. Please pick the current scheme instead.`);
-      // Pre-merger stitch: prepend the verified predecessor series, return-linked.
+      // Pre-merger stitch: walk the lineage chain back through as many
+      // verified hops as exist, prepending each predecessor's return-linked
+      // series in turn (see lib/schemeLineage.js).
       if (stitch && LINEAGE[item.id]) {
         try {
-          const pd = await fetchJSON(`/api/mf?code=${LINEAGE[item.id].pred}`);
-          if (pd?.data?.length) {
-            const st = stitchSeries(series, normSeries(pd.data, "mf"));
-            if (st) { series = st.series; stitchInfo = { spliceDate: st.spliceDate, from: st.from, fromName: LINEAGE[item.id].from }; }
-          }
+          const resolved = await walkLineage({
+            series,
+            code: item.id,
+            lineage: LINEAGE,
+            fetchPredecessor: async (code) => {
+              const pd = await fetchJSON(`/api/mf?code=${code}`);
+              return pd?.data?.length ? pd.data : null;
+            },
+            normalize: (raw) => normSeries(raw, "mf"),
+          });
+          if (resolved) { series = resolved.series; stitchInfo = resolved.stitchInfo; }
         } catch (e) { /* predecessor is optional enrichment — ignore failures */ }
       }
     } else {
@@ -399,7 +384,8 @@ export default function BacktestPage() {
       const res = runBacktest({ holdings: port, sipDay, defaultStart, end, benchmark: bchk, stepUp: (stepUpPct || 0) / 100 });
       if (res.invested <= 0) throw new Error("No investments could be placed in the selected window. Check your start dates against each fund's launch date.");
       const stitched = port.filter((p) => p.stitch).map((p) => ({ name: p.name, ...p.stitch }));
-      setResult({ ...res, end, port, bench: res.bench, years: (end - res.gridStart) / Y, generatedAt: Date.now(), stitched, splices: [...new Set(stitched.map((s) => s.spliceDate))] });
+      const allSpliceDates = stitched.flatMap((s) => s.hops.map((h) => h.spliceDate));
+      setResult({ ...res, end, port, bench: res.bench, years: (end - res.gridStart) / Y, generatedAt: Date.now(), stitched, splices: [...new Set(allSpliceDates)] });
       try { window.history.replaceState(null, "", `/backtest?p=${encodeState(buildShareState())}`); } catch (e) {}
     } catch (e) { setErr(e.message || "Something went wrong."); }
     finally { setRunning(false); }
@@ -790,7 +776,7 @@ function FundDetail({ row, end, onClose }) {
   const curve = useMemo(() => buildFundCurve(row.buys || [], row.series, row.start, end), [row, end]);
   const gain = row.value - row.invested;
   const gp = gain >= 0;
-  const splices = row.stitch ? [row.stitch.spliceDate] : [];
+  const splices = row.stitch ? row.stitch.hops.map((h) => h.spliceDate) : [];
   return (
     <div className="bt-drawer-wrap" onMouseDown={onClose}>
       <div className="bt-drawer" onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-label={`${row.name} detail`}>
