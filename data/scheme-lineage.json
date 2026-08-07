@@ -1,4 +1,51 @@
 {
   "140225": { "pred": 107301, "from": "JPMorgan India Mid and Small Cap Fund (Regular)" },
-  "140228": { "pred": 119869, "from": "JPMorgan India Mid and Small Cap Fund (Direct)" }
+  "140228": { "pred": 119869, "from": "JPMorgan India Mid and Small Cap Fund (Direct)" },
+
+  "151123": { "pred": 119348, "from": "L&T Hybrid Equity Fund - Direct Plan -IDCW" },
+  "151122": { "pred": 119347, "from": "L&T Hybrid Equity Fund - Direct Plan-Growth" },
+  "151120": { "pred": 118191, "from": "L&T Hybrid Equity Fund- Regular Plan - Growth" },
+  "151121": { "pred": 118192, "from": "L&T Hybrid Equity Fund- Regular Plan - IDCW" },
+  "151129": { "pred": 119298, "from": "L&T Balanced Advantage Fund-Direct Plan-Growth" },
+  "151128": { "pred": 119297, "from": "L&T Balanced Advantage Fund-Direct Plan-IDCW" },
+  "151127": { "pred": 118194, "from": "L&T Balanced Advantage Fund-Regular Plan-Growth" },
+  "151126": { "pred": 118193, "from": "L&T Balanced Advantage Fund-Regular Plan-IDCW" },
+
+  "149658": { "pred": 100895, "from": "Principal Cash Management Fund - Daily Income Distribution CUM Capital Withdrawal" },
+  "149663": { "pred": 119467, "from": "Principal Cash Management Fund - Direct Plan - Income Distribution CUM Capital Withdrawal Option - Daily" },
+
+  "152004": { "pred": 141475, "from": "IDBI Small Cap Fund - Growth Direct" },
+  "152006": { "pred": 141477, "from": "IDBI Small Cap Fund - IDCW Regular" },
+  "152003": { "pred": 141462, "from": "IDBI Small Cap Fund Growth Regular" },
+  "152005": { "pred": 141476, "from": "IDBI Small Cap Fund IDCW Direct" },
+  "152010": { "pred": 141920, "from": "IDBI FOCUSED 30 EQUITY FUND - Growth Direct" },
+  "152009": { "pred": 141919, "from": "IDBI FOCUSED 30 EQUITY FUND - Growth Regular" },
+  "152007": { "pred": 141917, "from": "IDBI FOCUSED 30 EQUITY FUND - IDCW Regular" },
+  "152008": { "pred": 141918, "from": "IDBI FOCUSED 30 EQUITY FUND -IDCW Direct" },
+  "151935": { "pred": 113249, "from": "IDBI Nifty Next 50 Index Fund Growth" },
+  "151937": { "pred": 118348, "from": "IDBI Nifty Next 50 Index Fund Growth Direct" },
+  "151938": { "pred": 118456, "from": "IDBI Nifty Next 50 Index Fund IDCW Direct" },
+  "151950": { "pred": 114982, "from": "IDBI Equity Savings Fund Growth Option" },
+  "151952": { "pred": 118452, "from": "IDBI Equity Savings Fund Growth Option Direct" },
+  "151953": { "pred": 118453, "from": "IDBI Equity Savings Fund IDCW Option Direct" },
+  "151949": { "pred": 114630, "from": "IDBI Equity Savings Fund IDCW Option" },
+
+  "130501": { "pred": 108196, "from": "Morgan Stanley A.C.E. Fund- Regular Dividend Plan" },
+  "130502": { "pred": 108197, "from": "Morgan Stanley A.C.E. Fund- Regular Growth Plan" },
+  "130504": { "pred": 119154, "from": "Morgan Stanley A.C.E. Fund-Direct Dividend Plan" },
+  "130503": { "pred": 119150, "from": "Morgan Stanley A.C.E. Fund-Direct Growth Plan" },
+
+  "131671": { "pred": 119980, "from": "ING Balanced Fund - Direct Plan - Dividend Option" },
+  "131670": { "pred": 119979, "from": "ING Balanced Fund - Direct Plan - Growth Option" },
+  "131665": { "pred": 100202, "from": "ING Balanced Fund-Dividend Option" },
+  "131666": { "pred": 100203, "from": "ING Balanced Fund-Growth Option" },
+
+  "133799": { "pred": 107408, "from": "PineBridge Infrastructure & Economic Reform Fund - Standard Plan-Dividend" },
+  "133796": { "pred": 107405, "from": "PineBridge Infrastructure & Economic Reform Fund - Standard Plan-Growth" },
+  "133800": { "pred": 119342, "from": "PineBridge Infrastructure & Economic Reform Fund- Direct Plan- Dividend Option" },
+  "133801": { "pred": 119343, "from": "PineBridge Infrastructure & Economic Reform Fund- Direct Plan- Growth Option" },
+  "133814": { "pred": 108168, "from": "PineBridge World Gold Fund - Standard Plan - Dividend Option" },
+  "133815": { "pred": 108169, "from": "PineBridge World Gold Fund - Standard Plan - Growth Option" },
+  "133817": { "pred": 119345, "from": "PineBridge World Gold Fund- Direct Plan- Dividend Option" },
+  "133816": { "pred": 119344, "from": "PineBridge World Gold Fund- Direct Plan- Growth Option" }
 }
