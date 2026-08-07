@@ -8,6 +8,8 @@ import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
 import { MFCompareBar, MFCompareModal } from './MFCompare';
 import CompareGrowthChart from './CompareGrowthChart';
 import { useRouter } from 'next/navigation';
+import { useSession, signIn } from 'next-auth/react';
+import { startCheckout } from '@/lib/checkoutClient';
 import { shortCat, FAQ_ITEMS, GLOSSARY_ITEMS, CURATED_CATEGORIES, categoryToSlug } from './screenerContent';
 import { normalizeSchemeName } from '@/lib/normalizeSchemeName';
 
@@ -792,9 +794,110 @@ export default function ScreenerClient({ initialCategory }) {
   );
 }
 
+/* ---------- Pro holdings paywall modal ---------- */
+function ProHoldingsModal({ schemeName, totalCount, onClose, session }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const isAuthed = Boolean(session?.user);
+
+  const handleUpgrade = async () => {
+    if (!isAuthed) {
+      signIn();
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      await startCheckout({
+        plan: 'annual',
+        session,
+        onSuccess() { window.location.reload(); },
+        onDismiss() { setLoading(false); },
+      });
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="scr-pro-modal-wrap" onClick={onClose}>
+      <div className="scr-pro-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <button className="scr-pro-modal-x" onClick={onClose} aria-label="Close">×</button>
+
+        <div className="scr-pro-modal-header">
+          <div className="scr-pro-crown-badge">👑 ABUNDANCE PRO FEATURE</div>
+          <h3 className="scr-pro-modal-title">Unlock Complete Portfolio Holdings</h3>
+          <p className="scr-pro-modal-desc">
+            {schemeName ? <strong>{schemeName}</strong> : 'This scheme'} holds <strong>{totalCount} total equity securities</strong>. Free accounts can view the top 10 holdings. Upgrade to <strong>Abundance Pro</strong> to unlock the complete holding list &amp; full analytics.
+          </p>
+        </div>
+
+        <div className="scr-pro-features-grid">
+          <div className="scr-pro-feat-item">
+            <div className="scr-pro-feat-ic">📊</div>
+            <div>
+              <strong>Complete {totalCount}-Stock Disclosure</strong>
+              <span>Full security-level breakdown with exact portfolio weightages &amp; sector tags.</span>
+            </div>
+          </div>
+          <div className="scr-pro-feat-item">
+            <div className="scr-pro-feat-ic">⚡</div>
+            <div>
+              <strong>Pairwise Fund Overlap</strong>
+              <span>Detect hidden stock duplication across multiple mutual funds in Proposal Studio.</span>
+            </div>
+          </div>
+          <div className="scr-pro-feat-item">
+            <div className="scr-pro-feat-ic">🏢</div>
+            <div>
+              <strong>AMFI Market Cap Allocation</strong>
+              <span>Official Large, Mid &amp; Small cap breakdown based on AMFI semi-annual categorization.</span>
+            </div>
+          </div>
+          <div className="scr-pro-feat-item">
+            <div className="scr-pro-feat-ic">🎯</div>
+            <div>
+              <strong>SEBI Stress Test &amp; Liquidity</strong>
+              <span>Days to liquidate 25%/50% portfolio and top 10 investor concentration metrics.</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="scr-pro-pricing-card">
+          <div className="scr-pro-price-row">
+            <div>
+              <span className="scr-pro-price-amount">₹499</span>
+              <span className="scr-pro-price-period">/ year + 18% GST</span>
+            </div>
+            <span className="scr-pro-price-total">Total ₹588.82</span>
+          </div>
+          <button className="scr-pro-cta" onClick={handleUpgrade} disabled={loading}>
+            {loading ? 'Opening checkout…' : !isAuthed ? 'Sign in to Upgrade →' : 'Upgrade to Pro Now →'}
+          </button>
+          {error && <div className="scr-pro-err">{error}</div>}
+          <div className="scr-pro-sublink">
+            <a href="/pricing" target="_blank" rel="noreferrer">See all Pro features &amp; plans →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- reusable holdings & sector breakdown section ---------- */
-function HoldingsSection({ holdingsData, loading }) {
+function HoldingsSection({ holdingsData, loading, schemeName }) {
   const [expanded, setExpanded] = useState(false);
+  const [showPaywallModal, setShowPaywallModal] = useState(false);
+
+  const { data: session } = useSession();
+  const isPaidOrAdmin = Boolean(
+    session?.user?.role === 'admin' ||
+    session?.user?.plan === 'pro' ||
+    session?.user?.plan === 'pro_lifetime' ||
+    session?.user?.plan === 'lifetime' ||
+    session?.user?.isPro
+  );
 
   if (loading) {
     return (
@@ -836,7 +939,15 @@ function HoldingsSection({ holdingsData, loading }) {
 
   const SECTOR_COLORS = ['#1b5e20', '#2e7d32', '#43a047', '#e65100', '#0288d1', '#5e35b1'];
 
-  const displayedHoldings = expanded ? equityHoldings : equityHoldings.slice(0, 10);
+  const displayedHoldings = (expanded && isPaidOrAdmin) ? equityHoldings : equityHoldings.slice(0, 10);
+
+  const handleToggleClick = () => {
+    if (isPaidOrAdmin) {
+      setExpanded(!expanded);
+    } else {
+      setShowPaywallModal(true);
+    }
+  };
 
   return (
     <div className="scr-hold-section">
@@ -896,14 +1007,55 @@ function HoldingsSection({ holdingsData, loading }) {
                 <td className="scr-hold-pct">{(h.weightagePct || 0).toFixed(2)}%</td>
               </tr>
             ))}
+            {!isPaidOrAdmin && equityHoldings.length > 10 && (
+              <tr
+                className="scr-hold-row-locked"
+                onClick={() => setShowPaywallModal(true)}
+                title="Unlock full holdings list"
+              >
+                <td className="scr-hold-stock" colSpan={3}>
+                  <div className="scr-hold-locked-cell">
+                    <span>🔒 +{totalCount - 10} additional holdings locked</span>
+                    <span className="scr-hold-pro-badge">PRO</span>
+                  </div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
       {equityHoldings.length > 10 && (
-        <button className="scr-hold-toggle" onClick={() => setExpanded(!expanded)}>
-          {expanded ? '▲ Show Top 10' : `▼ Show All ${totalCount} Holdings`}
-        </button>
+        <div className="scr-hold-toggle-wrap">
+          {isPaidOrAdmin ? (
+            <button className="scr-hold-toggle" onClick={handleToggleClick}>
+              {expanded ? '▲ Show Top 10' : `▼ Show All ${totalCount} Holdings`}
+            </button>
+          ) : (
+            <div className="scr-hold-pro-teaser" onClick={() => setShowPaywallModal(true)}>
+              <div className="scr-hold-teaser-info">
+                <span className="scr-hold-teaser-crown">👑</span>
+                <div>
+                  <div className="scr-hold-teaser-head">Showing 10 of {totalCount} Holdings</div>
+                  <div className="scr-hold-teaser-sub">Unlock all {totalCount} stocks &amp; full weightages with Pro</div>
+                </div>
+              </div>
+              <button className="scr-hold-teaser-btn" onClick={(e) => { e.stopPropagation(); setShowPaywallModal(true); }}>
+                <span>Show All {totalCount} Holdings</span>
+                <span className="scr-hold-btn-tag">PRO</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showPaywallModal && (
+        <ProHoldingsModal
+          schemeName={schemeName}
+          totalCount={totalCount}
+          onClose={() => setShowPaywallModal(false)}
+          session={session}
+        />
       )}
     </div>
   );
@@ -1072,7 +1224,7 @@ function Detail({ f, stress, onClose }) {
           </div>
         )}
 
-        <HoldingsSection holdingsData={holdingsData} loading={holdingsLoading} />
+        <HoldingsSection holdingsData={holdingsData} loading={holdingsLoading} schemeName={f.name} />
 
         <div className="scr-drawer-meta">
           <span>Latest NAV ₹{f.nav}</span>
@@ -1228,7 +1380,7 @@ function SifDetail({ s, onClose }) {
           <div className="scr-dk"><span>Data points</span><b>{pts ? pts.length : '—'}</b></div>
         </div>
 
-        <HoldingsSection holdingsData={holdingsData} loading={holdingsLoading} />
+        <HoldingsSection holdingsData={holdingsData} loading={holdingsLoading} schemeName={s.nav_name} />
 
         <div className="scr-drawer-cta">
           <a className="scr-btn primary" href={backtestSifLink(s)}>⚗ Backtest this SIF</a>
@@ -1519,17 +1671,205 @@ h2 + .scr-faq-group-h{margin-top:0}
 .scr-alloc-bar-fill.small-cap { background: #e65100; }
 .scr-alloc-bar-fill.cash { background: #0288d1; }
 
+@media(max-width:560px){
+  .scr-pager{justify-content:center}.scr-pager-info{order:3;width:100%;text-align:center}
+  /* shrink the sticky fund column so the data columns get room */
+  .scr-table{min-width:420px}
+  .scr-fundlink{max-width:132px}
+  .scr-fund-n{font-size:12px}
+  .scr-fund-sub{font-size:9.5px}
+  .scr-table th,.scr-table td{padding:9px 8px}
+  .scr-name,.scr-name-h{max-width:140px}
+}
+
+.scr-faq{margin-top:24px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
+.scr-faq h2{font-size:17px;margin:0 0 14px;color:var(--text)}
+.scr-faq-item{border:1px solid var(--border);border-radius:10px;background:var(--s2);margin-bottom:8px;overflow:hidden}
+.scr-faq-item.open{border-color:var(--g-light)}
+.scr-faq-q{width:100%;display:flex;justify-content:space-between;gap:12px;background:none;border:0;padding:14px 15px;text-align:left;font:700 14px Raleway,sans-serif;color:var(--text);cursor:pointer}
+.scr-faq-q:hover{color:var(--g1)}
+.scr-faq-ic{font:700 18px JetBrains Mono,monospace;color:var(--g3)}
+.scr-faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.scr-faq-a p{margin:0;padding:0 15px 15px;font-size:13px;line-height:1.65;color:var(--text2)}
+.scr-disc{margin-top:20px;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:15px 17px;font-size:11.5px;line-height:1.65;color:var(--muted)}
+.scr-disc b{color:var(--text2)}
+
+/* category explainer + FAQ group headings */
+.scr-explainer{background:var(--g-xlight);border:1px solid var(--g-light);border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.6;color:var(--text2);margin-bottom:16px}
+.scr-explainer b{color:var(--g1)}
+.scr-faq-group-h{font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
+h2 + .scr-faq-group-h{margin-top:0}
+
+/* drawer */
+.scr-drawer-wrap{position:fixed;inset:0;background:#0d260d55;backdrop-filter:blur(3px);z-index:10000;display:flex;justify-content:flex-end;animation:scrfade .2s ease}
+.scr-drawer{background:var(--surface);width:460px;max-width:100%;height:100%;overflow-y:auto;box-shadow:var(--shadow-lg);padding:22px;animation:scrslide .28s cubic-bezier(.2,.7,.3,1)}
+@keyframes scrfade{from{opacity:0}to{opacity:1}}
+@keyframes scrslide{from{transform:translateX(40px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes scrup{from{transform:translateY(60px);opacity:.5}to{transform:none;opacity:1}}
+.scr-drawer-h{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:14px}
+.scr-drawer-name{font-size:16px;font-weight:800;color:var(--text);line-height:1.3}
+.scr-drawer-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.scr-tag{font:700 10px JetBrains Mono,monospace;background:var(--g-xlight);color:var(--g1);padding:3px 8px;border-radius:5px}
+.scr-tag.alt{background:var(--s3,#eef5ee);color:var(--text2)}
+.scr-x{width:34px;height:34px;border:1px solid var(--border);background:var(--surface);border-radius:9px;font-size:20px;color:var(--muted);cursor:pointer;flex:none}
+.scr-warn{background:var(--warn-bg,#fff3e0);border:1px solid #ffcc80;color:#8a4300;padding:9px 12px;border-radius:8px;font-size:12px;margin-bottom:14px}
+.scr-spark-load{font:500 11px JetBrains Mono,monospace;color:var(--muted);margin-top:5px;padding:34px 0;text-align:center}
+.scr-drawer-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.scr-dk{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:9px 10px;display:flex;flex-direction:column;gap:3px}
+.scr-dk span{font:600 9.5px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase}
+.scr-dk b{font:800 16px JetBrains Mono,monospace;color:var(--text)}
+.scr-drawer-meta{display:flex;flex-wrap:wrap;gap:12px;font:600 11px JetBrains Mono,monospace;color:var(--muted);border-top:1px solid var(--border);padding-top:12px;margin-bottom:16px}
+.scr-drawer-cta{display:flex;gap:10px;flex-wrap:wrap}
+.scr-btn{flex:1;text-align:center;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:800 13px Raleway,sans-serif;text-decoration:none;white-space:nowrap}
+.scr-btn.primary{background:var(--g1);color:#fff;border-color:var(--g1)}
+.scr-btn:hover{transform:translateY(-1px)}
+@media(max-width:560px){
+  .scr-drawer-wrap{justify-content:center;align-items:flex-end}
+  .scr-drawer{width:100%;height:auto;max-height:90vh;border-radius:18px 18px 0 0;animation:scrup .3s cubic-bezier(.2,.7,.3,1)}
+  .scr-drawer-kpis{grid-template-columns:repeat(2,1fr)}
+  .scr-select{max-width:100%;flex:1}
+}
+@media (prefers-reduced-motion: reduce){ .scr-drawer,.scr-drawer-wrap{animation:none} .scr-btn:hover{transform:none} }
+
+/* Table liquidity badge styles */
+.scr-table-liq-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font: 700 9px JetBrains Mono, monospace;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.scr-table-liq-green {
+  background: rgba(46, 125, 50, 0.08);
+  color: #2e7d32;
+  border: 1px solid rgba(46, 125, 50, 0.15);
+}
+.scr-table-liq-amber {
+  background: rgba(230, 81, 0, 0.08);
+  color: #e65100;
+  border: 1px solid rgba(230, 81, 0, 0.15);
+}
+.scr-table-liq-red {
+  background: rgba(211, 47, 47, 0.08);
+  color: #d32f2f;
+  border: 1px solid rgba(211, 47, 47, 0.15);
+}
+
+/* Stress test section in drawer */
+.scr-stress-section {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.scr-stress-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.scr-stress-month {
+  font: 500 11px JetBrains Mono, monospace;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.scr-stress-liquidity-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.scr-stress-liq-card {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.scr-liq-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.scr-liq-val {
+  font: 800 18px JetBrains Mono, monospace;
+  color: var(--text);
+}
+.scr-liq-meter {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+.scr-liq-meter-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.scr-warn-liquidity {
+  background: rgba(230, 81, 0, 0.08);
+  border: 1px solid rgba(230, 81, 0, 0.15);
+  color: #e65100;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+.scr-allocation-card, .scr-valuation-card {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.scr-alloc-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  letter-spacing: 0.03em;
+}
+.scr-alloc-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.scr-alloc-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.scr-alloc-lbl {
+  font: 600 10.5px JetBrains Mono, monospace;
+  color: var(--text2);
+}
+.scr-alloc-bar-bg {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.scr-alloc-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+.scr-alloc-bar-fill.large-cap { background: #1b5e20; }
+.scr-alloc-bar-fill.mid-cap { background: #2e7d32; }
+.scr-alloc-bar-fill.small-cap { background: #e65100; }
+.scr-alloc-bar-fill.cash { background: #0288d1; }
+
 .scr-pe-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-}
-.scr-pe-item {
-  text-align: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px;
 }
 .scr-pe-label {
   font-size: 9px;
@@ -1564,6 +1904,258 @@ h2 + .scr-faq-group-h{margin-top:0}
 .scr-hold-toggle{display:block;width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--s2);color:var(--g1);font:700 11px JetBrains Mono,monospace;cursor:pointer;text-align:center;margin-bottom:12px;transition:background .15s}
 .scr-hold-toggle:hover{background:var(--g-xlight)}
 .scr-hold-empty{font:500 11px JetBrains Mono,monospace;color:var(--muted);text-align:center;padding:16px 0}
+
+/* Holdings gating & paywall modal */
+.scr-hold-row-locked {
+  cursor: pointer;
+  background: var(--s2);
+  transition: background 0.15s ease;
+}
+.scr-hold-row-locked:hover {
+  background: var(--g-xlight);
+}
+.scr-hold-locked-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 2px;
+  font: 700 11px JetBrains Mono, monospace;
+  color: var(--muted);
+}
+.scr-hold-pro-badge {
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #fff;
+  font: 800 9px JetBrains Mono, monospace;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+.scr-hold-toggle-wrap {
+  margin-bottom: 12px;
+}
+.scr-hold-pro-teaser {
+  background: linear-gradient(135deg, var(--s2) 0%, var(--g-xlight) 100%);
+  border: 1.5px solid var(--g-light);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.scr-hold-pro-teaser:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+  border-color: var(--g2);
+}
+.scr-hold-teaser-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.scr-hold-teaser-crown {
+  font-size: 22px;
+  line-height: 1;
+}
+.scr-hold-teaser-head {
+  font: 800 12.5px Raleway, sans-serif;
+  color: var(--text);
+}
+.scr-hold-teaser-sub {
+  font: 500 11px Raleway, sans-serif;
+  color: var(--muted);
+}
+.scr-hold-teaser-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #fff;
+  font: 800 12px Raleway, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(27, 94, 32, 0.25);
+  transition: opacity 0.15s ease;
+}
+.scr-hold-teaser-btn:hover {
+  opacity: 0.92;
+}
+.scr-hold-btn-tag {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font: 800 9px JetBrains Mono, monospace;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+/* Modal Window */
+.scr-pro-modal-wrap {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 38, 13, 0.72);
+  backdrop-filter: blur(6px);
+  z-index: 10005;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  animation: scrfade 0.2s ease;
+}
+.scr-pro-modal {
+  background: var(--surface);
+  border: 1.5px solid var(--g-light);
+  border-radius: 18px;
+  max-width: 480px;
+  width: 100%;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+  position: relative;
+  animation: scrup 0.25s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.scr-pro-modal-x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  background: var(--s2);
+  border-radius: 8px;
+  font-size: 20px;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.scr-pro-modal-x:hover {
+  color: var(--text);
+  border-color: var(--g3);
+}
+.scr-pro-modal-header {
+  text-align: center;
+  margin-bottom: 18px;
+}
+.scr-pro-crown-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--g-xlight);
+  color: var(--g1);
+  border: 1px solid var(--g-light);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font: 800 10.5px JetBrains Mono, monospace;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+.scr-pro-modal-title {
+  font: 800 19px Raleway, sans-serif;
+  color: var(--text);
+  margin: 0 0 6px;
+  line-height: 1.25;
+}
+.scr-pro-modal-desc {
+  font: 500 12.5px/1.55 Raleway, sans-serif;
+  color: var(--text2);
+  margin: 0;
+}
+.scr-pro-features-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+.scr-pro-feat-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.scr-pro-feat-ic {
+  font-size: 18px;
+  flex: none;
+  margin-top: 1px;
+}
+.scr-pro-feat-item strong {
+  display: block;
+  font: 700 12.5px Raleway, sans-serif;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.scr-pro-feat-item span {
+  display: block;
+  font: 500 11.5px/1.4 Raleway, sans-serif;
+  color: var(--muted);
+}
+.scr-pro-pricing-card {
+  background: linear-gradient(135deg, var(--s2) 0%, var(--g-xlight) 100%);
+  border: 1.5px solid var(--g-light);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+.scr-pro-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.scr-pro-price-amount {
+  font: 800 24px JetBrains Mono, monospace;
+  color: var(--g1);
+}
+.scr-pro-price-period {
+  font: 600 12px Raleway, sans-serif;
+  color: var(--muted);
+  margin-left: 4px;
+}
+.scr-pro-price-total {
+  font: 700 11px JetBrains Mono, monospace;
+  color: var(--muted);
+}
+.scr-pro-cta {
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #fff;
+  font: 800 14px Raleway, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(27, 94, 32, 0.3);
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.scr-pro-cta:hover:not(:disabled) {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+.scr-pro-cta:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.scr-pro-err {
+  color: #d32f2f;
+  font-size: 11.5px;
+  margin-top: 8px;
+}
+.scr-pro-sublink {
+  margin-top: 10px;
+}
+.scr-pro-sublink a {
+  font: 600 11.5px Raleway, sans-serif;
+  color: var(--g1);
+  text-decoration: none;
+}
+.scr-pro-sublink a:hover {
+  text-decoration: underline;
+}
 
 @media(max-width:860px){
   .scr-leaders-grid{grid-template-columns:repeat(2,1fr)}
