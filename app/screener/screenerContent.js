@@ -3,7 +3,38 @@
 // both the server page.js (metadata) and the client ScreenerClient.jsx
 // (rendering), so the two never drift out of sync.
 
-export const shortCat = (c = '') => c.replace(/^(Equity|Debt|Hybrid|Other|Solution Oriented)\s+Scheme\s*-\s*/i, '').replace(/\s+Fund$/i, '').trim() || c;
+export const shortCat = (c = '') => {
+  let s = c.replace(/^(Equity|Debt|Hybrid|Other|Solution Oriented|Income\/Debt Oriented)\s+Schemes?\s*-\s*/i, '').replace(/\s+Fund$/i, '').trim() || c;
+  if (/^sectoral|^thematic|sectoral\s*\/\s*thematic/i.test(s)) return 'Sectoral / Thematic';
+  if (/^value$|^contra$|value\s*\/\s*contra/i.test(s)) return 'Value / Contra';
+  return s;
+};
+
+export function normalizeCategory(c = '') {
+  if (!c || c === 'All') return 'All';
+  let cat = c
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/^(equity|debt|hybrid|other|solution oriented|income\/debt oriented)\s*schemes?\s*-\s*/i, '')
+    .replace(/\s*-\s*tax saver fund/i, '')
+    .replace(/\s+fund$/i, '')
+    .replace(/banking and psu debt/i, 'banking and psu')
+    .replace(/ultra short term|ultra short to short term/i, 'ultra short duration')
+    .replace(/short term/i, 'short duration')
+    .replace(/medium term/i, 'medium duration')
+    .replace(/balanced advantage fund\/\s*dynamic asset allocation/i, 'dynamic asset allocation or balanced advantage')
+    .trim();
+
+  if (/^sectoral|^thematic|sectoral\s*\/\s*thematic/i.test(cat)) {
+    return 'sectoral / thematic';
+  }
+
+  if (/^value$|^contra$|value\s*\/\s*contra/i.test(cat)) {
+    return 'value / contra';
+  }
+
+  return cat;
+}
 
 export const CURATED_CATEGORIES = [
   {
@@ -74,22 +105,6 @@ export function categoryToSlug(category) {
     .replace(/^(equity|debt|hybrid|other|solution oriented)\s*scheme\s*-\s*/i, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-}
-
-export function normalizeCategory(c = '') {
-  if (!c || c === 'All') return 'All';
-  return c
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/^(equity|debt|hybrid|other|solution oriented|income\/debt oriented)\s*schemes?\s*-\s*/i, '')
-    .replace(/\s*-\s*tax saver fund/i, '')
-    .replace(/\s+fund$/i, '')
-    .replace(/banking and psu debt/i, 'banking and psu')
-    .replace(/ultra short term|ultra short to short term/i, 'ultra short duration')
-    .replace(/short term/i, 'short duration')
-    .replace(/medium term/i, 'medium duration')
-    .replace(/balanced advantage fund\/\s*dynamic asset allocation/i, 'dynamic asset allocation or balanced advantage')
-    .trim();
 }
 
 export function matchCategory(fundCategory, selectedCategory) {
