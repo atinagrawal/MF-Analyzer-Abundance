@@ -15,6 +15,17 @@ import '@/app/screener/mf-compare.css';
 import './fund-detail.css';
 
 const BENCHMARK_OPTIONS = [
+  'BSE 500',
+  'BSE SENSEX',
+  'BSE 100',
+  'BSE 200',
+  'BSE NEXT 500',
+  'BSE LargeCap',
+  'BSE MidCap',
+  'BSE SmallCap',
+  'BSE LargeMidCap',
+  'BSE 250 LargeMidCap 65:35 Index',
+  'BSE Arbitrage Rate Index',
   'BSE Liquid Rate Index',
   'BSE India Corporate Bond Index',
   'BSE India 10 Year Sovereign Bond',
@@ -23,12 +34,6 @@ const BENCHMARK_OPTIONS = [
   'BSE India Government Bond Index',
   'BSE India Sovereign Bond Index',
   'BSE India Bond Index',
-  'BSE 500',
-  'BSE SENSEX',
-  'BSE LargeCap',
-  'BSE MidCap',
-  'BSE SmallCap',
-  'BSE LargeMidCap',
   'BSE India Defence',
   'BSE BANKEX',
   'BSE Financial Services',
@@ -40,15 +45,18 @@ const BENCHMARK_OPTIONS = [
   'BSE AUTO',
   'BSE PSU',
   'BSE PSU BANK',
+  'BSE CPSE',
   'BSE Energy',
   'BSE REALTY',
   'BSE METAL',
+  'BSE Commodities',
+  'BSE REITs and InvITs Index',
 ];
 
 function getDefaultBenchmark(name, category, benchmarkName) {
   const text = `${name || ''} ${category || ''} ${benchmarkName || ''}`.toLowerCase();
 
-  // Debt & Liquid Fund Benchmarks
+  // 1. Debt & Liquid Benchmarks
   if (text.includes('liquid') || text.includes('overnight') || text.includes('cash') || text.includes('cblo') || text.includes('treps')) {
     return 'BSE Liquid Rate Index';
   }
@@ -68,7 +76,32 @@ function getDefaultBenchmark(name, category, benchmarkName) {
     return 'BSE India Bond Index';
   }
 
-  // Equity Benchmarks
+  // 2. Hybrid & Arbitrage Benchmarks
+  if (text.includes('arbitrage')) {
+    return 'BSE Arbitrage Rate Index';
+  }
+  if (text.includes('balanced advantage') || text.includes('dynamic asset') || text.includes('aggressive hybrid') || text.includes('multi asset')) {
+    return 'BSE 250 LargeMidCap 65:35 Index';
+  }
+  if (text.includes('conservative hybrid') || text.includes('equity savings')) {
+    return 'BSE India Bond Index';
+  }
+
+  // 3. Index & ETF Special Categories
+  if (text.includes('gold') || text.includes('silver') || text.includes('commodity')) {
+    return 'BSE Commodities';
+  }
+  if (text.includes('reit') || text.includes('invit') || text.includes('real estate')) {
+    return 'BSE REITs and InvITs Index';
+  }
+  if (text.includes('next 50') || text.includes('next50') || text.includes('next 500')) {
+    return 'BSE NEXT 500';
+  }
+  if (text.includes('cpse')) {
+    return 'BSE CPSE';
+  }
+
+  // 4. Sectoral / Thematic Equity Benchmarks
   if (text.includes('defenc') || text.includes('defense')) return 'BSE India Defence';
   if (text.includes('small cap') || text.includes('smallcap')) return 'BSE SmallCap';
   if (text.includes('mid cap') || text.includes('midcap')) return 'BSE MidCap';
@@ -79,14 +112,18 @@ function getDefaultBenchmark(name, category, benchmarkName) {
   if (text.includes('infra') || text.includes('infrastructure')) return 'BSE India Infrastructure Index';
   if (text.includes('manufacturing')) return 'BSE India Manufacturing Index';
   if (text.includes('auto') || text.includes('automotive')) return 'BSE AUTO';
+  if (text.includes('psu bank')) return 'BSE PSU BANK';
   if (text.includes('psu')) return 'BSE PSU';
   if (text.includes('energy') || text.includes('power')) return 'BSE Energy';
-  if (text.includes('realty') || text.includes('real estate')) return 'BSE REALTY';
+  if (text.includes('realty')) return 'BSE REALTY';
   if (text.includes('metal')) return 'BSE METAL';
   if (text.includes('large & mid') || text.includes('large and mid')) return 'BSE LargeMidCap';
   if (text.includes('large cap') || text.includes('largecap')) return 'BSE LargeCap';
+  if (text.includes('sensex')) return 'BSE SENSEX';
+  if (text.includes('nifty 100') || text.includes('bse 100')) return 'BSE 100';
+  if (text.includes('nifty 200') || text.includes('bse 200')) return 'BSE 200';
 
-  // Default to BSE 500 as fallback
+  // 5. Default fallback for general equity / solution-oriented / FoF
   return 'BSE 500';
 }
 
