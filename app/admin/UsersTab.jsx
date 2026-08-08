@@ -24,26 +24,60 @@ function RoleBadge({ role }) {
   );
 }
 
+function PlanBadge({ plan }) {
+  if (!plan || plan === 'free') return null;
+  const isLifetime = plan === 'pro_lifetime' || plan === 'lifetime';
+  return (
+    <span style={{
+      fontSize: '.52rem', fontWeight: 800, letterSpacing: '.5px',
+      textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4,
+      fontFamily: "'JetBrains Mono', monospace",
+      background: isLifetime ? '#e0f7fa' : '#e8f5e9',
+      color: isLifetime ? '#006064' : '#1b5e20',
+      border: `1px solid ${isLifetime ? '#b2ebf2' : '#c8e6c9'}`,
+      marginLeft: 4,
+    }}>
+      {isLifetime ? 'PRO LIFETIME' : 'PRO'}
+    </span>
+  );
+}
+
 function fmtDate(d) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-/** Role dropdown — reused in both the desktop side panel and the mobile drill-down. */
-function RoleSelect({ user, sessionUserId, roleChanging, onChange }) {
+/** Role & Plan dropdowns — reused in both desktop side panel and mobile drill-down. */
+function RoleAndPlanSelect({ user, sessionUserId, roleChanging, planChanging, onRoleChange, onPlanChange }) {
   return (
-    <div className="admin-role-row">
-      <span className="admin-role-row-label">Role</span>
-      <select
-        className="admin-role-select"
-        value={user.role}
-        disabled={roleChanging === user.id || user.id === sessionUserId}
-        onChange={e => onChange(user.id, e.target.value)}
-      >
-        <option value="client">client</option>
-        <option value="distributor">distributor</option>
-        <option value="admin">admin</option>
-      </select>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+      <div className="admin-role-row">
+        <span className="admin-role-row-label">Role</span>
+        <select
+          className="admin-role-select"
+          value={user.role}
+          disabled={roleChanging === user.id || user.id === sessionUserId}
+          onChange={e => onRoleChange(user.id, e.target.value)}
+        >
+          <option value="client">client</option>
+          <option value="distributor">distributor</option>
+          <option value="admin">admin</option>
+        </select>
+      </div>
+
+      <div className="admin-role-row">
+        <span className="admin-role-row-label">Plan</span>
+        <select
+          className="admin-role-select"
+          value={user.plan || 'free'}
+          disabled={planChanging === user.id}
+          onChange={e => onPlanChange(user.id, e.target.value)}
+        >
+          <option value="free">Free Plan</option>
+          <option value="pro">Pro Plan</option>
+          <option value="pro_lifetime">Pro Lifetime</option>
+        </select>
+      </div>
     </div>
   );
 }
@@ -173,6 +207,7 @@ export default function UsersTab({ session }) {
   const [portfolios, setPortfolios]     = useState([]);
   const [portsLoading, setPortsLoading] = useState(false);
   const [roleChanging, setRoleChanging] = useState('');
+  const [planChanging, setPlanChanging] = useState('');
   const [notifying,    setNotifying]    = useState('');
   const [notifyMsg,    setNotifyMsg]    = useState({ id: '', type: '', text: '' });
   const [deletingId,     setDeletingId]     = useState('');
@@ -224,6 +259,22 @@ export default function UsersTab({ session }) {
       setSelectedUser(prev => prev && prev.id === userId ? { ...prev, role: newRole } : prev);
     } catch (e) { alert(e.message); }
     finally { setRoleChanging(''); }
+  }
+
+  async function changePlan(userId, newPlan) {
+    setPlanChanging(userId);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, plan: newPlan }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, plan: newPlan } : u));
+      setSelectedUser(prev => prev && prev.id === userId ? { ...prev, plan: newPlan } : prev);
+    } catch (e) { alert(e.message); }
+    finally { setPlanChanging(''); }
   }
 
   async function notifyClient(portfolio) {
@@ -290,11 +341,13 @@ export default function UsersTab({ session }) {
                 </div>
               </div>
               <div style={{ padding: '12px 16px' }}>
-                <RoleSelect
+                <RoleAndPlanSelect
                   user={selectedUser}
                   sessionUserId={session.user.id}
                   roleChanging={roleChanging}
-                  onChange={changeRole}
+                  planChanging={planChanging}
+                  onRoleChange={changeRole}
+                  onPlanChange={changePlan}
                 />
                 <PortfolioList {...detailProps} />
               </div>
@@ -385,7 +438,10 @@ export default function UsersTab({ session }) {
                         </div>
                       </div>
                     </td>
-                    <td style={{ textAlign: 'center' }}><RoleBadge role={u.role} /></td>
+                    <td style={{ textAlign: 'center' }}>
+                      <RoleBadge role={u.role} />
+                      <PlanBadge plan={u.plan} />
+                    </td>
                     <td style={{ fontFamily: "'JetBrains Mono', monospace", textAlign: 'right' }}>
                       {u.portfolio_count || 0}
                     </td>
@@ -418,11 +474,13 @@ export default function UsersTab({ session }) {
               </div>
             </div>
             <div style={{ padding: '12px 16px' }}>
-              <RoleSelect
+              <RoleAndPlanSelect
                 user={selectedUser}
                 sessionUserId={session.user.id}
                 roleChanging={roleChanging}
-                onChange={changeRole}
+                planChanging={planChanging}
+                onRoleChange={changeRole}
+                onPlanChange={changePlan}
               />
               <PortfolioList {...detailProps} />
             </div>
