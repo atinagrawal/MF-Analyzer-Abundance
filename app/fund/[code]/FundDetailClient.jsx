@@ -628,7 +628,7 @@ export default function FundDetailClient({ code }) {
                 series={[
                   {
                     name: f.name,
-                    color: normNav[normNav.length - 1].v >= normNav[0].v ? '#2e7d32' : '#b71c1c',
+                    color: (normNav && normNav.length >= 2 && normNav[normNav.length - 1]?.v >= normNav[0]?.v) ? '#2e7d32' : '#b71c1c',
                     data: normNav,
                   },
                   ...(normBench

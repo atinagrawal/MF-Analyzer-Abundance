@@ -94,7 +94,8 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
   // reaches an array lookup.
   const validSelection = selection && selection.hi < n ? selection : null;
   const { vMin, vMax } = useMemo(() => {
-    const all = filteredSeries.flatMap((s) => s.data.map((p) => p.v));
+    const all = filteredSeries.flatMap((s) => s.data.map((p) => p?.v).filter((v) => v != null && isFinite(v)));
+    if (!all.length) return { vMin: 0, vMax: 100 };
     return { vMin: Math.min(...all), vMax: Math.max(...all) };
   }, [filteredSeries]);
 
@@ -113,7 +114,17 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
   const iw = W - PAD_L - PAD_R, ih = H - PAD_T - PAD_B;
   const X = (i) => PAD_L + (i / (n - 1)) * iw;
   const Y = (v) => PAD_T + (1 - (v - vMin) / (vMax - vMin || 1)) * ih;
-  const pathFor = (s) => s.data.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ');
+  const pathFor = (s) => {
+    const len = s.data.length;
+    if (!len) return '';
+    return s.data
+      .map((p, i) => {
+        const x = PAD_L + (i / (len - 1 || 1)) * iw;
+        const v = p?.v ?? 0;
+        return `${i ? 'L' : 'M'}${x.toFixed(1)},${Y(v).toFixed(1)}`;
+      })
+      .join(' ');
+  };
 
   function clientXFromEvent(e) {
     if (e.touches && e.touches.length) return e.touches[0].clientX;
@@ -213,9 +224,12 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
 
   const rangeRows = validSelection
     ? filteredSeries.map((s) => {
-        const pct = pctChange(s.data[validSelection.lo].v, s.data[validSelection.hi].v);
+        const pLo = s.data[Math.min(validSelection.lo, s.data.length - 1)];
+        const pHi = s.data[Math.min(validSelection.hi, s.data.length - 1)];
+        if (!pLo?.v || !pHi?.v) return null;
+        const pct = pctChange(pLo.v, pHi.v);
         return { name: s.name, color: s.color, pct, pos: +pct >= 0 };
-      })
+      }).filter(Boolean)
     : null;
 
   return (
@@ -254,42 +268,54 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
               fill="var(--g1)" opacity="0.1" stroke="var(--g1)" strokeWidth="1" strokeDasharray="4 3" />;
           })()}
 
-          {validSelection && filteredSeries.map((s) => (
-            <circle key={s.name} cx={X(validSelection.hi)} cy={Y(s.data[validSelection.hi].v)} r="4" fill={s.color} stroke="#fff" strokeWidth="2" />
-          ))}
+          {validSelection && filteredSeries.map((s) => {
+            const pt = s.data[Math.min(validSelection.hi, s.data.length - 1)];
+            if (!pt || pt.v == null) return null;
+            return (
+              <circle key={s.name} cx={X(validSelection.hi)} cy={Y(pt.v)} r="4" fill={s.color} stroke="#fff" strokeWidth="2" />
+            );
+          })}
 
           {hoverIdx != null && !dragState && !validSelection && (
             <g>
               <line x1={X(hoverIdx)} y1={PAD_T} x2={X(hoverIdx)} y2={H - PAD_B} stroke="var(--muted)" strokeWidth="1" strokeDasharray="3 3" />
-              {filteredSeries.map((s) => <circle key={s.name} cx={X(hoverIdx)} cy={Y(s.data[hoverIdx].v)} r="3.5" fill={s.color} />)}
+              {filteredSeries.map((s) => {
+                const pt = s.data[Math.min(hoverIdx, s.data.length - 1)];
+                if (!pt || pt.v == null) return null;
+                return <circle key={s.name} cx={X(hoverIdx)} cy={Y(pt.v)} r="3.5" fill={s.color} />;
+              })}
             </g>
           )}
         </svg>
 
         {hoverIdx != null && !dragState && !validSelection && (
           <div className="cmp-tip" style={{ left: X(hoverIdx) / W > 0.6 ? `calc(${(X(hoverIdx) / W) * 100}% - 190px)` : `calc(${(X(hoverIdx) / W) * 100}% + 14px)` }}>
-            <div style={{ marginBottom: 4, opacity: 0.7 }}>{fmtDate(filteredSeries[0].data[hoverIdx].t)}</div>
-            {filteredSeries.map((s) => (
-              <div key={s.name} className="cmp-tip-row"><span>{s.name}</span><b style={{ color: s.color }}>{fmtVal(s.data[hoverIdx].v, vMax >= 1000)}</b></div>
-            ))}
+            <div style={{ marginBottom: 4, opacity: 0.7 }}>{filteredSeries[0]?.data[hoverIdx]?.t ? fmtDate(filteredSeries[0].data[hoverIdx].t) : ''}</div>
+            {filteredSeries.map((s) => {
+              const pt = s.data[Math.min(hoverIdx, s.data.length - 1)];
+              if (!pt || pt.v == null) return null;
+              return (
+                <div key={s.name} className="cmp-tip-row"><span>{s.name}</span><b style={{ color: s.color }}>{fmtVal(pt.v, vMax >= 1000)}</b></div>
+              );
+            })}
           </div>
         )}
 
         {dragState && (
           <>
             <div className="cmp-drag-date start" style={{ left: `${(X(dragState.startIdx) / W) * 100}%` }}>
-              {fmtDateShort(filteredSeries[0].data[dragState.startIdx].t)}
+              {filteredSeries[0]?.data[dragState.startIdx]?.t ? fmtDateShort(filteredSeries[0].data[dragState.startIdx].t) : ''}
             </div>
             <div className="cmp-drag-date end" style={{
               left: `${(X(dragState.curIdx) / W) * 100}%`,
               top: Math.abs(X(dragState.curIdx) - X(dragState.startIdx)) < 70 ? 18 : -2,
             }}>
-              {fmtDateShort(filteredSeries[0].data[dragState.curIdx].t)}
+              {filteredSeries[0]?.data[dragState.curIdx]?.t ? fmtDateShort(filteredSeries[0].data[dragState.curIdx].t) : ''}
             </div>
           </>
         )}
 
-        {validSelection && rangeRows && (
+        {validSelection && rangeRows && filteredSeries[0]?.data[validSelection.lo] && filteredSeries[0]?.data[validSelection.hi] && (
           <div className="cmp-onchart-summary show" style={{ left: `${((X(validSelection.lo) + X(validSelection.hi)) / 2 / W) * 100}%`, transform: 'translateX(-50%)' }}>
             <div className="cmp-onchart-header">{fmtDate(filteredSeries[0].data[validSelection.lo].t)} → {fmtDate(filteredSeries[0].data[validSelection.hi].t)}</div>
             {rangeRows.map((r) => (
