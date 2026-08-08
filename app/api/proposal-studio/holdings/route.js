@@ -231,6 +231,68 @@ async function fetchFresh(amfiCode, schemeName) {
   return formatDetailResponse(detail, amfiCode, schemeName);
 }
 
+async function resolveScreenerRecord(amfiCode, schemeName, detail = {}) {
+  try {
+    const codesToTry = [
+      amfiCode,
+      detail.scheme_code,
+      detail.direct_scheme_code,
+      detail.regular_scheme_code,
+    ].filter(Boolean).map(String);
+
+    const term = cleanSearchTerm(schemeName);
+
+    // 1. Try exact code matches
+    for (const c of codesToTry) {
+      const res = await pool.query(
+        `SELECT code, name, ret_1y, ret_3y, ret_5y, ret_inception FROM mf_screener WHERE code = $1`,
+        [c]
+      );
+      if (res.rows.length) {
+        const row = res.rows[0];
+        if (cleanSearchTerm(row.name).toLowerCase() === term.toLowerCase() || res.rows.length === 1) {
+          return row;
+        }
+      }
+    }
+
+    // 2. Try ISIN if available
+    if (detail.isin) {
+      const res = await pool.query(
+        `SELECT code, name, ret_1y, ret_3y, ret_5y, ret_inception FROM mf_screener WHERE isin = $1 LIMIT 1`,
+        [detail.isin]
+      );
+      if (res.rows.length) return res.rows[0];
+    }
+
+    // 3. Fallback: match by normalized scheme name ILIKE
+    if (term.length >= 3) {
+      const res = await pool.query(
+        `SELECT code, name, ret_1y, ret_3y, ret_5y, ret_inception FROM mf_screener WHERE name ILIKE $1 ORDER BY length(name) ASC LIMIT 1`,
+        [`%${term}%`]
+      );
+      if (res.rows.length) return res.rows[0];
+    }
+  } catch (err) {
+    console.warn('[proposal-studio/holdings] screener lookup error:', err.message);
+  }
+  return null;
+}
+
+async function ensureReturns(data, amfiCode, schemeName) {
+  if (!data) return data;
+  if (data.ret1y !== undefined || data.ret3y !== undefined || data.ret5y !== undefined || data.retInception !== undefined) {
+    return data;
+  }
+  const screenerRec = await resolveScreenerRecord(amfiCode, schemeName);
+  const parseNum = (v) => (v != null && !isNaN(v) ? parseFloat(v) : null);
+  data.ret1y = parseNum(screenerRec?.ret_1y);
+  data.ret3y = parseNum(screenerRec?.ret_3y);
+  data.ret5y = parseNum(screenerRec?.ret_5y);
+  data.retInception = parseNum(screenerRec?.ret_inception);
+  return data;
+}
+
 async function formatDetailResponse(detail, amfiCode, schemeName) {
   // amfiAum is keyed by plain numeric AMFI codes, sifAum by "SIF-XXX" --
   // the two key spaces never overlap, so a plain fallback is safe.
@@ -255,53 +317,7 @@ async function formatDetailResponse(detail, amfiCode, schemeName) {
     }
   }
 
-  let screenerRec = null;
-  try {
-    const codesToTry = [
-      amfiCode,
-      detail.scheme_code,
-      detail.direct_scheme_code,
-      detail.regular_scheme_code,
-    ].filter(Boolean).map(String);
-
-    const term = cleanSearchTerm(resolvedSchemeName);
-
-    // 1. Try exact code matches
-    for (const c of codesToTry) {
-      const res = await pool.query(
-        `SELECT code, name, ret_1y, ret_3y, ret_5y, ret_inception FROM mf_screener WHERE code = $1`,
-        [c]
-      );
-      if (res.rows.length) {
-        const row = res.rows[0];
-        if (cleanSearchTerm(row.name).toLowerCase() === term.toLowerCase() || res.rows.length === 1) {
-          screenerRec = row;
-          break;
-        }
-      }
-    }
-
-    // 2. Try ISIN if available and not yet matched
-    if (!screenerRec && detail.isin) {
-      const res = await pool.query(
-        `SELECT code, name, ret_1y, ret_3y, ret_5y, ret_inception FROM mf_screener WHERE isin = $1 LIMIT 1`,
-        [detail.isin]
-      );
-      if (res.rows.length) screenerRec = res.rows[0];
-    }
-
-    // 3. Fallback: match by normalized scheme name ILIKE
-    if (!screenerRec && term.length >= 3) {
-      const res = await pool.query(
-        `SELECT code, name, ret_1y, ret_3y, ret_5y, ret_inception FROM mf_screener WHERE name ILIKE $1 ORDER BY length(name) ASC LIMIT 1`,
-        [`%${term}%`]
-      );
-      if (res.rows.length) screenerRec = res.rows[0];
-    }
-  } catch (err) {
-    console.warn('[proposal-studio/holdings] screener lookup error:', err.message);
-  }
-
+  const screenerRec = await resolveScreenerRecord(amfiCode, resolvedSchemeName, detail);
   const parseNum = (v) => (v != null && !isNaN(v) ? parseFloat(v) : null);
 
   return {
@@ -338,19 +354,22 @@ export async function GET(request) {
   try {
     const mem = memCache.get(amfiCode);
     if (isFresh(mem?.ts)) {
-      return Response.json({ ...mem.data, source: 'memory' });
+      const data = await ensureReturns(mem.data, amfiCode, schemeName);
+      return Response.json({ ...data, source: 'memory' });
     }
 
     const blobData = await blobGet(amfiCode);
     if (blobData) {
-      memCache.set(amfiCode, { data: blobData, ts: Date.now() });
-      return Response.json({ ...blobData, source: 'blob' });
+      const data = await ensureReturns(blobData, amfiCode, schemeName);
+      memCache.set(amfiCode, { data, ts: Date.now() });
+      return Response.json({ ...data, source: 'blob' });
     }
 
     if (inflight.has(amfiCode)) {
       const data = await inflight.get(amfiCode);
       if (!data) return Response.json({ error: 'No holdings data found for this fund' }, { status: 404 });
-      return Response.json({ ...data, source: 'dedup' });
+      const enrichedData = await ensureReturns(data, amfiCode, schemeName);
+      return Response.json({ ...enrichedData, source: 'dedup' });
     }
 
     const fetchPromise = fetchFresh(amfiCode, schemeName)
@@ -366,7 +385,8 @@ export async function GET(request) {
 
     const data = await fetchPromise;
     if (!data) return Response.json({ error: 'No holdings data found for this fund' }, { status: 404 });
-    return Response.json({ ...data, source: 'live' });
+    const enrichedData = await ensureReturns(data, amfiCode, schemeName);
+    return Response.json({ ...enrichedData, source: 'live' });
   } catch (err) {
     console.error('[proposal-studio/holdings]', err.message);
     return Response.json({ error: err.message }, { status: 500 });
