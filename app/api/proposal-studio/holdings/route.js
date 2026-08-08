@@ -47,18 +47,18 @@ function isFresh(ts) {
 // route needs zero coupling to it.
 function cleanSearchTerm(schemeName) {
   return (schemeName || '')
+    .replace(/\s*\([^)]*formerly known as[^)]*\)/gi, '')
     .replace(/\s*-\s*/g, ' ')
     .replace(/\s+/g, ' ')
     .replace(/\b(Direct|Regular)\b/gi, '')
-    .replace(/\bPlan\b/gi, '')
+    .replace(/\b(Super\s+Institutional|Institutional|Retail|Unclaimed\s+Redemption|Unclaimed\s+Dividend|Unclaimed)\b/gi, '')
+    .replace(/\bPlan(\s+[A-Z])?\b/gi, '')
     .replace(/\b(Growth|IDCW|Dividend)\b/gi, '')
     .replace(/\b(Payout|Reinvestment|Reinvest|Bonus|Option|Quarterly|Monthly|Weekly|Daily|Annual)\b/gi, '')
     // Groww's own scheme titles inconsistently include the word "Fund" (e.g.
     // "HDFC Flexi Cap Direct Plan-Growth" has no "Fund", but "HDFC Focused
     // Fund" does) -- stripped here too so the normalized-name comparison in
-    // resolveSearchId lines up regardless of which form Groww used. Verified
-    // live (2026-08-03) this doesn't hurt query relevance or create
-    // collisions across similar fund names in the same AMC family.
+    // resolveSearchId lines up regardless of which form Groww used.
     .replace(/\bFund\b/gi, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -107,8 +107,14 @@ async function resolveSearchId(amfiCode, schemeName) {
   const json = await res.json();
   const candidates = json?.content || [];
   const normalizedTerm = term.toLowerCase();
+
   const match = candidates.find((c) => String(c.scheme_code) === String(amfiCode))
-    || candidates.find((c) => cleanSearchTerm(c.title).toLowerCase() === normalizedTerm);
+    || candidates.find((c) => cleanSearchTerm(c.title).toLowerCase() === normalizedTerm)
+    || candidates.find((c) => {
+         const candNorm = cleanSearchTerm(c.title).toLowerCase();
+         return candNorm.length >= 3 && (candNorm.includes(normalizedTerm) || normalizedTerm.includes(candNorm));
+       });
+
   return match ? match.search_id : null;
 }
 
