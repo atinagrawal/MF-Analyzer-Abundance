@@ -1,0 +1,383 @@
+/* ================================================================
+   app/sif/[id]/sif-detail.css
+   Abundance Specialised Investment Fund (SIF) Detail Page
+   ================================================================ */
+
+.sif-page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 20px 88px;
+}
+
+/* Loading & Error States */
+.sif-load {
+  padding: 80px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: .9rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.sif-load::before {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--g2);
+  border-radius: 50%;
+  animation: sif-spin .7s linear infinite;
+}
+
+@keyframes sif-spin { to { transform: rotate(360deg); } }
+
+.sif-err {
+  padding: 72px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: .95rem;
+}
+
+.sif-err a {
+  color: var(--g1);
+  text-decoration: none;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+/* Hero Section */
+.sif-hero {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 28px 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.sif-hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3.5px;
+  background: linear-gradient(90deg, #1b5e20 0%, #2e7d32 40%, #0288d1 100%);
+  border-radius: 20px 20px 0 0;
+}
+
+.sif-hero-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.sif-hero-logo {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--s2);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sif-hero-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.sif-hero-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px 0;
+}
+
+.sif-hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sif-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--s2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+
+.sif-tag.house {
+  background: rgba(46, 125, 50, 0.08);
+  color: #1b5e20;
+  border-color: rgba(46, 125, 50, 0.2);
+}
+
+.sif-tag.sebi {
+  background: rgba(2, 136, 209, 0.08);
+  color: #0288d1;
+  border-color: rgba(2, 136, 209, 0.2);
+}
+
+.sif-tag.code {
+  font-family: monospace;
+  font-weight: 700;
+}
+
+/* Strategy Badges */
+.sif-strat-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.sif-strat-badge-equity {
+  background: rgba(46, 125, 50, 0.12);
+  color: #1b5e20;
+  border: 1px solid rgba(46, 125, 50, 0.25);
+}
+
+.sif-strat-badge-hybrid {
+  background: rgba(123, 31, 162, 0.12);
+  color: #6a1b9a;
+  border: 1px solid rgba(123, 31, 162, 0.25);
+}
+
+/* Hero Actions */
+.sif-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.sif-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.18s ease;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.sif-btn:hover {
+  background: var(--s2);
+  transform: translateY(-1px);
+}
+
+.sif-btn.primary {
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.25);
+}
+
+.sif-btn.primary:hover {
+  box-shadow: 0 6px 16px rgba(46, 125, 50, 0.35);
+}
+
+/* KPI Banner */
+.sif-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.sif-kpi-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sif-kpi-lbl {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sif-kpi-val {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.sif-kpi-sub {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+/* SEBI SIF Notice Box */
+.sif-notice-card {
+  background: rgba(2, 136, 209, 0.05);
+  border: 1.5px solid rgba(2, 136, 209, 0.2);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sif-notice-icon {
+  font-size: 1.2rem;
+  color: #0288d1;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.sif-notice-body {
+  font-size: 0.82rem;
+  color: var(--text2);
+  line-height: 1.5;
+}
+
+.sif-notice-body strong {
+  color: var(--text);
+}
+
+/* Section Cards */
+.sif-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+
+.sif-card-h {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Strategy Facts Grid */
+.sif-facts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.sif-fact-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+}
+
+.sif-fact-lbl {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.sif-fact-val {
+  font-size: 0.92rem;
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* FAQ Section */
+.sif-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sif-faq-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--s2);
+  overflow: hidden;
+}
+
+.sif-faq-q {
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.sif-faq-a {
+  padding: 0 16px 14px;
+  font-size: 0.84rem;
+  color: var(--text2);
+  line-height: 1.55;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sif-hero-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .sif-hero-title {
+    font-size: 1.25rem;
+  }
+  .sif-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .sif-page {
+    padding: 0 12px 64px;
+  }
+  .sif-hero {
+    padding: 20px 16px;
+  }
+  .sif-card {
+    padding: 18px 14px;
+  }
+}

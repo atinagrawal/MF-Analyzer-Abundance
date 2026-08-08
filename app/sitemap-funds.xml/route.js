@@ -5,21 +5,37 @@ export const revalidate = 86400; // 24 hours
 export async function GET() {
   const BASE = 'https://mfcalc.getabundance.in';
   try {
-    const { rows } = await pool.query('SELECT code FROM mf_screener ORDER BY code');
-    const urls = rows
+    const { rows: mfRows } = await pool.query('SELECT code FROM mf_screener ORDER BY code');
+    const { rows: sifRows } = await pool.query('SELECT scheme_id FROM sif_screener ORDER BY scheme_id');
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const mfUrls = mfRows
       .map(
         (r) => `  <url>
     <loc>${BASE}/fund/${r.code}</loc>
-    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+    <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>`
       )
       .join('\n');
 
+    const sifUrls = sifRows
+      .map(
+        (r) => `  <url>
+    <loc>${BASE}/sif/${r.scheme_id}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>`
+      )
+      .join('\n');
+
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
+${mfUrls}
+${sifUrls}
 </urlset>`;
 
     return new Response(xml, {

@@ -575,7 +575,7 @@ export default function ScreenerClient({ initialCategory }) {
                     {c.label} <span className="scr-lead-all">view all →</span>
                   </button>
                   {c.top.map((s, i) => (
-                    <button className="scr-lead-row" key={s.scheme_id} onClick={() => setSifSel(s)}>
+                    <button className="scr-lead-row" key={s.scheme_id} onClick={() => router.push(`/sif/${s.scheme_id}`)}>
                       <span className="scr-lead-rank">{i + 1}</span>
                       <span className="scr-lead-name">{s.sif_name}</span>
                       {c.period ? (
@@ -630,7 +630,7 @@ export default function ScreenerClient({ initialCategory }) {
                 </thead>
                 <tbody>
                   {sifVisible.map((s) => (
-                    <tr key={s.scheme_id} className={`scr-row${isComparing('sif', s.scheme_id) ? ' row-comparing' : ''}`} onClick={() => setSifSel(s)}>
+                    <tr key={s.scheme_id} className={`scr-row${isComparing('sif', s.scheme_id) ? ' row-comparing' : ''}`} onClick={() => router.push(`/sif/${s.scheme_id}`)}>
                       <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', paddingLeft: 8, paddingRight: 4 }}>
                         <input
                           type="checkbox"
@@ -650,7 +650,7 @@ export default function ScreenerClient({ initialCategory }) {
                             size={26}
                             radius={6}
                           />
-                          <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSifSel(s); }}>
+                          <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); router.push(`/sif/${s.scheme_id}`); }}>
                             <span className="scr-fund-n">{s.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim()}</span>
                             <span className="scr-fund-sub">{s.scheme_id}</span>
                           </button>
