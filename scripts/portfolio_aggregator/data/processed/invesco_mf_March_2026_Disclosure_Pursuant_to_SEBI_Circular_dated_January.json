@@ -1,0 +1,407 @@
+[
+    {
+        "scheme_name": "ind_nifty50list",
+        "holdings": [
+            {
+                "isin": "INE423A01024",
+                "security_name": "ADANI ENTERPRISES LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE742F01042",
+                "security_name": "ADANI PORTS AND SPECIAL ECONOMIC ZONE LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE437A01024",
+                "security_name": "APOLLO HOSPITALS ENTERPRISE LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE021A01026",
+                "security_name": "ASIAN PAINTS LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE238A01034",
+                "security_name": "AXIS BANK LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE917I01010",
+                "security_name": "BAJAJ AUTO LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE918I01026",
+                "security_name": "BAJAJ FINSERV LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE296A01032",
+                "security_name": "BAJAJ FINANCE LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE263A01024",
+                "security_name": "BHARAT ELECTRONICS LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE397D01024",
+                "security_name": "BHARTI AIRTEL LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE059A01026",
+                "security_name": "CIPLA LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE522F01014",
+                "security_name": "COAL INDIA LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE089A01031",
+                "security_name": "DR. REDDY'S LABORATORIES LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE066A01021",
+                "security_name": "EICHER MOTORS LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE758T01015",
+                "security_name": "ETERNAL LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE047A01021",
+                "security_name": "GRASIM INDUSTRIES LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE860A01027",
+                "security_name": "HCL TECHNOLOGIES LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE040A01034",
+                "security_name": "HDFC BANK LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE795G01014",
+                "security_name": "HDFC LIFE INSURANCE COMPANY LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE038A01020",
+                "security_name": "HINDALCO INDUSTRIES LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE030A01027",
+                "security_name": "HINDUSTAN UNILEVER LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE090A01021",
+                "security_name": "ICICI BANK LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE646L01027",
+                "security_name": "INTERGLOBE AVIATION LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE009A01021",
+                "security_name": "INFOSYS LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE154A01025",
+                "security_name": "ITC LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE758E01017",
+                "security_name": "JIO FINANCIAL SERVICES LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE019A01038",
+                "security_name": "JSW STEEL LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE237A01036",
+                "security_name": "KOTAK MAHINDRA BANK LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE018A01030",
+                "security_name": "LARSEN & TOUBRO LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE101A01026",
+                "security_name": "MAHINDRA & MAHINDRA LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE585B01010",
+                "security_name": "MARUTI SUZUKI INDIA LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE027H01010",
+                "security_name": "MAX HEALTHCARE INSTITUTE LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE239A01024",
+                "security_name": "NESTLE INDIA LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE733E01010",
+                "security_name": "NTPC LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE213A01029",
+                "security_name": "OIL & NATURAL GAS CORPORATION LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE752E01010",
+                "security_name": "POWER GRID CORPORATION OF INDIA LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE002A01018",
+                "security_name": "RELIANCE INDUSTRIES LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE123W01016",
+                "security_name": "SBI LIFE INSURANCE COMPANY LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE062A01020",
+                "security_name": "STATE BANK OF INDIA",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE721A01047",
+                "security_name": "SHRIRAM FINANCE LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE044A01036",
+                "security_name": "SUN PHARMACEUTICAL INDUSTRIES LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE192A01025",
+                "security_name": "TATA CONSUMER PRODUCTS LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE081A01020",
+                "security_name": "TATA STEEL LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE467B01029",
+                "security_name": "TATA CONSULTANCY SERVICES LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE669C01036",
+                "security_name": "TECH MAHINDRA LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE280A01028",
+                "security_name": "TITAN COMPANY LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE155A01022",
+                "security_name": "TATA MOTORS PASSENGER VEHICLES LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE849A01020",
+                "security_name": "TRENT LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE481G01011",
+                "security_name": "ULTRATECH CEMENT LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE075A01022",
+                "security_name": "WIPRO LTD.",
+                "sector": "Unknown",
+                "quantity": 0.0,
+                "market_value": 0.0,
+                "weightage": 0.0
+            }
+        ]
+    }
+]

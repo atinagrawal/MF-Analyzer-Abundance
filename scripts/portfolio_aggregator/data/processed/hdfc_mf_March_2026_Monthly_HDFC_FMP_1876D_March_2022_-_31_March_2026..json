@@ -1,0 +1,95 @@
+[
+    {
+        "scheme_name": "Portfolio",
+        "holdings": [
+            {
+                "isin": "IN0020170026",
+                "security_name": "6.79% GOI MAT 150527",
+                "sector": "Sovereign",
+                "quantity": 1180000.0,
+                "market_value": 1191.1,
+                "weightage": 34.32
+            },
+            {
+                "isin": "IN3320150714",
+                "security_name": "8.42% Uttar Pradesh Uday SDL - Mat 290327^",
+                "sector": "Sovereign",
+                "quantity": 1000000.0,
+                "market_value": 1021.54,
+                "weightage": 29.43
+            },
+            {
+                "isin": "IN000227C024",
+                "security_name": "GOI STRIPS - Mat 220227^",
+                "sector": "Sovereign",
+                "quantity": 550000.0,
+                "market_value": 521.41,
+                "weightage": 15.02
+            },
+            {
+                "isin": "IN4520160156",
+                "security_name": "7.79% Telangana SDL - Mat 010327^",
+                "sector": "Sovereign",
+                "quantity": 90000.0,
+                "market_value": 91.4,
+                "weightage": 2.63
+            },
+            {
+                "isin": "IN3320160325",
+                "security_name": "7.78% Uttar Pradesh SDL Mat 010327^",
+                "sector": "Sovereign",
+                "quantity": 85000.0,
+                "market_value": 86.32,
+                "weightage": 2.49
+            },
+            {
+                "isin": "IN000127C018",
+                "security_name": "GOI STRIPS - Mat 020127^",
+                "sector": "Sovereign",
+                "quantity": 90000.0,
+                "market_value": 86.09,
+                "weightage": 2.48
+            },
+            {
+                "isin": "IN000327C048",
+                "security_name": "GOI STRIPS - Mat 190327^",
+                "sector": "Sovereign",
+                "quantity": 80000.0,
+                "market_value": 75.5,
+                "weightage": 2.18
+            },
+            {
+                "isin": "IN3120160194",
+                "security_name": "7.61% Tamil Nadu SDL - Mat 150227^",
+                "sector": "Sovereign",
+                "quantity": 50000.0,
+                "market_value": 50.68,
+                "weightage": 1.46
+            },
+            {
+                "isin": "IN2120160097",
+                "security_name": "7.60% Madhya Pradesh SDL Mat 150227^",
+                "sector": "Sovereign",
+                "quantity": 45200.0,
+                "market_value": 45.8,
+                "weightage": 1.32
+            },
+            {
+                "isin": "IN1920160125",
+                "security_name": "7.59% Karnataka SDL - Mat 290327^",
+                "sector": "Sovereign",
+                "quantity": 40000.0,
+                "market_value": 40.62,
+                "weightage": 1.17
+            },
+            {
+                "isin": "IN1620160276",
+                "security_name": "7.80 % Haryana SDL Mat 010327^",
+                "sector": "Sovereign",
+                "quantity": 25700.0,
+                "market_value": 26.1,
+                "weightage": 0.75
+            }
+        ]
+    }
+]

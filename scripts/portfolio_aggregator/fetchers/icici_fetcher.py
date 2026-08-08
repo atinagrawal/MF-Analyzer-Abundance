@@ -1,0 +1,53 @@
+from .base_fetcher import BaseFetcher, logger
+from bs4 import BeautifulSoup
+import re
+
+class ICICIFetcher(BaseFetcher):
+    def get_portfolio_links(self, year, month):
+        """Extracts ICICI Prudential portfolio links using predictive ZIP URL and scraping fallback"""
+        links = []
+        
+        # 1. Try Predictive ZIP URL
+        # Pattern: Monthly-Portfolio-Disclosure-March-2026.zip in /2026/Mar/
+        short_month = month[:3].capitalize()
+        
+        predictive_url = f"https://www.icicipruamc.com/blob/downloads/Files/Monthly%20Portfolio%20Disclosures/{year}/{short_month}/Monthly-Portfolio-Disclosure-{month}-{year}.zip"
+        
+        logger.info(f"Checking ICICI predictive URL: {predictive_url}")
+        if self._check_url_exists(predictive_url):
+            logger.info(f"Found ICICI portfolio ZIP via predictive URL")
+            links.append({
+                "title": f"Monthly Portfolio Disclosure {month} {year}",
+                "url": predictive_url
+            })
+            return links
+
+        # 2. Fallback to Scraping
+        try:
+            logger.info(f"Predictive URL failed, falling back to scraping: {self.amc_url}")
+            html = self._fetch_url(self.amc_url)
+            if not html:
+                return []
+                
+            soup = BeautifulSoup(html, 'html.parser')
+            target_pattern = f"{month}.*?{year}"
+            
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                text = link.get_text(strip=True)
+                
+                if (re.search(target_pattern, text, re.I) or re.search(target_pattern, href, re.I)) and \
+                   ('.zip' in href.lower() or '.xlsx' in href.lower()):
+                    
+                    if not href.startswith('http'):
+                        href = "https://www.icicipruamc.com" + (href if href.startswith('/') else '/' + href)
+                    
+                    links.append({
+                        "title": text or href.split('/')[-1],
+                        "url": href
+                    })
+            
+        except Exception as e:
+            logger.error(f"ICICI fallback scraper failed: {e}")
+            
+        return links

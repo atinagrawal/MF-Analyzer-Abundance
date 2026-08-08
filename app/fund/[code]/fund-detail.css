@@ -1,0 +1,532 @@
+/* app/fund/[code]/fund-detail.css */
+
+.fd-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 20px 72px;
+}
+
+.fd-load, .fd-err {
+  padding: 64px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+.fd-err a {
+  color: var(--g1);
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+/* ── Hero ─────────────────────────────────────────────────── */
+.fd-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 32px 0 24px;
+}
+
+.fd-hero-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fd-fund-name {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 10px;
+  line-height: 1.35;
+  letter-spacing: -0.2px;
+}
+
+.fd-hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.fd-tag {
+  font-size: .65rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: var(--s3);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.fd-tag.alt {
+  background: var(--g-xlight);
+  color: var(--g1);
+  border-color: var(--g-light);
+}
+
+.fd-tag.mono {
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: .5px;
+}
+
+.fd-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: .75rem;
+  color: var(--muted);
+}
+
+.fd-hero-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fd-warn {
+  font-size: .74rem;
+  font-weight: 600;
+  color: #d32f2f;
+  background: rgba(211,47,47,.08);
+  border: 1px solid rgba(211,47,47,.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 10px;
+  line-height: 1.4;
+}
+
+/* ── Sections ─────────────────────────────────────────────── */
+.fd-section {
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 22px 24px;
+  margin-bottom: 16px;
+}
+
+.fd-section-label {
+  font-size: .65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 14px;
+}
+
+.fd-explainer {
+  font-size: .84rem;
+  color: var(--muted);
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* ── Operational Facts ────────────────────────────────────── */
+.fd-ops-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.fd-ops-item {
+  background: var(--s3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.fd-ops-label {
+  font-size: .62rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.fd-ops-val {
+  font-size: .88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.fd-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.fd-badge {
+  font-size: .6rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 4px;
+  background: var(--s3);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.fd-badge.green {
+  background: var(--g-xlight);
+  color: var(--g1);
+  border-color: var(--g-light);
+}
+
+/* ── FAQ Section ──────────────────────────────────────────── */
+.fd-faq-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.fd-faq-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.fd-faq-item:last-child {
+  border-bottom: none;
+}
+
+.fd-faq-item summary {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--text);
+  padding: 14px 0;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.fd-faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.fd-faq-item summary::after {
+  content: '+';
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--muted);
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.fd-faq-item[open] summary::after {
+  content: '−';
+}
+
+.fd-faq-answer {
+  font-size: .8rem;
+  color: var(--muted);
+  line-height: 1.6;
+  padding-bottom: 14px;
+  margin: 0;
+}
+
+/* ── Upgrade Gate Panel ───────────────────────────────────── */
+.fd-gate-panel {
+  background: var(--s2);
+  border: 2px dashed var(--g-light);
+  border-radius: 16px;
+  padding: 44px 28px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.fd-gate-crown {
+  font-size: .65rem;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: var(--g1);
+  margin-bottom: 10px;
+}
+
+.fd-gate-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.fd-gate-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  display: inline-block;
+  text-align: left;
+}
+
+.fd-gate-features li {
+  font-size: .82rem;
+  color: var(--muted);
+  padding: 4px 0;
+}
+
+.fd-gate-features li::before {
+  content: '✓  ';
+  color: var(--g1);
+  font-weight: 800;
+}
+
+.fd-gate-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.fd-gate-btn {
+  padding: 11px 24px;
+  border-radius: 8px;
+  font-size: .84rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: opacity .15s ease;
+}
+
+.fd-gate-btn.primary {
+  background: var(--g1);
+  color: #fff;
+}
+
+.fd-gate-btn.primary:hover {
+  opacity: .92;
+}
+
+.fd-gate-btn.secondary {
+  background: var(--s3);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.fd-gate-link {
+  font-size: .75rem;
+  color: var(--muted);
+}
+
+.fd-gate-link a {
+  color: var(--g1);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.fd-gate-err {
+  color: #d32f2f;
+  font-size: .78rem;
+  margin-top: 8px;
+}
+
+/* ── Returns Grid (Pro) ───────────────────────────────────── */
+.fd-returns-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+
+.fd-ret-card {
+  background: var(--s3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 6px;
+  text-align: center;
+}
+
+.fd-ret-label {
+  font-size: .62rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.fd-ret-val {
+  font-size: .98rem;
+  font-weight: 800;
+}
+
+.fd-ret-type {
+  font-size: .55rem;
+  color: var(--muted);
+  margin-top: 3px;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+/* ── Chart Controls (Pro) ─────────────────────────────────── */
+.fd-chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.fd-period-pill {
+  font-size: .68rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--s3);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.fd-period-pill.active {
+  background: var(--g-xlight);
+  color: var(--g1);
+  border-color: var(--g-light);
+}
+
+.fd-benchmark-select {
+  font-size: .72rem;
+  background: var(--s3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.fd-toggle-pill {
+  font-size: .68rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--s3);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.fd-toggle-pill.active {
+  background: var(--s2);
+  color: var(--text);
+  border-color: var(--g1);
+}
+
+.fd-bench-err {
+  font-size: .72rem;
+  color: var(--muted);
+  font-style: italic;
+  margin-bottom: 8px;
+}
+
+.fd-spark-load {
+  padding: 32px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: .82rem;
+}
+
+/* ── Risk KPI Grid (Pro) ──────────────────────────────────── */
+.fd-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.fd-kpi {
+  background: var(--s3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.fd-kpi-label {
+  font-size: .62rem;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.fd-kpi b {
+  font-size: .95rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* ── Allocation & PE bars (Pro) ───────────────────────────── */
+.fd-alloc-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fd-alloc-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fd-alloc-lbl {
+  font-size: .74rem;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+}
+
+.fd-alloc-bg {
+  height: 8px;
+  background: var(--s3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.fd-alloc-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .3s ease;
+}
+
+/* ── Colour Utility Helpers ───────────────────────────────── */
+.fd-pos { color: var(--g1); }
+.fd-neg { color: #d32f2f; }
+.fd-muted { color: var(--muted); }
+
+/* ── Quick Actions ────────────────────────────────────────── */
+.fd-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.fd-action-btn {
+  font-size: .8rem;
+  font-weight: 700;
+  padding: 11px 20px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--s2);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+
+.fd-action-btn.primary {
+  background: var(--g1);
+  color: #fff;
+  border-color: var(--g1);
+}
+
+.fd-action-btn:hover {
+  border-color: var(--g1);
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .fd-ops-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .fd-hero { flex-direction: column; gap: 12px; }
+  .fd-ops-grid { grid-template-columns: 1fr; }
+  .fd-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .fd-returns-grid { grid-template-columns: repeat(3, 1fr); }
+  .fd-gate-panel { padding: 32px 16px; }
+}

@@ -1,0 +1,181 @@
+[
+    {
+        "id": "sbi_mf",
+        "name": "SBI Mutual Fund",
+        "url": "https://www.sbimf.com/portfolios",
+        "strategy": "api_post",
+        "config": {
+            "endpoint": "https://www.sbimf.com/ajaxcall/CMS/GetSchemePortfolioSheets"
+        }
+    },
+    {
+        "id": "hdfc_mf",
+        "name": "HDFC Mutual Fund",
+        "url": "https://www.hdfcfund.com/statutory-disclosure/portfolio/monthly-portfolio",
+        "strategy": "nextjs_state",
+        "config": {}
+    },
+    {
+        "id": "icici_pru_mf",
+        "name": "ICICI Prudential Mutual Fund",
+        "url": "https://www.icicipruamc.com/statutory-disclosures/portfolio-disclosures",
+        "strategy": "icici_api",
+        "config": {}
+    },
+    {
+        "id": "nippon_india_mf",
+        "name": "Nippon India Mutual Fund",
+        "url": "https://mf.nipponindiaim.com/Statutory-Disclosures/Monthly-Portfolio-Disclosures",
+        "strategy": "nippon_api",
+        "config": {}
+    },
+    {
+        "id": "absl_mf",
+        "name": "Aditya Birla Sun Life Mutual Fund",
+        "url": "https://mutualfund.adityabirlacapital.com/forms-and-downloads/portfolio",
+        "strategy": "absl_api",
+        "config": {}
+    },
+    {
+        "id": "tata_mf",
+        "name": "Tata Mutual Fund",
+        "url": "https://www.tatamutualfund.com/downloads/monthly-portfolio",
+        "strategy": "tata_api",
+        "config": {}
+    },
+    {
+        "id": "motilal_mf",
+        "name": "Motilal Oswal Mutual Fund",
+        "url": "https://www.motilaloswalmf.com/downloads/mutual-fund/monthly-portfolio",
+        "strategy": "motilal_api",
+        "config": {}
+    },
+    {
+        "id": "axis_mf",
+        "name": "Axis Mutual Fund",
+        "url": "https://www.axismf.com/statutory-disclosures/monthly-portfolio-disclosure",
+        "strategy": "axis_api",
+        "config": {}
+    },
+    {
+        "id": "uti_mf",
+        "name": "UTI Mutual Fund",
+        "url": "https://www.utimf.com/downloads/consolidate-all-portfolio-disclosure",
+        "strategy": "uti_api",
+        "config": {}
+    },
+    {
+        "id": "franklin_mf",
+        "name": "Franklin Templeton Mutual Fund",
+        "url": "https://www.franklintempletonindia.com/investor/downloads/monthly-portfolios",
+        "strategy": "franklin_api",
+        "config": {}
+    },
+    {
+        "id": "invesco_mf",
+        "name": "Invesco Mutual Fund",
+        "url": "https://www.invescomutualfund.com/literature-and-form?tab=Complete",
+        "strategy": "invesco_api",
+        "config": {}
+    },
+    {
+        "id": "edelweiss_mf",
+        "name": "Edelweiss Mutual Fund",
+        "url": "https://www.edelweissmf.com/statutory-disclosures/monthly-portfolio-disclosure",
+        "strategy": "edelweiss_api",
+        "config": {}
+    },
+    {
+        "id": "lic_mf",
+        "name": "LIC Mutual Fund",
+        "url": "https://www.licmf.com/statutory-disclosures/monthly-portfolio",
+        "strategy": "lic_api",
+        "config": {}
+    },
+    {
+        "id": "mirae_mf",
+        "name": "Mirae Asset Mutual Fund",
+        "url": "https://www.miraeassetmf.co.in/downloads/statutory-disclosures/monthly-portfolio-disclosures",
+        "strategy": "mirae_api",
+        "config": {}
+    },
+    {
+        "id": "hsbc_mf",
+        "name": "HSBC Mutual Fund",
+        "url": "https://www.assetmanagement.hsbc.co.in/en/mutual-funds/investor-resources/statutory-disclosures/monthly-portfolios",
+        "strategy": "hsbc_api",
+        "config": {}
+    },
+    {
+        "id": "dsp_mf",
+        "name": "DSP Mutual Fund",
+        "url": "https://www.dspim.com/literature-and-forms/statutory-disclosures",
+        "strategy": "dsp_api",
+        "config": {}
+    },
+    {
+        "id": "canara_robeco_mf",
+        "name": "Canara Robeco Mutual Fund",
+        "url": "https://www.canararobeco.com/statutory-disclosures/monthly-portfolio",
+        "strategy": "canara_api",
+        "config": {}
+    },
+    {
+        "id": "sundaram_mf",
+        "name": "Sundaram Mutual Fund",
+        "url": "https://www.sundarammutual.com/statutory-disclosures",
+        "strategy": "sundaram_api",
+        "config": {}
+    },
+    {
+        "id": "mahindra_manulife_mf",
+        "name": "Mahindra Manulife Mutual Fund",
+        "url": "https://www.mahindramanulife.com/downloads/statutory-disclosures",
+        "strategy": "mahindra_api",
+        "config": {}
+    },
+    {
+        "id": "navi_mf",
+        "name": "Navi Mutual Fund",
+        "url": "https://www.navimutualfund.com/downloads/statutory-disclosures",
+        "strategy": "navi_api",
+        "config": {}
+    },
+    {
+        "id": "groww_mf",
+        "name": "Groww Mutual Fund",
+        "url": "https://www.growwmf.in/downloads/disclosure",
+        "strategy": "groww_api",
+        "config": {}
+    },
+    {
+        "id": "kotak_mf",
+        "name": "Kotak Mutual Fund",
+        "url": "https://www.kotakmf.com/Information/forms-and-downloads",
+        "strategy": "kotak_api",
+        "config": {}
+    },
+    {
+        "id": "quant_mf",
+        "name": "Quant Mutual Fund",
+        "url": "https://quantmutual.com/statutory-disclosures",
+        "strategy": "browser_automation",
+        "config": {}
+    },
+    {
+        "id": "bandhan_mf",
+        "name": "Bandhan Mutual Fund",
+        "url": "https://bandhanmutual.com/statutory-disclosures/portfolio",
+        "strategy": "bandhan_api",
+        "config": {
+            "endpoint": "https://bandhanmutual.com/investor/v1/dashboard/cms-call"
+        }
+    },
+    {
+        "id": "ppfas_mf",
+        "name": "PPFAS Mutual Fund",
+        "url": "https://amc.ppfas.com/downloads/portfolio-disclosure/",
+        "strategy": "static_html",
+        "config": {}
+    }
+]

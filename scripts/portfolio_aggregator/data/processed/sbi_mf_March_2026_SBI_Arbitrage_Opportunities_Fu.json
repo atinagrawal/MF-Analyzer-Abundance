@@ -1,0 +1,1567 @@
+[
+    {
+        "scheme_name": "SBI Arbitrage Opportunities Fund",
+        "holdings": [
+            {
+                "isin": "INE040A01034",
+                "security_name": "HDFC Bank Ltd.",
+                "sector": "Banks",
+                "quantity": 30699900.0,
+                "market_value": 224585.12,
+                "weightage": 5.47
+            },
+            {
+                "isin": "INE090A01021",
+                "security_name": "ICICI Bank Ltd.",
+                "sector": "Banks",
+                "quantity": 12154100.0,
+                "market_value": 146566.29,
+                "weightage": 3.57
+            },
+            {
+                "isin": "INE397D01024",
+                "security_name": "Bharti Airtel Ltd.",
+                "sector": "Telecom - Services",
+                "quantity": 5312400.0,
+                "market_value": 94688.22,
+                "weightage": 2.31
+            },
+            {
+                "isin": "INE238A01034",
+                "security_name": "Axis Bank Ltd.",
+                "sector": "Banks",
+                "quantity": 6408750.0,
+                "market_value": 74424.81,
+                "weightage": 1.81
+            },
+            {
+                "isin": "INE002A01018",
+                "security_name": "Reliance Industries Ltd.",
+                "sector": "Petroleum Products",
+                "quantity": 4965000.0,
+                "market_value": 66724.64,
+                "weightage": 1.63
+            },
+            {
+                "isin": "INE019A01038",
+                "security_name": "JSW Steel Ltd.",
+                "sector": "Ferrous Metals",
+                "quantity": 5801625.0,
+                "market_value": 65123.24,
+                "weightage": 1.59
+            },
+            {
+                "isin": "INE263A01024",
+                "security_name": "Bharat Electronics Ltd.",
+                "sector": "Aerospace & Defense",
+                "quantity": 15367200.0,
+                "market_value": 61568.69,
+                "weightage": 1.5
+            },
+            {
+                "isin": "INE205A01025",
+                "security_name": "Vedanta Ltd.",
+                "sector": "Diversified Metals",
+                "quantity": 9157450.0,
+                "market_value": 59962.98,
+                "weightage": 1.46
+            },
+            {
+                "isin": "INE018A01030",
+                "security_name": "Larsen & Toubro Ltd.",
+                "sector": "Construction",
+                "quantity": 1647100.0,
+                "market_value": 57716.03,
+                "weightage": 1.41
+            },
+            {
+                "isin": "INE062A01020",
+                "security_name": "State Bank of India",
+                "sector": "Banks",
+                "quantity": 5817000.0,
+                "market_value": 56971.7,
+                "weightage": 1.39
+            },
+            {
+                "isin": "INE237A01036",
+                "security_name": "Kotak Mahindra Bank Ltd.",
+                "sector": "Banks",
+                "quantity": 14372000.0,
+                "market_value": 50790.65,
+                "weightage": 1.24
+            },
+            {
+                "isin": "INE066F01020",
+                "security_name": "Hindustan Aeronautics Ltd.",
+                "sector": "Aerospace & Defense",
+                "quantity": 1311900.0,
+                "market_value": 45748.58,
+                "weightage": 1.11
+            },
+            {
+                "isin": "INE721A01047",
+                "security_name": "Shriram Finance Ltd.",
+                "sector": "Finance",
+                "quantity": 5172750.0,
+                "market_value": 45111.55,
+                "weightage": 1.1
+            },
+            {
+                "isin": "INE423A01024",
+                "security_name": "Adani Enterprises Ltd.",
+                "sector": "Metals & Minerals Trading",
+                "quantity": 2564700.0,
+                "market_value": 45107.94,
+                "weightage": 1.1
+            },
+            {
+                "isin": "INE467B01029",
+                "security_name": "Tata Consultancy Services Ltd.",
+                "sector": "IT - Software",
+                "quantity": 1849050.0,
+                "market_value": 43617.24,
+                "weightage": 1.06
+            },
+            {
+                "isin": "INE134E01011",
+                "security_name": "Power Finance Corporation Ltd.",
+                "sector": "Finance",
+                "quantity": 11342500.0,
+                "market_value": 43044.79,
+                "weightage": 1.05
+            },
+            {
+                "isin": "INE758E01017",
+                "security_name": "Jio Financial Services Ltd.",
+                "sector": "Finance",
+                "quantity": 17916400.0,
+                "market_value": 40150.65,
+                "weightage": 0.98
+            },
+            {
+                "isin": "INE154A01025",
+                "security_name": "ITC Ltd.",
+                "sector": "Diversified FMCG",
+                "quantity": 13648000.0,
+                "market_value": 39265.3,
+                "weightage": 0.96
+            },
+            {
+                "isin": "INE669E01016",
+                "security_name": "Vodafone Idea Ltd.",
+                "sector": "Telecom - Services",
+                "quantity": 454366575.0,
+                "market_value": 38757.47,
+                "weightage": 0.94
+            },
+            {
+                "isin": "INE257A01026",
+                "security_name": "Bharat Heavy Electricals Ltd.",
+                "sector": "Electrical Equipment",
+                "quantity": 13266750.0,
+                "market_value": 32569.87,
+                "weightage": 0.79
+            },
+            {
+                "isin": "INE121J01017",
+                "security_name": "Indus Towers Ltd.",
+                "sector": "Telecom - Services",
+                "quantity": 7646600.0,
+                "market_value": 31974.26,
+                "weightage": 0.78
+            },
+            {
+                "isin": "INE020B01018",
+                "security_name": "REC Ltd.",
+                "sector": "Finance",
+                "quantity": 9752400.0,
+                "market_value": 29754.57,
+                "weightage": 0.72
+            },
+            {
+                "isin": "INE406A01037",
+                "security_name": "Aurobindo Pharma Ltd.",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 2173600.0,
+                "market_value": 28352.44,
+                "weightage": 0.69
+            },
+            {
+                "isin": "INE101A01026",
+                "security_name": "Mahindra & Mahindra Ltd.",
+                "sector": "Automobiles",
+                "quantity": 952000.0,
+                "market_value": 28128.74,
+                "weightage": 0.69
+            },
+            {
+                "isin": "INE160A01022",
+                "security_name": "Punjab National Bank",
+                "sector": "Banks",
+                "quantity": 27768000.0,
+                "market_value": 27923.5,
+                "weightage": 0.68
+            },
+            {
+                "isin": "INE935A01035",
+                "security_name": "Glenmark Pharmaceuticals Ltd.",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 1294125.0,
+                "market_value": 27586.86,
+                "weightage": 0.67
+            },
+            {
+                "isin": "INE670K01029",
+                "security_name": "Lodha Developers Ltd.",
+                "sector": "Realty",
+                "quantity": 3998250.0,
+                "market_value": 27068.15,
+                "weightage": 0.66
+            },
+            {
+                "isin": "INE776C01039",
+                "security_name": "GMR Airports Ltd.",
+                "sector": "Transport Infrastructure",
+                "quantity": 31596750.0,
+                "market_value": 26778.25,
+                "weightage": 0.65
+            },
+            {
+                "isin": "INE271C01023",
+                "security_name": "DLF Ltd.",
+                "sector": "Realty",
+                "quantity": 5231325.0,
+                "market_value": 26371.11,
+                "weightage": 0.64
+            },
+            {
+                "isin": "INE584A01023",
+                "security_name": "NMDC Ltd.",
+                "sector": "Minerals & Mining",
+                "quantity": 34161750.0,
+                "market_value": 26055.17,
+                "weightage": 0.63
+            },
+            {
+                "isin": "INE114A01011",
+                "security_name": "Steel Authority of India Ltd.",
+                "sector": "Ferrous Metals",
+                "quantity": 16976400.0,
+                "market_value": 25705.66,
+                "weightage": 0.63
+            },
+            {
+                "isin": "INE047A01021",
+                "security_name": "Grasim Industries Ltd.",
+                "sector": "Cement & Cement Products",
+                "quantity": 988000.0,
+                "market_value": 25270.08,
+                "weightage": 0.62
+            },
+            {
+                "isin": "INE742F01042",
+                "security_name": "Adani Ports and Special Economic Zone Ltd.",
+                "sector": "Transport Infrastructure",
+                "quantity": 1892875.0,
+                "market_value": 24845.88,
+                "weightage": 0.61
+            },
+            {
+                "isin": "INE364U01010",
+                "security_name": "Adani Green Energy Ltd.",
+                "sector": "Power",
+                "quantity": 2913000.0,
+                "market_value": 23505.0,
+                "weightage": 0.57
+            },
+            {
+                "isin": "INE758T01015",
+                "security_name": "Eternal Ltd.",
+                "sector": "Retailing",
+                "quantity": 9639375.0,
+                "market_value": 22072.24,
+                "weightage": 0.54
+            },
+            {
+                "isin": "INE021A01026",
+                "security_name": "Asian Paints Ltd.",
+                "sector": "Consumer Durables",
+                "quantity": 1003250.0,
+                "market_value": 21722.37,
+                "weightage": 0.53
+            },
+            {
+                "isin": "INE585B01010",
+                "security_name": "Maruti Suzuki India Ltd.",
+                "sector": "Automobiles",
+                "quantity": 175450.0,
+                "market_value": 21590.88,
+                "weightage": 0.53
+            },
+            {
+                "isin": "INE280A01028",
+                "security_name": "Titan Company Ltd.",
+                "sector": "Consumer Durables",
+                "quantity": 542500.0,
+                "market_value": 21436.35,
+                "weightage": 0.52
+            },
+            {
+                "isin": "INE361B01024",
+                "security_name": "Divi's Laboratories Ltd.",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 352600.0,
+                "market_value": 20969.12,
+                "weightage": 0.51
+            },
+            {
+                "isin": "INE079A01024",
+                "security_name": "Ambuja Cements Ltd.",
+                "sector": "Cement & Cement Products",
+                "quantity": 5088300.0,
+                "market_value": 20416.8,
+                "weightage": 0.5
+            },
+            {
+                "isin": "INE733E01010",
+                "security_name": "NTPC Ltd.",
+                "sector": "Power",
+                "quantity": 5386500.0,
+                "market_value": 19965.06,
+                "weightage": 0.49
+            },
+            {
+                "isin": "INE947Q01028",
+                "security_name": "Laurus Labs Ltd.",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 1862350.0,
+                "market_value": 18487.55,
+                "weightage": 0.45
+            },
+            {
+                "isin": "INE081A01020",
+                "security_name": "Tata Steel Ltd.",
+                "sector": "Ferrous Metals",
+                "quantity": 9531500.0,
+                "market_value": 18287.14,
+                "weightage": 0.45
+            },
+            {
+                "isin": "INE267A01025",
+                "security_name": "Hindustan Zinc Ltd.",
+                "sector": "Non - Ferrous Metals",
+                "quantity": 3624775.0,
+                "market_value": 18201.81,
+                "weightage": 0.44
+            },
+            {
+                "isin": "INE200M01039",
+                "security_name": "Varun Beverages Ltd.",
+                "sector": "Beverages",
+                "quantity": 4676625.0,
+                "market_value": 17962.92,
+                "weightage": 0.44
+            },
+            {
+                "isin": "INE931S01010",
+                "security_name": "Adani Energy Solutions Ltd.",
+                "sector": "Power",
+                "quantity": 1919025.0,
+                "market_value": 17940.96,
+                "weightage": 0.44
+            },
+            {
+                "isin": "INE115A01026",
+                "security_name": "LIC Housing Finance Ltd.",
+                "sector": "Finance",
+                "quantity": 3464000.0,
+                "market_value": 17155.46,
+                "weightage": 0.42
+            },
+            {
+                "isin": "INE242A01010",
+                "security_name": "Indian Oil Corporation Ltd.",
+                "sector": "Petroleum Products",
+                "quantity": 12645750.0,
+                "market_value": 17122.35,
+                "weightage": 0.42
+            },
+            {
+                "isin": "INE180A01020",
+                "security_name": "Max Financial Services Ltd.",
+                "sector": "Insurance",
+                "quantity": 1138800.0,
+                "market_value": 16976.09,
+                "weightage": 0.41
+            },
+            {
+                "isin": "INE040H01021",
+                "security_name": "Suzlon Energy Ltd.",
+                "sector": "Electrical Equipment",
+                "quantity": 42751425.0,
+                "market_value": 16912.46,
+                "weightage": 0.41
+            },
+            {
+                "isin": "INE976G01028",
+                "security_name": "RBL Bank Ltd.",
+                "sector": "Banks",
+                "quantity": 5803900.0,
+                "market_value": 16816.8,
+                "weightage": 0.41
+            },
+            {
+                "isin": "INE494B01023",
+                "security_name": "TVS Motor Company Ltd.",
+                "sector": "Automobiles",
+                "quantity": 498575.0,
+                "market_value": 16771.07,
+                "weightage": 0.41
+            },
+            {
+                "isin": "INE481G01011",
+                "security_name": "Ultratech Cement Ltd.",
+                "sector": "Cement & Cement Products",
+                "quantity": 148700.0,
+                "market_value": 15977.82,
+                "weightage": 0.39
+            },
+            {
+                "isin": "INE044A01036",
+                "security_name": "Sun Pharmaceutical Industries Ltd.",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 899150.0,
+                "market_value": 15799.86,
+                "weightage": 0.38
+            },
+            {
+                "isin": "INE674K01013",
+                "security_name": "Aditya Birla Capital Ltd.",
+                "sector": "Finance",
+                "quantity": 5400200.0,
+                "market_value": 15782.08,
+                "weightage": 0.38
+            },
+            {
+                "isin": "INE795G01014",
+                "security_name": "HDFC Life Insurance Company Ltd.",
+                "sector": "Insurance",
+                "quantity": 2638900.0,
+                "market_value": 15585.34,
+                "weightage": 0.38
+            },
+            {
+                "isin": "INE982J01020",
+                "security_name": "One 97 Communications Ltd.",
+                "sector": "Financial Technology (Fintech)",
+                "quantity": 1619650.0,
+                "market_value": 15532.44,
+                "weightage": 0.38
+            },
+            {
+                "isin": "INE476A01022",
+                "security_name": "Canara Bank",
+                "sector": "Banks",
+                "quantity": 12359250.0,
+                "market_value": 15257.49,
+                "weightage": 0.37
+            },
+            {
+                "isin": "INE745G01043",
+                "security_name": "Multi Commodity Exchange of India Ltd.",
+                "sector": "Capital Markets",
+                "quantity": 632500.0,
+                "market_value": 15112.96,
+                "weightage": 0.37
+            },
+            {
+                "isin": "INE121A01024",
+                "security_name": "Cholamandalam Investment & Finance Co. Ltd.",
+                "sector": "Finance",
+                "quantity": 1048750.0,
+                "market_value": 14207.42,
+                "weightage": 0.35
+            },
+            {
+                "isin": "INE437A01024",
+                "security_name": "Apollo Hospitals Enterprise Ltd.",
+                "sector": "Healthcare Services",
+                "quantity": 186500.0,
+                "market_value": 13836.44,
+                "weightage": 0.34
+            },
+            {
+                "isin": "INE038A01020",
+                "security_name": "Hindalco Industries Ltd.",
+                "sector": "Non - Ferrous Metals",
+                "quantity": 1544900.0,
+                "market_value": 13663.87,
+                "weightage": 0.33
+            },
+            {
+                "isin": "INE028A01039",
+                "security_name": "Bank of Baroda",
+                "sector": "Banks",
+                "quantity": 5507775.0,
+                "market_value": 13637.25,
+                "weightage": 0.33
+            },
+            {
+                "isin": "INE192A01025",
+                "security_name": "Tata Consumer Products Ltd.",
+                "sector": "Agricultural Food & other Products",
+                "quantity": 1269950.0,
+                "market_value": 12887.45,
+                "weightage": 0.31
+            },
+            {
+                "isin": "INE245A01021",
+                "security_name": "Tata Power Company Ltd.",
+                "sector": "Power",
+                "quantity": 3358200.0,
+                "market_value": 12719.18,
+                "weightage": 0.31
+            },
+            {
+                "isin": "INE139A01034",
+                "security_name": "National Aluminium Company Ltd.",
+                "sector": "Non - Ferrous Metals",
+                "quantity": 3281250.0,
+                "market_value": 12668.91,
+                "weightage": 0.31
+            },
+            {
+                "isin": "INE522D01027",
+                "security_name": "Manappuram Finance Ltd.",
+                "sector": "Finance",
+                "quantity": 5043000.0,
+                "market_value": 12662.97,
+                "weightage": 0.31
+            },
+            {
+                "isin": "INE299U01018",
+                "security_name": "Crompton Greaves Consumer Electricals Ltd.",
+                "sector": "Consumer Durables",
+                "quantity": 5634000.0,
+                "market_value": 12597.62,
+                "weightage": 0.31
+            },
+            {
+                "isin": "INE619A01035",
+                "security_name": "Patanjali Foods Ltd.",
+                "sector": "Agricultural Food & other Products",
+                "quantity": 2716200.0,
+                "market_value": 12487.73,
+                "weightage": 0.3
+            },
+            {
+                "isin": "INE171A01029",
+                "security_name": "The Federal Bank Ltd.",
+                "sector": "Banks",
+                "quantity": 4810000.0,
+                "market_value": 12477.14,
+                "weightage": 0.3
+            },
+            {
+                "isin": "INE148I01020",
+                "security_name": "Sammaan Capital Ltd.",
+                "sector": "Finance",
+                "quantity": 8247400.0,
+                "market_value": 12331.51,
+                "weightage": 0.3
+            },
+            {
+                "isin": "INE213A01029",
+                "security_name": "Oil & Natural Gas Corporation Ltd.",
+                "sector": "Oil",
+                "quantity": 4299750.0,
+                "market_value": 12239.24,
+                "weightage": 0.3
+            },
+            {
+                "isin": "INE196A01026",
+                "security_name": "Marico Ltd.",
+                "sector": "Agricultural Food & other Products",
+                "quantity": 1651200.0,
+                "market_value": 12152.01,
+                "weightage": 0.3
+            },
+            {
+                "isin": "INE094A01015",
+                "security_name": "Hindustan Petroleum Corporation Ltd.",
+                "sector": "Petroleum Products",
+                "quantity": 3525525.0,
+                "market_value": 11824.61,
+                "weightage": 0.29
+            },
+            {
+                "isin": "INE296A01032",
+                "security_name": "Bajaj Finance Ltd.",
+                "sector": "Finance",
+                "quantity": 1454250.0,
+                "market_value": 11656.54,
+                "weightage": 0.28
+            },
+            {
+                "isin": "INE545U01014",
+                "security_name": "Bandhan Bank Ltd.",
+                "sector": "Banks",
+                "quantity": 8103600.0,
+                "market_value": 11454.44,
+                "weightage": 0.28
+            },
+            {
+                "isin": "INE053A01029",
+                "security_name": "The Indian Hotels Company Ltd.",
+                "sector": "Leisure Services",
+                "quantity": 2002000.0,
+                "market_value": 11430.42,
+                "weightage": 0.28
+            },
+            {
+                "isin": "INE854D01024",
+                "security_name": "United Spirits Ltd.",
+                "sector": "Beverages",
+                "quantity": 922000.0,
+                "market_value": 11237.34,
+                "weightage": 0.27
+            },
+            {
+                "isin": "INE129A01019",
+                "security_name": "GAIL (India) Ltd.",
+                "sector": "Gas",
+                "quantity": 7856100.0,
+                "market_value": 10818.64,
+                "weightage": 0.26
+            },
+            {
+                "isin": "INE303R01014",
+                "security_name": "Kalyan Jewellers India Ltd.",
+                "sector": "Consumer Durables",
+                "quantity": 2817650.0,
+                "market_value": 10591.55,
+                "weightage": 0.26
+            },
+            {
+                "isin": "INE016A01026",
+                "security_name": "Dabur India Ltd.",
+                "sector": "Personal Products",
+                "quantity": 2546250.0,
+                "market_value": 10451.08,
+                "weightage": 0.25
+            },
+            {
+                "isin": "INE522F01014",
+                "security_name": "Coal India Ltd.",
+                "sector": "Consumable Fuels",
+                "quantity": 2286900.0,
+                "market_value": 10301.34,
+                "weightage": 0.25
+            },
+            {
+                "isin": "INE211B01039",
+                "security_name": "The Phoenix Mills Ltd.",
+                "sector": "Realty",
+                "quantity": 677600.0,
+                "market_value": 10206.69,
+                "weightage": 0.25
+            },
+            {
+                "isin": "INE726G01019",
+                "security_name": "ICICI Prudential Life Insurance Company Ltd.",
+                "sector": "Insurance",
+                "quantity": 1998000.0,
+                "market_value": 10180.81,
+                "weightage": 0.25
+            },
+            {
+                "isin": "INE343H01029",
+                "security_name": "Solar Industries India Ltd.",
+                "sector": "Chemicals & Petrochemicals",
+                "quantity": 81100.0,
+                "market_value": 9793.64,
+                "weightage": 0.24
+            },
+            {
+                "isin": "INE066P01011",
+                "security_name": "Inox Wind Ltd.",
+                "sector": "Electrical Equipment",
+                "quantity": 12455300.0,
+                "market_value": 9402.51,
+                "weightage": 0.23
+            },
+            {
+                "isin": "INE302A01020",
+                "security_name": "Exide Industries Ltd.",
+                "sector": "Auto Components",
+                "quantity": 3160800.0,
+                "market_value": 9099.94,
+                "weightage": 0.22
+            },
+            {
+                "isin": "INE918I01026",
+                "security_name": "Bajaj Finserv Ltd.",
+                "sector": "Finance",
+                "quantity": 551750.0,
+                "market_value": 9003.46,
+                "weightage": 0.22
+            },
+            {
+                "isin": "INE775A01035",
+                "security_name": "Samvardhana Motherson International Ltd.",
+                "sector": "Auto Components",
+                "quantity": 8560800.0,
+                "market_value": 8995.69,
+                "weightage": 0.22
+            },
+            {
+                "isin": "INE572E01012",
+                "security_name": "PNB Housing Finance Ltd.",
+                "sector": "Finance",
+                "quantity": 1176500.0,
+                "market_value": 8883.16,
+                "weightage": 0.22
+            },
+            {
+                "isin": "INE029A01011",
+                "security_name": "Bharat Petroleum Corporation Ltd.",
+                "sector": "Petroleum Products",
+                "quantity": 2992125.0,
+                "market_value": 8407.87,
+                "weightage": 0.2
+            },
+            {
+                "isin": "INE111A01025",
+                "security_name": "Container Corporation of India Ltd.",
+                "sector": "Transport Services",
+                "quantity": 1878750.0,
+                "market_value": 7990.32,
+                "weightage": 0.19
+            },
+            {
+                "isin": "INE092T01019",
+                "security_name": "IDFC First Bank Ltd.",
+                "sector": "Banks",
+                "quantity": 12994275.0,
+                "market_value": 7647.13,
+                "weightage": 0.19
+            },
+            {
+                "isin": "INE155A01022",
+                "security_name": "Tata Motors Passenger Vehicles Ltd.",
+                "sector": "Automobiles",
+                "quantity": 2543200.0,
+                "market_value": 7532.96,
+                "weightage": 0.18
+            },
+            {
+                "isin": "INE127D01025",
+                "security_name": "HDFC Asset Management Co. Ltd.",
+                "sector": "Capital Markets",
+                "quantity": 323100.0,
+                "market_value": 7161.19,
+                "weightage": 0.17
+            },
+            {
+                "isin": "INE073K01018",
+                "security_name": "Sona Blw Precision Forgings Ltd.",
+                "sector": "Auto Components",
+                "quantity": 1463875.0,
+                "market_value": 7048.56,
+                "weightage": 0.17
+            },
+            {
+                "isin": "INE591G01025",
+                "security_name": "Coforge Ltd.",
+                "sector": "IT - Software",
+                "quantity": 623625.0,
+                "market_value": 6951.55,
+                "weightage": 0.17
+            },
+            {
+                "isin": "INE405E01023",
+                "security_name": "UNO Minda Ltd.",
+                "sector": "Auto Components",
+                "quantity": 653950.0,
+                "market_value": 6746.15,
+                "weightage": 0.16
+            },
+            {
+                "isin": "INE123W01016",
+                "security_name": "SBI Life Insurance Co. Ltd.",
+                "sector": "Insurance",
+                "quantity": 373125.0,
+                "market_value": 6631.55,
+                "weightage": 0.16
+            },
+            {
+                "isin": "INE752E01010",
+                "security_name": "Power Grid Corporation of India Ltd.",
+                "sector": "Power",
+                "quantity": 2209700.0,
+                "market_value": 6542.92,
+                "weightage": 0.16
+            },
+            {
+                "isin": "INE121E01018",
+                "security_name": "JSW Energy Ltd.",
+                "sector": "Power",
+                "quantity": 1370000.0,
+                "market_value": 6460.92,
+                "weightage": 0.16
+            },
+            {
+                "isin": "INE702C01027",
+                "security_name": "APL Apollo Tubes Ltd.",
+                "sector": "Industrial Products",
+                "quantity": 327600.0,
+                "market_value": 6345.61,
+                "weightage": 0.15
+            },
+            {
+                "isin": "INE376G01013",
+                "security_name": "Biocon Ltd.",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 1750000.0,
+                "market_value": 6315.75,
+                "weightage": 0.15
+            },
+            {
+                "isin": "INE059A01026",
+                "security_name": "Cipla Ltd.",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 498750.0,
+                "market_value": 6105.7,
+                "weightage": 0.15
+            },
+            {
+                "isin": "INE239A01024",
+                "security_name": "Nestle India Ltd.",
+                "sector": "Food Products",
+                "quantity": 513500.0,
+                "market_value": 6032.6,
+                "weightage": 0.15
+            },
+            {
+                "isin": "INE849A01020",
+                "security_name": "Trent Ltd.",
+                "sector": "Retailing",
+                "quantity": 178300.0,
+                "market_value": 5876.41,
+                "weightage": 0.14
+            },
+            {
+                "isin": "INE216A01030",
+                "security_name": "Britannia Industries Ltd.",
+                "sector": "Food Products",
+                "quantity": 107375.0,
+                "market_value": 5822.95,
+                "weightage": 0.14
+            },
+            {
+                "isin": "INE347G01014",
+                "security_name": "Petronet LNG Ltd.",
+                "sector": "Gas",
+                "quantity": 2276200.0,
+                "market_value": 5655.22,
+                "weightage": 0.14
+            },
+            {
+                "isin": "INE102D01028",
+                "security_name": "Godrej Consumer Products Ltd.",
+                "sector": "Personal Products",
+                "quantity": 574000.0,
+                "market_value": 5652.75,
+                "weightage": 0.14
+            },
+            {
+                "isin": "INE323A01026",
+                "security_name": "Bosch Ltd.",
+                "sector": "Auto Components",
+                "quantity": 19650.0,
+                "market_value": 5648.39,
+                "weightage": 0.14
+            },
+            {
+                "isin": "INE010B01027",
+                "security_name": "Zydus Lifesciences Ltd.",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 642600.0,
+                "market_value": 5598.33,
+                "weightage": 0.14
+            },
+            {
+                "isin": "INE061F01013",
+                "security_name": "Fortis Healthcare Ltd.",
+                "sector": "Healthcare Services",
+                "quantity": 697500.0,
+                "market_value": 5545.13,
+                "weightage": 0.14
+            },
+            {
+                "isin": "INE388Y01029",
+                "security_name": "FSN E-Commerce Ventures Ltd.",
+                "sector": "Retailing",
+                "quantity": 2262500.0,
+                "market_value": 5316.88,
+                "weightage": 0.13
+            },
+            {
+                "isin": "INE417T01026",
+                "security_name": "PB Fintech Ltd.",
+                "sector": "Financial Technology (Fintech)",
+                "quantity": 350000.0,
+                "market_value": 4997.3,
+                "weightage": 0.12
+            },
+            {
+                "isin": "INE118H01025",
+                "security_name": "BSE Ltd.",
+                "sector": "Capital Markets",
+                "quantity": 174000.0,
+                "market_value": 4669.29,
+                "weightage": 0.11
+            },
+            {
+                "isin": "INE148O01028",
+                "security_name": "Delhivery Ltd.",
+                "sector": "Transport Services",
+                "quantity": 1118425.0,
+                "market_value": 4660.48,
+                "weightage": 0.11
+            },
+            {
+                "isin": "INE628A01036",
+                "security_name": "UPL Ltd.",
+                "sector": "Fertilizers & Agrochemicals",
+                "quantity": 817065.0,
+                "market_value": 4640.52,
+                "weightage": 0.11
+            },
+            {
+                "isin": "INE030A01027",
+                "security_name": "Hindustan Unilever Ltd.",
+                "sector": "Diversified FMCG",
+                "quantity": 212700.0,
+                "market_value": 4371.41,
+                "weightage": 0.11
+            },
+            {
+                "isin": "INE095N01031",
+                "security_name": "NBCC (India) Ltd.",
+                "sector": "Construction",
+                "quantity": 5499000.0,
+                "market_value": 4262.82,
+                "weightage": 0.1
+            },
+            {
+                "isin": "INE158A01026",
+                "security_name": "Hero MotoCorp Ltd.",
+                "sector": "Automobiles",
+                "quantity": 83250.0,
+                "market_value": 4214.95,
+                "weightage": 0.1
+            },
+            {
+                "isin": "INE377N01017",
+                "security_name": "Waaree Energies Ltd.",
+                "sector": "Electrical Equipment",
+                "quantity": 127925.0,
+                "market_value": 3978.21,
+                "weightage": 0.1
+            },
+            {
+                "isin": "INE084A01016",
+                "security_name": "Bank of India",
+                "sector": "Banks",
+                "quantity": 2896400.0,
+                "market_value": 3967.78,
+                "weightage": 0.1
+            },
+            {
+                "isin": "INE356A01018",
+                "security_name": "Mphasis Ltd.",
+                "sector": "IT - Software",
+                "quantity": 192225.0,
+                "market_value": 3946.38,
+                "weightage": 0.1
+            },
+            {
+                "isin": "INE176B01034",
+                "security_name": "Havells India Ltd.",
+                "sector": "Consumer Durables",
+                "quantity": 328500.0,
+                "market_value": 3911.12,
+                "weightage": 0.1
+            },
+            {
+                "isin": "INE647A01010",
+                "security_name": "SRF Ltd.",
+                "sector": "Chemicals & Petrochemicals",
+                "quantity": 157200.0,
+                "market_value": 3832.54,
+                "weightage": 0.09
+            },
+            {
+                "isin": "INE949L01017",
+                "security_name": "AU Small Finance Bank Ltd.",
+                "sector": "Banks",
+                "quantity": 435000.0,
+                "market_value": 3665.75,
+                "weightage": 0.09
+            },
+            {
+                "isin": "INE732I01021",
+                "security_name": "Angel One Ltd.",
+                "sector": "Capital Markets",
+                "quantity": 1520000.0,
+                "market_value": 3458.46,
+                "weightage": 0.08
+            },
+            {
+                "isin": "INE07Y701011",
+                "security_name": "Hitachi Energy India Ltd.",
+                "sector": "Electrical Equipment",
+                "quantity": 13800.0,
+                "market_value": 3344.43,
+                "weightage": 0.08
+            },
+            {
+                "isin": "INE249Z01020",
+                "security_name": "Mazagon Dock Shipbuilders Ltd.",
+                "sector": "Industrial Manufacturing",
+                "quantity": 153600.0,
+                "market_value": 3172.15,
+                "weightage": 0.08
+            },
+            {
+                "isin": "INE811K01011",
+                "security_name": "Prestige Estates Projects Ltd.",
+                "sector": "Realty",
+                "quantity": 261900.0,
+                "market_value": 2950.3,
+                "weightage": 0.07
+            },
+            {
+                "isin": "INE095A01012",
+                "security_name": "IndusInd Bank Ltd.",
+                "sector": "Banks",
+                "quantity": 386400.0,
+                "market_value": 2907.47,
+                "weightage": 0.07
+            },
+            {
+                "isin": "INE918Z01012",
+                "security_name": "Kaynes Technology India Ltd.",
+                "sector": "Industrial Manufacturing",
+                "quantity": 83400.0,
+                "market_value": 2860.29,
+                "weightage": 0.07
+            },
+            {
+                "isin": "INE466L01038",
+                "security_name": "360 ONE WAM Ltd.",
+                "sector": "Capital Markets",
+                "quantity": 298000.0,
+                "market_value": 2829.81,
+                "weightage": 0.07
+            },
+            {
+                "isin": "INE066A01021",
+                "security_name": "Eicher Motors Ltd.",
+                "sector": "Automobiles",
+                "quantity": 42800.0,
+                "market_value": 2818.81,
+                "weightage": 0.07
+            },
+            {
+                "isin": "INE326A01037",
+                "security_name": "Lupin Ltd.",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 112200.0,
+                "market_value": 2596.2,
+                "weightage": 0.06
+            },
+            {
+                "isin": "INE848E01016",
+                "security_name": "NHPC Ltd.",
+                "sector": "Power",
+                "quantity": 3430400.0,
+                "market_value": 2528.89,
+                "weightage": 0.06
+            },
+            {
+                "isin": "INE142M01025",
+                "security_name": "Tata Technologies Ltd.",
+                "sector": "IT - Services",
+                "quantity": 489600.0,
+                "market_value": 2493.04,
+                "weightage": 0.06
+            },
+            {
+                "isin": "INE208A01029",
+                "security_name": "Ashok Leyland Ltd.",
+                "sector": "Agricultural, Commercial & Construction Vehicles",
+                "quantity": 1590000.0,
+                "market_value": 2450.67,
+                "weightage": 0.06
+            },
+            {
+                "isin": "INE484J01027",
+                "security_name": "Godrej Properties Ltd.",
+                "sector": "Realty",
+                "quantity": 162250.0,
+                "market_value": 2387.18,
+                "weightage": 0.06
+            },
+            {
+                "isin": "INE0J1Y01017",
+                "security_name": "Life Insurance Corporation of India",
+                "sector": "Insurance",
+                "quantity": 269500.0,
+                "market_value": 1955.63,
+                "weightage": 0.05
+            },
+            {
+                "isin": "INE603J01030",
+                "security_name": "PI Industries Ltd.",
+                "sector": "Fertilizers & Agrochemicals",
+                "quantity": 70875.0,
+                "market_value": 1926.95,
+                "weightage": 0.05
+            },
+            {
+                "isin": "INE298A01020",
+                "security_name": "Cummins India Ltd.",
+                "sector": "Industrial Products",
+                "quantity": 39200.0,
+                "market_value": 1764.04,
+                "weightage": 0.04
+            },
+            {
+                "isin": "INE596I01020",
+                "security_name": "Computer Age Management Services Ltd.",
+                "sector": "Capital Markets",
+                "quantity": 275250.0,
+                "market_value": 1722.51,
+                "weightage": 0.04
+            },
+            {
+                "isin": "INE540L01014",
+                "security_name": "Alkem Laboratories Ltd.",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 31250.0,
+                "market_value": 1655.94,
+                "weightage": 0.04
+            },
+            {
+                "isin": "INE118A01012",
+                "security_name": "Bajaj Holdings & Investment Ltd.",
+                "sector": "Finance",
+                "quantity": 17650.0,
+                "market_value": 1543.67,
+                "weightage": 0.04
+            },
+            {
+                "isin": "INE259A01022",
+                "security_name": "Colgate Palmolive (India) Ltd.",
+                "sector": "Personal Products",
+                "quantity": 82800.0,
+                "market_value": 1481.04,
+                "weightage": 0.04
+            },
+            {
+                "isin": "INE027H01010",
+                "security_name": "Max Healthcare Institute Ltd.",
+                "sector": "Healthcare Services",
+                "quantity": 153825.0,
+                "market_value": 1480.26,
+                "weightage": 0.04
+            },
+            {
+                "isin": "INE634S01028",
+                "security_name": "Mankind Pharma Ltd.",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 68625.0,
+                "market_value": 1376.48,
+                "weightage": 0.03
+            },
+            {
+                "isin": "INE685A01028",
+                "security_name": "Torrent Pharmaceuticals Ltd.",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 32000.0,
+                "market_value": 1350.46,
+                "weightage": 0.03
+            },
+            {
+                "isin": "INE031A01017",
+                "security_name": "Housing and Urban Development Corporation Ltd.",
+                "sector": "Finance",
+                "quantity": 790875.0,
+                "market_value": 1262.08,
+                "weightage": 0.03
+            },
+            {
+                "isin": "INE067A01029",
+                "security_name": "CG Power and Industrial Solutions Ltd.",
+                "sector": "Electrical Equipment",
+                "quantity": 174250.0,
+                "market_value": 1141.42,
+                "weightage": 0.03
+            },
+            {
+                "isin": "INE498L01015",
+                "security_name": "L&T Finance Ltd.",
+                "sector": "Finance",
+                "quantity": 407250.0,
+                "market_value": 978.21,
+                "weightage": 0.02
+            },
+            {
+                "isin": "INE881D01027",
+                "security_name": "Oracle Financial Services Software Ltd.",
+                "sector": "IT - Software",
+                "quantity": 14400.0,
+                "market_value": 969.26,
+                "weightage": 0.02
+            },
+            {
+                "isin": "INE813H01021",
+                "security_name": "Torrent Power Ltd.",
+                "sector": "Power",
+                "quantity": 71825.0,
+                "market_value": 937.89,
+                "weightage": 0.02
+            },
+            {
+                "isin": "INE371P01015",
+                "security_name": "Amber Enterprises India Ltd.",
+                "sector": "Consumer Durables",
+                "quantity": 13100.0,
+                "market_value": 857.92,
+                "weightage": 0.02
+            },
+            {
+                "isin": "INE022Q01020",
+                "security_name": "Indian Energy Exchange Ltd.",
+                "sector": "Capital Markets",
+                "quantity": 645000.0,
+                "market_value": 740.14,
+                "weightage": 0.02
+            },
+            {
+                "isin": "INE974X01010",
+                "security_name": "Tube Investments of India Ltd.",
+                "sector": "Auto Components",
+                "quantity": 29000.0,
+                "market_value": 730.02,
+                "weightage": 0.02
+            },
+            {
+                "isin": "INE089A01031",
+                "security_name": "Dr. Reddy's Laboratories Ltd.",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 57500.0,
+                "market_value": 721.57,
+                "weightage": 0.02
+            },
+            {
+                "isin": "INE00R701025",
+                "security_name": "Dalmia Bharat Ltd.",
+                "sector": "Cement & Cement Products",
+                "quantity": 35100.0,
+                "market_value": 624.5,
+                "weightage": 0.02
+            },
+            {
+                "isin": "INE692A01016",
+                "security_name": "Union Bank of India",
+                "sector": "Banks",
+                "quantity": 345150.0,
+                "market_value": 566.74,
+                "weightage": 0.01
+            },
+            {
+                "isin": "INE669C01036",
+                "security_name": "Tech Mahindra Ltd.",
+                "sector": "IT - Software",
+                "quantity": 38400.0,
+                "market_value": 531.46,
+                "weightage": 0.01
+            },
+            {
+                "isin": "INE04I401011",
+                "security_name": "KPIT Technologies Ltd.",
+                "sector": "IT - Software",
+                "quantity": 78625.0,
+                "market_value": 499.07,
+                "weightage": 0.01
+            },
+            {
+                "isin": "INE646L01027",
+                "security_name": "Interglobe Aviation Ltd.",
+                "sector": "Transport Services",
+                "quantity": 12600.0,
+                "market_value": 496.88,
+                "weightage": 0.01
+            },
+            {
+                "isin": "INE318A01026",
+                "security_name": "Pidilite Industries Ltd.",
+                "sector": "Chemicals & Petrochemicals",
+                "quantity": 18500.0,
+                "market_value": 237.73,
+                "weightage": 0.01
+            },
+            {
+                "isin": "INE935N01020",
+                "security_name": "Dixon Technologies (India) Ltd.",
+                "sector": "Consumer Durables",
+                "quantity": 2150.0,
+                "market_value": 207.97,
+                "weightage": 0.01
+            },
+            {
+                "isin": "INE765G01017",
+                "security_name": "ICICI Lombard General Insurance Company Ltd.",
+                "sector": "Insurance",
+                "quantity": 12025.0,
+                "market_value": 205.7,
+                "weightage": 0.01
+            },
+            {
+                "isin": "INE472A01039",
+                "security_name": "Blue Star Ltd.",
+                "sector": "Consumer Durables",
+                "quantity": 10400.0,
+                "market_value": 167.51,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE860A01027",
+                "security_name": "HCL Technologies Ltd.",
+                "sector": "IT - Software",
+                "quantity": 10500.0,
+                "market_value": 140.87,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE749A01030",
+                "security_name": "Jindal Steel Ltd.",
+                "sector": "Ferrous Metals",
+                "quantity": 11875.0,
+                "market_value": 132.18,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE531F01023",
+                "security_name": "Nuvama Wealth Management Ltd.",
+                "sector": "Capital Markets",
+                "quantity": 11000.0,
+                "market_value": 127.72,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE192R01011",
+                "security_name": "Avenue Supermarts Ltd.",
+                "sector": "Retailing",
+                "quantity": 1950.0,
+                "market_value": 77.16,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE195A01028",
+                "security_name": "Supreme Industries Ltd.",
+                "sector": "Industrial Products",
+                "quantity": 1925.0,
+                "market_value": 72.09,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE663F01032",
+                "security_name": "Info Edge (India) Ltd.",
+                "sector": "Retailing",
+                "quantity": 1500.0,
+                "market_value": 14.52,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE274J01014",
+                "security_name": "Oil India Ltd.",
+                "sector": "Oil",
+                "quantity": 2800.0,
+                "market_value": 13.31,
+                "weightage": 0.0
+            },
+            {
+                "isin": "INE891K07887",
+                "security_name": "Axis Finance Ltd.",
+                "sector": "CRISIL AAA",
+                "quantity": 30000.0,
+                "market_value": 29984.88,
+                "weightage": 0.73
+            },
+            {
+                "isin": "INE020B08FC8",
+                "security_name": "REC Ltd.",
+                "sector": "[ICRA]AAA",
+                "quantity": 15000.0,
+                "market_value": 14991.08,
+                "weightage": 0.37
+            },
+            {
+                "isin": "INE163N08263",
+                "security_name": "ONGC Petro Additions Ltd.",
+                "sector": "CRISIL AA+",
+                "quantity": 5000.0,
+                "market_value": 4999.05,
+                "weightage": 0.12
+            },
+            {
+                "isin": "INE494B04019",
+                "security_name": "TVS Motor Company Ltd.",
+                "sector": "CARE A1+",
+                "quantity": 3025400.0,
+                "market_value": 310.1,
+                "weightage": 0.01
+            },
+            {
+                "isin": "INE121A14XR5",
+                "security_name": "Cholamandalam Investment & Finance Co. Ltd.",
+                "sector": "CRISIL A1+",
+                "quantity": 4000.0,
+                "market_value": 19729.14,
+                "weightage": 0.48
+            },
+            {
+                "isin": "INE121A14XW5",
+                "security_name": "Cholamandalam Investment & Finance Co. Ltd.",
+                "sector": "CRISIL A1+",
+                "quantity": 4000.0,
+                "market_value": 19675.96,
+                "weightage": 0.48
+            },
+            {
+                "isin": "INE121A14XO2",
+                "security_name": "Cholamandalam Investment & Finance Co. Ltd.",
+                "sector": "CRISIL A1+",
+                "quantity": 1000.0,
+                "market_value": 4935.75,
+                "weightage": 0.12
+            },
+            {
+                "isin": "INE976I14QF4",
+                "security_name": "TATA Capital Ltd.",
+                "sector": "CRISIL A1+",
+                "quantity": 1000.0,
+                "market_value": 4914.61,
+                "weightage": 0.12
+            },
+            {
+                "isin": "INE160A16UD4",
+                "security_name": "Punjab National Bank",
+                "sector": "CRISIL A1+",
+                "quantity": 10000.0,
+                "market_value": 47116.15,
+                "weightage": 1.15
+            },
+            {
+                "isin": "INE028A16LG5",
+                "security_name": "Bank of Baroda",
+                "sector": "IND A1+",
+                "quantity": 10000.0,
+                "market_value": 47107.6,
+                "weightage": 1.15
+            },
+            {
+                "isin": "INE028A16JF1",
+                "security_name": "Bank of Baroda",
+                "sector": "IND A1+",
+                "quantity": 7000.0,
+                "market_value": 34226.5,
+                "weightage": 0.83
+            },
+            {
+                "isin": "INE692A16LP9",
+                "security_name": "Union Bank of India",
+                "sector": "[ICRA]A1+",
+                "quantity": 5000.0,
+                "market_value": 23378.45,
+                "weightage": 0.57
+            },
+            {
+                "isin": "INE556F16CD0",
+                "security_name": "Small Industries Development Bank of India",
+                "sector": "CRISIL A1+",
+                "quantity": 5000.0,
+                "market_value": 23350.98,
+                "weightage": 0.57
+            },
+            {
+                "isin": "INE028A16KR4",
+                "security_name": "Bank of Baroda",
+                "sector": "IND A1+",
+                "quantity": 4000.0,
+                "market_value": 19741.6,
+                "weightage": 0.48
+            },
+            {
+                "isin": "INE949L16DR3",
+                "security_name": "AU Small Finance Bank Ltd.",
+                "sector": "CRISIL A1+",
+                "quantity": 3000.0,
+                "market_value": 14768.31,
+                "weightage": 0.36
+            },
+            {
+                "isin": "INE063P16BB2",
+                "security_name": "Equitas Small Finance Bank Ltd.",
+                "sector": "CRISIL A1+",
+                "quantity": 3000.0,
+                "market_value": 14441.46,
+                "weightage": 0.35
+            },
+            {
+                "isin": "IN002025Z344",
+                "security_name": "364 DAY T-BILL 19.11.26",
+                "sector": "Sovereign",
+                "quantity": 2300000.0,
+                "market_value": 2222.18,
+                "weightage": 0.05
+            },
+            {
+                "isin": "INF200K01SZ5",
+                "security_name": "SBI Savings Fund - Direct Plan - Growth Option",
+                "sector": "Mutual Fund/ETF",
+                "quantity": 726722883.088,
+                "market_value": 337974.83,
+                "weightage": 8.23
+            },
+            {
+                "isin": "INF200K01UT4",
+                "security_name": "SBI Liquid Fund - Direct Plan - Growth Option",
+                "sector": "Mutual Fund/ETF",
+                "quantity": 6824454.435,
+                "market_value": 293868.75,
+                "weightage": 7.16
+            },
+            {
+                "isin": "INF200K01VM7",
+                "security_name": "SBI Low Duration Fund - Direct Plan - Growth Option",
+                "sector": "Mutual Fund/ETF",
+                "quantity": 2904125.125,
+                "market_value": 110162.44,
+                "weightage": 2.68
+            },
+            {
+                "isin": "INF200K01TF5",
+                "security_name": "SBI Ultra Short Duration Fund - Direct Plan - Cash Option",
+                "sector": "Mutual Fund/ETF",
+                "quantity": 1176705.955,
+                "market_value": 74860.36,
+                "weightage": 1.82
+            }
+        ]
+    }
+]

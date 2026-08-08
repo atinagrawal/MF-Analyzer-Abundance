@@ -1,0 +1,63 @@
+[
+    {
+        "scheme_name": "Portfolio",
+        "holdings": [
+            {
+                "isin": "IN000330C042",
+                "security_name": "GOI STRIPS - Mat 190330^",
+                "sector": "Sovereign",
+                "quantity": 8346000.0,
+                "market_value": 6344.8,
+                "weightage": 38.69
+            },
+            {
+                "isin": "IN000929C041",
+                "security_name": "GOI STRIPS - Mat 190929^",
+                "sector": "Sovereign",
+                "quantity": 3626000.0,
+                "market_value": 2869.98,
+                "weightage": 17.5
+            },
+            {
+                "isin": "IN000230C028",
+                "security_name": "GOI STRIPS - Mat 220230^",
+                "sector": "Sovereign",
+                "quantity": 3042000.0,
+                "market_value": 2325.85,
+                "weightage": 14.18
+            },
+            {
+                "isin": "IN000430C016",
+                "security_name": "GOI STRIPS - Mat 260430^",
+                "sector": "Sovereign",
+                "quantity": 2547600.0,
+                "market_value": 1921.17,
+                "weightage": 11.72
+            },
+            {
+                "isin": "IN0020200070",
+                "security_name": "5.79% GOI MAT 110530^",
+                "sector": "Sovereign",
+                "quantity": 1600000.0,
+                "market_value": 1543.55,
+                "weightage": 9.41
+            },
+            {
+                "isin": "IN000130C012",
+                "security_name": "GOI STRIPS - Mat 020130^",
+                "sector": "Sovereign",
+                "quantity": 1037500.0,
+                "market_value": 801.65,
+                "weightage": 4.89
+            },
+            {
+                "isin": "IN000330C059",
+                "security_name": "GOI STRIPS - Mat 120330^",
+                "sector": "Sovereign",
+                "quantity": 500000.0,
+                "market_value": 380.68,
+                "weightage": 2.32
+            }
+        ]
+    }
+]

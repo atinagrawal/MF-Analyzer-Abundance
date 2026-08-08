@@ -1,0 +1,23 @@
+[
+    {
+        "scheme_name": "Portfolio Statement",
+        "holdings": [
+            {
+                "isin": "IN0020210244",
+                "security_name": "6.54% GOI (MD 17/01/2032)",
+                "sector": "SOVEREIGN",
+                "quantity": 33555000.0,
+                "market_value": 32891.85,
+                "weightage": 76.22
+            },
+            {
+                "isin": "IN0020210095",
+                "security_name": "6.1% GOI (MD 12/07/2031)",
+                "sector": "SOVEREIGN",
+                "quantity": 9025000.0,
+                "market_value": 8686.27,
+                "weightage": 20.13
+            }
+        ]
+    }
+]

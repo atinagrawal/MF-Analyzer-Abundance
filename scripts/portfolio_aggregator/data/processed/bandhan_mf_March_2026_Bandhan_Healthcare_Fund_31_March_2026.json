@@ -1,0 +1,279 @@
+[
+    {
+        "scheme_name": "Portfolio Statement",
+        "holdings": [
+            {
+                "isin": "INE044A01036",
+                "security_name": "Sun Pharmaceutical Industries Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 150000.0,
+                "market_value": 2635.8,
+                "weightage": 9.65
+            },
+            {
+                "isin": "INE437A01024",
+                "security_name": "Apollo Hospitals Enterprise Limited",
+                "sector": "Healthcare Services",
+                "quantity": 33000.0,
+                "market_value": 2448.27,
+                "weightage": 8.97
+            },
+            {
+                "isin": "INE361B01024",
+                "security_name": "Divi's Laboratories Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 34000.0,
+                "market_value": 2021.98,
+                "weightage": 7.3999999999999995
+            },
+            {
+                "isin": "INE027H01010",
+                "security_name": "Max Healthcare Institute Limited",
+                "sector": "Healthcare Services",
+                "quantity": 202500.0,
+                "market_value": 1948.66,
+                "weightage": 7.140000000000001
+            },
+            {
+                "isin": "INE089A01031",
+                "security_name": "Dr. Reddy's Laboratories Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 155000.0,
+                "market_value": 1945.1,
+                "weightage": 7.12
+            },
+            {
+                "isin": "INE059A01026",
+                "security_name": "Cipla Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 150000.0,
+                "market_value": 1836.3,
+                "weightage": 6.72
+            },
+            {
+                "isin": "INE572A01036",
+                "security_name": "JB Chemicals & Pharmaceuticals Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 65000.0,
+                "market_value": 1341.86,
+                "weightage": 4.91
+            },
+            {
+                "isin": "INE326A01037",
+                "security_name": "Lupin Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 45000.0,
+                "market_value": 1041.26,
+                "weightage": 3.81
+            },
+            {
+                "isin": "INE634S01028",
+                "security_name": "Mankind Pharma Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 45000.0,
+                "market_value": 902.61,
+                "weightage": 3.3099999999999996
+            },
+            {
+                "isin": "INE031B01049",
+                "security_name": "Ajanta Pharma Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 30000.0,
+                "market_value": 841.53,
+                "weightage": 3.08
+            },
+            {
+                "isin": "INE935A01035",
+                "security_name": "Glenmark Pharmaceuticals Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 38000.0,
+                "market_value": 810.05,
+                "weightage": 2.97
+            },
+            {
+                "isin": "INE406A01037",
+                "security_name": "Aurobindo Pharma Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 60000.0,
+                "market_value": 782.64,
+                "weightage": 2.87
+            },
+            {
+                "isin": "INE600L01024",
+                "security_name": "Dr. Lal Path Labs Limited",
+                "sector": "Healthcare Services",
+                "quantity": 58000.0,
+                "market_value": 761.02,
+                "weightage": 2.79
+            },
+            {
+                "isin": "INE474Q01031",
+                "security_name": "Global Health Limited",
+                "sector": "Healthcare Services",
+                "quantity": 70000.0,
+                "market_value": 672.77,
+                "weightage": 2.46
+            },
+            {
+                "isin": "INE358A01014",
+                "security_name": "Abbott India Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 2200.0,
+                "market_value": 570.13,
+                "weightage": 2.09
+            },
+            {
+                "isin": "INE961O01016",
+                "security_name": "Rainbow Childrens Medicare Limited",
+                "sector": "Healthcare Services",
+                "quantity": 45000.0,
+                "market_value": 523.4,
+                "weightage": 1.92
+            },
+            {
+                "isin": "INE398R01022",
+                "security_name": "Syngene International Limited",
+                "sector": "Healthcare Services",
+                "quantity": 130000.0,
+                "market_value": 506.87,
+                "weightage": 1.8599999999999999
+            },
+            {
+                "isin": "INE159A01016",
+                "security_name": "GlaxoSmithKline Pharmaceuticals Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 22000.0,
+                "market_value": 502.26,
+                "weightage": 1.8399999999999999
+            },
+            {
+                "isin": "INE967H01025",
+                "security_name": "Krishna Institute Of Medical Sciences Limited",
+                "sector": "Healthcare Services",
+                "quantity": 80000.0,
+                "market_value": 497.2,
+                "weightage": 1.82
+            },
+            {
+                "isin": "INE570L01029",
+                "security_name": "Sai Life Sciences Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 50000.0,
+                "market_value": 486.0,
+                "weightage": 1.78
+            },
+            {
+                "isin": "INE182A01018",
+                "security_name": "Pfizer Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 10000.0,
+                "market_value": 472.05,
+                "weightage": 1.73
+            },
+            {
+                "isin": "INE790G01031",
+                "security_name": "Shilpa Medicare Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 125000.0,
+                "market_value": 436.13,
+                "weightage": 1.6
+            },
+            {
+                "isin": "INE914M01019",
+                "security_name": "Aster DM Healthcare Limited",
+                "sector": "Healthcare Services",
+                "quantity": 60000.0,
+                "market_value": 402.0,
+                "weightage": 1.47
+            },
+            {
+                "isin": "INE575P01011",
+                "security_name": "Star Health And Allied Insurance Company Limited",
+                "sector": "Insurance",
+                "quantity": 80000.0,
+                "market_value": 366.0,
+                "weightage": 1.34
+            },
+            {
+                "isin": "INE058A01010",
+                "security_name": "Sanofi India Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 10000.0,
+                "market_value": 320.97,
+                "weightage": 1.18
+            },
+            {
+                "isin": "INE700A01033",
+                "security_name": "Jubilant Pharmova Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 30000.0,
+                "market_value": 244.94,
+                "weightage": 0.8999999999999999
+            },
+            {
+                "isin": "INE456Z01021",
+                "security_name": "Medi Assist Healthcare Services Limited",
+                "sector": "Insurance",
+                "quantity": 80000.0,
+                "market_value": 237.4,
+                "weightage": 0.8699999999999999
+            },
+            {
+                "isin": "INE075I01017",
+                "security_name": "Healthcare Global Enterprises Limited",
+                "sector": "Healthcare Services",
+                "quantity": 43874.0,
+                "market_value": 230.43,
+                "weightage": 0.84
+            },
+            {
+                "isin": "INE338H01029",
+                "security_name": "Concord Biotech Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 20000.0,
+                "market_value": 203.68,
+                "weightage": 0.75
+            },
+            {
+                "isin": "INE03QK01018",
+                "security_name": "Cohance Lifesciences Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 60000.0,
+                "market_value": 180.87,
+                "weightage": 0.66
+            },
+            {
+                "isin": "INE571A01038",
+                "security_name": "IPCA Laboratories Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 10000.0,
+                "market_value": 160.12,
+                "weightage": 0.59
+            },
+            {
+                "isin": "INE191A01027",
+                "security_name": "Orchid Pharma Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 23988.0,
+                "market_value": 115.73,
+                "weightage": 0.42
+            },
+            {
+                "isin": "INE0KBH01020",
+                "security_name": "Blue Jet Healthcare Ltd",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 30000.0,
+                "market_value": 98.18,
+                "weightage": 0.36
+            },
+            {
+                "isin": "INE115Q01022",
+                "security_name": "Inventurus Knowledge Solutions Limited",
+                "sector": "IT - Services",
+                "quantity": 5000.0,
+                "market_value": 66.42,
+                "weightage": 0.24
+            }
+        ]
+    }
+]

@@ -1,0 +1,271 @@
+[
+    {
+        "scheme_name": "SBI Automotive Opportunities Fund",
+        "holdings": [
+            {
+                "isin": "INE101A01026",
+                "security_name": "Mahindra & Mahindra Ltd.",
+                "sector": "Automobiles",
+                "quantity": 2000000.0,
+                "market_value": 59094.0,
+                "weightage": 12.8
+            },
+            {
+                "isin": "INE066A01021",
+                "security_name": "Eicher Motors Ltd.",
+                "sector": "Automobiles",
+                "quantity": 520000.0,
+                "market_value": 34247.2,
+                "weightage": 7.42
+            },
+            {
+                "isin": "INE585B01010",
+                "security_name": "Maruti Suzuki India Ltd.",
+                "sector": "Automobiles",
+                "quantity": 200000.0,
+                "market_value": 24612.0,
+                "weightage": 5.33
+            },
+            {
+                "isin": "INE494B01023",
+                "security_name": "TVS Motor Company Ltd.",
+                "sector": "Automobiles",
+                "quantity": 700000.0,
+                "market_value": 23546.6,
+                "weightage": 5.1
+            },
+            {
+                "isin": "INE465A01025",
+                "security_name": "Bharat Forge Ltd.",
+                "sector": "Auto Components",
+                "quantity": 1320000.0,
+                "market_value": 22104.72,
+                "weightage": 4.79
+            },
+            {
+                "isin": "INE342J01019",
+                "security_name": "ZF Commercial Vehicle Control Systems India Ltd.",
+                "sector": "Auto Components",
+                "quantity": 140000.0,
+                "market_value": 19275.2,
+                "weightage": 4.18
+            },
+            {
+                "isin": "INE073K01018",
+                "security_name": "Sona Blw Precision Forgings Ltd.",
+                "sector": "Auto Components",
+                "quantity": 4000000.0,
+                "market_value": 19260.0,
+                "weightage": 4.17
+            },
+            {
+                "isin": "INE953O01021",
+                "security_name": "Sansera Engineering Ltd.",
+                "sector": "Auto Components",
+                "quantity": 900000.0,
+                "market_value": 18670.5,
+                "weightage": 4.04
+            },
+            {
+                "isin": "INE1TAE01010",
+                "security_name": "Tata Motors Ltd.",
+                "sector": "Agricultural, Commercial & Construction Vehicles",
+                "quantity": 4500000.0,
+                "market_value": 17766.0,
+                "weightage": 3.85
+            },
+            {
+                "isin": "INE19RI01016",
+                "security_name": "Tenneco Clean Air India Ltd.",
+                "sector": "Auto Components",
+                "quantity": 3300000.0,
+                "market_value": 16998.3,
+                "weightage": 3.68
+            },
+            {
+                "isin": "INE775A01035",
+                "security_name": "Samvardhana Motherson International Ltd.",
+                "sector": "Auto Components",
+                "quantity": 16000000.0,
+                "market_value": 16812.8,
+                "weightage": 3.64
+            },
+            {
+                "isin": "INE00LO01017",
+                "security_name": "Craftsman Automation Ltd.",
+                "sector": "Auto Components",
+                "quantity": 240000.0,
+                "market_value": 16744.8,
+                "weightage": 3.63
+            },
+            {
+                "isin": "INE330T01021",
+                "security_name": "Happy Forgings Ltd.",
+                "sector": "Industrial Products",
+                "quantity": 1441493.0,
+                "market_value": 16665.1,
+                "weightage": 3.61
+            },
+            {
+                "isin": "INE0LEZ01016",
+                "security_name": "Ather Energy Ltd.",
+                "sector": "Automobiles",
+                "quantity": 2000000.0,
+                "market_value": 15080.0,
+                "weightage": 3.27
+            },
+            {
+                "isin": "INE405E01023",
+                "security_name": "UNO Minda Ltd.",
+                "sector": "Auto Components",
+                "quantity": 1400000.0,
+                "market_value": 14442.4,
+                "weightage": 3.13
+            },
+            {
+                "isin": "INE325A01013",
+                "security_name": "Timken India Ltd.",
+                "sector": "Industrial Products",
+                "quantity": 400000.0,
+                "market_value": 12901.2,
+                "weightage": 2.79
+            },
+            {
+                "isin": "INE513A01022",
+                "security_name": "Schaeffler India Ltd.",
+                "sector": "Auto Components",
+                "quantity": 320000.0,
+                "market_value": 12303.36,
+                "weightage": 2.67
+            },
+            {
+                "isin": "INE894V01022",
+                "security_name": "Belrise Industries Ltd.",
+                "sector": "Auto Components",
+                "quantity": 6400000.0,
+                "market_value": 11903.36,
+                "weightage": 2.58
+            },
+            {
+                "isin": "INE524A01029",
+                "security_name": "Gabriel India Ltd.",
+                "sector": "Auto Components",
+                "quantity": 1320000.0,
+                "market_value": 10907.82,
+                "weightage": 2.36
+            },
+            {
+                "isin": "INE842C01021",
+                "security_name": "Minda Corporation Ltd.",
+                "sector": "Auto Components",
+                "quantity": 1800000.0,
+                "market_value": 9101.7,
+                "weightage": 1.97
+            },
+            {
+                "isin": "INE473D01015",
+                "security_name": "Kingfa Science & Technology India Ltd.",
+                "sector": "Industrial Products",
+                "quantity": 200000.0,
+                "market_value": 8387.6,
+                "weightage": 1.81
+            },
+            {
+                "isin": "INE491J01022",
+                "security_name": "ASK Automotive Ltd.",
+                "sector": "Auto Components",
+                "quantity": 1800000.0,
+                "market_value": 8005.5,
+                "weightage": 1.73
+            },
+            {
+                "isin": "INE913H01037",
+                "security_name": "Endurance Technologies Ltd.",
+                "sector": "Auto Components",
+                "quantity": 360000.0,
+                "market_value": 7970.04,
+                "weightage": 1.73
+            },
+            {
+                "isin": "INE00XB01019",
+                "security_name": "Sedemac Mechatronics Ltd.",
+                "sector": "Auto Components",
+                "quantity": 500000.0,
+                "market_value": 7567.0,
+                "weightage": 1.64
+            },
+            {
+                "isin": "INE439A01020",
+                "security_name": "Asahi India Glass Ltd.",
+                "sector": "Auto Components",
+                "quantity": 800000.0,
+                "market_value": 6275.2,
+                "weightage": 1.36
+            },
+            {
+                "isin": "INE208A01029",
+                "security_name": "Ashok Leyland Ltd.",
+                "sector": "Agricultural, Commercial & Construction Vehicles",
+                "quantity": 4000000.0,
+                "market_value": 6165.2,
+                "weightage": 1.34
+            },
+            {
+                "isin": "INE387A01021",
+                "security_name": "Sundram Fasteners Ltd.",
+                "sector": "Auto Components",
+                "quantity": 700000.0,
+                "market_value": 5243.35,
+                "weightage": 1.14
+            },
+            {
+                "isin": "INE974X01010",
+                "security_name": "Tube Investments of India Ltd.",
+                "sector": "Auto Components",
+                "quantity": 200000.0,
+                "market_value": 5034.6,
+                "weightage": 1.09
+            },
+            {
+                "isin": "INE787D01026",
+                "security_name": "Balkrishna Industries Ltd.",
+                "sector": "Auto Components",
+                "quantity": 150000.0,
+                "market_value": 3124.5,
+                "weightage": 0.68
+            },
+            {
+                "isin": "INE062D01024",
+                "security_name": "Alicon Castalloy Ltd.",
+                "sector": "Auto Components",
+                "quantity": 500000.0,
+                "market_value": 2931.5,
+                "weightage": 0.64
+            },
+            {
+                "isin": "INE0Q3R01026",
+                "security_name": "Sundaram Clayton Ltd.",
+                "sector": "Auto Components",
+                "quantity": 204000.0,
+                "market_value": 2432.09,
+                "weightage": 0.53
+            },
+            {
+                "isin": "INE645S01024",
+                "security_name": "Rolex Rings Ltd.",
+                "sector": "Auto Components",
+                "quantity": 1500000.0,
+                "market_value": 1665.0,
+                "weightage": 0.36
+            },
+            {
+                "isin": "IN002025Z344",
+                "security_name": "364 DAY T-BILL 19.11.26",
+                "sector": "Sovereign",
+                "quantity": 500000.0,
+                "market_value": 483.08,
+                "weightage": 0.1
+            }
+        ]
+    }
+]

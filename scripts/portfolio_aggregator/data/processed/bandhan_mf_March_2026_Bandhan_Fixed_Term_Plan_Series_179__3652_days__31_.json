@@ -1,0 +1,215 @@
+[
+    {
+        "scheme_name": "Portfolio Statement",
+        "holdings": [
+            {
+                "isin": "IN3320180174",
+                "security_name": "8.43% Uttar Pradesh SDL (MD 06/03/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 7537600.0,
+                "market_value": 7831.54,
+                "weightage": 21.42
+            },
+            {
+                "isin": "IN3120180226",
+                "security_name": "8.37% Tamilnadu SDL (MD 06/03/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 6150000.0,
+                "market_value": 6388.18,
+                "weightage": 17.47
+            },
+            {
+                "isin": "IN1520180317",
+                "security_name": "8.35% Gujarat SDL (MD 06/03/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 6140100.0,
+                "market_value": 6374.69,
+                "weightage": 17.44
+            },
+            {
+                "isin": "IN1520180291",
+                "security_name": "8.28% Gujarat SDL (MD 20/02/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 4600000.0,
+                "market_value": 4764.85,
+                "weightage": 13.03
+            },
+            {
+                "isin": "IN1920180164",
+                "security_name": "8.32% Karnataka SDL (MD 06/02/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 1884400.0,
+                "market_value": 1952.97,
+                "weightage": 5.34
+            },
+            {
+                "isin": "IN3320180158",
+                "security_name": "8.32% Uttar Pradesh SDL (MD 13/02/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 1332800.0,
+                "market_value": 1379.92,
+                "weightage": 3.7699999999999996
+            },
+            {
+                "isin": "IN1520180200",
+                "security_name": "8.5% Gujarat SDL (MD 28/11/2028)",
+                "sector": "SOVEREIGN",
+                "quantity": 1000000.0,
+                "market_value": 1042.09,
+                "weightage": 2.85
+            },
+            {
+                "isin": "IN1920180149",
+                "security_name": "8.19% Karnataka SDL (MD 23/01/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 630000.0,
+                "market_value": 650.59,
+                "weightage": 1.78
+            },
+            {
+                "isin": "IN1520180283",
+                "security_name": "8.28% Gujarat SDL (MD 13/02/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 563300.0,
+                "market_value": 583.36,
+                "weightage": 1.6
+            },
+            {
+                "isin": "IN2020180146",
+                "security_name": "8.31% Kerala SDL (MD 13/02/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 520000.0,
+                "market_value": 538.16,
+                "weightage": 1.47
+            },
+            {
+                "isin": "IN1520180309",
+                "security_name": "8.38% Gujarat SDL (MD 27/02/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 500000.0,
+                "market_value": 519.33,
+                "weightage": 1.4200000000000002
+            },
+            {
+                "isin": "IN2020180138",
+                "security_name": "8.35% Kerala SDL (MD 06/02/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 500000.0,
+                "market_value": 517.86,
+                "weightage": 1.4200000000000002
+            },
+            {
+                "isin": "IN1020220720",
+                "security_name": "7.7% Andhra Pradesh SDL (MD 08/03/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 500000.0,
+                "market_value": 508.76,
+                "weightage": 1.39
+            },
+            {
+                "isin": "IN2220180060",
+                "security_name": "8.26% Maharashtra SDL (MD 02/01/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 485000.0,
+                "market_value": 501.38,
+                "weightage": 1.37
+            },
+            {
+                "isin": "IN1520180259",
+                "security_name": "8.27% Gujarat SDL (MD 09/01/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 370000.0,
+                "market_value": 382.67,
+                "weightage": 1.05
+            },
+            {
+                "isin": "IN3120180192",
+                "security_name": "8.18% Tamilnadu SDL (MD 19/12/2028)",
+                "sector": "SOVEREIGN",
+                "quantity": 344000.0,
+                "market_value": 356.07,
+                "weightage": 0.97
+            },
+            {
+                "isin": "IN1520180275",
+                "security_name": "8.3% Gujarat SDL (MD 06/02/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 256800.0,
+                "market_value": 266.01,
+                "weightage": 0.73
+            },
+            {
+                "isin": "IN3120180168",
+                "security_name": "8.53% Tamilnadu SDL (MD 28/11/2028)",
+                "sector": "SOVEREIGN",
+                "quantity": 205000.0,
+                "market_value": 213.78,
+                "weightage": 0.58
+            },
+            {
+                "isin": "IN1920180123",
+                "security_name": "8.28% Karnataka SDL (MD 09/01/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 173400.0,
+                "market_value": 179.38,
+                "weightage": 0.49
+            },
+            {
+                "isin": "IN1920180172",
+                "security_name": "8.3% Karnataka SDL (MD 20/02/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 125000.0,
+                "market_value": 129.54,
+                "weightage": 0.35000000000000003
+            },
+            {
+                "isin": "IN1520180226",
+                "security_name": "8.17% Gujarat SDL (MD 19/12/2028)",
+                "sector": "SOVEREIGN",
+                "quantity": 75000.0,
+                "market_value": 77.61,
+                "weightage": 0.21
+            },
+            {
+                "isin": "IN2220180052",
+                "security_name": "8.08% Maharashtra SDL (MD 26/12/2028)",
+                "sector": "SOVEREIGN",
+                "quantity": 75000.0,
+                "market_value": 77.46,
+                "weightage": 0.21
+            },
+            {
+                "isin": "IN3320180166",
+                "security_name": "8.45% Uttar Pradesh SDL (MD 27/02/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 40000.0,
+                "market_value": 41.57,
+                "weightage": 0.11
+            },
+            {
+                "isin": "IN1320180061",
+                "security_name": "8.44% Bihar SDL (MD 06/03/2029)",
+                "sector": "SOVEREIGN",
+                "quantity": 34700.0,
+                "market_value": 36.0,
+                "weightage": 0.1
+            },
+            {
+                "isin": "IN3120180200",
+                "security_name": "8.08% Tamilnadu SDL (MD 26/12/2028)",
+                "sector": "SOVEREIGN",
+                "quantity": 11000.0,
+                "market_value": 11.36,
+                "weightage": 0.03
+            },
+            {
+                "isin": "IN3120180184",
+                "security_name": "8.36% Tamil Nadu SDL (MD 12/12/2028)",
+                "sector": "SOVEREIGN",
+                "quantity": 10600.0,
+                "market_value": 11.02,
+                "weightage": 0.03
+            }
+        ]
+    }
+]

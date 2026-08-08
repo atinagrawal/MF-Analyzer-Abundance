@@ -11,7 +11,10 @@ export default function robots() {
         disallow: ['/api/', '/admin', '/admin/', '/login', '/proposal-studio/view/'],
       },
     ],
-    sitemap: 'https://mfcalc.getabundance.in/sitemap.xml',
+    sitemap: [
+      'https://mfcalc.getabundance.in/sitemap.xml',
+      'https://mfcalc.getabundance.in/sitemap-funds.xml',
+    ],
     host: 'https://mfcalc.getabundance.in',
   };
 }

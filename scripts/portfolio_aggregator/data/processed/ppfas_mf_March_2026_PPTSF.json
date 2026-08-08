@@ -1,0 +1,399 @@
+[
+    {
+        "scheme_name": "Parag Parikh ELSS Tax Saver Fund (An open ended equity linked saving scheme with a statutory lock in of 3 years and tax benefit)",
+        "holdings": [
+            {
+                "isin": "INE040A01034",
+                "security_name": "HDFC Bank Limited",
+                "sector": "Banks",
+                "quantity": 5771785.0,
+                "market_value": 42223.49,
+                "weightage": 8.03
+            },
+            {
+                "isin": "INE752E01010",
+                "security_name": "Power Grid Corporation of India Limited",
+                "sector": "Power",
+                "quantity": 13647455.0,
+                "market_value": 40410.11,
+                "weightage": 7.68
+            },
+            {
+                "isin": "INE522F01014",
+                "security_name": "Coal India Limited",
+                "sector": "Consumable Fuels",
+                "quantity": 8209670.0,
+                "market_value": 36980.46,
+                "weightage": 7.03
+            },
+            {
+                "isin": "INE118A01012",
+                "security_name": "Bajaj Holdings & Investment Limited",
+                "sector": "Finance",
+                "quantity": 352751.0,
+                "market_value": 30851.6,
+                "weightage": 5.86
+            },
+            {
+                "isin": "INE154A01025",
+                "security_name": "ITC Limited",
+                "sector": "Diversified FMCG",
+                "quantity": 9312837.0,
+                "market_value": 26793.03,
+                "weightage": 5.09
+            },
+            {
+                "isin": "INE288A01013",
+                "security_name": "Maharashtra Scooters Limited",
+                "sector": "Finance",
+                "quantity": 236284.0,
+                "market_value": 26248.79,
+                "weightage": 4.99
+            },
+            {
+                "isin": "INE090A01021",
+                "security_name": "ICICI Bank Limited",
+                "sector": "Banks",
+                "quantity": 2035120.0,
+                "market_value": 24541.51,
+                "weightage": 4.67
+            },
+            {
+                "isin": "INE237A01036",
+                "security_name": "Kotak Mahindra Bank Limited",
+                "sector": "Banks",
+                "quantity": 6089925.0,
+                "market_value": 21521.79,
+                "weightage": 4.09
+            },
+            {
+                "isin": "INE860A01027",
+                "security_name": "HCL Technologies Limited",
+                "sector": "IT - Software",
+                "quantity": 1595041.0,
+                "market_value": 21399.07,
+                "weightage": 4.07
+            },
+            {
+                "isin": "INE585B01010",
+                "security_name": "Maruti Suzuki India Limited",
+                "sector": "Automobiles",
+                "quantity": 159145.0,
+                "market_value": 19584.38,
+                "weightage": 3.7199999999999998
+            },
+            {
+                "isin": "INE009A01021",
+                "security_name": "Infosys Limited",
+                "sector": "IT - Software",
+                "quantity": 1502022.0,
+                "market_value": 18784.29,
+                "weightage": 3.5700000000000003
+            },
+            {
+                "isin": "INE397D01024",
+                "security_name": "Bharti Airtel Limited",
+                "sector": "Telecom - Services",
+                "quantity": 1048262.0,
+                "market_value": 18684.22,
+                "weightage": 3.55
+            },
+            {
+                "isin": "INE238A01034",
+                "security_name": "Axis Bank Limited",
+                "sector": "Banks",
+                "quantity": 1598937.0,
+                "market_value": 18568.46,
+                "weightage": 3.53
+            },
+            {
+                "isin": "INE101A01026",
+                "security_name": "Mahindra & Mahindra Limited",
+                "sector": "Automobiles",
+                "quantity": 626849.0,
+                "market_value": 18521.51,
+                "weightage": 3.52
+            },
+            {
+                "isin": "INE925R01014",
+                "security_name": "CMS Info System Limited",
+                "sector": "Commercial Services & Supplies",
+                "quantity": 6167029.0,
+                "market_value": 16379.63,
+                "weightage": 3.11
+            },
+            {
+                "isin": "INE421D01022",
+                "security_name": "CCL Products (India) Limited",
+                "sector": "Agricultural Food & other Products",
+                "quantity": 1401976.0,
+                "market_value": 14597.37,
+                "weightage": 2.77
+            },
+            {
+                "isin": "INE467B01029",
+                "security_name": "Tata Consultancy Services Limited",
+                "sector": "IT - Software",
+                "quantity": 455117.0,
+                "market_value": 10735.75,
+                "weightage": 2.04
+            },
+            {
+                "isin": "INE075A01022",
+                "security_name": "Wipro Limited",
+                "sector": "IT - Software",
+                "quantity": 4936754.0,
+                "market_value": 9263.33,
+                "weightage": 1.76
+            },
+            {
+                "isin": "INE089A01031",
+                "security_name": "Dr. Reddy's Laboratories Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 609491.0,
+                "market_value": 7648.5,
+                "weightage": 1.4500000000000002
+            },
+            {
+                "isin": "INE010B01027",
+                "security_name": "Zydus Lifesciences Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 812824.0,
+                "market_value": 7081.32,
+                "weightage": 1.35
+            },
+            {
+                "isin": "INE059A01026",
+                "security_name": "Cipla Limited",
+                "sector": "Pharmaceuticals & Biotechnology",
+                "quantity": 549046.0,
+                "market_value": 6721.42,
+                "weightage": 1.28
+            },
+            {
+                "isin": "INE768C01028",
+                "security_name": "Zydus Wellness Limited",
+                "sector": "Food Products",
+                "quantity": 1163620.0,
+                "market_value": 4961.09,
+                "weightage": 0.9400000000000001
+            },
+            {
+                "isin": "INE710A01016",
+                "security_name": "VST Industries Limited",
+                "sector": "Cigarettes & Tobacco Products",
+                "quantity": 2309159.0,
+                "market_value": 4619.93,
+                "weightage": 0.88
+            },
+            {
+                "isin": "INE022Q01020",
+                "security_name": "Indian Energy Exchange Limited",
+                "sector": "Capital Markets",
+                "quantity": 3951545.0,
+                "market_value": 4534.4,
+                "weightage": 0.86
+            },
+            {
+                "isin": "INE126A01031",
+                "security_name": "EID Parry India Limited",
+                "sector": "Food Products",
+                "quantity": 331899.0,
+                "market_value": 2573.88,
+                "weightage": 0.49
+            },
+            {
+                "isin": "INE787D01026",
+                "security_name": "Balkrishna Industries Limited",
+                "sector": "Auto Components",
+                "quantity": 119748.0,
+                "market_value": 2494.35,
+                "weightage": 0.47000000000000003
+            },
+            {
+                "isin": "INE017A01032",
+                "security_name": "The Great Eastern Shipping Company Limited",
+                "sector": "Transport Services",
+                "quantity": 134254.0,
+                "market_value": 1899.29,
+                "weightage": 0.36
+            },
+            {
+                "isin": "INE410P01011",
+                "security_name": "Narayana Hrudayalaya Limited",
+                "sector": "Healthcare Services",
+                "quantity": 104790.0,
+                "market_value": 1682.19,
+                "weightage": 0.32
+            },
+            {
+                "isin": "INE736A01011",
+                "security_name": "Central Depository Services (India) Limited",
+                "sector": "Capital Markets",
+                "quantity": 103262.0,
+                "market_value": 1155.91,
+                "weightage": 0.22
+            },
+            {
+                "isin": "INE277A01016",
+                "security_name": "Swaraj Engines Limited",
+                "sector": "Industrial Products",
+                "quantity": 31709.0,
+                "market_value": 1049.22,
+                "weightage": 0.2
+            },
+            {
+                "isin": "INE976A01021",
+                "security_name": "West Coast Paper Mills Limited",
+                "sector": "Paper, Forest & Jute Products",
+                "quantity": 140059.0,
+                "market_value": 569.62,
+                "weightage": 0.11
+            },
+            {
+                "isin": "INE121J01017",
+                "security_name": "Indus Towers Limited",
+                "sector": "Telecom - Services",
+                "quantity": 100000.0,
+                "market_value": 418.15,
+                "weightage": 0.08
+            },
+            {
+                "isin": "INE209A01019",
+                "security_name": "Sundrop Brands Ltd",
+                "sector": "Agricultural Food & other Products",
+                "quantity": 72838.0,
+                "market_value": 408.51,
+                "weightage": 0.08
+            },
+            {
+                "isin": "INE725G01011",
+                "security_name": "ICRA Limited",
+                "sector": "Capital Markets",
+                "quantity": 5803.0,
+                "market_value": 290.32,
+                "weightage": 0.06
+            },
+            {
+                "isin": "INE536H01010",
+                "security_name": "CIE Automotive India Limited",
+                "sector": "Auto Components",
+                "quantity": 34765.0,
+                "market_value": 154.7,
+                "weightage": 0.03
+            },
+            {
+                "isin": "INE317F01035",
+                "security_name": "Nesco Limited",
+                "sector": "Commercial Services & Supplies",
+                "quantity": 15060.0,
+                "market_value": 152.71,
+                "weightage": 0.03
+            },
+            {
+                "isin": "INE203G01027",
+                "security_name": "Indraprastha Gas Limited",
+                "sector": "Gas",
+                "quantity": 47293.0,
+                "market_value": 68.87,
+                "weightage": 0.01
+            },
+            {
+                "isin": "INE002S01010",
+                "security_name": "Mahanagar Gas Limited",
+                "sector": "Gas",
+                "quantity": 3840.0,
+                "market_value": 35.62,
+                "weightage": 0.01
+            },
+            {
+                "isin": "INE041025011",
+                "security_name": "Embassy Office Parks REIT",
+                "sector": "Realty",
+                "quantity": 3212391.0,
+                "market_value": 13501.36,
+                "weightage": 2.5700000000000003
+            },
+            {
+                "isin": "INE0FDU25010",
+                "security_name": "Brookfield India Real Estate Trust",
+                "sector": "Realty",
+                "quantity": 4069460.0,
+                "market_value": 13172.44,
+                "weightage": 2.5
+            },
+            {
+                "isin": "INE028A16KE2",
+                "security_name": "Bank of Baroda (16/10/2026)",
+                "sector": "IND A1+",
+                "quantity": 1000.0,
+                "market_value": 4809.67,
+                "weightage": 0.91
+            },
+            {
+                "isin": "INE238AD6AT7",
+                "security_name": "Axis Bank Limited (11/06/2026) #",
+                "sector": "CRISIL A1+",
+                "quantity": 500.0,
+                "market_value": 2464.53,
+                "weightage": 0.47000000000000003
+            },
+            {
+                "isin": "INE763G14C53",
+                "security_name": "ICICI Securities Limited (15/06/2026)",
+                "sector": "CRISIL A1+",
+                "quantity": 1000.0,
+                "market_value": 4920.88,
+                "weightage": 0.9400000000000001
+            },
+            {
+                "isin": "INE296A14A81",
+                "security_name": "Bajaj Finance Limited (18/06/2026)",
+                "sector": "CRISIL A1+",
+                "quantity": 1000.0,
+                "market_value": 4919.32,
+                "weightage": 0.9400000000000001
+            },
+            {
+                "isin": "INE700G14SJ0",
+                "security_name": "HDFC Securities Limited (15/05/2026)",
+                "sector": "CARE A1+",
+                "quantity": 500.0,
+                "market_value": 2475.01,
+                "weightage": 0.47000000000000003
+            },
+            {
+                "isin": "INE020B14698",
+                "security_name": "REC Limited (10/06/2026)",
+                "sector": "CRISIL A1+",
+                "quantity": 500.0,
+                "market_value": 2464.95,
+                "weightage": 0.47000000000000003
+            },
+            {
+                "isin": "INE261F14OH8",
+                "security_name": "National Bank For Agriculture and Rural Development (25/06/2026)",
+                "sector": "CRISIL A1+",
+                "quantity": 500.0,
+                "market_value": 2456.64,
+                "weightage": 0.47000000000000003
+            },
+            {
+                "isin": "IN002025Z419",
+                "security_name": "364 Days Tbill (MD 15/01/2027)",
+                "sector": "Sovereign",
+                "quantity": 1000000.0,
+                "market_value": 956.82,
+                "weightage": 0.18
+            },
+            {
+                "isin": "IN002025Z187",
+                "security_name": "364 Days Tbill (MD 30/07/2026)",
+                "sector": "Sovereign",
+                "quantity": 500000.0,
+                "market_value": 491.28,
+                "weightage": 0.09
+            }
+        ]
+    }
+]
