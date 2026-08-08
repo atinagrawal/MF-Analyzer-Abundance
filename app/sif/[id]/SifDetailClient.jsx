@@ -42,6 +42,10 @@ export default function SifDetailClient({ id }) {
   const [copied, setCopied] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
 
+  const [benchIdx, setBenchIdx] = useState('BSE 250 LargeMidCap 65:35 Index');
+  const [chartPeriod, setChartPeriod] = useState('All');
+  const [chartMode, setChartMode] = useState('reindexed'); // 'reindexed' | 'raw'
+
   // 1. Fetch SIF Record
   useEffect(() => {
     setLoading(true);
@@ -53,6 +57,9 @@ export default function SifDetailClient({ id }) {
       })
       .then((d) => {
         setSif(d.scheme);
+        if (/arbitrage/i.test(d.scheme?.category || '')) setBenchIdx('BSE Arbitrage Rate Index');
+        else if (/liquid/i.test(d.scheme?.category || '')) setBenchIdx('BSE Liquid Rate Index');
+        else setBenchIdx('BSE 250 LargeMidCap 65:35 Index');
         setLoading(false);
       })
       .catch((e) => {
@@ -91,30 +98,29 @@ export default function SifDetailClient({ id }) {
         setHistLoading(false);
       })
       .catch(() => setHistLoading(false));
+  }, [sif]);
 
-    // Fetch Benchmark Series (BSE Benchmark matching SIF strategy)
-    const benchmarkIndex = /arbitrage/i.test(sif.category)
-      ? 'BSE Arbitrage Rate Index'
-      : /liquid/i.test(sif.category)
-      ? 'BSE Liquid Rate Index'
-      : 'BSE 250 LargeMidCap 65:35 Index';
-
-    fetch(`/api/nifty-tri?index=${encodeURIComponent(benchmarkIndex)}`)
+  // 3. Fetch Benchmark Series when benchIdx changes
+  useEffect(() => {
+    if (!sif) return;
+    setBenchPts(null);
+    fetch(`/api/nifty-tri?index=${encodeURIComponent(benchIdx)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d?.data?.length) {
+          const MONTHS = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11 };
           const bPts = d.data
             .map((r) => {
-              const dt = new Date(r.date).getTime();
-              return { t: dt, v: Number(r.value) };
+              const [dd, mon, yy] = r.date.split(' ');
+              return { t: Date.UTC(+yy, MONTHS[mon], +dd), v: Number(r.value) };
             })
-            .filter((p) => !isNaN(p.t) && isFinite(p.v))
+            .filter((p) => !isNaN(p.t) && isFinite(p.v) && p.v > 0)
             .sort((a, b) => a.t - b.t);
           setBenchPts(bPts);
         }
       })
       .catch(() => {});
-  }, [sif]);
+  }, [sif, benchIdx]);
 
   const copyShareLink = () => {
     if (typeof window === 'undefined') return;
@@ -123,24 +129,65 @@ export default function SifDetailClient({ id }) {
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const cleanName = sif ? sif.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim() : '';
+
+  // Filter NAV and Benchmark series by selected chart period
+  const filteredNavPts = useMemo(() => {
+    if (!navPts || chartPeriod === 'All') return navPts;
+    const months = chartPeriod === '1M' ? 1 : chartPeriod === '3M' ? 3 : chartPeriod === '6M' ? 6 : 12;
+    const cutoff = Date.now() - months * 30.4375 * 86400000;
+    return navPts.filter((p) => p.t >= cutoff);
+  }, [navPts, chartPeriod]);
+
+  const filteredBenchPts = useMemo(() => {
+    if (!benchPts || chartPeriod === 'All') return benchPts;
+    const months = chartPeriod === '1M' ? 1 : chartPeriod === '3M' ? 3 : chartPeriod === '6M' ? 6 : 12;
+    const cutoff = Date.now() - months * 30.4375 * 86400000;
+    return benchPts.filter((p) => p.t >= cutoff);
+  }, [benchPts, chartPeriod]);
+
   const chartSeries = useMemo(() => {
-    if (!navPts || navPts.length < 2) return null;
+    if (!filteredNavPts || filteredNavPts.length < 2) return null;
+
+    if (chartMode === 'raw') {
+      return [
+        {
+          name: cleanName || 'SIF NAV',
+          color: filteredNavPts[filteredNavPts.length - 1].v >= filteredNavPts[0].v ? '#2e7d32' : '#b71c1c',
+          data: filteredNavPts,
+        },
+      ];
+    }
+
+    // Re-indexed mode (Growth of ₹10,000)
+    const baseT = Math.max(filteredNavPts[0].t, filteredBenchPts?.[0]?.t ?? filteredNavPts[0].t);
+    const navSlice = filteredNavPts.filter((p) => p.t >= baseT);
+    const navBase = navSlice[0]?.v;
+    if (!navBase) return null;
+
+    const normNav = navSlice.map((p) => ({ t: p.t, v: (p.v / navBase) * 10000 }));
     const series = [
       {
-        name: sif?.nav_name || 'SIF NAV',
-        color: navPts[navPts.length - 1].v >= navPts[0].v ? '#2e7d32' : '#b71c1c',
-        data: navPts,
+        name: cleanName,
+        color: '#1b5e20',
+        data: normNav,
       },
     ];
-    if (benchPts && benchPts.length >= 2) {
-      series.push({
-        name: 'Benchmark Index',
-        color: '#0288d1',
-        data: benchPts,
-      });
+
+    if (filteredBenchPts && filteredBenchPts.length >= 2) {
+      const benchSlice = filteredBenchPts.filter((p) => p.t >= baseT);
+      const benchBase = benchSlice[0]?.v;
+      if (benchBase) {
+        const normBench = benchSlice.map((p) => ({ t: p.t, v: (p.v / benchBase) * 10000 }));
+        series.push({
+          name: `Benchmark (${benchIdx})`,
+          color: '#0288d1',
+          data: normBench,
+        });
+      }
     }
     return series;
-  }, [navPts, benchPts, sif]);
+  }, [filteredNavPts, filteredBenchPts, chartMode, cleanName, benchIdx]);
 
   if (loading) {
     return (
@@ -169,7 +216,6 @@ export default function SifDetailClient({ id }) {
     );
   }
 
-  const cleanName = sif.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim();
   const fam = sif.category?.startsWith('Equity') ? 'Equity' : 'Hybrid';
   const stratTitle = sifStratShort(sif.category);
 
@@ -273,16 +319,96 @@ export default function SifDetailClient({ id }) {
 
         {/* NAV Growth Chart Card */}
         <div className="sif-card">
-          <div className="sif-card-h">
-            <span>📈 Historical NAV Performance &amp; Benchmark</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 500 }}>
-              {navPts ? `${navPts.length} daily NAV records` : 'Loading series…'}
-            </span>
+          <div className="sif-card-h" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
+            <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+              <span>📈 NAV Growth &amp; Benchmark Comparison</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Benchmark:</span>
+                <select
+                  value={benchIdx}
+                  onChange={(e) => setBenchIdx(e.target.value)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 8,
+                    fontSize: '0.78rem',
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface)',
+                    color: 'var(--text)',
+                    fontWeight: 600,
+                  }}
+                >
+                  <option value="BSE 250 LargeMidCap 65:35 Index">BSE 250 LargeMidCap 65:35</option>
+                  <option value="BSE 500">BSE 500</option>
+                  <option value="BSE Arbitrage Rate Index">BSE Arbitrage Index</option>
+                  <option value="BSE Liquid Rate Index">BSE Liquid Rate Index</option>
+                  <option value="BSE India Corporate Bond Index">BSE Corporate Bond</option>
+                  <option value="BSE India 10 Year Sovereign Bond">BSE 10Y Sovereign Bond</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Timeframe & Mode Toolbar */}
+            <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {['1M', '3M', '6M', '1Y', 'All'].map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setChartPeriod(p)}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      border: '1px solid var(--border)',
+                      background: chartPeriod === p ? 'var(--g1)' : 'var(--s2)',
+                      color: chartPeriod === p ? '#fff' : 'var(--text2)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={() => setChartMode('reindexed')}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    border: '1px solid var(--border)',
+                    background: chartMode === 'reindexed' ? 'var(--s2)' : 'transparent',
+                    color: chartMode === 'reindexed' ? 'var(--text)' : 'var(--muted)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Growth of ₹10k
+                </button>
+                <button
+                  onClick={() => setChartMode('raw')}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    border: '1px solid var(--border)',
+                    background: chartMode === 'raw' ? 'var(--s2)' : 'transparent',
+                    color: chartMode === 'raw' ? 'var(--text)' : 'var(--muted)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Raw NAV
+                </button>
+              </div>
+            </div>
           </div>
+
           {histLoading ? (
-            <div className="sif-load">Fetching NAV historical data…</div>
+            <div className="sif-load">Fetching NAV historical series…</div>
           ) : !chartSeries ? (
-            <div className="sif-err">Historical NAV series is populating as daily NAVs are updated.</div>
+            <div className="sif-err">Historical NAV series is populating as daily NAVs update.</div>
           ) : (
             <CompareGrowthChart series={chartSeries} showLegend={true} />
           )}
