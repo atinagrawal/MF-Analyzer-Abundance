@@ -586,12 +586,6 @@ export default function ScreenerClient({ initialCategory }) {
                   <tr>
                     <th style={{ width: 32, textAlign: 'center', color: 'var(--muted)', fontSize: '.65rem' }} title="Add to compare (max 3)">⚖</th>
                     <th className="scr-name-h">Fund</th>
-                    {sifCat === 'all' && (
-                      <th className={`scr-sortable ${sifSort.key === 'category' ? 'active' : ''}`} style={{textAlign:'left'}} onClick={() => setSifSortKey('category')}>Strategy{sifSort.key === 'category' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
-                    )}
-                    {sifHouse === 'all' && (
-                      <th className={`scr-sortable ${sifSort.key === 'sif_name' ? 'active' : ''}`} style={{textAlign:'left'}} onClick={() => setSifSortKey('sif_name')}>Fund House{sifSort.key === 'sif_name' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
-                    )}
                     {visibleCols.map((m) => (
                       <th key={m.key} className={`scr-sortable ${sifSort.key === m.key ? 'active' : ''}`} onClick={() => setSifSortKey(m.key)}>
                         {m.label}{sifSort.key === m.key ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}
@@ -600,51 +594,38 @@ export default function ScreenerClient({ initialCategory }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {sifVisible.map((s) => {
-                    const fam = s.category?.startsWith('Equity') ? 'Equity' : 'Hybrid';
-                    return (
-                      <tr key={s.scheme_id} className={`scr-row${isComparing('sif', s.scheme_id) ? ' row-comparing' : ''}`} onClick={() => setSifSel(s)}>
-                        <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', paddingLeft: 8, paddingRight: 4 }}>
-                          <input
-                            type="checkbox"
-                            className="cmp-chk"
-                            checked={isComparing('sif', s.scheme_id)}
-                            onChange={() => toggleCompare(s, 'sif')}
-                            disabled={!isComparing('sif', s.scheme_id) && compareList.length >= MAX_COMPARE}
-                            title={isComparing('sif', s.scheme_id) ? 'Remove from compare' : compareList.length >= MAX_COMPARE ? 'Max 3 selected' : 'Add to compare'}
-                            aria-label={`Compare ${s.nav_name}`}
+                  {sifVisible.map((s) => (
+                    <tr key={s.scheme_id} className={`scr-row${isComparing('sif', s.scheme_id) ? ' row-comparing' : ''}`} onClick={() => setSifSel(s)}>
+                      <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', paddingLeft: 8, paddingRight: 4 }}>
+                        <input
+                          type="checkbox"
+                          className="cmp-chk"
+                          checked={isComparing('sif', s.scheme_id)}
+                          onChange={() => toggleCompare(s, 'sif')}
+                          disabled={!isComparing('sif', s.scheme_id) && compareList.length >= MAX_COMPARE}
+                          title={isComparing('sif', s.scheme_id) ? 'Remove from compare' : compareList.length >= MAX_COMPARE ? 'Max 3 selected' : 'Add to compare'}
+                          aria-label={`Compare ${s.nav_name}`}
+                        />
+                      </td>
+                      <td className="scr-name">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <ProviderAvatar
+                            name={s.sif_name}
+                            logoPath={getSIFLogo(s.sif_name)}
+                            size={26}
+                            radius={6}
                           />
-                        </td>
-                        <td className="scr-name">
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <ProviderAvatar
-                              name={s.sif_name}
-                              logoPath={getSIFLogo(s.sif_name)}
-                              size={26}
-                              radius={6}
-                            />
-                            <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSifSel(s); }}>
-                              <span className="scr-fund-n">{s.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim()}</span>
-                              <span className="scr-fund-sub">
-                                {s.sif_name}{sifCat === 'all' && sifHouse !== 'all' ? ` · ${sifStratShort(s.category)}` : ''} · {s.scheme_id}
-                              </span>
-                            </button>
-                          </div>
-                        </td>
-                        {sifCat === 'all' && (
-                          <td style={{textAlign:'left'}}>
-                            <span className={`scr-sif-badge scr-sif-badge-${fam.toLowerCase()}`}>{sifStratShort(s.category)}</span>
-                          </td>
-                        )}
-                        {sifHouse === 'all' && (
-                          <td style={{textAlign:'left',color:'var(--text2)',fontSize:'12px',fontWeight:600}}>{s.sif_name}</td>
-                        )}
-                        {visibleCols.map((m) => (
-                          <td key={m.key} className={cellCls(m, s[m.key])}>{m.kind === 'ratio' ? <b>{fmtCell(m, s[m.key])}</b> : fmtCell(m, s[m.key])}</td>
-                        ))}
-                      </tr>
-                    );
-                  })}
+                          <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSifSel(s); }}>
+                            <span className="scr-fund-n">{s.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim()}</span>
+                            <span className="scr-fund-sub">{s.scheme_id}</span>
+                          </button>
+                        </div>
+                      </td>
+                      {visibleCols.map((m) => (
+                        <td key={m.key} className={cellCls(m, s[m.key])}>{m.kind === 'ratio' ? <b>{fmtCell(m, s[m.key])}</b> : fmtCell(m, s[m.key])}</td>
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
