@@ -151,6 +151,7 @@ export function exportProposalPDF({
     'Asset Allocation',
     'Sector & Security Exposure',
     readyFunds.length >= 2 ? 'Portfolio Overlap' : null,
+    'Historical Performance (CAGR)',
     mCapIndex ? 'M-Cap Allocation' : null,
     'Growth Projection',
   ].filter(Boolean);
@@ -194,6 +195,37 @@ export function exportProposalPDF({
       <tbody>${grid.map((row, i) => `<tr><th style="text-align:left">${esc(names[i])}</th>${row.map((v, j) => `<td class="num${i === j ? ' diag' : ''}">${v.toFixed(1)}%</td>`).join('')}</tr>`).join('')}</tbody></table>
       </div>`;
   }
+
+  const perfFmt = (v) => (v == null || isNaN(v) ? '—' : (v > 0 ? '+' : '') + Number(v).toFixed(1) + '%');
+  const perfCls = (v) => (v == null || isNaN(v) ? '' : v >= 0 ? 'pos' : 'neg');
+  const perfRows = selectedFunds.map((f) => {
+    const d = holdingsByFund[f.amfiCode];
+    return `<tr>
+      <td style="text-align:left">${esc(f.schemeName)}</td>
+      <td class="num ${perfCls(d?.ret1y)}">${perfFmt(d?.ret1y)}</td>
+      <td class="num ${perfCls(d?.ret3y)}">${perfFmt(d?.ret3y)}</td>
+      <td class="num ${perfCls(d?.ret5y)}">${perfFmt(d?.ret5y)}</td>
+      <td class="num ${perfCls(d?.retInception)}">${perfFmt(d?.retInception)}</td>
+    </tr>`;
+  }).join('');
+
+  const perfHTML = `
+    <div class="sec-block">
+    <div class="sec">Historical Performance (CAGR Returns)</div>
+    <table class="ptable">
+      <thead>
+        <tr>
+          <th style="text-align:left">Fund Name</th>
+          <th class="num">1 Year</th>
+          <th class="num">3 Year</th>
+          <th class="num">5 Year</th>
+          <th class="num">Since Inception</th>
+        </tr>
+      </thead>
+      <tbody>${perfRows}</tbody>
+    </table>
+    <p style="font-size:.55rem;color:#5e8a5e;margin-top:6px;">3Y, 5Y and Since Inception returns are compound annual growth rates (CAGR). Past performance may or may not be sustained in future and is not a guarantee of any future returns.</p>
+    </div>`;
 
   let mcapHTML = '';
   if (mCapIndex && readyFunds.length > 0) {
@@ -371,6 +403,7 @@ ${exposureSection('Asset Allocation', assetAllocation, 'donut')}
 ${exposureSection('Sector Exposure', sectorExposure, 'bars')}
 ${exposureSection('Security Exposure (Top Holdings)', stockExposure, 'bars')}
 ${overlapHTML}
+${perfHTML}
 ${mcapHTML}
 ${projectionHTML}
 <div class="sec-block">
@@ -531,6 +564,48 @@ export function OverlapGrid({ funds, selectedFunds }) {
           </tbody>
         </table>
       </div>
+    </CollapsibleSection>
+  );
+}
+
+export function HistoricalPerformanceTable({ selectedFunds, holdingsByFund }) {
+  if (!selectedFunds || selectedFunds.length === 0) return null;
+
+  const fmt = (v) => (v == null || isNaN(v) ? '—' : (v > 0 ? '+' : '') + Number(v).toFixed(1) + '%');
+  const cls = (v) => (v == null || isNaN(v) ? 'pfc-muted' : v >= 0 ? 'pfc-pos' : 'pfc-neg');
+
+  return (
+    <CollapsibleSection title="Historical Performance (CAGR Returns)">
+      <div className="pfc-table-wrap">
+        <table className="pfc-table">
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left' }}>Fund Name</th>
+              <th className="pfc-table-pct">1 Year</th>
+              <th className="pfc-table-pct">3 Year</th>
+              <th className="pfc-table-pct">5 Year</th>
+              <th className="pfc-table-pct">Since Inception</th>
+            </tr>
+          </thead>
+          <tbody>
+            {selectedFunds.map((f) => {
+              const d = holdingsByFund[f.amfiCode];
+              return (
+                <tr key={f.amfiCode}>
+                  <td style={{ textAlign: 'left', fontWeight: 700 }}>{f.schemeName}</td>
+                  <td className={`pfc-table-pct ${cls(d?.ret1y)}`}>{fmt(d?.ret1y)}</td>
+                  <td className={`pfc-table-pct ${cls(d?.ret3y)}`}>{fmt(d?.ret3y)}</td>
+                  <td className={`pfc-table-pct ${cls(d?.ret5y)}`}>{fmt(d?.ret5y)}</td>
+                  <td className={`pfc-table-pct ${cls(d?.retInception)}`}>{fmt(d?.retInception)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="pfc-projection-note" style={{ marginTop: '8px', fontSize: '.72rem' }}>
+        * Note: 3Y, 5Y and Since Inception returns are compound annual growth rates (CAGR). Past performance may or may not be sustained in future.
+      </p>
     </CollapsibleSection>
   );
 }
@@ -756,6 +831,8 @@ export function ProposalAnalysisBlock({
       {readyFunds.length === 1 && (
         <div className="pfc-hint">Add another fund to see overlap analysis.</div>
       )}
+
+      <HistoricalPerformanceTable selectedFunds={selectedFunds} holdingsByFund={holdingsByFund} />
 
       {mCapIndex && <MCapTable selectedFunds={selectedFunds} readyFunds={readyFunds} mCapIndex={mCapIndex} allocations={allocations} />}
 

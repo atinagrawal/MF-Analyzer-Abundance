@@ -22,6 +22,7 @@ import sifAum from '@/data/sif-aum.json';
 import amfiSchemeRisk from '@/data/amfi-scheme-risk.json';
 import { fetchRiskometer, matchBenchmarkRisk, matchOwnSchemeRisk } from '@/lib/riskometer';
 import { r2Get, r2Put } from '@/lib/r2';
+import pool from '@/lib/db';
 
 const CACHE_PREFIX = 'portfolio-creator-holdings/';
 const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -254,6 +255,17 @@ async function formatDetailResponse(detail, amfiCode, schemeName) {
     }
   }
 
+  let screenerRec = null;
+  try {
+    const res = await pool.query(
+      `SELECT ret_1y, ret_3y, ret_5y, ret_inception FROM mf_screener WHERE code = $1 OR isin = $2 LIMIT 1`,
+      [amfiCode, detail.isin || '']
+    );
+    if (res.rows.length) screenerRec = res.rows[0];
+  } catch {}
+
+  const parseNum = (v) => (v != null && !isNaN(v) ? parseFloat(v) : null);
+
   return {
     schemeName: resolvedSchemeName,
     aum: detail.aum ?? null,
@@ -268,6 +280,10 @@ async function formatDetailResponse(detail, amfiCode, schemeName) {
     benchmarkName: detail.benchmark_name ?? null,
     minInvestment: detail.min_investment_amount ?? null,
     minSipInvestment: detail.min_sip_investment ?? null,
+    ret1y: parseNum(screenerRec?.ret_1y ?? detail.ret_1y ?? detail.return_1y ?? detail.return_stats?.return_1y),
+    ret3y: parseNum(screenerRec?.ret_3y ?? detail.ret_3y ?? detail.return_3y ?? detail.return_stats?.return_3y),
+    ret5y: parseNum(screenerRec?.ret_5y ?? detail.ret_5y ?? detail.return_5y ?? detail.return_stats?.return_5y),
+    retInception: parseNum(screenerRec?.ret_inception ?? detail.ret_inception ?? detail.return_inception ?? detail.return_stats?.return_inception),
     holdings: normalizeHoldings(detail.holdings),
   };
 }
