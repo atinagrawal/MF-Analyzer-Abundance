@@ -23,16 +23,25 @@ export async function GET() {
         u.image,
         u.role,
         u.plan,
+        u.distributor_id,
+        d.name AS distributor_name,
         u.created_at,
         COUNT(cp.id)::int AS portfolio_count,
         MAX(cp.uploaded_at) AS last_upload
       FROM users u
       LEFT JOIN cas_portfolios cp ON cp.user_id = u.id
-      GROUP BY u.id
+      LEFT JOIN users d ON d.id = u.distributor_id
+      GROUP BY u.id, d.name
       ORDER BY u.created_at DESC
     `);
 
-    return Response.json({ users: result.rows });
+    const dists = await pool.query(`
+      SELECT id, name, email FROM users
+      WHERE role = 'distributor' OR role = 'admin'
+      ORDER BY name ASC
+    `);
+
+    return Response.json({ users: result.rows, distributors: dists.rows });
 
   } catch (err) {
     console.error('[admin/users]', err.name, err.message);
@@ -51,7 +60,7 @@ export async function PATCH(req) {
     if (!session?.user?.id)            return Response.json({ error: 'Unauthorised' }, { status: 401 });
     if (session.user.role !== 'admin') return Response.json({ error: 'Forbidden' },     { status: 403 });
 
-    const { userId, role, plan } = await req.json();
+    const { userId, role, plan, distributorId } = await req.json();
     const VALID_ROLES = ['client', 'distributor', 'admin'];
     const VALID_PLANS = ['free', 'pro', 'pro_lifetime', 'lifetime'];
 
@@ -77,7 +86,12 @@ export async function PATCH(req) {
       await pool.query('UPDATE users SET plan = $1 WHERE id = $2', [plan, userId]);
     }
 
-    return Response.json({ ok: true, userId, role, plan });
+    if (distributorId !== undefined) {
+      const targetDistributor = distributorId ? distributorId : null;
+      await pool.query('UPDATE users SET distributor_id = $1 WHERE id = $2', [targetDistributor, userId]);
+    }
+
+    return Response.json({ ok: true, userId, role, plan, distributorId });
 
   } catch (err) {
     console.error('[admin/users PATCH]', err.name, err.message);

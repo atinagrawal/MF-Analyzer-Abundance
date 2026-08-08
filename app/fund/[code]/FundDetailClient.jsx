@@ -106,6 +106,7 @@ export default function FundDetailClient({ code }) {
 
   const isPaidOrAdmin = Boolean(
     session?.user?.role === 'admin' ||
+      session?.user?.role === 'distributor' ||
       session?.user?.plan === 'pro' ||
       session?.user?.plan === 'pro_lifetime' ||
       session?.user?.plan === 'lifetime' ||

@@ -29,6 +29,7 @@
 
 import { auth } from '@/auth';
 import pool      from '@/lib/db';
+import { canManageUser } from '@/lib/permissions';
 
 const VALID_FUND_TYPES = ['Equity MF', 'Debt MF', 'Hybrid MF', 'Index Fund / ETF', 'SIF', 'Other'];
 
@@ -51,9 +52,9 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const targetUserId = searchParams.get('userId');
 
-    // Non-admins can only read their own holdings
-    if (targetUserId && targetUserId !== session.user.id && session.user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    if (targetUserId && targetUserId !== session.user.id) {
+      const allowed = await canManageUser(session, targetUserId);
+      if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const userId = targetUserId || session.user.id;
@@ -80,14 +81,16 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const session = await auth();
-    if (!session?.user?.id)            return Response.json({ error: 'Unauthorised' }, { status: 401 });
-    if (session.user.role !== 'admin') return Response.json({ error: 'Forbidden' },     { status: 403 });
+    if (!session?.user?.id) return Response.json({ error: 'Unauthorised' }, { status: 401 });
 
     const body = await req.json();
     const { userId, fund_name, amfi_code, fund_type, units, purchase_nav,
             purchase_date, folio, notes, pan } = body;
 
     if (!userId) return Response.json({ error: 'userId is required' }, { status: 400 });
+
+    const allowed = await canManageUser(session, userId);
+    if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
     const validErr = validateHolding({ fund_name, fund_type, units, purchase_nav });
     if (validErr) return Response.json({ error: validErr }, { status: 400 });
@@ -125,14 +128,16 @@ export async function POST(req) {
 export async function PUT(req) {
   try {
     const session = await auth();
-    if (!session?.user?.id)            return Response.json({ error: 'Unauthorised' }, { status: 401 });
-    if (session.user.role !== 'admin') return Response.json({ error: 'Forbidden' },     { status: 403 });
+    if (!session?.user?.id) return Response.json({ error: 'Unauthorised' }, { status: 401 });
 
     const body = await req.json();
     const { id, userId, fund_name, amfi_code, fund_type, units, purchase_nav,
             purchase_date, folio, notes, pan } = body;
 
     if (!id || !userId) return Response.json({ error: 'id and userId are required' }, { status: 400 });
+
+    const allowed = await canManageUser(session, userId);
+    if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
     const validErr = validateHolding({ fund_name, fund_type, units, purchase_nav });
     if (validErr) return Response.json({ error: validErr }, { status: 400 });
@@ -185,14 +190,16 @@ export async function PUT(req) {
 export async function DELETE(req) {
   try {
     const session = await auth();
-    if (!session?.user?.id)            return Response.json({ error: 'Unauthorised' }, { status: 401 });
-    if (session.user.role !== 'admin') return Response.json({ error: 'Forbidden' },     { status: 403 });
+    if (!session?.user?.id) return Response.json({ error: 'Unauthorised' }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
     const id     = searchParams.get('id');
     const userId = searchParams.get('userId');
 
     if (!id || !userId) return Response.json({ error: 'id and userId are required' }, { status: 400 });
+
+    const allowed = await canManageUser(session, userId);
+    if (!allowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
     const result = await pool.query(
       'DELETE FROM manual_holdings WHERE id = $1 AND user_id = $2 RETURNING id',

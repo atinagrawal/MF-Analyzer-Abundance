@@ -10,6 +10,7 @@
 
 import { auth } from '@/auth';
 import pool      from '@/lib/db';
+import { canManageUser } from '@/lib/permissions';
 
 export async function GET(req) {
   try {
@@ -21,9 +22,12 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const targetUserId = searchParams.get('userId');
 
-    // Only admin can query other users
-    if (targetUserId && session.user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    // Verify permission if requesting another user's portfolios
+    if (targetUserId && targetUserId !== session.user.id) {
+      const allowed = await canManageUser(session, targetUserId);
+      if (!allowed) {
+        return Response.json({ error: 'Forbidden' }, { status: 403 });
+      }
     }
 
     const userId = targetUserId || session.user.id;

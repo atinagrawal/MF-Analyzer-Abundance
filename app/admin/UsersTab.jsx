@@ -47,8 +47,8 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-/** Role & Plan dropdowns — reused in both desktop side panel and mobile drill-down. */
-function RoleAndPlanSelect({ user, sessionUserId, roleChanging, planChanging, onRoleChange, onPlanChange }) {
+/** Role, Plan, & Distributor dropdowns — reused in desktop side panel and mobile drill-down. */
+function RoleAndPlanSelect({ user, sessionUserId, distributors = [], roleChanging, planChanging, distributorChanging, onRoleChange, onPlanChange, onDistributorChange }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
       <div className="admin-role-row">
@@ -76,6 +76,23 @@ function RoleAndPlanSelect({ user, sessionUserId, roleChanging, planChanging, on
           <option value="free">Free Plan</option>
           <option value="pro">Pro Plan</option>
           <option value="pro_lifetime">Pro Lifetime</option>
+        </select>
+      </div>
+
+      <div className="admin-role-row">
+        <span className="admin-role-row-label">Assigned MFD</span>
+        <select
+          className="admin-role-select"
+          value={user.distributor_id || ''}
+          disabled={distributorChanging === user.id}
+          onChange={e => onDistributorChange(user.id, e.target.value)}
+        >
+          <option value="">Unassigned (None)</option>
+          {distributors.map(d => (
+            <option key={d.id} value={d.id}>
+              {d.name || d.email}
+            </option>
+          ))}
         </select>
       </div>
     </div>
@@ -200,6 +217,7 @@ function PortfolioList({ selectedUser, portfolios, portsLoading, deletingId, set
 
 export default function UsersTab({ session }) {
   const [users, setUsers]               = useState([]);
+  const [distributors, setDistributors] = useState([]);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
@@ -208,6 +226,7 @@ export default function UsersTab({ session }) {
   const [portsLoading, setPortsLoading] = useState(false);
   const [roleChanging, setRoleChanging] = useState('');
   const [planChanging, setPlanChanging] = useState('');
+  const [distributorChanging, setDistributorChanging] = useState('');
   const [notifying,    setNotifying]    = useState('');
   const [notifyMsg,    setNotifyMsg]    = useState({ id: '', type: '', text: '' });
   const [deletingId,     setDeletingId]     = useState('');
@@ -216,7 +235,11 @@ export default function UsersTab({ session }) {
   useEffect(() => {
     fetch('/api/admin/users')
       .then(r => r.json())
-      .then(d => { if (d.error) throw new Error(d.error); setUsers(d.users); })
+      .then(d => {
+        if (d.error) throw new Error(d.error);
+        setUsers(d.users || []);
+        setDistributors(d.distributors || []);
+      })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -275,6 +298,23 @@ export default function UsersTab({ session }) {
       setSelectedUser(prev => prev && prev.id === userId ? { ...prev, plan: newPlan } : prev);
     } catch (e) { alert(e.message); }
     finally { setPlanChanging(''); }
+  }
+
+  async function changeDistributor(userId, distributorId) {
+    setDistributorChanging(userId);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, distributorId }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      const distObj = distributors.find(x => x.id === distributorId);
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, distributor_id: distributorId, distributor_name: distObj?.name } : u));
+      setSelectedUser(prev => prev && prev.id === userId ? { ...prev, distributor_id: distributorId, distributor_name: distObj?.name } : prev);
+    } catch (e) { alert(e.message); }
+    finally { setDistributorChanging(''); }
   }
 
   async function notifyClient(portfolio) {
@@ -344,10 +384,13 @@ export default function UsersTab({ session }) {
                 <RoleAndPlanSelect
                   user={selectedUser}
                   sessionUserId={session.user.id}
+                  distributors={distributors}
                   roleChanging={roleChanging}
                   planChanging={planChanging}
+                  distributorChanging={distributorChanging}
                   onRoleChange={changeRole}
                   onPlanChange={changePlan}
+                  onDistributorChange={changeDistributor}
                 />
                 <PortfolioList {...detailProps} />
               </div>
@@ -477,10 +520,13 @@ export default function UsersTab({ session }) {
               <RoleAndPlanSelect
                 user={selectedUser}
                 sessionUserId={session.user.id}
+                distributors={distributors}
                 roleChanging={roleChanging}
                 planChanging={planChanging}
+                distributorChanging={distributorChanging}
                 onRoleChange={changeRole}
                 onPlanChange={changePlan}
+                onDistributorChange={changeDistributor}
               />
               <PortfolioList {...detailProps} />
             </div>

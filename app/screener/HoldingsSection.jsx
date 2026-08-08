@@ -101,10 +101,11 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
   const { data: session } = useSession();
   const isPaidOrAdmin = Boolean(
     session?.user?.role === 'admin' ||
-    session?.user?.plan === 'pro' ||
-    session?.user?.plan === 'pro_lifetime' ||
-    session?.user?.plan === 'lifetime' ||
-    session?.user?.isPro
+      session?.user?.role === 'distributor' ||
+      session?.user?.plan === 'pro' ||
+      session?.user?.plan === 'pro_lifetime' ||
+      session?.user?.plan === 'lifetime' ||
+      session?.user?.isPro
   );
 
   if (loading) {

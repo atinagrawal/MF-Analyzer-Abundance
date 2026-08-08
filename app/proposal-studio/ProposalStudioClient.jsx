@@ -15,7 +15,14 @@ import ShareControls from './ShareControls';
 export default function ProposalStudioClient() {
   const { data: session, status } = useSession();
   const isAuthed = status === 'authenticated';
-  const isPro = session?.user?.plan === 'pro';
+  const isPro = Boolean(
+    session?.user?.role === 'admin' ||
+    session?.user?.role === 'distributor' ||
+    session?.user?.plan === 'pro' ||
+    session?.user?.plan === 'pro_lifetime' ||
+    session?.user?.plan === 'lifetime' ||
+    session?.user?.isPro
+  );
 
   return (
     <>

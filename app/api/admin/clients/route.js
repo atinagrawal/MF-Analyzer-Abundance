@@ -18,8 +18,9 @@ import pool      from '@/lib/db';
 export async function POST(req) {
   try {
     const session = await auth();
-    if (!session?.user?.id)            return Response.json({ error: 'Unauthorised' }, { status: 401 });
-    if (session.user.role !== 'admin') return Response.json({ error: 'Forbidden' },     { status: 403 });
+    if (!session?.user?.id) return Response.json({ error: 'Unauthorised' }, { status: 401 });
+    const isAllowed = session.user.role === 'admin' || session.user.role === 'distributor';
+    if (!isAllowed) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
     const { email, name } = await req.json();
 
@@ -31,26 +32,33 @@ export async function POST(req) {
 
     // Check if user already exists
     const existing = await pool.query(
-      'SELECT id, name, role FROM users WHERE email = $1 LIMIT 1',
+      'SELECT id, name, role, distributor_id FROM users WHERE email = $1 LIMIT 1',
       [normalised]
     );
 
     if (existing.rows.length > 0) {
+      const u = existing.rows[0];
+      // If client doesn't have a distributor yet and created by distributor, link them
+      if (!u.distributor_id && session.user.role === 'distributor') {
+        await pool.query(
+          'UPDATE users SET distributor_id = $1, created_by = COALESCE(created_by, $1) WHERE id = $2',
+          [session.user.id, u.id]
+        );
+      }
       return Response.json({
-        userId:  existing.rows[0].id,
+        userId:  u.id,
         created: false,
-        role:    existing.rows[0].role,
+        role:    u.role,
       });
     }
 
-    // Create pending user — no image, no emailVerified (they haven't signed in yet).
-    // role defaults to 'client'. When they sign in with Google, NextAuth finds this
-    // row by email and updates name/image/emailVerified automatically.
+    // Create pending user — defaults to role 'client'
+    const distributorId = session.user.role === 'distributor' ? session.user.id : null;
     const result = await pool.query(
-      `INSERT INTO users (name, email, role, created_at)
-       VALUES ($1, $2, 'client', NOW())
+      `INSERT INTO users (name, email, role, distributor_id, created_by, created_at)
+       VALUES ($1, $2, 'client', $3, $4, NOW())
        RETURNING id`,
-      [name?.trim() || null, normalised]
+      [name?.trim() || null, normalised, distributorId, session.user.id]
     );
 
     return Response.json({
