@@ -257,12 +257,50 @@ async function formatDetailResponse(detail, amfiCode, schemeName) {
 
   let screenerRec = null;
   try {
-    const res = await pool.query(
-      `SELECT ret_1y, ret_3y, ret_5y, ret_inception FROM mf_screener WHERE code = $1 OR isin = $2 LIMIT 1`,
-      [amfiCode, detail.isin || '']
-    );
-    if (res.rows.length) screenerRec = res.rows[0];
-  } catch {}
+    const codesToTry = [
+      amfiCode,
+      detail.scheme_code,
+      detail.direct_scheme_code,
+      detail.regular_scheme_code,
+    ].filter(Boolean).map(String);
+
+    const term = cleanSearchTerm(resolvedSchemeName);
+
+    // 1. Try exact code matches
+    for (const c of codesToTry) {
+      const res = await pool.query(
+        `SELECT code, name, ret_1y, ret_3y, ret_5y, ret_inception FROM mf_screener WHERE code = $1`,
+        [c]
+      );
+      if (res.rows.length) {
+        const row = res.rows[0];
+        if (cleanSearchTerm(row.name).toLowerCase() === term.toLowerCase() || res.rows.length === 1) {
+          screenerRec = row;
+          break;
+        }
+      }
+    }
+
+    // 2. Try ISIN if available and not yet matched
+    if (!screenerRec && detail.isin) {
+      const res = await pool.query(
+        `SELECT code, name, ret_1y, ret_3y, ret_5y, ret_inception FROM mf_screener WHERE isin = $1 LIMIT 1`,
+        [detail.isin]
+      );
+      if (res.rows.length) screenerRec = res.rows[0];
+    }
+
+    // 3. Fallback: match by normalized scheme name ILIKE
+    if (!screenerRec && term.length >= 3) {
+      const res = await pool.query(
+        `SELECT code, name, ret_1y, ret_3y, ret_5y, ret_inception FROM mf_screener WHERE name ILIKE $1 ORDER BY length(name) ASC LIMIT 1`,
+        [`%${term}%`]
+      );
+      if (res.rows.length) screenerRec = res.rows[0];
+    }
+  } catch (err) {
+    console.warn('[proposal-studio/holdings] screener lookup error:', err.message);
+  }
 
   const parseNum = (v) => (v != null && !isNaN(v) ? parseFloat(v) : null);
 
