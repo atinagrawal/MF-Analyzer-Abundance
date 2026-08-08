@@ -240,6 +240,15 @@ export default function FundDetailClient({ code }) {
     showBench ? filteredBench : null
   );
 
+  // Chart date-range info bar
+  const chartFromDate = filteredNav?.length
+    ? new Date(filteredNav[0].t).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    : null;
+  const chartToDate = filteredNav?.length
+    ? new Date(filteredNav[filteredNav.length - 1].t).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    : null;
+  const chartDataPts = filteredNav?.length ?? 0;
+
   const ageYrs = f.age_years != null ? Math.floor(f.age_years) : null;
   const navFormatted = f.nav != null ? `₹${Number(f.nav).toFixed(4)}` : null;
   const launchDate = f.inception_date
@@ -551,36 +560,60 @@ export default function FundDetailClient({ code }) {
             <div className="fd-section-head">
               <div className="fd-section-icon">📊</div>
               <span className="fd-section-title">NAV Growth &amp; Benchmark Overlay</span>
-              <span className="fd-section-sub">Normalised to 100</span>
+              <span className="fd-section-sub">Base 100 normalised</span>
             </div>
 
+            {/* Period segmented control + benchmark selector */}
             <div className="fd-chart-controls">
-              {['1Y', '3Y', '5Y', 'All'].map((p) => (
-                <button
-                  key={p}
-                  className={`fd-period-pill${chartPeriod === p ? ' active' : ''}`}
-                  onClick={() => setChartPeriod(p)}
-                >
-                  {p}
-                </button>
-              ))}
-              <div className="fd-chart-spacer" />
-              <select
-                className="fd-benchmark-select"
-                value={benchIdx}
-                onChange={(e) => { setBenchIdx(e.target.value); setShowBench(true); }}
-              >
-                {BENCHMARK_OPTIONS.map((b) => (
-                  <option key={b} value={b}>{b}</option>
+              {/* Segmented pill group */}
+              <div className="fd-period-group">
+                {['1Y', '3Y', '5Y', 'All'].map((p) => (
+                  <button
+                    key={p}
+                    className={`fd-period-pill${chartPeriod === p ? ' active' : ''}`}
+                    onClick={() => setChartPeriod(p)}
+                  >
+                    {p}
+                  </button>
                 ))}
-              </select>
-              <button
-                className={`fd-toggle-pill${showBench ? ' active' : ''}`}
-                onClick={() => setShowBench((s) => !s)}
-              >
-                Benchmark
-              </button>
+              </div>
+              <div className="fd-chart-spacer" />
+              {/* Benchmark controls */}
+              <div className="fd-benchmark-controls">
+                <select
+                  className="fd-benchmark-select"
+                  value={benchIdx}
+                  onChange={(e) => { setBenchIdx(e.target.value); setShowBench(true); }}
+                >
+                  {BENCHMARK_OPTIONS.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+                <button
+                  className={`fd-toggle-pill${showBench ? ' active' : ''}`}
+                  onClick={() => setShowBench((s) => !s)}
+                >
+                  Benchmark
+                </button>
+              </div>
             </div>
+
+            {/* Date range info bar */}
+            {chartFromDate && (
+              <div className="fd-chart-info-bar">
+                <span className="fd-chart-info-label">
+                  {chartPeriod === 'All' ? 'Full history' : `Last ${chartPeriod}`}
+                  {normBench && showBench && ` · vs ${benchIdx}`}
+                </span>
+                <div className="fd-chart-info-dates">
+                  <span>{chartFromDate}</span>
+                  <span className="fd-chart-date-sep">→</span>
+                  <span>{chartToDate}</span>
+                  <span className="fd-chart-date-sep">·</span>
+                  <span>{chartDataPts} data points</span>
+                </div>
+              </div>
+            )}
 
             {benchErr && showBench && (
               <div className="fd-bench-err">
@@ -771,6 +804,15 @@ export default function FundDetailClient({ code }) {
         {/* ── ⑪ HOLDINGS (Pro) ──────────────────────────────────────────── */}
         {isPro && (
           <div className="fd-section">
+            <div className="fd-section-head">
+              <div className="fd-section-icon">🗂</div>
+              <span className="fd-section-title">Portfolio Holdings &amp; Sectors</span>
+              {holdingsData?.holdings && (
+                <span className="fd-section-sub">
+                  {holdingsData.holdings.filter((h) => h.assetClass === 'EQUITY').length} equity stocks
+                </span>
+              )}
+            </div>
             <HoldingsSection holdingsData={holdingsData} loading={holdingsLoading} schemeName={f.name} />
           </div>
         )}

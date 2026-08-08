@@ -842,6 +842,413 @@
 .fd-neg { color: var(--neg); }
 .fd-muted { color: var(--muted); }
 
+/* ── Holdings Section — fund page overrides ─────────────────────
+   The shared HoldingsSection component uses .scr-hold-* classes
+   defined in ScreenerClient's inline <style>. We layer overrides
+   here to make the table look great in the wider page context.
+   ─────────────────────────────────────────────────────────── */
+.fd-section .scr-hold-section {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.fd-section .scr-hold-title {
+  display: none; /* header handled by fd-section-head above */
+}
+
+/* Summary KPI strip */
+.fd-section .scr-drawer-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 18px !important;
+}
+
+.fd-section .scr-dk {
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fd-section .scr-dk span {
+  font-size: .6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--muted);
+}
+
+.fd-section .scr-dk b {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -.3px;
+}
+
+/* Sector exposure card */
+.fd-section .scr-allocation-card {
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+
+.fd-section .scr-alloc-title {
+  font-size: .72rem;
+  font-weight: 800;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  margin-bottom: 14px;
+}
+
+.fd-section .scr-alloc-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.fd-section .scr-alloc-item:last-child { margin-bottom: 0; }
+
+.fd-section .scr-alloc-lbl {
+  font-size: .76rem;
+  font-weight: 600;
+  color: var(--text2);
+  min-width: 160px;
+  flex-shrink: 0;
+}
+
+.fd-section .scr-alloc-bar-bg {
+  flex: 1;
+  height: 10px;
+  background: var(--s3);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.fd-section .scr-alloc-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width .5s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* Holdings table */
+.fd-section .scr-hold-table-wrap {
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.fd-section .scr-hold-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .83rem;
+}
+
+.fd-section .scr-hold-table thead tr {
+  background: var(--s2);
+}
+
+.fd-section .scr-hold-table th {
+  font-size: .6rem;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  padding: 10px 14px;
+  border-bottom: 1.5px solid var(--border);
+  text-align: left;
+}
+
+.fd-section .scr-hold-table th:last-child {
+  text-align: right;
+}
+
+.fd-section .scr-hold-table td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: .82rem;
+  color: var(--text);
+}
+
+.fd-section .scr-hold-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Alternating row backgrounds */
+.fd-section .scr-hold-table tbody tr:nth-child(even) {
+  background: var(--s2);
+}
+
+.fd-section .scr-hold-table tbody tr:hover {
+  background: var(--g-xlight);
+}
+
+.fd-section .scr-hold-stock {
+  font-weight: 700;
+  color: var(--text);
+  max-width: 240px;
+}
+
+.fd-section .scr-hold-sector {
+  font-size: .7rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+}
+
+/* Inline sector chip */
+.fd-hold-sector-chip {
+  display: inline-block;
+  font-size: .6rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--s3);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  white-space: nowrap;
+}
+
+.fd-section .scr-hold-pct {
+  font-size: .88rem;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: right;
+  color: var(--g1);
+  white-space: nowrap;
+}
+
+/* Weight mini-bar inside cell */
+.fd-hold-weight-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.fd-hold-weight-bar-bg {
+  width: 80px;
+  height: 4px;
+  background: var(--s3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.fd-hold-weight-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--g2);
+}
+
+/* Toggle / teaser area */
+.fd-section .scr-hold-toggle-wrap {
+  margin-bottom: 0;
+}
+
+.fd-section .scr-hold-toggle {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--s2);
+  color: var(--g1);
+  font-size: .78rem;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: center;
+  transition: background .15s, border-color .15s;
+}
+
+.fd-section .scr-hold-toggle:hover {
+  background: var(--g-xlight);
+  border-color: var(--g-light);
+}
+
+.fd-section .scr-hold-empty {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--muted);
+  font-size: .82rem;
+}
+
+.fd-section .scr-spark-load {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: .82rem;
+}
+
+/* ── Chart period segmented control improvements ───────────────── */
+.fd-chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+/* Segmented control group */
+.fd-period-group {
+  display: inline-flex;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  padding: 3px;
+  gap: 2px;
+}
+
+.fd-period-pill {
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+  letter-spacing: .1px;
+  outline: none;
+}
+
+.fd-period-pill:hover {
+  color: var(--g2);
+  background: var(--s3);
+}
+
+.fd-period-pill.active {
+  background: var(--g1);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(27, 94, 32, .3);
+}
+
+.fd-chart-spacer { flex: 1; min-width: 12px; }
+
+/* Benchmark controls row */
+.fd-benchmark-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fd-benchmark-select {
+  font-size: .72rem;
+  font-weight: 600;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color .15s;
+  font-family: inherit;
+  max-width: 180px;
+}
+
+.fd-benchmark-select:hover,
+.fd-benchmark-select:focus {
+  border-color: var(--g-light);
+  outline: none;
+}
+
+.fd-toggle-pill {
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--s2);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .15s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.fd-toggle-pill::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border2);
+  display: inline-block;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+
+.fd-toggle-pill.active {
+  background: var(--g-xlight);
+  border-color: var(--g-light);
+  color: var(--g1);
+}
+
+.fd-toggle-pill.active::before {
+  background: var(--g2);
+}
+
+/* Date range info bar */
+.fd-chart-info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: .68rem;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  margin-bottom: 12px;
+}
+
+.fd-chart-info-label {
+  font-weight: 700;
+  color: var(--text2);
+  font-family: 'Raleway', sans-serif;
+  font-size: .68rem;
+  letter-spacing: .1px;
+}
+
+.fd-chart-info-dates {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fd-chart-date-sep {
+  color: var(--border2);
+  font-size: .6rem;
+}
+
+@media (max-width: 640px) {
+  .fd-chart-controls { gap: 6px; }
+  .fd-period-group { flex: none; }
+  .fd-benchmark-controls { flex-wrap: wrap; }
+  .fd-benchmark-select { max-width: 140px; font-size: .65rem; }
+  .fd-section .scr-alloc-lbl { min-width: 120px; }
+  .fd-hold-weight-bar-bg { width: 50px; }
+  .fd-section .scr-hold-table th,
+  .fd-section .scr-hold-table td { padding: 8px 10px; }
+  .fd-section .scr-hold-stock { max-width: 140px; }
+  .fd-chart-info-bar { flex-direction: column; align-items: flex-start; gap: 2px; }
+}
+
 /* ── Quick Actions Bar ──────────────────────────────────────── */
 .fd-actions {
   display: flex;
