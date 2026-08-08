@@ -586,8 +586,12 @@ export default function ScreenerClient({ initialCategory }) {
                   <tr>
                     <th style={{ width: 32, textAlign: 'center', color: 'var(--muted)', fontSize: '.65rem' }} title="Add to compare (max 3)">⚖</th>
                     <th className="scr-name-h">Fund</th>
-                    <th className={`scr-sortable ${sifSort.key === 'category' ? 'active' : ''}`} style={{textAlign:'left'}} onClick={() => setSifSortKey('category')}>Strategy{sifSort.key === 'category' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
-                    <th className={`scr-sortable ${sifSort.key === 'sif_name' ? 'active' : ''}`} style={{textAlign:'left'}} onClick={() => setSifSortKey('sif_name')}>Fund House{sifSort.key === 'sif_name' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
+                    {sifCat === 'all' && (
+                      <th className={`scr-sortable ${sifSort.key === 'category' ? 'active' : ''}`} style={{textAlign:'left'}} onClick={() => setSifSortKey('category')}>Strategy{sifSort.key === 'category' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
+                    )}
+                    {sifHouse === 'all' && (
+                      <th className={`scr-sortable ${sifSort.key === 'sif_name' ? 'active' : ''}`} style={{textAlign:'left'}} onClick={() => setSifSortKey('sif_name')}>Fund House{sifSort.key === 'sif_name' ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}</th>
+                    )}
                     {visibleCols.map((m) => (
                       <th key={m.key} className={`scr-sortable ${sifSort.key === m.key ? 'active' : ''}`} onClick={() => setSifSortKey(m.key)}>
                         {m.label}{sifSort.key === m.key ? <span className="scr-arrow">{sifSort.dir < 0 ? '▾' : '▴'}</span> : ''}
@@ -621,14 +625,20 @@ export default function ScreenerClient({ initialCategory }) {
                             />
                             <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSifSel(s); }}>
                               <span className="scr-fund-n">{s.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim()}</span>
-                              <span className="scr-fund-sub">{s.scheme_id}</span>
+                              <span className="scr-fund-sub">
+                                {s.sif_name}{sifCat === 'all' && sifHouse !== 'all' ? ` · ${sifStratShort(s.category)}` : ''} · {s.scheme_id}
+                              </span>
                             </button>
                           </div>
                         </td>
-                        <td style={{textAlign:'left'}}>
-                          <span className={`scr-sif-badge scr-sif-badge-${fam.toLowerCase()}`}>{sifStratShort(s.category)}</span>
-                        </td>
-                        <td style={{textAlign:'left',color:'var(--text2)',fontSize:'12px',fontWeight:600}}>{s.sif_name}</td>
+                        {sifCat === 'all' && (
+                          <td style={{textAlign:'left'}}>
+                            <span className={`scr-sif-badge scr-sif-badge-${fam.toLowerCase()}`}>{sifStratShort(s.category)}</span>
+                          </td>
+                        )}
+                        {sifHouse === 'all' && (
+                          <td style={{textAlign:'left',color:'var(--text2)',fontSize:'12px',fontWeight:600}}>{s.sif_name}</td>
+                        )}
                         {visibleCols.map((m) => (
                           <td key={m.key} className={cellCls(m, s[m.key])}>{m.kind === 'ratio' ? <b>{fmtCell(m, s[m.key])}</b> : fmtCell(m, s[m.key])}</td>
                         ))}
