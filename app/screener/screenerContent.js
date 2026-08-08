@@ -87,10 +87,85 @@ export const CURATED_CATEGORIES = [
   },
 ];
 
+export const KNOWN_CATEGORIES = [
+  'Equity Scheme - Large Cap Fund',
+  'Equity Scheme - Mid Cap Fund',
+  'Equity Scheme - Small Cap Fund',
+  'Equity Scheme - Large & Mid Cap Fund',
+  'Equity Scheme - Multi Cap Fund',
+  'Equity Scheme - Flexi Cap Fund',
+  'Equity Scheme - ELSS',
+  'Equity Scheme - Focused Fund',
+  'Equity Scheme - Value Fund',
+  'Equity Scheme - Contra Fund',
+  'Equity Scheme - Dividend Yield Fund',
+  'Equity Scheme - Sectoral/ Thematic',
+  'Debt Scheme - Overnight Fund',
+  'Debt Scheme - Liquid Fund',
+  'Debt Scheme - Ultra Short Duration Fund',
+  'Debt Scheme - Low Duration Fund',
+  'Debt Scheme - Money Market Fund',
+  'Debt Scheme - Short Duration Fund',
+  'Debt Scheme - Medium Duration Fund',
+  'Debt Scheme - Medium to Long Duration Fund',
+  'Debt Scheme - Long Duration Fund',
+  'Debt Scheme - Dynamic Bond',
+  'Debt Scheme - Corporate Bond Fund',
+  'Debt Scheme - Credit Risk Fund',
+  'Debt Scheme - Banking and PSU Fund',
+  'Debt Scheme - Gilt Fund',
+  'Debt Scheme - Gilt Fund with 10 year constant duration',
+  'Debt Scheme - Floater Fund',
+  'Hybrid Scheme - Conservative Hybrid Fund',
+  'Hybrid Scheme - Balanced Hybrid Fund',
+  'Hybrid Scheme - Aggressive Hybrid Fund',
+  'Hybrid Scheme - Dynamic Asset Allocation or Balanced Advantage',
+  'Hybrid Scheme - Multi Asset Allocation',
+  'Hybrid Scheme - Arbitrage Fund',
+  'Hybrid Scheme - Equity Savings',
+  'Solution Oriented Scheme - Retirement Fund',
+  'Solution Oriented Scheme - Children’s Fund',
+  'Other Scheme - Index Funds',
+  'Other Scheme - Gold ETF',
+  'Other Scheme - Other  ETFs',
+  'Other Scheme - FoF Domestic',
+  'Other Scheme - FoF Overseas',
+  'Income/Debt Oriented Schemes - Liquid Fund',
+  'Income/Debt Oriented Schemes - Overnight Fund',
+  'Income/Debt Oriented Schemes - Money Market Fund',
+  'Income/Debt Oriented Schemes - Ultra Short Term Fund',
+  'Income/Debt Oriented Schemes - Short Term Fund',
+  'Income/Debt Oriented Schemes - Medium Term Fund',
+  'Income/Debt Oriented Schemes - Banking and PSU Debt Fund',
+  'Income/Debt Oriented Schemes - Corporate Bond Fund',
+  'Income/Debt Oriented Schemes - Credit Risk Fund',
+  'Income/Debt Oriented Schemes - Gilt Fund',
+  'Equity Schemes - Large Cap Fund',
+  'Equity Schemes - Mid Cap Fund',
+  'Equity Schemes - Small Cap Fund',
+  'Equity Schemes - Flexi Cap Fund',
+  'Equity Schemes - Multi Cap Fund',
+  'Equity Schemes - ELSS',
+  'Equity Schemes - Value Fund',
+  'Equity Schemes - Contra Fund',
+  'Equity Schemes - Sectoral Fund',
+  'Equity Schemes - Thematic Fund',
+];
+
 export function slugToCategory(slug) {
   if (!slug) return null;
   const entry = CURATED_CATEGORIES.find((c) => c.slug === slug);
-  return entry ? entry.category : null;
+  if (entry) return entry.category;
+
+  const cleanSlug = slug.toLowerCase().trim();
+  for (const cat of KNOWN_CATEGORIES) {
+    if (categoryToSlug(cat) === cleanSlug) return cat;
+  }
+  const unslugified = cleanSlug.replace(/-/g, ' ');
+  for (const cat of KNOWN_CATEGORIES) {
+    if (normalizeCategory(cat) === unslugified) return cat;
+  }
+  return null;
 }
 
 export function categoryToSlug(category) {
@@ -100,11 +175,8 @@ export function categoryToSlug(category) {
   );
   if (entry) return entry.slug;
 
-  return category
-    .toLowerCase()
-    .replace(/^(equity|debt|hybrid|other|solution oriented)\s*scheme\s*-\s*/i, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  const norm = normalizeCategory(category);
+  return norm.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
 export function matchCategory(fundCategory, selectedCategory) {
