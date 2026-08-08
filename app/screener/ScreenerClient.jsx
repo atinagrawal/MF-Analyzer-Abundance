@@ -325,14 +325,36 @@ export default function ScreenerClient({ initialCategory }) {
   // sifSchemes changes again (e.g. after the next nightly rebuild). Falls
   // back to leaving the initial NAV/static defaults in place if no period
   // has a majority (or any data) yet.
+  const sifAvailableKeys = useMemo(() => {
+    if (!sifSchemes || sifSchemes.length === 0) return new Set(METRICS.map((m) => m.key));
+    const keys = new Set();
+    METRICS.forEach((m) => {
+      if (sifSchemes.some((s) => s[m.key] != null)) {
+        keys.add(m.key);
+      }
+    });
+    return keys;
+  }, [sifSchemes]);
+
   const [sifSortInitialized, setSifSortInitialized] = useState(false);
   useEffect(() => {
     if (!sifSortInitialized && sifSchemes.length > 0) {
       const period = pickDefaultSortPeriod(sifSchemes);
       if (period) setSifSort({ key: period.key, dir: -1 });
-      if (window.innerWidth < 1024) {
+
+      const availableKeys = METRICS.map((m) => m.key).filter((k) =>
+        sifSchemes.some((s) => s[k] != null)
+      );
+
+      if (window.innerWidth >= 1024) {
+        setSifCols(availableKeys);
+      } else {
         const retCols = pickDefaultSifReturnCols(sifSchemes, 3);
-        if (retCols) setSifCols([...retCols, 'max_dd', 'ret_per_risk']);
+        const mobileBase = retCols || ['ret_1m', 'ret_3m', 'ret_6m'];
+        const mobileCols = [...mobileBase, 'max_dd', 'ret_per_risk'].filter((k) =>
+          availableKeys.includes(k)
+        );
+        setSifCols(mobileCols.length > 0 ? mobileCols : availableKeys);
       }
       setSifSortInitialized(true);
     }
@@ -517,9 +539,22 @@ export default function ScreenerClient({ initialCategory }) {
 
         <div className="scr-colbar">
           <span className="scr-colbar-l">Columns:</span>
-          {METRICS.map((m) => (
-            <button key={m.key} className={`scr-colchip ${activeCols.includes(m.key) ? 'on' : ''}`} onClick={() => toggleCol(m.key)}>{m.label}</button>
-          ))}
+          {METRICS.map((m) => {
+            const isAvail = isSIF ? sifAvailableKeys.has(m.key) : true;
+            const isOn = activeCols.includes(m.key) && isAvail;
+            return (
+              <button
+                key={m.key}
+                className={`scr-colchip ${isOn ? 'on' : ''}`}
+                disabled={!isAvail}
+                onClick={() => isAvail && toggleCol(m.key)}
+                style={!isAvail ? { opacity: 0.45, cursor: 'not-allowed', filter: 'grayscale(1)' } : undefined}
+                title={!isAvail ? `No SIF fund has ${m.label} historical data yet` : `Toggle ${m.label} column`}
+              >
+                {m.label}{!isAvail ? ' (N/A)' : ''}
+              </button>
+            );
+          })}
         </div>
 
         <div className="scr-meta">
