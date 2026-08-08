@@ -15,26 +15,50 @@ import '@/app/screener/mf-compare.css';
 import './fund-detail.css';
 
 const BENCHMARK_OPTIONS = [
-  'BSE SENSEX',
   'BSE 500',
+  'BSE SENSEX',
+  'BSE LargeCap',
   'BSE MidCap',
   'BSE SmallCap',
+  'BSE LargeMidCap',
+  'BSE India Defence',
   'BSE BANKEX',
+  'BSE Financial Services',
   'BSE Information Technology',
   'BSE Healthcare',
   'BSE Fast Moving Consumer Goods',
+  'BSE India Infrastructure Index',
+  'BSE India Manufacturing Index',
+  'BSE AUTO',
+  'BSE PSU',
+  'BSE PSU BANK',
+  'BSE Energy',
+  'BSE REALTY',
+  'BSE METAL',
 ];
 
-function getDefaultBenchmark(category) {
-  const cat = (category || '').toLowerCase();
-  if (cat.includes('small cap') || cat.includes('smallcap')) return 'BSE SmallCap';
-  if (cat.includes('mid cap') || cat.includes('midcap')) return 'BSE MidCap';
-  if (cat.includes('bank') || cat.includes('finance') || cat.includes('financial')) return 'BSE BANKEX';
-  if (cat.includes('tech') || cat.includes('it') || cat.includes('software')) return 'BSE Information Technology';
-  if (cat.includes('pharma') || cat.includes('health') || cat.includes('healthcare')) return 'BSE Healthcare';
-  if (cat.includes('fmcg') || cat.includes('consumer')) return 'BSE Fast Moving Consumer Goods';
-  if (cat.includes('flexi') || cat.includes('multi') || cat.includes('large & mid') || cat.includes('large and mid')) return 'BSE 500';
-  return 'BSE SENSEX';
+function getDefaultBenchmark(name, category) {
+  const text = `${name || ''} ${category || ''}`.toLowerCase();
+
+  if (text.includes('defenc') || text.includes('defense')) return 'BSE India Defence';
+  if (text.includes('small cap') || text.includes('smallcap')) return 'BSE SmallCap';
+  if (text.includes('mid cap') || text.includes('midcap')) return 'BSE MidCap';
+  if (text.includes('bank') || text.includes('finance') || text.includes('financial')) return 'BSE BANKEX';
+  if (text.includes('tech') || text.includes('it') || text.includes('software')) return 'BSE Information Technology';
+  if (text.includes('pharma') || text.includes('health') || text.includes('healthcare')) return 'BSE Healthcare';
+  if (text.includes('fmcg') || text.includes('consumer')) return 'BSE Fast Moving Consumer Goods';
+  if (text.includes('infra') || text.includes('infrastructure')) return 'BSE India Infrastructure Index';
+  if (text.includes('manufacturing')) return 'BSE India Manufacturing Index';
+  if (text.includes('auto') || text.includes('automotive')) return 'BSE AUTO';
+  if (text.includes('psu')) return 'BSE PSU';
+  if (text.includes('energy') || text.includes('power')) return 'BSE Energy';
+  if (text.includes('realty') || text.includes('real estate')) return 'BSE REALTY';
+  if (text.includes('metal')) return 'BSE METAL';
+  if (text.includes('large & mid') || text.includes('large and mid')) return 'BSE LargeMidCap';
+  if (text.includes('large cap') || text.includes('largecap')) return 'BSE LargeCap';
+
+  // Default to BSE 500 as fallback
+  return 'BSE 500';
 }
 
 function formatSettlementText(val) {
@@ -98,8 +122,8 @@ export default function FundDetailClient({ code }) {
       })
       .then((d) => {
         setFundData(d);
-        if (d?.fund?.category) {
-          setBenchIdx(getDefaultBenchmark(d.fund.category));
+        if (d?.fund) {
+          setBenchIdx(getDefaultBenchmark(d.fund.name, d.fund.category));
         }
         setLoading(false);
       })
@@ -150,7 +174,14 @@ export default function FundDetailClient({ code }) {
     fetch(`/api/nifty-tri?index=${encodeURIComponent(benchIdx)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (!d?.data?.length) { setBenchErr(true); return; }
+        if (!d?.data?.length) {
+          setBenchErr(true);
+          // Fall back to BSE 500 if specific benchmark data is unavailable
+          if (benchIdx !== 'BSE 500') {
+            setBenchIdx('BSE 500');
+          }
+          return;
+        }
         const MONTHS = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11 };
         const pts = d.data
           .map((r) => {
@@ -161,7 +192,12 @@ export default function FundDetailClient({ code }) {
           .sort((a, b) => a.t - b.t);
         setBenchPts(pts);
       })
-      .catch(() => setBenchErr(true));
+      .catch(() => {
+        setBenchErr(true);
+        if (benchIdx !== 'BSE 500') {
+          setBenchIdx('BSE 500');
+        }
+      });
   }, [isPaidOrAdmin, benchIdx, showBench]);
 
   // ── Chart helpers ─────────────────────────────────────────────────────────
