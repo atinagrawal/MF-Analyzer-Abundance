@@ -4,12 +4,12 @@
    ================================================================ */
 
 .sif-page {
-  max-width: 1040px;
+  max-width: 980px;
   margin: 0 auto;
   padding: 0 20px 88px;
 }
 
-/* Loading & Error States */
+/* ── Loading & Error ──────────────────────────────────────────── */
 .sif-load {
   padding: 80px 0;
   text-align: center;
@@ -35,10 +35,10 @@
 @keyframes sif-spin { to { transform: rotate(360deg); } }
 
 .sif-err {
-  padding: 72px 0;
+  padding: 60px 0;
   text-align: center;
   color: var(--muted);
-  font-size: .95rem;
+  font-size: .9rem;
 }
 
 .sif-err a {
@@ -48,13 +48,28 @@
   margin-left: 6px;
 }
 
-/* Hero Section */
+/* ── Breadcrumb ───────────────────────────────────────────────── */
+.sif-breadcrumb {
+  padding: 16px 0 12px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.sif-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.sif-breadcrumb a:hover { color: var(--g1); }
+
+/* ── Hero ─────────────────────────────────────────────────────── */
 .sif-hero {
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: 20px;
-  padding: 28px 28px 24px;
-  margin-bottom: 20px;
+  padding: 28px 28px 22px;
+  margin-bottom: 16px;
   box-shadow: var(--shadow);
   position: relative;
   overflow: hidden;
@@ -64,7 +79,7 @@
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 3.5px;
+  height: 3px;
   background: linear-gradient(90deg, #1b5e20 0%, #2e7d32 40%, #0288d1 100%);
   border-radius: 20px 20px 0 0;
 }
@@ -72,14 +87,14 @@
 .sif-hero-row {
   display: flex;
   align-items: flex-start;
-  gap: 18px;
+  gap: 16px;
 }
 
 .sif-hero-logo {
   flex-shrink: 0;
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
   border: 1.5px solid var(--border);
   background: var(--s2);
   overflow: hidden;
@@ -94,7 +109,7 @@
 }
 
 .sif-hero-title {
-  font-size: 1.45rem;
+  font-size: 1.35rem;
   font-weight: 800;
   color: var(--text);
   line-height: 1.25;
@@ -106,20 +121,22 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 14px;
 }
 
+/* ── Tags & Badges ────────────────────────────────────────────── */
 .sif-tag {
   display: inline-flex;
   align-items: center;
   padding: 3px 10px;
   border-radius: 20px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   background: var(--s2);
   color: var(--text2);
   border: 1px solid var(--border);
+  white-space: nowrap;
 }
 
 .sif-tag.house {
@@ -129,7 +146,7 @@
 }
 
 .sif-tag.sebi {
-  background: rgba(2, 136, 209, 0.08);
+  background: rgba(2, 136, 209, 0.06);
   color: #0288d1;
   border-color: rgba(2, 136, 209, 0.2);
 }
@@ -137,54 +154,54 @@
 .sif-tag.code {
   font-family: monospace;
   font-weight: 700;
+  font-size: 0.74rem;
 }
 
-/* Strategy Badges */
 .sif-strat-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  padding: 3px 10px;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .sif-strat-badge-equity {
-  background: rgba(46, 125, 50, 0.12);
+  background: rgba(46, 125, 50, 0.1);
   color: #1b5e20;
-  border: 1px solid rgba(46, 125, 50, 0.25);
+  border: 1px solid rgba(46, 125, 50, 0.22);
 }
 
 .sif-strat-badge-hybrid {
-  background: rgba(123, 31, 162, 0.12);
+  background: rgba(123, 31, 162, 0.1);
   color: #6a1b9a;
-  border: 1px solid rgba(123, 31, 162, 0.25);
+  border: 1px solid rgba(123, 31, 162, 0.22);
 }
 
-/* Hero Actions */
+/* ── Hero Action Buttons ──────────────────────────────────────── */
 .sif-hero-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 8px;
 }
 
 .sif-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 10px;
-  font-size: 0.82rem;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 9px;
+  font-size: 0.8rem;
   font-weight: 700;
   text-decoration: none;
-  transition: all 0.18s ease;
+  transition: all 0.16s ease;
   cursor: pointer;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
+  line-height: 1;
 }
 
 .sif-btn:hover {
@@ -201,101 +218,197 @@
 
 .sif-btn.primary:hover {
   box-shadow: 0 6px 16px rgba(46, 125, 50, 0.35);
+  transform: translateY(-1px);
 }
 
-/* KPI Banner */
+/* ── KPI Grid ─────────────────────────────────────────────────── */
 .sif-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 .sif-kpi-card {
   background: var(--surface);
   border: 1.5px solid var(--border);
-  border-radius: 14px;
-  padding: 14px 16px;
+  border-radius: 12px;
+  padding: 12px 14px;
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .sif-kpi-lbl {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .sif-kpi-val {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: var(--text);
   line-height: 1.2;
 }
 
 .sif-kpi-sub {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--muted);
 }
 
-/* SEBI SIF Notice Box */
+/* ── Notice Card ──────────────────────────────────────────────── */
 .sif-notice-card {
   background: rgba(2, 136, 209, 0.05);
-  border: 1.5px solid rgba(2, 136, 209, 0.2);
-  border-radius: 14px;
-  padding: 14px 18px;
-  margin-bottom: 20px;
+  border: 1.5px solid rgba(2, 136, 209, 0.18);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
 }
 
 .sif-notice-icon {
-  font-size: 1.2rem;
+  font-size: 1rem;
   color: #0288d1;
   flex-shrink: 0;
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .sif-notice-body {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--text2);
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
-.sif-notice-body strong {
-  color: var(--text);
-}
+.sif-notice-body strong { color: var(--text); }
 
-/* Section Cards */
+/* ── Section Cards ────────────────────────────────────────────── */
 .sif-card {
   background: var(--surface);
   border: 1.5px solid var(--border);
-  border-radius: 18px;
-  padding: 24px;
-  margin-bottom: 20px;
+  border-radius: 16px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
   box-shadow: var(--shadow);
 }
 
+/* Simple section heading (no chart controls) */
 .sif-card-h {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 800;
   color: var(--text);
   margin-bottom: 16px;
+}
+
+/* ── Chart Card Controls ──────────────────────────────────────── */
+.sif-chart-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
-/* Strategy Facts Grid */
+.sif-chart-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.sif-chart-bench-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.sif-chart-bench-lbl {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.sif-chart-bench-select {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  border: 1px solid var(--border);
+  background: var(--s2);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sif-chart-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.sif-period-btns {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.sif-period-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.73rem;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  background: var(--s2);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sif-period-btn.active {
+  background: var(--g1, #2e7d32);
+  color: #fff;
+  border-color: transparent;
+}
+
+.sif-mode-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.sif-mode-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.73rem;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sif-mode-btn.active {
+  background: var(--s2);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+/* ── Facts Grid ───────────────────────────────────────────────── */
 .sif-facts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
 }
 
 .sif-fact-item {
@@ -309,75 +422,126 @@
 }
 
 .sif-fact-lbl {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--muted);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .sif-fact-val {
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   color: var(--text);
   font-weight: 700;
+  line-height: 1.3;
 }
 
-/* FAQ Section */
+/* ── FAQ ──────────────────────────────────────────────────────── */
 .sif-faq-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .sif-faq-item {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--s2);
   overflow: hidden;
 }
 
 .sif-faq-q {
   width: 100%;
-  padding: 14px 16px;
+  padding: 13px 16px;
   text-align: left;
   background: none;
   border: none;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 700;
   color: var(--text);
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
+  gap: 12px;
 }
 
 .sif-faq-a {
-  padding: 0 16px 14px;
-  font-size: 0.84rem;
+  padding: 0 16px 13px;
+  font-size: 0.82rem;
   color: var(--text2);
   line-height: 1.55;
 }
 
-/* Responsive */
+/* ── Compliance Footer ────────────────────────────────────────── */
+.sif-compliance {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.6;
+  padding-bottom: 8px;
+}
+
+/* ── Responsive: Tablet ───────────────────────────────────────── */
 @media (max-width: 768px) {
-  .sif-hero-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .sif-hero-title {
-    font-size: 1.25rem;
-  }
   .sif-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .sif-hero-title {
+    font-size: 1.2rem;
+  }
+
+  .sif-chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sif-chart-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
+/* ── Responsive: Mobile ───────────────────────────────────────── */
 @media (max-width: 480px) {
   .sif-page {
     padding: 0 12px 64px;
   }
+
   .sif-hero {
-    padding: 20px 16px;
+    padding: 18px 14px 16px;
   }
+
+  .sif-hero-logo {
+    width: 42px;
+    height: 42px;
+  }
+
+  .sif-hero-title {
+    font-size: 1.1rem;
+  }
+
   .sif-card {
-    padding: 18px 14px;
+    padding: 16px 14px;
+  }
+
+  .sif-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .sif-kpi-val {
+    font-size: 1rem;
+  }
+
+  .sif-facts-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sif-btn {
+    font-size: 0.76rem;
+    padding: 6px 11px;
   }
 }

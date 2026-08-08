@@ -1163,7 +1163,7 @@ function SifDetail({ s, onClose }) {
         <HoldingsSection holdingsData={holdingsData} loading={holdingsLoading} schemeName={s.nav_name} />
 
         <div className="scr-drawer-cta">
-          <a className="scr-btn primary" href={`/sif/${s.scheme_id}`}>View Full SIF Page →</a>
+          <a className="scr-btn primary" href={`/sif/${s.scheme_id}`} target="_blank" rel="noreferrer">View Full SIF Page →</a>
           <a className="scr-btn" href={backtestSifLink(s)}>⚗ Backtest this SIF</a>
           <a className="scr-btn" href="/sifs">📋 Full SIF screener</a>
         </div>
