@@ -180,22 +180,32 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
   function renderRangePicker() {
     return (
       <div className="cmp-range-picker">
-        <label>From <input
-          type="date"
-          value={toDateInputValue(effectiveFrom)}
-          min={toDateInputValue(defaultFrom)}
-          max={toDateInputValue(effectiveTo)}
-          onChange={(e) => setCustomFrom(fromDateInputValue(e.target.value))}
-        /></label>
-        <label>To <input
-          type="date"
-          value={toDateInputValue(effectiveTo)}
-          min={toDateInputValue(effectiveFrom)}
-          max={toDateInputValue(defaultTo)}
-          onChange={(e) => setCustomTo(fromDateInputValue(e.target.value))}
-        /></label>
+        <div className="cmp-range-field">
+          <span className="cmp-range-label">From</span>
+          <input
+            type="date"
+            className="cmp-date-input"
+            value={toDateInputValue(effectiveFrom)}
+            min={toDateInputValue(defaultFrom)}
+            max={toDateInputValue(effectiveTo)}
+            onChange={(e) => setCustomFrom(fromDateInputValue(e.target.value))}
+          />
+        </div>
+        <div className="cmp-range-field">
+          <span className="cmp-range-label">To</span>
+          <input
+            type="date"
+            className="cmp-date-input"
+            value={toDateInputValue(effectiveTo)}
+            min={toDateInputValue(effectiveFrom)}
+            max={toDateInputValue(defaultTo)}
+            onChange={(e) => setCustomTo(fromDateInputValue(e.target.value))}
+          />
+        </div>
         {hasCustomRange && (
-          <span className="cmp-range-picker-reset" onClick={() => { setCustomFrom(null); setCustomTo(null); }}>↺ Reset to full range</span>
+          <button type="button" className="cmp-range-reset-btn" onClick={() => { setCustomFrom(null); setCustomTo(null); }}>
+            ↺ Reset range
+          </button>
         )}
       </div>
     );
@@ -281,9 +291,12 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
 
         {validSelection && rangeRows && (
           <div className="cmp-onchart-summary show" style={{ left: `${((X(validSelection.lo) + X(validSelection.hi)) / 2 / W) * 100}%`, transform: 'translateX(-50%)' }}>
-            <div style={{ marginBottom: 3, opacity: 0.6, fontSize: 9 }}>{fmtDate(filteredSeries[0].data[validSelection.lo].t)} → {fmtDate(filteredSeries[0].data[validSelection.hi].t)}</div>
+            <div className="cmp-onchart-header">{fmtDate(filteredSeries[0].data[validSelection.lo].t)} → {fmtDate(filteredSeries[0].data[validSelection.hi].t)}</div>
             {rangeRows.map((r) => (
-              <div key={r.name} className="cmp-onchart-row"><span>{r.name}</span><b style={{ color: r.color }}>{r.pos ? '+' : ''}{r.pct}%</b></div>
+              <div key={r.name} className="cmp-onchart-row">
+                <span className="cmp-onchart-name" title={r.name}>{r.name}</span>
+                <b className="cmp-onchart-val" style={{ color: r.color }}>{r.pos ? '+' : ''}{r.pct}%</b>
+              </div>
             ))}
           </div>
         )}
@@ -296,7 +309,10 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
             <span className="cmp-range-clear" onClick={() => setSelection(null)}>✕ Clear</span>
           </div>
           {rangeRows.map((r) => (
-            <div key={r.name} className="cmp-range-row"><span>{r.name}</span><span style={{ color: r.pos ? 'var(--g1)' : 'var(--neg)' }}>{r.pos ? '+' : ''}{r.pct}%</span></div>
+            <div key={r.name} className="cmp-range-row">
+              <span className="cmp-range-name">{r.name}</span>
+              <span className="cmp-range-val" style={{ color: r.pos ? 'var(--g1)' : 'var(--neg)' }}>{r.pos ? '+' : ''}{r.pct}%</span>
+            </div>
           ))}
         </div>
       )}

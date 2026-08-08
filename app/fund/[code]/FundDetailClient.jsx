@@ -11,6 +11,7 @@ import { getMFLogo } from '@/lib/providerLogos';
 import { shortCat, CURATED_CATEGORIES, categoryToSlug } from '@/app/screener/screenerContent';
 import { normalizeSchemeName } from '@/lib/normalizeSchemeName';
 import { startCheckout } from '@/lib/checkoutClient';
+import '@/app/screener/mf-compare.css';
 import './fund-detail.css';
 
 const BENCHMARK_OPTIONS = [
@@ -23,6 +24,27 @@ const BENCHMARK_OPTIONS = [
   'BSE Healthcare',
   'BSE Fast Moving Consumer Goods',
 ];
+
+function getDefaultBenchmark(category) {
+  const cat = (category || '').toLowerCase();
+  if (cat.includes('small cap') || cat.includes('smallcap')) return 'BSE SmallCap';
+  if (cat.includes('mid cap') || cat.includes('midcap')) return 'BSE MidCap';
+  if (cat.includes('bank') || cat.includes('finance') || cat.includes('financial')) return 'BSE BANKEX';
+  if (cat.includes('tech') || cat.includes('it') || cat.includes('software')) return 'BSE Information Technology';
+  if (cat.includes('pharma') || cat.includes('health') || cat.includes('healthcare')) return 'BSE Healthcare';
+  if (cat.includes('fmcg') || cat.includes('consumer')) return 'BSE Fast Moving Consumer Goods';
+  if (cat.includes('flexi') || cat.includes('multi') || cat.includes('large & mid') || cat.includes('large and mid')) return 'BSE 500';
+  return 'BSE SENSEX';
+}
+
+function formatSettlementText(val) {
+  if (!val) return '—';
+  const str = String(val).trim();
+  if (/^t\+/i.test(str)) {
+    return `${str.toUpperCase()} Business Days`;
+  }
+  return `T+${str} Business Days`;
+}
 
 const pctTxt = (v, sign = true) =>
   v == null ? '—' : (sign && v > 0 ? '+' : '') + v.toFixed(1) + '%';
@@ -74,7 +96,13 @@ export default function FundDetailClient({ code }) {
         if (!r.ok) throw new Error('Fund not found');
         return r.json();
       })
-      .then((d) => { setFundData(d); setLoading(false); })
+      .then((d) => {
+        setFundData(d);
+        if (d?.fund?.category) {
+          setBenchIdx(getDefaultBenchmark(d.fund.category));
+        }
+        setLoading(false);
+      })
       .catch((e) => { setError(e.message || 'Failed to load fund data'); setLoading(false); });
   }, [code]);
 
@@ -392,7 +420,7 @@ export default function FundDetailClient({ code }) {
               <div className="fd-ops-item">
                 <div className="fd-ops-label">Settlement</div>
                 <div className="fd-ops-val">
-                  {masterRec.settlement ? `T+${masterRec.settlement} days` : '—'}
+                  {formatSettlementText(masterRec.settlement)}
                 </div>
               </div>
             </div>
@@ -425,70 +453,7 @@ export default function FundDetailClient({ code }) {
           </div>
         )}
 
-        {/* ── ④ FAQ (Public) ────────────────────────────────────────────── */}
-        <div className="fd-section">
-          <div className="fd-section-head">
-            <div className="fd-section-icon">❓</div>
-            <span className="fd-section-title">Frequently Asked Questions</span>
-          </div>
-          <div className="fd-faq-list">
-            <details className="fd-faq-item">
-              <summary>What is {f.name}?</summary>
-              <p className="fd-faq-answer">
-                {f.name} is an open-ended {shortCat(f.category)} mutual fund scheme managed by {f.amc}.
-                {f.inception_date &&
-                  ` It was launched in ${new Date(f.inception_date + 'T00:00:00Z').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}.`}{' '}
-                It is categorised under {f.category} as defined by SEBI. Investors can invest via lumpsum or
-                systematic investment plans (SIP).
-              </p>
-            </details>
-
-            <details className="fd-faq-item">
-              <summary>Who manages {f.name}?</summary>
-              <p className="fd-faq-answer">
-                {f.name} is managed and operated by {f.amc}. As a SEBI-regulated mutual fund house in India,{' '}
-                {f.amc} employs professional fund managers to make asset allocation and security selection decisions
-                in accordance with SEBI guidelines.
-              </p>
-            </details>
-
-            <details className="fd-faq-item">
-              <summary>What is the minimum investment in {f.name}?</summary>
-              <p className="fd-faq-answer">
-                {masterRec?.minPurchase != null
-                  ? `The minimum initial lumpsum purchase amount for ${f.name} via BSE StAR MF is ₹${Number(masterRec.minPurchase).toLocaleString('en-IN')}.`
-                  : `Minimum investment limits vary by plan, but most equity mutual funds allow initial lumpsum investments from ₹1,000 to ₹5,000 and monthly SIPs from ₹500.`}
-              </p>
-            </details>
-
-            <details className="fd-faq-item">
-              <summary>What is the exit load on {f.name}?</summary>
-              <p className="fd-faq-answer">
-                {masterRec?.exitLoadText
-                  ? `Exit load: ${masterRec.exitLoadText}`
-                  : `Exit load is charged if units are redeemed before a specified holding period (typically 1% for equity funds if redeemed within 1 year). Refer to the official factsheet for exact tier details.`}
-              </p>
-            </details>
-
-            <details className="fd-faq-item">
-              <summary>Is {f.name} suitable for long-term goals?</summary>
-              <p className="fd-faq-answer">
-                {f.name} belongs to the {f.category} category. Equity-oriented funds are designed for long-term
-                wealth accumulation (5+ year horizon), while debt funds suit shorter horizons. Always evaluate your
-                risk tolerance and goal timeline before investing.
-              </p>
-            </details>
-
-            <details className="fd-faq-item">
-              <summary>How can I view complete analytics &amp; holdings for {f.name}?</summary>
-              <p className="fd-faq-answer">
-                Abundance Pro members get instant access to complete analytics for {f.name}, including
-                point-to-point CAGR returns (1M to 10Y), interactive NAV history charts with benchmark overlays,
-                SEBI stress test data, and complete 100% portfolio stock disclosures.
-              </p>
-            </details>
-          </div>
-        </div>
+        {/* Operational Facts Section ends here, FAQ moved to bottom */}
 
         {/* ── ⑤ UPGRADE GATE (Non-Pro) ──────────────────────────────────── */}
         {!isPro && (
@@ -816,6 +781,71 @@ export default function FundDetailClient({ code }) {
             <HoldingsSection holdingsData={holdingsData} loading={holdingsLoading} schemeName={f.name} />
           </div>
         )}
+
+        {/* ── ⑫ FREQUENTLY ASKED QUESTIONS (Public - Bottom for SEO) ─────── */}
+        <div className="fd-section">
+          <div className="fd-section-head">
+            <div className="fd-section-icon">❓</div>
+            <span className="fd-section-title">Frequently Asked Questions</span>
+          </div>
+          <div className="fd-faq-list">
+            <details className="fd-faq-item">
+              <summary>What is {f.name}?</summary>
+              <p className="fd-faq-answer">
+                {f.name} is an open-ended {shortCat(f.category)} mutual fund scheme managed by {f.amc}.
+                {f.inception_date &&
+                  ` It was launched in ${new Date(f.inception_date + 'T00:00:00Z').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}.`}{' '}
+                It is categorised under {f.category} as defined by SEBI. Investors can invest via lumpsum or
+                systematic investment plans (SIP).
+              </p>
+            </details>
+
+            <details className="fd-faq-item">
+              <summary>Who manages {f.name}?</summary>
+              <p className="fd-faq-answer">
+                {f.name} is managed and operated by {f.amc}. As a SEBI-regulated mutual fund house in India,{' '}
+                {f.amc} employs professional fund managers and quantitative research teams to make asset allocation and security selection decisions
+                in accordance with SEBI guidelines and the scheme's SID mandate.
+              </p>
+            </details>
+
+            <details className="fd-faq-item">
+              <summary>What is the minimum investment in {f.name}?</summary>
+              <p className="fd-faq-answer">
+                {masterRec?.minPurchase != null
+                  ? `The minimum initial lumpsum purchase amount for ${f.name} via BSE StAR MF is ₹${Number(masterRec.minPurchase).toLocaleString('en-IN')}.`
+                  : `Minimum investment limits vary by plan, but most equity mutual funds allow initial lumpsum investments from ₹1,000 to ₹5,000 and monthly SIPs from ₹500.`}
+              </p>
+            </details>
+
+            <details className="fd-faq-item">
+              <summary>What is the exit load on {f.name}?</summary>
+              <p className="fd-faq-answer">
+                {masterRec?.exitLoadText
+                  ? `Exit load: ${masterRec.exitLoadText}`
+                  : `Exit load is charged if units are redeemed before a specified holding period (typically 1% for equity funds if redeemed within 1 year). Refer to the official factsheet for exact tier details.`}
+              </p>
+            </details>
+
+            <details className="fd-faq-item">
+              <summary>Is {f.name} suitable for long-term goals?</summary>
+              <p className="fd-faq-answer">
+                {f.name} belongs to the {f.category} category. Equity-oriented funds are designed for long-term
+                wealth accumulation (5+ year horizon), while debt funds suit shorter horizons. Always evaluate your
+                risk tolerance and goal timeline before investing.
+              </p>
+            </details>
+
+            <details className="fd-faq-item">
+              <summary>How can I view complete analytics &amp; holdings for {f.name}?</summary>
+              <p className="fd-faq-answer">
+                Abundance Pro members get instant access to complete analytics for {f.name}, including
+                point-to-point CAGR returns (1M to 10Y), interactive NAV history charts with benchmark overlays,
+                SEBI stress test data, and complete 100% portfolio stock disclosures.
+              </p>
+            </details>
+          </div>
+        </div>
 
         {/* ── ⑫ QUICK ACTIONS ───────────────────────────────────────────── */}
         <div className="fd-actions">

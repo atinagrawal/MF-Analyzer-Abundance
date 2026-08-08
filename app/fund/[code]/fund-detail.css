@@ -1202,38 +1202,167 @@
   background: var(--g2);
 }
 
-/* Date range info bar */
-.fd-chart-info-bar {
+/* ── Date range picker styling ───────────────────────────────── */
+.fd-section .cmp-range-picker {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: .68rem;
-  color: var(--muted);
-  font-family: 'JetBrains Mono', monospace;
-  background: var(--s2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 12px;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 12px;
+  padding: 10px 14px;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
 }
 
-.fd-chart-info-label {
-  font-weight: 700;
-  color: var(--text2);
-  font-family: 'Raleway', sans-serif;
-  font-size: .68rem;
-  letter-spacing: .1px;
-}
-
-.fd-chart-info-dates {
+.fd-section .cmp-range-field {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.fd-chart-date-sep {
-  color: var(--border2);
-  font-size: .6rem;
+.fd-section .cmp-range-label {
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.fd-section .cmp-date-input {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .75rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease;
+  outline: none;
+}
+
+.fd-section .cmp-date-input:hover,
+.fd-section .cmp-date-input:focus {
+  border-color: var(--g2);
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, .12);
+}
+
+.fd-section .cmp-range-reset-btn {
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--g1);
+  cursor: pointer;
+  transition: all .15s ease;
+  margin-left: auto;
+}
+
+.fd-section .cmp-range-reset-btn:hover {
+  background: var(--g-xlight);
+  border-color: var(--g1);
+}
+
+/* ── On-chart selection popup & summary alignment ──────────────── */
+.fd-section .cmp-onchart-summary {
+  position: absolute;
+  top: 8px;
+  background: var(--surface);
+  border: 1.5px solid var(--g3);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 11px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.15);
+  pointer-events: none;
+  z-index: 6;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  max-width: 320px;
+}
+
+.fd-section .cmp-onchart-header {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+
+.fd-section .cmp-onchart-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 0;
+}
+
+.fd-section .cmp-onchart-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fd-section .cmp-onchart-val {
+  font-size: 12px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.fd-section .cmp-range-summary {
+  margin: 14px 0 0;
+  padding: 14px 16px;
+  background: var(--g-xlight);
+  border: 1.5px solid var(--g3);
+  border-radius: 12px;
+}
+
+.fd-section .cmp-range-summary-h {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--g1);
+  margin-bottom: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fd-section .cmp-range-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.fd-section .cmp-range-row:last-child {
+  border-bottom: none;
+}
+
+.fd-section .cmp-range-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.fd-section .cmp-range-val {
+  font-size: 13px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 @media (max-width: 640px) {
