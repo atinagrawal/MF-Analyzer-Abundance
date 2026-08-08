@@ -191,8 +191,6 @@ export function exportProposalPDF({
       <div class="sec-block">
       <div class="sec">Portfolio Overlap (Named Holdings)</div>
       ${overlapHeatmapSvg(names, grid)}
-      <table class="ptable"><thead><tr><th></th>${names.map((n) => `<th class="num">${esc(n)}</th>`).join('')}</tr></thead>
-      <tbody>${grid.map((row, i) => `<tr><th style="text-align:left">${esc(names[i])}</th>${row.map((v, j) => `<td class="num${i === j ? ' diag' : ''}">${v.toFixed(1)}%</td>`).join('')}</tr>`).join('')}</tbody></table>
       </div>`;
   }
 
@@ -343,24 +341,21 @@ svg{max-width:100%;height:auto;display:block;margin-bottom:8px}
 .page-break { page-break-after: always; }
 .running-header { display: none; }
 @media print {
-  /* The running header is position:fixed so Chrome repeats it on every
-     physical page -- but CSS padding on the body element only reserves
-     space ONCE, at the very start of the document's content flow (page 1),
-     not per-page: a paginated box's own padding doesn't repeat at each
-     fragment boundary. That meant every page after page 1 had its actual
-     first ~34px of content (a section title, the first chart row) rendered
-     directly under the fixed header and visually cropped/hidden behind it.
-     @page margin, unlike body padding, DOES apply consistently on every
-     physical page -- so the header's clearance now lives there (the
-     print @page rule above, margin: 1.6cm .8cm .8cm .8cm) instead of in
-     body's padding-top, which is removed here. */
-  .running-header { display: flex; align-items: center; gap: 8px; position: fixed; top: 0; left: 0; right: 0; padding: 8px 36px; background: #fff; border-bottom: 1px solid #e8f5e9; font-size: .6rem; color: #5e8a5e; font-weight: 700; z-index: 10; }
+  body { padding: 0 20px 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { margin: 1.4cm 0.8cm 0.8cm 0.8cm; size: A4 portrait; }
+  .running-header { display: flex; align-items: center; justify-content: space-between; position: fixed; top: -1.1cm; left: 0; right: 0; padding: 4px 0; background: #fff; border-bottom: 1px solid #c2dfc2; font-size: .6rem; color: #1b5e20; font-weight: 700; z-index: 10; }
   .running-header img { height: 16px; }
-  .cover { margin: 0 -20px 0; }
+  .cover { margin: -1.4cm -0.8cm 0; min-height: 100vh; }
+  .sec-block { break-inside: avoid !important; page-break-inside: avoid !important; margin-bottom: 18px; }
+  .ptable { break-inside: avoid !important; page-break-inside: avoid !important; }
+  svg { break-inside: avoid !important; page-break-inside: avoid !important; max-width: 100%; height: auto; display: block; }
+  tr { break-inside: avoid !important; page-break-inside: avoid !important; }
 }
-.sec-block { page-break-inside: avoid; }
 </style></head><body>
-<div class="running-header"><img src="/logo-og.png" onerror="this.style.display='none'">Abundance Financial Services</div>
+<div class="running-header">
+  <span>Abundance Financial Services &nbsp;·&nbsp; Investment Proposal</span>
+  <span>${esc(advisorArn)}</span>
+</div>
 <div class="cover">
   <div class="cover-logo"><img src="/logo-mark-white.png" onerror="this.style.display='none'"></div>
   <div class="cover-title">Investment Proposal</div>
@@ -388,11 +383,6 @@ svg{max-width:100%;height:auto;display:block;margin-bottom:8px}
   <div class="cover-powered-by"><img src="/logo-mark-white.png" onerror="this.style.display='none'"> Powered by <b>Abundance Financial Services</b></div>
 </div>
 <div class="page-break"></div>
-<div class="ph">
-  <div><div class="pt">Investment Proposal — ${esc(typeLabel)}</div>
-  <div class="pa">Abundance Financial Services® · ${esc(advisorArn)} · AMFI Registered Mutual Fund &amp; SIF Distributor</div></div>
-  <img class="logo" src="/logo-og.png" onerror="this.style.display='none'">
-</div>
 <div class="sec-block">
 <div class="sec">Selected Funds</div>
 <table class="ptable"><thead><tr><th style="text-align:left">Fund</th><th class="num">Amount</th><th class="num">% of Total</th></tr></thead><tbody>${fundRows}</tbody></table>
