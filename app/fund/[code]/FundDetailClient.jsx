@@ -15,6 +15,14 @@ import '@/app/screener/mf-compare.css';
 import './fund-detail.css';
 
 const BENCHMARK_OPTIONS = [
+  'BSE Liquid Rate Index',
+  'BSE India Corporate Bond Index',
+  'BSE India 10 Year Sovereign Bond',
+  'BSE India 5 Year Sovereign Bond Index',
+  'BSE India Government Bill Index',
+  'BSE India Government Bond Index',
+  'BSE India Sovereign Bond Index',
+  'BSE India Bond Index',
   'BSE 500',
   'BSE SENSEX',
   'BSE LargeCap',
@@ -37,9 +45,30 @@ const BENCHMARK_OPTIONS = [
   'BSE METAL',
 ];
 
-function getDefaultBenchmark(name, category) {
-  const text = `${name || ''} ${category || ''}`.toLowerCase();
+function getDefaultBenchmark(name, category, benchmarkName) {
+  const text = `${name || ''} ${category || ''} ${benchmarkName || ''}`.toLowerCase();
 
+  // Debt & Liquid Fund Benchmarks
+  if (text.includes('liquid') || text.includes('overnight') || text.includes('cash') || text.includes('cblo') || text.includes('treps')) {
+    return 'BSE Liquid Rate Index';
+  }
+  if (text.includes('corporate bond') || text.includes('credit risk') || text.includes('credit') || text.includes('financials bond')) {
+    return 'BSE India Corporate Bond Index';
+  }
+  if (text.includes('10 year') || text.includes('constant duration') || text.includes('gilt') || text.includes('sovereign')) {
+    return 'BSE India 10 Year Sovereign Bond';
+  }
+  if (text.includes('g-sec') || text.includes('treasury') || text.includes('tbill') || text.includes('t-bill') || text.includes('bill') || text.includes('money market')) {
+    return 'BSE India Government Bill Index';
+  }
+  if (text.includes('govt bond') || text.includes('government bond')) {
+    return 'BSE India Government Bond Index';
+  }
+  if (text.includes('short duration') || text.includes('medium duration') || text.includes('long duration') || text.includes('low duration') || text.includes('ultra short') || text.includes('dynamic bond') || text.includes('floater') || text.includes('debt') || text.includes('income')) {
+    return 'BSE India Bond Index';
+  }
+
+  // Equity Benchmarks
   if (text.includes('defenc') || text.includes('defense')) return 'BSE India Defence';
   if (text.includes('small cap') || text.includes('smallcap')) return 'BSE SmallCap';
   if (text.includes('mid cap') || text.includes('midcap')) return 'BSE MidCap';

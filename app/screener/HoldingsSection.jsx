@@ -121,23 +121,25 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
 
   const holdings = holdingsData.holdings;
   const equityHoldings = holdings.filter((h) => h.assetClass === 'EQUITY');
+  const activeHoldings = equityHoldings.length > 0 ? equityHoldings : holdings;
 
-  if (equityHoldings.length === 0) {
+  if (activeHoldings.length === 0) {
     return (
       <div className="scr-hold-section">
         <div className="scr-hold-title">📊 Portfolio Holdings &amp; Sectors</div>
-        <div className="scr-hold-empty">This fund does not hold listed equities (debt / liquid / cash portfolio).</div>
+        <div className="scr-hold-empty">No portfolio holdings data available for this scheme.</div>
       </div>
     );
   }
 
-  const top5Pct = equityHoldings.slice(0, 5).reduce((a, h) => a + (h.weightagePct || 0), 0);
-  const top10Pct = equityHoldings.slice(0, 10).reduce((a, h) => a + (h.weightagePct || 0), 0);
-  const totalCount = equityHoldings.length;
+  const isEquity = equityHoldings.length > 0;
+  const top5Pct = activeHoldings.slice(0, 5).reduce((a, h) => a + (h.weightagePct || 0), 0);
+  const top10Pct = activeHoldings.slice(0, 10).reduce((a, h) => a + (h.weightagePct || 0), 0);
+  const totalCount = activeHoldings.length;
 
   const sectorMap = {};
-  equityHoldings.forEach((h) => {
-    const sec = h.sector || 'Unknown';
+  activeHoldings.forEach((h) => {
+    const sec = h.sector && h.sector !== 'Unknown' && h.sector !== 'Unspecified' ? h.sector : (h.assetClass || 'Debt / Cash');
     sectorMap[sec] = (sectorMap[sec] || 0) + (h.weightagePct || 0);
   });
   const sectors = Object.entries(sectorMap)
@@ -148,7 +150,7 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
 
   const SECTOR_COLORS = ['#1b5e20', '#2e7d32', '#43a047', '#e65100', '#0288d1', '#5e35b1'];
 
-  const displayedHoldings = (expanded && isPaidOrAdmin) ? equityHoldings : equityHoldings.slice(0, 10);
+  const displayedHoldings = (expanded && isPaidOrAdmin) ? activeHoldings : activeHoldings.slice(0, 10);
 
   const handleToggleClick = () => {
     if (isPaidOrAdmin) {
@@ -172,14 +174,14 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
           <b>{top10Pct.toFixed(1)}%</b>
         </div>
         <div className="scr-dk">
-          <span>Equity Stocks</span>
+          <span>{isEquity ? 'Equity Stocks' : 'Securities'}</span>
           <b>{totalCount}</b>
         </div>
       </div>
 
       {topSectors.length > 0 && (
         <div className="scr-allocation-card">
-          <div className="scr-alloc-title">Top Sector Exposure</div>
+          <div className="scr-alloc-title">{isEquity ? 'Top Sector Exposure' : 'Top Instrument / Sector Exposure'}</div>
           <div className="scr-alloc-bars">
             {topSectors.map((sec, idx) => (
               <div className="scr-alloc-item" key={sec.name}>
@@ -203,8 +205,8 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
         <table className="scr-hold-table">
           <thead>
             <tr>
-              <th>Stock</th>
-              <th>Sector</th>
+              <th>{isEquity ? 'Stock' : 'Security / Instrument'}</th>
+              <th>{isEquity ? 'Sector' : 'Type / Sector'}</th>
               <th style={{ textAlign: 'right' }}>Weight</th>
             </tr>
           </thead>
@@ -212,11 +214,11 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
             {displayedHoldings.map((h, i) => (
               <tr key={i}>
                 <td className="scr-hold-stock" title={h.securityName}>{h.securityName}</td>
-                <td className="scr-hold-sector">{h.sector || '—'}</td>
+                <td className="scr-hold-sector">{h.sector || h.assetClass || '—'}</td>
                 <td className="scr-hold-pct">{(h.weightagePct || 0).toFixed(2)}%</td>
               </tr>
             ))}
-            {!isPaidOrAdmin && equityHoldings.length > 10 && (
+            {!isPaidOrAdmin && activeHoldings.length > 10 && (
               <tr
                 className="scr-hold-row-locked"
                 onClick={() => setShowPaywallModal(true)}
