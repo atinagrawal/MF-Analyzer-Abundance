@@ -919,6 +919,73 @@ export default function SifScreener({ initialData }) {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
+            SIF vs Mutual Funds vs PMS vs AIF Comparison Matrix
+        ════════════════════════════════════════════════════════════════════ */}
+        <section className="sif-comp-matrix" aria-label="SIF vs MF vs PMS comparison">
+          <div className="sif-comp-header">
+            <h2 className="sif-comp-title">SIF vs Mutual Funds vs PMS — SEBI Framework Comparison</h2>
+            <p className="sif-comp-sub">Understanding the regulatory positioning of Specialised Investment Funds in India</p>
+          </div>
+          <div className="sif-comp-table-wrap">
+            <table className="sif-comp-table">
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>Mutual Funds (MF)</th>
+                  <th className="sif-comp-highlight-th">Specialised Funds (SIF) ✨</th>
+                  <th>Portfolio Management (PMS)</th>
+                  <th>Cat III AIF</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="sif-comp-feature">Minimum Investment</td>
+                  <td>₹100 – ₹500</td>
+                  <td className="sif-comp-highlight-td"><strong>₹10 Lakhs</strong></td>
+                  <td>₹50 Lakhs</td>
+                  <td>₹1 Crore</td>
+                </tr>
+                <tr>
+                  <td className="sif-comp-feature">Derivatives &amp; Short Exposure</td>
+                  <td>❌ Prohibited</td>
+                  <td className="sif-comp-highlight-td"><strong>Up to 25% Shorting Allowed</strong></td>
+                  <td>Allowed</td>
+                  <td>Allowed</td>
+                </tr>
+                <tr>
+                  <td className="sif-comp-feature">Strategy Flexibility</td>
+                  <td>Strict Mandate Limits</td>
+                  <td className="sif-comp-highlight-td"><strong>Long-Short &amp; Sector Rotation</strong></td>
+                  <td>Customized Discretionary</td>
+                  <td>Alternative / Complex</td>
+                </tr>
+                <tr>
+                  <td className="sif-comp-feature">Regulatory Structure</td>
+                  <td>SEBI MF Regulations</td>
+                  <td className="sif-comp-highlight-td"><strong>SEBI MF Framework (Trust)</strong></td>
+                  <td>SEBI PMS Regulations</td>
+                  <td>SEBI AIF Regulations</td>
+                </tr>
+                <tr>
+                  <td className="sif-comp-feature">NAV Publishing Frequency</td>
+                  <td>Daily (AMFI)</td>
+                  <td className="sif-comp-highlight-td"><strong>Daily (AMFI SIF Feed)</strong></td>
+                  <td>Monthly / Periodic</td>
+                  <td>Monthly / Quarterly</td>
+                </tr>
+                <tr>
+                  <td className="sif-comp-feature">Redemption Notice Period</td>
+                  <td>Nil (Same/Next Day)</td>
+                  <td className="sif-comp-highlight-td"><strong>Up to 15 Working Days</strong></td>
+                  <td>Custom Lock-in / Exit Terms</td>
+                  <td>Lock-in / Closed-Ended</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════════
             FAQ Section
             — Rendered HTML matching the FAQPage JSON-LD built in page.js
               from the same lib/sifFaq.js source (getSifFaq).

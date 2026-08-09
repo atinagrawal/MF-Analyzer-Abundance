@@ -7287,9 +7287,78 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 }
 
 /* ── FAQ (visible accordion matching the FAQPage JSON-LD, see lib/sifFaq.js) ── */
-.sif-faq {
-  margin: 48px 0 32px;
+/* ── SIF Comparison Matrix ────────────────────────────────────── */
+.sif-comp-matrix {
+  margin: 48px 0 24px;
   padding-top: 40px;
+  border-top: 1.5px solid var(--border);
+}
+.sif-comp-header { margin-bottom: 20px; }
+.sif-comp-title {
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: -.4px;
+  margin: 0 0 6px;
+}
+.sif-comp-sub {
+  font-size: .78rem;
+  color: var(--muted);
+  margin: 0;
+}
+.sif-comp-table-wrap {
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  overflow-x: auto;
+  background: var(--surface);
+}
+.sif-comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .84rem;
+}
+.sif-comp-table th {
+  background: var(--s2);
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: 12px 16px;
+  border-bottom: 1.5px solid var(--border);
+  text-align: left;
+}
+.sif-comp-highlight-th {
+  background: rgba(46, 125, 50, 0.12) !important;
+  color: var(--g1) !important;
+  border-bottom: 2px solid var(--g1) !important;
+}
+.sif-comp-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.sif-comp-table tr:last-child td {
+  border-bottom: none;
+}
+.sif-comp-feature {
+  font-weight: 700;
+  color: var(--text);
+  background: var(--s2);
+  width: 200px;
+}
+.sif-comp-highlight-td {
+  background: rgba(46, 125, 50, 0.04);
+  color: var(--text);
+}
+@media (max-width: 680px) {
+  .sif-comp-matrix { margin: 32px 0 20px; padding-top: 28px; }
+  .sif-comp-table th, .sif-comp-table td { padding: 10px 12px; font-size: .78rem; }
+}
+
+.sif-faq {
+  margin: 36px 0 32px;
+  padding-top: 32px;
   border-top: 1.5px solid var(--border);
 }
 .sif-faq-header { margin-bottom: 24px; }
