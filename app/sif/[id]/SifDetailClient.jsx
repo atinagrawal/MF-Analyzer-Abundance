@@ -17,6 +17,8 @@ const SIF_STRATEGY_LABELS = {
 };
 
 const BENCH_OPTIONS = [
+  { value: 'BSE MidCap',                       label: 'BSE MidCap' },
+  { value: 'BSE SmallCap',                     label: 'BSE SmallCap' },
   { value: 'BSE 250 LargeMidCap 65:35 Index', label: 'BSE 250 LargeMidCap 65:35' },
   { value: 'BSE 500',                          label: 'BSE 500' },
   { value: 'BSE Arbitrage Rate Index',          label: 'BSE Arbitrage Index' },
@@ -32,8 +34,10 @@ function sifStratShort(cat) {
 }
 
 function sifDefaultBench(cat) {
-  if (/arbitrage/i.test(cat || '')) return 'BSE Arbitrage Rate Index';
-  if (/liquid/i.test(cat || ''))    return 'BSE Liquid Rate Index';
+  const c = (cat || '').toLowerCase();
+  if (c.includes('ex-top 100') || c.includes('ex top 100')) return 'BSE MidCap';
+  if (c.includes('arbitrage')) return 'BSE Arbitrage Rate Index';
+  if (c.includes('liquid'))    return 'BSE Liquid Rate Index';
   return 'BSE 250 LargeMidCap 65:35 Index';
 }
 
