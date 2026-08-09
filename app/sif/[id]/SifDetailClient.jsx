@@ -17,7 +17,7 @@ const SIF_STRATEGY_LABELS = {
 };
 
 const BENCH_OPTIONS = [
-  { value: 'BSE 500',                          label: 'BSE 500 (Nifty 500 TRI)' },
+  { value: 'BSE 500',                          label: 'BSE 500' },
   { value: 'BSE 400 MidSmallCap Index',        label: 'BSE 400 MidSmallCap' },
   { value: 'BSE MidSmallCap',                  label: 'BSE MidSmallCap' },
   { value: 'BSE MidCap',                       label: 'BSE MidCap' },
