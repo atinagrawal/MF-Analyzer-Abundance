@@ -54,13 +54,35 @@ const BENCHMARK_OPTIONS = [
 ];
 
 function getDefaultBenchmark(name, category, benchmarkName) {
-  const text = `${name || ''} ${category || ''} ${benchmarkName || ''}`.toLowerCase();
+  const bName = (benchmarkName || '').toLowerCase();
+  if (bName) {
+    if (bName.includes('500')) return 'BSE 500';
+    if (bName.includes('small')) return 'BSE SmallCap';
+    if (bName.includes('mid') && !bName.includes('large')) return 'BSE MidCap';
+    if (bName.includes('large') && bName.includes('mid')) return 'BSE LargeMidCap';
+    if (bName.includes('sensex') || bName.includes(' 50')) return 'BSE SENSEX';
+    if (bName.includes('100')) return 'BSE LargeCap';
+    if (bName.includes('200')) return 'BSE 200';
+    if (bName.includes('bank')) return 'BSE BANKEX';
+    if (/\b(it|tech|technology|software)\b/i.test(bName)) return 'BSE Information Technology';
+    if (bName.includes('pharma') || bName.includes('health')) return 'BSE Healthcare';
+    if (bName.includes('fmcg') || bName.includes('consumer')) return 'BSE Fast Moving Consumer Goods';
+    if (bName.includes('infra')) return 'BSE India Infrastructure Index';
+    if (bName.includes('manufacturing')) return 'BSE India Manufacturing Index';
+    if (bName.includes('auto')) return 'BSE AUTO';
+    if (bName.includes('defenc') || bName.includes('defense')) return 'BSE India Defence';
+    if (bName.includes('psu')) return 'BSE PSU';
+    if (bName.includes('realty')) return 'BSE REALTY';
+    if (bName.includes('metal')) return 'BSE METAL';
+  }
+
+  const text = `${name || ''} ${category || ''}`.toLowerCase();
 
   // 1. Debt & Liquid Benchmarks
   if (text.includes('liquid') || text.includes('overnight') || text.includes('cash') || text.includes('cblo') || text.includes('treps')) {
     return 'BSE Liquid Rate Index';
   }
-  if (text.includes('corporate bond') || text.includes('credit risk') || text.includes('credit') || text.includes('financials bond')) {
+  if (text.includes('corporate bond') || text.includes('credit risk') || text.includes('financials bond')) {
     return 'BSE India Corporate Bond Index';
   }
   if (text.includes('10 year') || text.includes('constant duration') || text.includes('gilt') || text.includes('sovereign')) {
@@ -106,7 +128,7 @@ function getDefaultBenchmark(name, category, benchmarkName) {
   if (text.includes('small cap') || text.includes('smallcap')) return 'BSE SmallCap';
   if (text.includes('mid cap') || text.includes('midcap')) return 'BSE MidCap';
   if (text.includes('bank') || text.includes('finance') || text.includes('financial')) return 'BSE BANKEX';
-  if (text.includes('tech') || text.includes('it') || text.includes('software')) return 'BSE Information Technology';
+  if (/\b(it|tech|technology|software)\b/i.test(text)) return 'BSE Information Technology';
   if (text.includes('pharma') || text.includes('health') || text.includes('healthcare')) return 'BSE Healthcare';
   if (text.includes('fmcg') || text.includes('consumer')) return 'BSE Fast Moving Consumer Goods';
   if (text.includes('infra') || text.includes('infrastructure')) return 'BSE India Infrastructure Index';
@@ -119,6 +141,7 @@ function getDefaultBenchmark(name, category, benchmarkName) {
   if (text.includes('metal')) return 'BSE METAL';
   if (text.includes('large & mid') || text.includes('large and mid')) return 'BSE LargeMidCap';
   if (text.includes('large cap') || text.includes('largecap')) return 'BSE LargeCap';
+  if (text.includes('flexi cap') || text.includes('flexicap') || text.includes('multi cap') || text.includes('multicap')) return 'BSE 500';
   if (text.includes('sensex')) return 'BSE SENSEX';
   if (text.includes('nifty 100') || text.includes('bse 100')) return 'BSE 100';
   if (text.includes('nifty 200') || text.includes('bse 200')) return 'BSE 200';
@@ -229,7 +252,13 @@ export default function FundDetailClient({ code }) {
       `/api/proposal-studio/holdings?amfiCode=${encodeURIComponent(code)}&schemeName=${encodeURIComponent(f.name)}`
     )
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { setHoldingsData(d); setHoldingsLoading(false); })
+      .then((d) => {
+        setHoldingsData(d);
+        if (d?.benchmarkName) {
+          setBenchIdx(getDefaultBenchmark(f.name, f.category, d.benchmarkName));
+        }
+        setHoldingsLoading(false);
+      })
       .catch(() => setHoldingsLoading(false));
   }, [isPaidOrAdmin, fundData, code]);
 
