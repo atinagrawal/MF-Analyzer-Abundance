@@ -23,6 +23,8 @@ const BENCHMARK_OPTIONS = [
   'BSE LargeCap',
   'BSE MidCap',
   'BSE SmallCap',
+  'BSE 400 MidSmallCap Index',
+  'BSE MidSmallCap',
   'BSE LargeMidCap',
   'BSE 250 LargeMidCap 65:35 Index',
   'BSE Arbitrage Rate Index',
@@ -56,6 +58,7 @@ const BENCHMARK_OPTIONS = [
 function getDefaultBenchmark(name, category, benchmarkName) {
   const bName = (benchmarkName || '').toLowerCase();
   if (bName) {
+    if (bName.includes('midsmall') || bName.includes('mid small') || bName.includes('400')) return 'BSE 400 MidSmallCap Index';
     if (bName.includes('500')) return 'BSE 500';
     if (bName.includes('small')) return 'BSE SmallCap';
     if (bName.includes('mid') && !bName.includes('large')) return 'BSE MidCap';
