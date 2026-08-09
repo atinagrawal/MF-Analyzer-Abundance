@@ -70,12 +70,12 @@ export const CURATED_CATEGORIES = [
     explainer: 'Flexi Cap funds must invest at least 65% in equity but face no mandated split across large, mid and small cap — the fund manager can move freely between them based on where they see opportunity. This flexibility makes Flexi Cap a popular single-fund core holding for investors who’d rather leave the cap-size allocation call to a professional manager.',
   },
   {
-    slug: 'elss',
-    label: 'ELSS',
-    category: 'Equity Scheme - ELSS',
-    subtitleSuffix: ' ELSS funds qualify for a Section 80C tax deduction with a 3-year lock-in.',
-    metaBlurb: 'ELSS funds offer a Section 80C tax deduction up to ₹1.5 lakh with a mandatory 3-year lock-in.',
-    explainer: 'ELSS (Equity Linked Savings Scheme) funds invest predominantly in equity and are the only mutual fund category that qualifies for a tax deduction under Section 80C, up to ₹1.5 lakh per financial year. They come with a mandatory 3-year lock-in — the shortest among all 80C options — but still carry full equity market risk, so the tax benefit shouldn’t be the only reason to invest.',
+    slug: 'multi-cap',
+    label: 'Multi Cap',
+    category: 'Equity Scheme - Multi Cap Fund',
+    subtitleSuffix: ' Multi Cap funds invest at least 25% each in Large, Mid and Small Cap stocks.',
+    metaBlurb: 'Multi Cap funds mandate 25% Large, 25% Mid and 25% Small Cap allocation for true market-wide coverage.',
+    explainer: 'Multi Cap funds are mandated by SEBI to invest at least 25% in Large Cap, 25% in Mid Cap, and 25% in Small Cap stocks at all times. Unlike Flexi Cap funds where the manager can tilt heavily toward one market cap, Multi Cap funds guarantee disciplined exposure across all three segments in a single fund.',
   },
   {
     slug: 'multi-asset-allocation',

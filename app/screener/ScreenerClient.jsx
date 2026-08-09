@@ -188,8 +188,17 @@ const FEATURED = [
   { label: 'Mid Cap', m: (c) => /mid cap/i.test(c) && !/large/i.test(c) },
   { label: 'Small Cap', m: (c) => /small cap/i.test(c) },
   { label: 'Flexi Cap', m: (c) => /flexi cap/i.test(c) },
-  { label: 'ELSS (Tax Saver)', m: (c) => /elss/i.test(c) },
+  { label: 'Large & Mid Cap', m: (c) => /large & mid/i.test(c) || /large and mid/i.test(c) },
   { label: 'Multi Asset Allocation', m: (c) => /multi asset allocation/i.test(c) },
+];
+
+const EQUITY_FEATURED = [
+  { label: 'Large Cap', m: (c) => /equity/i.test(c) && /large cap/i.test(c) && !/mid/i.test(c) },
+  { label: 'Mid Cap', m: (c) => /mid cap/i.test(c) && !/large/i.test(c) },
+  { label: 'Small Cap', m: (c) => /small cap/i.test(c) },
+  { label: 'Flexi Cap', m: (c) => /flexi cap/i.test(c) },
+  { label: 'Large & Mid Cap', m: (c) => /large & mid/i.test(c) || /large and mid/i.test(c) },
+  { label: 'Multi Cap', m: (c) => /multi cap/i.test(c) },
 ];
 
 export default function ScreenerClient({ initialCategory }) {
@@ -428,6 +437,8 @@ export default function ScreenerClient({ initialCategory }) {
     let featured; // [{ label, m }]
     if (group === 'All') {
       featured = FEATURED; // curated cross-asset set
+    } else if (group === 'Equity') {
+      featured = EQUITY_FEATURED; // curated 6 premier equity categories
     } else {
       // top categories WITHIN the selected type, ranked by number of funds
       const counts = {};
