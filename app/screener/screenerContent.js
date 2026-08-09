@@ -38,12 +38,12 @@ export function normalizeCategory(c = '') {
 
 export const CURATED_CATEGORIES = [
   {
-    slug: 'large-cap',
-    label: 'Large Cap',
-    category: 'Equity Scheme - Large Cap Fund',
-    subtitleSuffix: ' Large Cap funds invest in India’s top 100 companies by market capitalisation.',
-    metaBlurb: 'Large Cap funds invest in India’s top 100 companies by market cap — the most stable, liquid part of the equity market.',
-    explainer: 'Large Cap funds invest at least 80% of assets in India’s top 100 companies by market capitalisation — the most established, liquid names on the exchange. They tend to be the least volatile equity category, making them a common starting point for a core portfolio, though that stability usually comes with more modest upside than mid or small cap funds during strong bull phases.',
+    slug: 'sectoral-thematic',
+    label: 'Sectoral / Thematic',
+    category: 'Equity Scheme - Sectoral/ Thematic',
+    subtitleSuffix: ' Sectoral & Thematic funds invest in specific sectors like Banking, IT, Pharma or Infrastructure.',
+    metaBlurb: 'Sectoral & Thematic funds concentrate investments in specific sectors or themes like Banking, Defence, PSU or IT.',
+    explainer: 'Sectoral and Thematic funds invest at least 80% of assets in a specific industry sector (like Banking, Technology, Healthcare) or theme (like Infrastructure, Manufacturing, Defence). They carry higher risk than diversified funds because their performance depends entirely on one sector’s business cycle.',
   },
   {
     slug: 'mid-cap',
@@ -70,12 +70,12 @@ export const CURATED_CATEGORIES = [
     explainer: 'Flexi Cap funds must invest at least 65% in equity but face no mandated split across large, mid and small cap — the fund manager can move freely between them based on where they see opportunity. This flexibility makes Flexi Cap a popular single-fund core holding for investors who’d rather leave the cap-size allocation call to a professional manager.',
   },
   {
-    slug: 'multi-cap',
-    label: 'Multi Cap',
-    category: 'Equity Scheme - Multi Cap Fund',
-    subtitleSuffix: ' Multi Cap funds invest at least 25% each in Large, Mid and Small Cap stocks.',
-    metaBlurb: 'Multi Cap funds mandate 25% Large, 25% Mid and 25% Small Cap allocation for true market-wide coverage.',
-    explainer: 'Multi Cap funds are mandated by SEBI to invest at least 25% in Large Cap, 25% in Mid Cap, and 25% in Small Cap stocks at all times. Unlike Flexi Cap funds where the manager can tilt heavily toward one market cap, Multi Cap funds guarantee disciplined exposure across all three segments in a single fund.',
+    slug: 'value-contra',
+    label: 'Value / Contra',
+    category: 'Equity Scheme - Value Fund',
+    subtitleSuffix: ' Value & Contra funds invest in undervalued or temporarily out-of-favour stocks.',
+    metaBlurb: 'Value & Contra funds follow a value-investing strategy, buying stocks trading below their intrinsic worth.',
+    explainer: 'Value funds follow a value-investing strategy by holding stocks trading below their intrinsic value, while Contra funds take contrarian bets against prevailing market trends. Both require patience, as undervalued stocks can take time to re-rate.',
   },
   {
     slug: 'multi-asset-allocation',

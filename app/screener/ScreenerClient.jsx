@@ -184,7 +184,7 @@ const GROUP_DEFAULT_CAT = {
 
 // Featured categories for the "category leaders" band (top 3 by 3Y CAGR each).
 const FEATURED = [
-  { label: 'Large Cap', m: (c) => /equity/i.test(c) && /large cap/i.test(c) && !/mid/i.test(c) },
+  { label: 'Sectoral / Thematic', m: (c) => /sectoral|thematic/i.test(c) },
   { label: 'Mid Cap', m: (c) => /mid cap/i.test(c) && !/large/i.test(c) },
   { label: 'Small Cap', m: (c) => /small cap/i.test(c) },
   { label: 'Flexi Cap', m: (c) => /flexi cap/i.test(c) },
@@ -193,12 +193,12 @@ const FEATURED = [
 ];
 
 const EQUITY_FEATURED = [
-  { label: 'Large Cap', m: (c) => /equity/i.test(c) && /large cap/i.test(c) && !/mid/i.test(c) },
+  { label: 'Sectoral / Thematic', m: (c) => /sectoral|thematic/i.test(c) },
   { label: 'Mid Cap', m: (c) => /mid cap/i.test(c) && !/large/i.test(c) },
   { label: 'Small Cap', m: (c) => /small cap/i.test(c) },
   { label: 'Flexi Cap', m: (c) => /flexi cap/i.test(c) },
   { label: 'Large & Mid Cap', m: (c) => /large & mid/i.test(c) || /large and mid/i.test(c) },
-  { label: 'Multi Cap', m: (c) => /multi cap/i.test(c) },
+  { label: 'Value / Contra', m: (c) => /value|contra/i.test(c) },
 ];
 
 export default function ScreenerClient({ initialCategory }) {
