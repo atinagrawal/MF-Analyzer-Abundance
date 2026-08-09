@@ -473,7 +473,194 @@
   line-height: 1.55;
 }
 
-/* ── Compliance Footer ────────────────────────────────────────── */
+/* ── SIF Holdings & Sectors Section ───────────────────────────── */
+.sif-holdings-card {
+  padding: 24px;
+}
+
+.sif-holdings-card .scr-hold-section {
+  border-top: none !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+.sif-holdings-card .scr-hold-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* KPI Summary Cards */
+.sif-holdings-card .scr-drawer-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px !important;
+}
+
+.sif-holdings-card .scr-dk {
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sif-holdings-card .scr-dk span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.sif-holdings-card .scr-dk b {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Sector Exposure Card */
+.sif-holdings-card .scr-allocation-card {
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+
+.sif-holdings-card .scr-alloc-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+}
+
+.sif-holdings-card .scr-alloc-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.sif-holdings-card .scr-alloc-item:last-child {
+  margin-bottom: 0;
+}
+
+.sif-holdings-card .scr-alloc-lbl {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text2);
+  width: 230px;
+  min-width: 230px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sif-holdings-card .scr-alloc-bar-bg {
+  flex: 1;
+  height: 10px;
+  background: var(--s3, rgba(255,255,255,0.06));
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.sif-holdings-card .scr-alloc-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Holdings Table */
+.sif-holdings-card .scr-hold-table-wrap {
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.sif-holdings-card .scr-hold-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.sif-holdings-card .scr-hold-table th {
+  background: var(--s2);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 11px 16px;
+  border-bottom: 1.5px solid var(--border);
+  text-align: left;
+}
+
+.sif-holdings-card .scr-hold-table th:last-child {
+  text-align: right;
+}
+
+.sif-holdings-card .scr-hold-table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.sif-holdings-card .scr-hold-table tr:last-child td {
+  border-bottom: none;
+}
+
+.sif-holdings-card .scr-hold-stock {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.sif-holdings-card .scr-hold-sector {
+  color: var(--text2);
+  font-size: 0.8rem;
+}
+
+.sif-holdings-card .scr-hold-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  text-align: right;
+  color: var(--g1, #2e7d32);
+}
+
+/* Pro Teaser / Paywall Banner */
+.sif-holdings-card .scr-hold-pro-teaser {
+  margin-top: 16px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.08) 0%, rgba(255, 179, 0, 0.04) 100%);
+  border: 1.5px solid rgba(255, 215, 0, 0.25);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sif-holdings-card .scr-hold-pro-teaser:hover {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.12) 0%, rgba(255, 179, 0, 0.08) 100%);
+  border-color: rgba(255, 215, 0, 0.4);
+}
+
+/* Compliance Footer */
 .sif-compliance {
   margin-top: 20px;
   text-align: center;

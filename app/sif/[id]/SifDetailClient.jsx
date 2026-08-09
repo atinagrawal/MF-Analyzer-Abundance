@@ -327,8 +327,10 @@ export default function SifDetailClient({ id }) {
           </div>
         </div>
 
-        {/* Holdings */}
-        <HoldingsSection holdingsData={holdingsData} loading={holdingsLoad} schemeName={sif.nav_name} />
+        {/* Holdings & Sectors */}
+        <div className="sif-card sif-holdings-card">
+          <HoldingsSection holdingsData={holdingsData} loading={holdingsLoad} schemeName={sif.nav_name} />
+        </div>
 
         {/* FAQs */}
         <div className="sif-card">
