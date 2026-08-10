@@ -145,6 +145,7 @@ export default function SifDetailClient({ id }) {
   // Derived: clean name
   const cleanName = sif ? sif.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim() : '';
   const fam = sif?.category?.startsWith('Equity') ? 'equity' : 'hybrid';
+  const schemeFaqs = getSchemeFaq(sif, holdingsData?.totalHoldingsCount ?? holdingsData?.holdings?.length ?? 0);
 
   // Period-filtered nav/bench
   const PERIOD_MS = { '1M': 30.44, '3M': 91.31, '6M': 182.62, '1Y': 365.25 };
