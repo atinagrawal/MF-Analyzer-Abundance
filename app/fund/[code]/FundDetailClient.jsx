@@ -63,6 +63,7 @@ function getDefaultBenchmark(name, category, benchmarkName) {
     if (bName.includes('small')) return 'BSE SmallCap';
     if (bName.includes('mid') && !bName.includes('large')) return 'BSE MidCap';
     if (bName.includes('large') && bName.includes('mid')) return 'BSE LargeMidCap';
+    if (bName.includes('next 50') || bName.includes('next50') || bName.includes('next 500')) return 'BSE NEXT 500';
     if (bName.includes('sensex') || bName.includes(' 50')) return 'BSE SENSEX';
     if (bName.includes('100')) return 'BSE LargeCap';
     if (bName.includes('200')) return 'BSE 200';
