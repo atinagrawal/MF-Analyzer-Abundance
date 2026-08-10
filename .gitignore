@@ -43,3 +43,10 @@ data/scheme-lineage.review.md
 .superpowers/
 
 .env*
+
+# portfolio_aggregator: large scraped output + run logs + Python bytecode
+# aren't meant to be tracked -- only the fetchers/registry source is.
+scripts/portfolio_aggregator/data/
+scripts/portfolio_aggregator/logs/
+__pycache__/
+*.pyc
