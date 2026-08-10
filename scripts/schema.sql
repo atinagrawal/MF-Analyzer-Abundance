@@ -174,6 +174,289 @@ CREATE INDEX IF NOT EXISTS idx_proposals_user ON proposals(user_id);
 ALTER TABLE proposals ADD COLUMN IF NOT EXISTS share_token TEXT UNIQUE;
 CREATE INDEX IF NOT EXISTS idx_proposals_share_token ON proposals(share_token) WHERE share_token IS NOT NULL;
 
+-- ── users: paid-plan + distributor columns ──────────────────────────────────
+-- Added by the Lifetime-plan and distributor-scoping features, after the
+-- base `users` table above was first written. plan/plan_expires_at are the
+-- source auth.js's session callback normalizes into session.user.plan
+-- ('free' | 'pro'). distributor_id/created_by back lib/permissions.js's
+-- canManageUser() (a distributor may manage a client only if one of these
+-- points at that distributor).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS plan               TEXT NOT NULL DEFAULT 'free';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at    TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS razorpay_order_id  TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS distributor_id     TEXT REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by         TEXT REFERENCES users(id) ON DELETE SET NULL;
+
+-- ── Data-engine tables ───────────────────────────────────────────────────────
+-- Populated by scheduled GitHub Actions workflows running scripts/*.mjs and
+-- scripts/sync_*.js against public data sources (AMFI, BSE, NSE, mfapi.in),
+-- not by user requests. The app only ever reads these.
+
+-- MF screener — scripts/build-screener.mjs
+CREATE TABLE IF NOT EXISTS mf_screener (
+  code            TEXT    NOT NULL PRIMARY KEY,
+  name            TEXT    NOT NULL,
+  amc             TEXT,
+  category        TEXT,
+  structure       TEXT,
+  isin            TEXT,
+  nav             NUMERIC,
+  nav_date        TEXT,
+  ret_1m          NUMERIC,
+  ret_3m          NUMERIC,
+  ret_6m          NUMERIC,
+  ret_1y          NUMERIC,
+  ret_3y          NUMERIC,
+  ret_5y          NUMERIC,
+  ret_7y          NUMERIC,
+  ret_10y         NUMERIC,
+  ret_inception   NUMERIC,
+  inception_date  TEXT,
+  vol             NUMERIC,
+  max_dd          NUMERIC,
+  ret_per_risk    NUMERIC,
+  age_years       NUMERIC,
+  flag            TEXT,
+  asof            TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_mf_screener_category  ON mf_screener(category);
+CREATE INDEX IF NOT EXISTS idx_mf_screener_structure ON mf_screener(structure);
+CREATE INDEX IF NOT EXISTS idx_mf_screener_ret3y      ON mf_screener(ret_3y);
+
+-- Resolved fund-inception cache (avoids re-resolving the same scheme's
+-- since-inception NAV/date on every build-screener run) -- scripts/build-screener.mjs
+CREATE TABLE IF NOT EXISTS mf_inception (
+  code            TEXT    NOT NULL PRIMARY KEY,
+  inception_date  TEXT    NOT NULL,
+  inception_nav   NUMERIC NOT NULL,
+  source          TEXT    NOT NULL
+);
+
+-- SEBI SIF (Specialised Investment Fund) screener — scripts/build-sif-screener.mjs
+CREATE TABLE IF NOT EXISTS sif_screener (
+  scheme_id                  TEXT    NOT NULL PRIMARY KEY,  -- e.g. 'SIF-01'
+  nav_name                   TEXT    NOT NULL,
+  sif_name                   TEXT,
+  category                   TEXT,
+  nav                        NUMERIC,
+  nav_date                   TEXT,
+  ret_1m                     NUMERIC,
+  ret_3m                     NUMERIC,
+  ret_6m                     NUMERIC,
+  ret_1y                     NUMERIC,
+  ret_3y                     NUMERIC,
+  ret_5y                     NUMERIC,
+  ret_7y                     NUMERIC,
+  ret_10y                    NUMERIC,
+  vol                        NUMERIC,
+  max_dd                     NUMERIC,
+  ret_per_risk               NUMERIC,
+  age_years                  NUMERIC,
+  inception_date             TEXT,
+  ret_inception              NUMERIC,
+  ret_inception_annualized   BOOLEAN,
+  asof                       TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_sif_screener_category ON sif_screener(category);
+
+-- SEBI monthly stress-test / portfolio-concentration disclosures, per scheme
+-- per month -- scripts/build-screener.mjs
+CREATE TABLE IF NOT EXISTS mf_stress_test (
+  scheme_code           INTEGER NOT NULL,
+  scheme_name           TEXT    NOT NULL,
+  amc_name              TEXT,
+  category              TEXT    NOT NULL,
+  month                 DATE    NOT NULL,
+  aum_cr                NUMERIC,
+  days_50pct            NUMERIC,
+  days_25pct            NUMERIC,
+  top10_investors_pct   NUMERIC,
+  large_cap_pct         NUMERIC,
+  mid_cap_pct           NUMERIC,
+  small_cap_pct         NUMERIC,
+  cash_pct              NUMERIC,
+  std_dev_portfolio     NUMERIC,
+  std_dev_benchmark     NUMERIC,
+  beta                  NUMERIC,
+  pe_portfolio          NUMERIC,
+  pe_benchmark          NUMERIC,
+  pe_benchmark_1ya      NUMERIC,
+  pe_benchmark_2ya      NUMERIC,
+  turnover_ratio        NUMERIC,
+  fetched_at            TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (scheme_code, month)
+);
+
+-- BSE benchmark index dashboard (PE/PB/yield + trailing returns per index) --
+-- scripts/build-bse-index-dashboard.mjs
+CREATE TABLE IF NOT EXISTS bse_index_dashboard (
+  symbol      TEXT NOT NULL PRIMARY KEY,
+  name        TEXT NOT NULL,
+  cat         TEXT NOT NULL,
+  short       TEXT,
+  r1m         NUMERIC,
+  r3m         NUMERIC,
+  r1y         NUMERIC,
+  r3y         NUMERIC,
+  r5y         NUMERIC,
+  pe          NUMERIC,
+  pb          NUMERIC,
+  dy          NUMERIC,
+  as_of       DATE,
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_bse_index_dashboard_cat ON bse_index_dashboard(cat);
+
+-- Daily NSE-listed-stock OHLCV bars -- scripts/ingest-eod.mjs
+CREATE TABLE IF NOT EXISTS stock_eod (
+  trade_date  DATE    NOT NULL,
+  isin        TEXT    NOT NULL,
+  symbol      TEXT,
+  name        TEXT,
+  series      TEXT,
+  open        NUMERIC,
+  high        NUMERIC,
+  low         NUMERIC,
+  close       NUMERIC NOT NULL,
+  prev_close  NUMERIC,
+  volume      BIGINT,
+  turnover    NUMERIC,
+  PRIMARY KEY (trade_date, isin)
+);
+CREATE INDEX IF NOT EXISTS idx_stock_eod_isin_date ON stock_eod(isin, trade_date);
+CREATE INDEX IF NOT EXISTS idx_stock_eod_date       ON stock_eod(trade_date);
+
+-- Per-stock daily technical signals (DMAs, golden/death cross, 52w hi/lo) --
+-- derived from stock_eod by scripts/build-signals.mjs
+CREATE TABLE IF NOT EXISTS stock_signals (
+  snap_date      DATE    NOT NULL,
+  isin           TEXT    NOT NULL,
+  symbol         TEXT,
+  name           TEXT,
+  close          NUMERIC,
+  above_20       BOOLEAN,
+  above_50       BOOLEAN,
+  above_100      BOOLEAN,
+  above_150      BOOLEAN,
+  above_200      BOOLEAN,
+  dma20          NUMERIC,
+  dma50          NUMERIC,
+  dma100         NUMERIC,
+  dma150         NUMERIC,
+  dma200         NUMERIC,
+  golden_cross   BOOLEAN,
+  death_cross    BOOLEAN,
+  bull_stacked   BOOLEAN,
+  bear_stacked   BOOLEAN,
+  new_high_52w   BOOLEAN,
+  new_low_52w    BOOLEAN,
+  pct_from_52h   NUMERIC,
+  pct_from_52l   NUMERIC,
+  adv_dec        SMALLINT,
+  PRIMARY KEY (snap_date, isin)
+);
+CREATE INDEX IF NOT EXISTS idx_stock_signals_date ON stock_signals(snap_date);
+CREATE INDEX IF NOT EXISTS idx_stock_signals_isin ON stock_signals(isin, snap_date);
+
+-- Market-wide breadth snapshot, one row per trading day -- scripts/build-breadth.mjs
+CREATE TABLE IF NOT EXISTS market_breadth (
+  snap_date     DATE PRIMARY KEY,
+  universe      INTEGER,
+  a20           INTEGER,
+  t20           INTEGER,
+  a50           INTEGER,
+  t50           INTEGER,
+  a100          INTEGER,
+  t100          INTEGER,
+  a150          INTEGER,
+  t150          INTEGER,
+  a200          INTEGER,
+  t200          INTEGER,
+  advancing     INTEGER,
+  declining     INTEGER,
+  unchanged     INTEGER,
+  new_high      INTEGER,
+  new_low       INTEGER,
+  regime_pct    NUMERIC,
+  golden_cross  INTEGER,
+  death_cross   INTEGER,
+  bull_stacked  INTEGER,
+  bear_stacked  INTEGER,
+  asof          TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Same breadth metrics as market_breadth, split per sector -- scripts/build-sector-breadth.mjs
+CREATE TABLE IF NOT EXISTS sector_breadth (
+  snap_date     DATE NOT NULL,
+  sector        TEXT NOT NULL,
+  universe      INTEGER,
+  a20           INTEGER,
+  t20           INTEGER,
+  a50           INTEGER,
+  t50           INTEGER,
+  a100          INTEGER,
+  t100          INTEGER,
+  a150          INTEGER,
+  t150          INTEGER,
+  a200          INTEGER,
+  t200          INTEGER,
+  advancing     INTEGER,
+  declining     INTEGER,
+  unchanged     INTEGER,
+  new_high      INTEGER,
+  new_low       INTEGER,
+  regime_pct    NUMERIC,
+  golden_cross  INTEGER,
+  death_cross   INTEGER,
+  bull_stacked  INTEGER,
+  bear_stacked  INTEGER,
+  asof          TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (snap_date, sector)
+);
+CREATE INDEX IF NOT EXISTS idx_sector_breadth_date ON sector_breadth(snap_date);
+
+-- ISIN -> sector lookup feeding sector_breadth -- scripts/ingest-sector-map.mjs
+CREATE TABLE IF NOT EXISTS sector_isin_map (
+  isin    TEXT NOT NULL,
+  sector  TEXT NOT NULL,
+  PRIMARY KEY (isin, sector)
+);
+CREATE INDEX IF NOT EXISTS idx_sector_isin_map_sector ON sector_isin_map(sector);
+
+-- AMFI state-wise / age-wise AUM report, cached by calendar month since AMFI
+-- only republishes it monthly -- pages/api/amfi-statewise.js (fetch-on-read,
+-- not a scheduled sync script)
+CREATE TABLE IF NOT EXISTS amfi_statewise_cache (
+  id          SERIAL PRIMARY KEY,
+  data_month  CHAR(7)     NOT NULL UNIQUE,  -- 'YYYY-MM'
+  amfi_date   VARCHAR(20) NOT NULL,
+  payload     JSONB       NOT NULL,
+  fetched_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ── manual_holdings: user-entered holdings not covered by a CAS upload ──────
+-- Lets a client/distributor manually record a holding (e.g. an offline-only
+-- fund, or one bought before CAS tracking started) alongside their uploaded
+-- CAS portfolios. pan is optional -- ties the row into the same
+-- pan_investor_names authorization model as cas_portfolios when set.
+CREATE TABLE IF NOT EXISTS manual_holdings (
+  id             SERIAL      PRIMARY KEY,
+  user_id        TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  fund_name      TEXT        NOT NULL,
+  amfi_code      TEXT,
+  fund_type      TEXT        NOT NULL DEFAULT 'Equity MF',
+  units          NUMERIC     NOT NULL,
+  purchase_nav   NUMERIC     NOT NULL,
+  purchase_date  DATE,
+  folio          TEXT,
+  notes          TEXT,
+  pan            TEXT,
+  created_at     TIMESTAMPTZ DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS manual_holdings_user_idx ON manual_holdings(user_id);
+CREATE INDEX IF NOT EXISTS manual_holdings_pan_idx  ON manual_holdings(pan) WHERE pan IS NOT NULL;
+
 -- =============================================================================
 -- Role values: 'client' | 'distributor' | 'admin'
 -- Promote a user manually:
