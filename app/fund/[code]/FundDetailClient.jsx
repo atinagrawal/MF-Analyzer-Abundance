@@ -183,6 +183,7 @@ export default function FundDetailClient({ code }) {
   const [fundData, setFundData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [openFaq, setOpenFaq] = useState(null);
 
   // Pro-only state
   const [navPts, setNavPts] = useState(null);
@@ -410,6 +411,47 @@ export default function FundDetailClient({ code }) {
   const launchDate = f.inception_date
     ? new Date(f.inception_date + 'T00:00:00Z').toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
     : null;
+
+  const faqItems = [
+    {
+      q: `What is ${f.name}?`,
+      a: <>
+        {f.name} is an open-ended {shortCat(f.category)} mutual fund scheme managed by {f.amc}.
+        {f.inception_date &&
+          ` It was launched in ${new Date(f.inception_date + 'T00:00:00Z').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}.`}{' '}
+        It is categorised under {f.category} as defined by SEBI. Investors can invest via lumpsum or
+        systematic investment plans (SIP).
+      </>,
+    },
+    {
+      q: `Who manages ${f.name}?`,
+      a: <>
+        {f.name} is managed and operated by {f.amc}. As a SEBI-regulated mutual fund house in India,{' '}
+        {f.amc} employs professional fund managers and quantitative research teams to make asset allocation and security selection decisions
+        in accordance with SEBI guidelines and the scheme's SID mandate.
+      </>,
+    },
+    {
+      q: `What is the minimum investment in ${f.name}?`,
+      a: masterRec?.minPurchase != null
+        ? `The minimum initial lumpsum purchase amount for ${f.name} via BSE StAR MF is ₹${Number(masterRec.minPurchase).toLocaleString('en-IN')}.`
+        : `Minimum investment limits vary by plan, but most equity mutual funds allow initial lumpsum investments from ₹1,000 to ₹5,000 and monthly SIPs from ₹500.`,
+    },
+    {
+      q: `What is the exit load on ${f.name}?`,
+      a: masterRec?.exitLoadText
+        ? `Exit load: ${masterRec.exitLoadText}`
+        : `Exit load is charged if units are redeemed before a specified holding period (typically 1% for equity funds if redeemed within 1 year). Refer to the official factsheet for exact tier details.`,
+    },
+    {
+      q: `Is ${f.name} suitable for long-term goals?`,
+      a: `${f.name} belongs to the ${f.category} category. Equity-oriented funds are designed for long-term wealth accumulation (5+ year horizon), while debt funds suit shorter horizons. Always evaluate your risk tolerance and goal timeline before investing.`,
+    },
+    {
+      q: `How can I view complete analytics & holdings for ${f.name}?`,
+      a: `Abundance Pro members get instant access to complete analytics for ${f.name}, including point-to-point CAGR returns (1M to 10Y), interactive NAV history charts with benchmark overlays, SEBI stress test data, and complete 100% portfolio stock disclosures.`,
+    },
+  ];
 
   return (
     <>
@@ -895,17 +937,14 @@ export default function FundDetailClient({ code }) {
         )}
 
         {/* ── ⑪ HOLDINGS (Pro) ──────────────────────────────────────────── */}
+        {/* No fd-section-head wrapper here (unlike other sections) --
+            HoldingsSection renders its own title + accurate all-asset-class
+            "Total Holdings" count, so a second outer title would either
+            duplicate it or (as it did before) drift out of sync, since the
+            outer copy couldn't see per-asset-class composition. Matches the
+            SIF detail page's pattern for the same component. */}
         {isPro && (
           <div className="fd-section">
-            <div className="fd-section-head">
-              <div className="fd-section-icon">🗂</div>
-              <span className="fd-section-title">Portfolio Holdings &amp; Sectors</span>
-              {holdingsData?.holdings && (
-                <span className="fd-section-sub">
-                  {holdingsData.holdings.filter((h) => h.assetClass === 'EQUITY').length} equity stocks
-                </span>
-              )}
-            </div>
             <HoldingsSection holdingsData={holdingsData} loading={holdingsLoading} schemeName={f.name} />
           </div>
         )}
@@ -917,61 +956,15 @@ export default function FundDetailClient({ code }) {
             <span className="fd-section-title">Frequently Asked Questions</span>
           </div>
           <div className="fd-faq-list">
-            <details className="fd-faq-item">
-              <summary>What is {f.name}?</summary>
-              <p className="fd-faq-answer">
-                {f.name} is an open-ended {shortCat(f.category)} mutual fund scheme managed by {f.amc}.
-                {f.inception_date &&
-                  ` It was launched in ${new Date(f.inception_date + 'T00:00:00Z').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}.`}{' '}
-                It is categorised under {f.category} as defined by SEBI. Investors can invest via lumpsum or
-                systematic investment plans (SIP).
-              </p>
-            </details>
-
-            <details className="fd-faq-item">
-              <summary>Who manages {f.name}?</summary>
-              <p className="fd-faq-answer">
-                {f.name} is managed and operated by {f.amc}. As a SEBI-regulated mutual fund house in India,{' '}
-                {f.amc} employs professional fund managers and quantitative research teams to make asset allocation and security selection decisions
-                in accordance with SEBI guidelines and the scheme's SID mandate.
-              </p>
-            </details>
-
-            <details className="fd-faq-item">
-              <summary>What is the minimum investment in {f.name}?</summary>
-              <p className="fd-faq-answer">
-                {masterRec?.minPurchase != null
-                  ? `The minimum initial lumpsum purchase amount for ${f.name} via BSE StAR MF is ₹${Number(masterRec.minPurchase).toLocaleString('en-IN')}.`
-                  : `Minimum investment limits vary by plan, but most equity mutual funds allow initial lumpsum investments from ₹1,000 to ₹5,000 and monthly SIPs from ₹500.`}
-              </p>
-            </details>
-
-            <details className="fd-faq-item">
-              <summary>What is the exit load on {f.name}?</summary>
-              <p className="fd-faq-answer">
-                {masterRec?.exitLoadText
-                  ? `Exit load: ${masterRec.exitLoadText}`
-                  : `Exit load is charged if units are redeemed before a specified holding period (typically 1% for equity funds if redeemed within 1 year). Refer to the official factsheet for exact tier details.`}
-              </p>
-            </details>
-
-            <details className="fd-faq-item">
-              <summary>Is {f.name} suitable for long-term goals?</summary>
-              <p className="fd-faq-answer">
-                {f.name} belongs to the {f.category} category. Equity-oriented funds are designed for long-term
-                wealth accumulation (5+ year horizon), while debt funds suit shorter horizons. Always evaluate your
-                risk tolerance and goal timeline before investing.
-              </p>
-            </details>
-
-            <details className="fd-faq-item">
-              <summary>How can I view complete analytics &amp; holdings for {f.name}?</summary>
-              <p className="fd-faq-answer">
-                Abundance Pro members get instant access to complete analytics for {f.name}, including
-                point-to-point CAGR returns (1M to 10Y), interactive NAV history charts with benchmark overlays,
-                SEBI stress test data, and complete 100% portfolio stock disclosures.
-              </p>
-            </details>
+            {faqItems.map((item, i) => (
+              <div className={`fd-faq-item${openFaq === i ? ' open' : ''}`} key={i}>
+                <button className="fd-faq-q" onClick={() => setOpenFaq(openFaq === i ? null : i)}>
+                  <span>{item.q}</span>
+                  <span className="fd-faq-icon" aria-hidden="true">{openFaq === i ? '−' : '+'}</span>
+                </button>
+                {openFaq === i && <div className="fd-faq-answer"><p>{item.a}</p></div>}
+              </div>
+            ))}
           </div>
         </div>
 

@@ -329,45 +329,44 @@
 }
 
 /* ── FAQ Section ──────────────────────────────────────────────
-   Clean accordion with smooth open/close animation
+   Interactive accordion (matches app/sif/[id]/sif-detail.css's
+   .sif-faq-* pattern for visual/interaction consistency between the
+   two flagship detail pages)
    ─────────────────────────────────────────────────────────── */
 .fd-faq-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 10px;
 }
 
 .fd-faq-item {
-  border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--s2);
+  overflow: hidden;
 }
 
-.fd-faq-item:last-child { border-bottom: none; }
-
-.fd-faq-item summary {
+.fd-faq-q {
+  width: 100%;
+  padding: 13px 16px;
+  text-align: left;
+  background: none;
+  border: none;
   font-size: .86rem;
   font-weight: 700;
   color: var(--text);
-  padding: 14px 2px;
-  cursor: pointer;
-  list-style: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  user-select: none;
+  gap: 14px;
+  cursor: pointer;
   transition: color .15s;
 }
 
-.fd-faq-item summary:hover { color: var(--g1); }
+.fd-faq-q:hover { color: var(--g1); }
 
-.fd-faq-item summary::-webkit-details-marker { display: none; }
-
-.fd-faq-item summary::after {
-  content: '+';
-  font-size: 1.1rem;
-  font-weight: 300;
-  color: var(--muted);
+.fd-faq-icon {
   flex-shrink: 0;
-  margin-left: 14px;
   width: 22px;
   height: 22px;
   display: flex;
@@ -375,23 +374,25 @@
   justify-content: center;
   border: 1px solid var(--border);
   border-radius: 50%;
-  transition: background .15s, color .15s;
+  font-size: 1.1rem;
+  font-weight: 300;
+  color: var(--muted);
 }
 
-.fd-faq-item[open] summary::after {
-  content: '−';
+.fd-faq-item.open .fd-faq-icon {
   background: var(--g-xlight);
   border-color: var(--g-light);
   color: var(--g1);
 }
 
 .fd-faq-answer {
+  padding: 0 16px 13px;
   font-size: .82rem;
   color: var(--muted);
   line-height: 1.68;
-  padding: 0 2px 16px;
-  margin: 0;
 }
+
+.fd-faq-answer p { margin: 0; }
 
 /* ── Upgrade Gate Panel ───────────────────────────────────────
    Premium locked state — premium gradient card
@@ -854,7 +855,14 @@
 }
 
 .fd-section .scr-hold-title {
-  display: none; /* header handled by fd-section-head above */
+  font-size: .78rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: .1px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* Summary KPI strip */
