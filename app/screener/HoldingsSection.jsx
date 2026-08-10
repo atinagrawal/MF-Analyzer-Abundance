@@ -218,6 +218,19 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
 
   const displayedHoldings = (expanded && isPaidOrAdmin) ? activeHoldings : activeHoldings.slice(0, 10);
 
+  // totalCount is portfolio-wide (across every asset class); activeTabCount
+  // is scoped to whichever tab is selected. Pro users' "Show All" toggle and
+  // the free-tier paywall nudge both used to quote totalCount unconditionally,
+  // which was wrong once switched to a non-ALL tab: Pro's toggle promised
+  // "Show All 47" but a click only ever revealed the current tab's items, and
+  // the free nudge claimed "+37 locked" underneath a tab whose few items were
+  // already fully shown. The free-tier count is only ever known portfolio-wide
+  // (the server truncates before per-asset-class breakdown is knowable), so
+  // that nudge only makes sense on the ALL tab.
+  const activeTabCount = tabCounts[activeTab] ?? annotatedHoldings.length;
+  const showProToggle = isPaidOrAdmin && activeTabCount > 10;
+  const showFreeTeaser = !isPaidOrAdmin && activeTab === 'ALL' && totalCount > 10;
+
   const handleToggleClick = () => {
     if (isPaidOrAdmin) {
       setExpanded(!expanded);
@@ -358,7 +371,7 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
                 </tr>
               );
             })}
-            {!isPaidOrAdmin && totalCount > 10 && (
+            {showFreeTeaser && (
               <tr
                 className="scr-hold-row-locked"
                 onClick={() => setShowPaywallModal(true)}
@@ -376,11 +389,11 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
         </table>
       </div>
 
-      {totalCount > 10 && (
+      {(showProToggle || showFreeTeaser) && (
         <div className="scr-hold-toggle-wrap">
           {isPaidOrAdmin ? (
             <button className="scr-hold-toggle" onClick={handleToggleClick}>
-              {expanded ? '▲ Show Top 10' : `▼ Show All ${totalCount} Holdings`}
+              {expanded ? '▲ Show Top 10' : `▼ Show All ${activeTabCount} Holdings`}
             </button>
           ) : (
             <div className="scr-hold-pro-teaser" onClick={() => setShowPaywallModal(true)}>
