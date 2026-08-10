@@ -496,7 +496,7 @@ export default function ScreenerClient({ initialCategory }) {
   const from = rows.length ? cur * pageSize + 1 : 0;
   const to = Math.min(rows.length, (cur + 1) * pageSize);
 
-  const curatedCat = !isSIF ? CURATED_CATEGORIES.find((c) => c.category === cat) : null;
+  const curatedCat = !isSIF ? CURATED_CATEGORIES.find((c) => matchCategory(cat, c.category)) : null;
 
   return (
     <div className="scr-body">

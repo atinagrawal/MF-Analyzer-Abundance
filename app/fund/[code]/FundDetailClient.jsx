@@ -8,7 +8,7 @@ import ProviderAvatar from '@/components/ProviderAvatar';
 import CompareGrowthChart from '@/app/screener/CompareGrowthChart';
 import HoldingsSection from '@/app/screener/HoldingsSection';
 import { getMFLogo } from '@/lib/providerLogos';
-import { shortCat, CURATED_CATEGORIES, categoryToSlug } from '@/app/screener/screenerContent';
+import { shortCat, CURATED_CATEGORIES, categoryToSlug, matchCategory } from '@/app/screener/screenerContent';
 import { normalizeSchemeName } from '@/lib/normalizeSchemeName';
 import { startCheckout } from '@/lib/checkoutClient';
 import '@/app/screener/mf-compare.css';
@@ -342,7 +342,7 @@ export default function FundDetailClient({ code }) {
       (schemeFacts.byNormName?.[normalizeSchemeName(f.name)]) || null
     : null;
 
-  const catEntry = f ? CURATED_CATEGORIES.find((c) => c.category === f.category) : null;
+  const catEntry = f ? CURATED_CATEGORIES.find((c) => matchCategory(f.category, c.category)) : null;
   const catExplainer = catEntry?.explainer || null;
   const catSlug = f ? categoryToSlug(f.category) : null;
 
