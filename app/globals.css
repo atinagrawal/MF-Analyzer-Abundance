@@ -7541,13 +7541,21 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   margin-right: 6px;
   vertical-align: middle;
 }
-.scr-badge-eq { background: rgba(46, 125, 50, 0.12); color: #43a047; border: 1px solid rgba(46, 125, 50, 0.25); }
-.scr-badge-deriv { background: rgba(239, 83, 80, 0.12); color: #ef5350; border: 1px solid rgba(239, 83, 80, 0.25); }
-.scr-badge-debt { background: rgba(2, 136, 209, 0.12); color: #29b6f6; border: 1px solid rgba(2, 136, 209, 0.25); }
-.scr-badge-reit { background: rgba(142, 36, 170, 0.12); color: #ab47bc; border: 1px solid rgba(142, 36, 170, 0.25); }
-.scr-badge-comm { background: rgba(245, 127, 23, 0.12); color: #ffee58; border: 1px solid rgba(245, 127, 23, 0.25); }
-.scr-badge-mf { background: rgba(0, 137, 123, 0.12); color: #26a69a; border: 1px solid rgba(0, 137, 123, 0.25); }
-.scr-badge-cash { background: rgba(120, 144, 156, 0.12); color: #78909c; border: 1px solid rgba(120, 144, 156, 0.25); }
+.scr-badge-eq { background: rgba(46, 125, 50, 0.12); color: #2e7d32; border: 1px solid rgba(46, 125, 50, 0.3); }
+.scr-badge-deriv { background: rgba(239, 83, 80, 0.12); color: #c62828; border: 1px solid rgba(239, 83, 80, 0.3); }
+.scr-badge-debt { background: rgba(2, 136, 209, 0.12); color: #0277bd; border: 1px solid rgba(2, 136, 209, 0.3); }
+.scr-badge-reit { background: rgba(142, 36, 170, 0.12); color: #6a1b9a; border: 1px solid rgba(142, 36, 170, 0.3); }
+.scr-badge-comm { background: rgba(245, 127, 23, 0.14); color: #e65100; border: 1px solid rgba(245, 127, 23, 0.35); }
+.scr-badge-mf { background: rgba(0, 137, 123, 0.12); color: #00695c; border: 1px solid rgba(0, 137, 123, 0.3); }
+.scr-badge-cash { background: rgba(120, 144, 156, 0.14); color: #37474f; border: 1px solid rgba(120, 144, 156, 0.3); }
+
+[data-theme="dark"] .scr-badge-eq, .dark .scr-badge-eq { color: #43a047; }
+[data-theme="dark"] .scr-badge-deriv, .dark .scr-badge-deriv { color: #ef5350; }
+[data-theme="dark"] .scr-badge-debt, .dark .scr-badge-debt { color: #29b6f6; }
+[data-theme="dark"] .scr-badge-reit, .dark .scr-badge-reit { color: #ab47bc; }
+[data-theme="dark"] .scr-badge-comm, .dark .scr-badge-comm { color: #ffb74d; }
+[data-theme="dark"] .scr-badge-mf, .dark .scr-badge-mf { color: #26a69a; }
+[data-theme="dark"] .scr-badge-cash, .dark .scr-badge-cash { color: #b0bec5; }
 
 .scr-hold-sec-sub {
   font-size: .78rem;
