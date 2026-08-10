@@ -2,11 +2,16 @@
  * /api/mf — Resilient proxy for Indian mutual fund data
  *
  * SEARCH (?q=), in priority order:
- *   1. data/mf-scheme-list.json — static, bundled with the deploy, refreshed
- *      daily by scripts/sync_mf_scheme_list.js. No fetch at all, not even a
- *      cache-miss one -- fast on the very first request after a cold start.
+ *   1. R2-stored scheme list (mf-scheme-list.json), refreshed daily by
+ *      scripts/sync_mf_scheme_list.js, cached in-memory 1h per warm
+ *      instance -- one R2 fetch on a cold instance's first search, instant
+ *      for every request after (formerly a static bundled import; moved to
+ *      R2 so a sync updates live search without a redeploy or growing repo
+ *      history with a fresh ~1MB diff every day).
  *   2. AMFI NAVAll.txt, fetched live and cached in-memory 30 min — catches
- *      anything added/renamed since the last daily sync.
+ *      anything added/renamed since the last daily sync, or covers a cold
+ *      instance whose first request beat the R2 fetch above (or found R2
+ *      unavailable).
  *   3. api.mfapi.in — last resort. Live-tested (2026-08): highly
  *      inconsistent latency (0.5s-10s+ for the same query), which is why
  *      it's no longer tried first.
@@ -22,7 +27,7 @@
  *   /api/mf?code=125497&latest=1 → latest NAV only
  */
 
-import mfSchemeList from '../../data/mf-scheme-list.json';
+import { r2Get } from '../../lib/r2';
 
 export const config = { runtime: 'nodejs' };
 
@@ -32,6 +37,28 @@ let _amfiCache = null;
 let _amfiCacheTime = 0;
 const AMFI_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const AMFI_URL    = 'https://portal.amfiindia.com/spages/NAVAll.txt';
+
+// ── Module-level static scheme-list cache (warm function reuse across requests) ──
+// R2 itself only refreshes once a day, so an hour-long in-memory cache is
+// plenty fresh while sparing every request but the first-per-warm-instance
+// an R2 round-trip.
+let _staticListCache = null;
+let _staticListCacheTime = 0;
+const STATIC_LIST_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+/** Fetch and cache the R2-stored { schemeCode: schemeName } map. Returns null on any failure. */
+async function getStaticSchemeList() {
+  const now = Date.now();
+  if (_staticListCache && (now - _staticListCacheTime) < STATIC_LIST_TTL_MS) return _staticListCache;
+  try {
+    const payload = await r2Get('mf-scheme-list.json');
+    _staticListCache = payload?.schemes || null;
+    _staticListCacheTime = now;
+  } catch (_) {
+    return null; // leave any previous cache value stale rather than throwing
+  }
+  return _staticListCache;
+}
 
 // ── Helpers ──
 
@@ -88,17 +115,15 @@ function searchAmfi(amfi, query) {
 }
 
 /**
- * Search the pre-synced static scheme list (scripts/sync_mf_scheme_list.js,
- * refreshed daily) -- bundled into the deploy, so this needs no fetch at
- * all, not even a cache-miss one. Same matching rule as searchAmfi (every
- * word must appear in the name) so results are identical in shape/quality;
- * this is just a faster route to the same data for the common case.
+ * Search the R2-stored scheme list (scripts/sync_mf_scheme_list.js,
+ * refreshed daily). Same matching rule as searchAmfi (every word must
+ * appear in the name) so results are identical in shape/quality; this is
+ * just a faster route to the same data for the common case.
  */
-function searchStaticList(query) {
+function searchStaticList(schemes, query) {
   const q = query.toLowerCase().replace(/\s+/g, ' ').trim();
   const words = q.split(' ').filter(Boolean);
   const results = [];
-  const schemes = mfSchemeList.schemes || {};
 
   for (const code in schemes) {
     const name = schemes[code].toLowerCase();
@@ -219,14 +244,16 @@ export default async function handler(req, res) {
 
   // ── SEARCH ──
   if (q !== null) {
-    // 1. Static pre-synced scheme list (scripts/sync_mf_scheme_list.js,
-    // refreshed daily) -- bundled with the deploy, so this needs NO fetch
-    // at all, not even a cache-miss one. Fast on literally the very first
-    // request after a cold start, matching how SIF search always felt.
+    // 1. R2-stored scheme list (scripts/sync_mf_scheme_list.js, refreshed
+    // daily), cached in-memory 1h per warm instance -- instant except for
+    // a cold instance's first search, which pays one R2 round-trip.
     try {
-      const results = searchStaticList(q);
-      if (results.length > 0) {
-        return sendOk(res, results, 's-maxage=86400, stale-while-revalidate=172800');
+      const schemes = await getStaticSchemeList();
+      if (schemes) {
+        const results = searchStaticList(schemes, q);
+        if (results.length > 0) {
+          return sendOk(res, results, 's-maxage=86400, stale-while-revalidate=172800');
+        }
       }
     } catch (_) { /* fall through to live AMFI */ }
 
