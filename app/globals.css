@@ -7440,6 +7440,128 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   color: var(--muted);
   line-height: 1.7;
 }
+/* ── Multi-Asset Class Holdings Styles ───────────────────────────── */
+.scr-asset-summary-card {
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r, 12px);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.scr-asset-bar-wrap {
+  display: flex;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--s3, rgba(255,255,255,0.06));
+  border: 1px solid var(--border);
+  margin: 10px 0 12px;
+  gap: 1.5px;
+}
+.scr-asset-segment {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+.scr-asset-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  font-size: .78rem;
+}
+.scr-asset-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.scr-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.scr-dot-equity { background: #2e7d32; }
+.scr-dot-derivative { background: #ef5350; }
+.scr-dot-debt { background: #0288d1; }
+.scr-dot-realest { background: #8e24aa; }
+.scr-dot-commodity { background: #f57f17; }
+.scr-dot-mutual_fund { background: #00897b; }
+.scr-dot-cash { background: #78909c; }
+.scr-legend-label {
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.scr-legend-val {
+  color: var(--text);
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Asset Class Filter Tabs */
+.scr-asset-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+.scr-asset-tab {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: .75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s ease;
+}
+.scr-asset-tab:hover {
+  background: var(--s3);
+  color: var(--text);
+  border-color: var(--border2);
+}
+.scr-asset-tab.active {
+  background: var(--g1, #2e7d32);
+  color: white;
+  border-color: var(--g1, #2e7d32);
+}
+
+/* Badges for Asset Classes in Table */
+.scr-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.scr-badge-eq { background: rgba(46, 125, 50, 0.12); color: #43a047; border: 1px solid rgba(46, 125, 50, 0.25); }
+.scr-badge-deriv { background: rgba(239, 83, 80, 0.12); color: #ef5350; border: 1px solid rgba(239, 83, 80, 0.25); }
+.scr-badge-debt { background: rgba(2, 136, 209, 0.12); color: #29b6f6; border: 1px solid rgba(2, 136, 209, 0.25); }
+.scr-badge-reit { background: rgba(142, 36, 170, 0.12); color: #ab47bc; border: 1px solid rgba(142, 36, 170, 0.25); }
+.scr-badge-comm { background: rgba(245, 127, 23, 0.12); color: #ffee58; border: 1px solid rgba(245, 127, 23, 0.25); }
+.scr-badge-mf { background: rgba(0, 137, 123, 0.12); color: #26a69a; border: 1px solid rgba(0, 137, 123, 0.25); }
+.scr-badge-cash { background: rgba(120, 144, 156, 0.12); color: #78909c; border: 1px solid rgba(120, 144, 156, 0.25); }
+
+.scr-hold-sec-sub {
+  font-size: .78rem;
+  color: var(--muted);
+  vertical-align: middle;
+}
+.scr-hold-neg {
+  color: #ef5350 !important;
+  font-weight: 800;
+}
+.scr-hold-pos {
+  color: var(--g1, #2e7d32);
+}
+
 @media (max-width: 680px) {
   .sif-faq { margin: 32px 0 24px; padding-top: 28px; }
   .sif-faq-q { font-size: .8rem; padding: 14px 16px; }

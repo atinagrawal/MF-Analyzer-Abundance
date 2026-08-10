@@ -94,9 +94,44 @@ function ProHoldingsModal({ schemeName, totalCount, onClose, session }) {
   );
 }
 
+function getHoldingMeta(h) {
+  const name = (h.securityName || '').toLowerCase();
+  const rawAc = (h.assetClass || '').toUpperCase();
+
+  // Derivative check (Futures, Options, Call/Put, Expiries)
+  const isDerivative =
+    name.includes('futures') ||
+    name.includes('option') ||
+    name.includes(' call') ||
+    name.includes(' put') ||
+    /\b\d{1,2}-[a-z]{3}-\d{2,4}\b/.test(name) ||
+    /\b\d{1,2}(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\d{2,4}\b/.test(name);
+
+  if (isDerivative) {
+    return { key: 'DERIVATIVE', label: 'Derivative', badgeClass: 'scr-badge-deriv' };
+  }
+  if (rawAc === 'EQUITY') {
+    return { key: 'EQUITY', label: 'Equity Stock', badgeClass: 'scr-badge-eq' };
+  }
+  if (rawAc === 'DEBT' || name.includes('bond') || name.includes('gsec') || name.includes('goi') || name.includes('tbill') || name.includes('ncd') || name.includes(' cp') || name.includes(' cd')) {
+    return { key: 'DEBT', label: 'Debt & Bond', badgeClass: 'scr-badge-debt' };
+  }
+  if (rawAc === 'REALEST' || name.includes('reit') || name.includes('invit') || name.includes('trust')) {
+    return { key: 'REALEST', label: 'REIT / InvIT', badgeClass: 'scr-badge-reit' };
+  }
+  if (rawAc === 'COMM' || name.includes('gold') || name.includes('silver') || name.includes('crude')) {
+    return { key: 'COMMODITY', label: 'Commodity', badgeClass: 'scr-badge-comm' };
+  }
+  if (rawAc === 'MF' || name.includes('etf') || name.includes('mutual fund')) {
+    return { key: 'MUTUAL_FUND', label: 'Mutual Fund', badgeClass: 'scr-badge-mf' };
+  }
+  return { key: 'CASH', label: 'Cash & Repo', badgeClass: 'scr-badge-cash' };
+}
+
 export default function HoldingsSection({ holdingsData, loading, schemeName }) {
   const [expanded, setExpanded] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('ALL');
 
   const { data: session } = useSession();
   const isPaidOrAdmin = Boolean(
@@ -120,10 +155,7 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
   if (!holdingsData || !holdingsData.holdings) return null;
 
   const holdings = holdingsData.holdings;
-  const equityHoldings = holdings.filter((h) => h.assetClass === 'EQUITY');
-  const activeHoldings = equityHoldings.length > 0 ? equityHoldings : holdings;
-
-  if (activeHoldings.length === 0) {
+  if (holdings.length === 0) {
     return (
       <div className="scr-hold-section">
         <div className="scr-hold-title">📊 Portfolio Holdings &amp; Sectors</div>
@@ -132,20 +164,32 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
     );
   }
 
-  const isEquity = equityHoldings.length > 0;
-  const top5Pct = activeHoldings.slice(0, 5).reduce((a, h) => a + (h.weightagePct || 0), 0);
-  const top10Pct = activeHoldings.slice(0, 10).reduce((a, h) => a + (h.weightagePct || 0), 0);
-  // When the server has already truncated `holdings` to a free-tier preview
-  // (lib/holdingsLookup.js's truncateHoldingsForFreeTier), it also sends the
-  // TRUE count separately so "Showing 10 of N" stays accurate without the
-  // other N-10 holdings ever reaching this browser. Falls back to the
-  // array's own length when the caller sent the full list (Pro users, or
-  // any consumer that hasn't opted into server-side truncation).
-  const totalCount = holdingsData.totalHoldingsCount ?? activeHoldings.length;
+  // Annotate holdings with Security Metadata
+  const annotatedHoldings = holdings.map((h) => ({
+    ...h,
+    meta: getHoldingMeta(h),
+  }));
 
+  // Asset Class Allocation Breakdown
+  const assetWeights = {};
+  annotatedHoldings.forEach((h) => {
+    const k = h.meta.key;
+    assetWeights[k] = (assetWeights[k] || 0) + (h.weightagePct || 0);
+  });
+
+  // Filtered holdings based on selected tab
+  const activeHoldings = activeTab === 'ALL'
+    ? annotatedHoldings
+    : annotatedHoldings.filter((h) => h.meta.key === activeTab);
+
+  const top5Pct = annotatedHoldings.slice(0, 5).reduce((a, h) => a + (h.weightagePct || 0), 0);
+  const top10Pct = annotatedHoldings.slice(0, 10).reduce((a, h) => a + (h.weightagePct || 0), 0);
+  const totalCount = holdingsData.totalHoldingsCount ?? annotatedHoldings.length;
+
+  // Sector breakdown
   const sectorMap = {};
-  activeHoldings.forEach((h) => {
-    const sec = h.sector && h.sector !== 'Unknown' && h.sector !== 'Unspecified' ? h.sector : (h.assetClass || 'Debt / Cash');
+  annotatedHoldings.forEach((h) => {
+    const sec = h.sector && h.sector !== 'Unknown' && h.sector !== 'Unspecified' ? h.sector : h.meta.label;
     sectorMap[sec] = (sectorMap[sec] || 0) + (h.weightagePct || 0);
   });
   const sectors = Object.entries(sectorMap)
@@ -155,6 +199,22 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
   const maxSectorPct = topSectors[0]?.pct || 1;
 
   const SECTOR_COLORS = ['#1b5e20', '#2e7d32', '#43a047', '#e65100', '#0288d1', '#5e35b1'];
+
+  // Asset Class Tabs
+  const tabCounts = { ALL: annotatedHoldings.length };
+  annotatedHoldings.forEach((h) => {
+    tabCounts[h.meta.key] = (tabCounts[h.meta.key] || 0) + 1;
+  });
+
+  const tabOptions = [
+    { key: 'ALL', label: 'All Items' },
+    { key: 'EQUITY', label: 'Equity' },
+    { key: 'DERIVATIVE', label: 'Derivatives' },
+    { key: 'DEBT', label: 'Debt & Bonds' },
+    { key: 'REALEST', label: 'REITs / InvITs' },
+    { key: 'COMMODITY', label: 'Commodities' },
+    { key: 'CASH', label: 'Cash & Repo' },
+  ].filter((t) => t.key === 'ALL' || (tabCounts[t.key] && tabCounts[t.key] > 0));
 
   const displayedHoldings = (expanded && isPaidOrAdmin) ? activeHoldings : activeHoldings.slice(0, 10);
 
@@ -168,9 +228,9 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
 
   return (
     <div className="scr-hold-section">
-      <div className="scr-hold-title">📊 Portfolio Holdings &amp; Sectors</div>
+      <div className="scr-hold-title">📊 Portfolio Holdings &amp; Asset Breakdown</div>
 
-      <div className="scr-drawer-kpis" style={{ marginBottom: '12px' }}>
+      <div className="scr-drawer-kpis" style={{ marginBottom: '16px' }}>
         <div className="scr-dk">
           <span>Top 5 Conc.</span>
           <b>{top5Pct.toFixed(1)}%</b>
@@ -180,14 +240,60 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
           <b>{top10Pct.toFixed(1)}%</b>
         </div>
         <div className="scr-dk">
-          <span>{isEquity ? 'Equity Stocks' : 'Securities'}</span>
+          <span>Total Holdings</span>
           <b>{totalCount}</b>
         </div>
       </div>
 
+      {/* Asset Allocation Summary Bar */}
+      {Object.keys(assetWeights).length > 1 && (
+        <div className="scr-asset-summary-card">
+          <div className="scr-alloc-title">Asset Class Allocation Summary</div>
+          <div className="scr-asset-bar-wrap">
+            {Object.entries(assetWeights)
+              .filter(([_, w]) => Math.abs(w) > 0.01)
+              .map(([key, weight]) => {
+                const isNeg = weight < 0;
+                const absW = Math.abs(weight);
+                const colorMap = {
+                  EQUITY: '#2e7d32',
+                  DERIVATIVE: isNeg ? '#ef5350' : '#43a047',
+                  DEBT: '#0288d1',
+                  REALEST: '#8e24aa',
+                  COMMODITY: '#f57f17',
+                  MUTUAL_FUND: '#00897b',
+                  CASH: '#78909c',
+                };
+                return (
+                  <div
+                    key={key}
+                    className="scr-asset-segment"
+                    style={{
+                      width: `${Math.min(100, Math.max(4, absW))}%`,
+                      backgroundColor: colorMap[key] || '#78909c',
+                    }}
+                    title={`${key}: ${weight.toFixed(1)}%`}
+                  />
+                );
+              })}
+          </div>
+          <div className="scr-asset-legend">
+            {Object.entries(assetWeights)
+              .filter(([_, w]) => Math.abs(w) > 0.01)
+              .map(([key, weight]) => (
+                <div className="scr-asset-legend-item" key={key}>
+                  <span className={`scr-legend-dot scr-dot-${key.toLowerCase()}`} />
+                  <span className="scr-legend-label">{key.replace('_', ' ')}</span>
+                  <span className="scr-legend-val">{weight > 0 ? `+${weight.toFixed(1)}%` : `${weight.toFixed(1)}%`}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
       {topSectors.length > 0 && (
         <div className="scr-allocation-card">
-          <div className="scr-alloc-title">{isEquity ? 'Top Sector Exposure' : 'Top Instrument / Sector Exposure'}</div>
+          <div className="scr-alloc-title">Top Sector Exposure</div>
           <div className="scr-alloc-bars">
             {topSectors.map((sec, idx) => (
               <div className="scr-alloc-item" key={sec.name}>
@@ -207,23 +313,51 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
         </div>
       )}
 
+      {/* Asset Filter Tabs */}
+      {tabOptions.length > 2 && (
+        <div className="scr-asset-tabs">
+          {tabOptions.map((t) => (
+            <button
+              key={t.key}
+              className={`scr-asset-tab ${activeTab === t.key ? 'active' : ''}`}
+              onClick={() => setActiveTab(t.key)}
+            >
+              {t.label} ({tabCounts[t.key] || 0})
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="scr-hold-table-wrap">
         <table className="scr-hold-table">
           <thead>
             <tr>
-              <th>{isEquity ? 'Stock' : 'Security / Instrument'}</th>
-              <th>{isEquity ? 'Sector' : 'Type / Sector'}</th>
+              <th>Security / Instrument</th>
+              <th>Asset &amp; Sector</th>
               <th style={{ textAlign: 'right' }}>Weight</th>
             </tr>
           </thead>
           <tbody>
-            {displayedHoldings.map((h, i) => (
-              <tr key={i}>
-                <td className="scr-hold-stock" title={h.securityName}>{h.securityName}</td>
-                <td className="scr-hold-sector">{h.sector || h.assetClass || '—'}</td>
-                <td className="scr-hold-pct">{(h.weightagePct || 0).toFixed(2)}%</td>
-              </tr>
-            ))}
+            {displayedHoldings.map((h, i) => {
+              const weight = h.weightagePct || 0;
+              const isNeg = weight < 0;
+              return (
+                <tr key={i}>
+                  <td className="scr-hold-stock" title={h.securityName}>
+                    <div className="scr-hold-name-cell">
+                      <span className="scr-hold-sec-name">{h.securityName}</span>
+                    </div>
+                  </td>
+                  <td className="scr-hold-sector">
+                    <span className={`scr-badge ${h.meta.badgeClass}`}>{h.meta.label}</span>
+                    <span className="scr-hold-sec-sub">{h.sector && h.sector !== 'Unknown' && h.sector !== 'Unspecified' ? h.sector : ''}</span>
+                  </td>
+                  <td className={`scr-hold-pct ${isNeg ? 'scr-hold-neg' : 'scr-hold-pos'}`}>
+                    {isNeg ? `${weight.toFixed(2)}%` : `${weight.toFixed(2)}%`}
+                  </td>
+                </tr>
+              );
+            })}
             {!isPaidOrAdmin && totalCount > 10 && (
               <tr
                 className="scr-hold-row-locked"
@@ -254,7 +388,7 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
                 <span className="scr-hold-teaser-crown">👑</span>
                 <div>
                   <div className="scr-hold-teaser-head">Showing 10 of {totalCount} Holdings</div>
-                  <div className="scr-hold-teaser-sub">Unlock all {totalCount} stocks &amp; full weightages with Pro</div>
+                  <div className="scr-hold-teaser-sub">Unlock all {totalCount} securities &amp; full weightages with Pro</div>
                 </div>
               </div>
               <button className="scr-hold-teaser-btn" onClick={(e) => { e.stopPropagation(); setShowPaywallModal(true); }}>
