@@ -3,10 +3,16 @@
  *
  * GET /api/sif-detail/[id]
  * Fetches complete detail for a single Specialised Investment Fund (SIF)
- * by scheme_id (e.g. SIF-01) or numeric ID.
+ * by scheme_id (e.g. SIF-01) or numeric ID, plus its holdings -- gated the
+ * same way app/api/fund-detail/[code]/route.js gates mutual fund holdings:
+ * non-Pro visitors get a top-10 preview (matching HoldingsSection.jsx's
+ * existing free-tier UI) with a true total count, never the full list.
  */
 
+import { auth } from '@/auth';
+import { getUserPlan } from '@/lib/plan';
 import pool from '@/lib/db';
+import { getHoldingsData, truncateHoldingsForFreeTier } from '@/lib/holdingsLookup';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,10 +64,29 @@ export async function GET(req, { params }) {
       asof: r.asof,
     };
 
-    return Response.json({ scheme }, {
+    const session = await auth();
+    const isPro = Boolean(
+      session?.user?.role === 'admin' ||
+      session?.user?.role === 'distributor' ||
+      session?.user?.plan === 'pro' ||
+      session?.user?.plan === 'pro_lifetime' ||
+      session?.user?.plan === 'lifetime' ||
+      session?.user?.isPro ||
+      (session?.user?.id && (await getUserPlan(session.user.id)) === 'pro')
+    );
+
+    let holdings = null;
+    try {
+      const raw = await getHoldingsData(scheme.scheme_id, scheme.nav_name);
+      holdings = isPro || !raw ? raw : truncateHoldingsForFreeTier(raw);
+    } catch (err) {
+      console.error('[api/sif-detail] holdings lookup failed:', err.message);
+    }
+
+    return Response.json({ scheme, holdings, isPro }, {
       status: 200,
       headers: {
-        'Cache-Control': 's-maxage=21600, stale-while-revalidate=86400',
+        'Cache-Control': 'private, no-store',
       },
     });
   } catch (e) {

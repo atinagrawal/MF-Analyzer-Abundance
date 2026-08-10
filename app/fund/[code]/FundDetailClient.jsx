@@ -190,8 +190,6 @@ export default function FundDetailClient({ code }) {
   const [showBench, setShowBench] = useState(true);
   const [benchErr, setBenchErr] = useState(false);
   const [chartPeriod, setChartPeriod] = useState('All');
-  const [holdingsData, setHoldingsData] = useState(null);
-  const [holdingsLoading, setHoldingsLoading] = useState(false);
   const [schemeFacts, setSchemeFacts] = useState(null);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [upgradeErr, setUpgradeErr] = useState('');
@@ -216,7 +214,7 @@ export default function FundDetailClient({ code }) {
       .then((d) => {
         setFundData(d);
         if (d?.fund) {
-          setBenchIdx(getDefaultBenchmark(d.fund.name, d.fund.category));
+          setBenchIdx(getDefaultBenchmark(d.fund.name, d.fund.category, d.holdings?.benchmarkName));
         }
         setLoading(false);
       })
@@ -249,21 +247,15 @@ export default function FundDetailClient({ code }) {
       })
       .catch(() => {});
 
-    // Holdings
-    setHoldingsLoading(true);
-    fetch(
-      `/api/proposal-studio/holdings?amfiCode=${encodeURIComponent(code)}&schemeName=${encodeURIComponent(f.name)}`
-    )
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        setHoldingsData(d);
-        if (d?.benchmarkName) {
-          setBenchIdx(getDefaultBenchmark(f.name, f.category, d.benchmarkName));
-        }
-        setHoldingsLoading(false);
-      })
-      .catch(() => setHoldingsLoading(false));
   }, [isPaidOrAdmin, fundData, code]);
+
+  // Holdings come from the already plan-gated /api/fund-detail response
+  // (lib/holdingsLookup.js, called server-side) -- never fetched directly
+  // from the public /api/proposal-studio/holdings route here, so a non-Pro
+  // visitor's browser never receives full holdings even via direct API
+  // inspection. `fundData.holdings` is null for non-Pro responses.
+  const holdingsData = fundData?.holdings ?? null;
+  const holdingsLoading = loading;
 
   // ── 4. Benchmark fetch ────────────────────────────────────────────────────
   useEffect(() => {

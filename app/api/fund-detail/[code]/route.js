@@ -1,6 +1,7 @@
 import { auth } from '@/auth';
 import { getUserPlan } from '@/lib/plan';
 import pool from '@/lib/db';
+import { getHoldingsData } from '@/lib/holdingsLookup';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,7 +54,7 @@ export async function GET(req, { params }) {
     };
 
     if (!isPro) {
-      return Response.json({ fund: publicFields, stress: null, isPro: false });
+      return Response.json({ fund: publicFields, stress: null, holdings: null, isPro: false });
     }
 
     const proFields = {
@@ -72,6 +73,21 @@ export async function GET(req, { params }) {
       ret_per_risk: num(fund.ret_per_risk),
     };
 
+    // Holdings for Pro users only -- fetched server-side (not via the public
+    // /api/proposal-studio/holdings route, which always returns full data
+    // regardless of the caller's own plan) so a non-Pro visitor's browser
+    // never receives the full holdings list even via direct API inspection.
+    // Matches this page's existing all-or-nothing UX: the whole holdings
+    // section is hidden client-side for non-Pro, so there's no "top 10
+    // preview" tier here (unlike the SIF page) -- non-Pro gets null, Pro
+    // gets everything.
+    let holdings = null;
+    try {
+      holdings = await getHoldingsData(String(fund.code), fund.name);
+    } catch (err) {
+      console.error('[api/fund-detail] holdings lookup failed:', err.message);
+    }
+
     const { rows: stressRows } = await pool.query(
       `SELECT scheme_code, month, aum_cr, days_50pct, days_25pct,
               top10_investors_pct, large_cap_pct, mid_cap_pct, small_cap_pct, cash_pct,
@@ -88,7 +104,7 @@ export async function GET(req, { params }) {
       )
     ) : null;
 
-    return Response.json({ fund: proFields, stress, isPro: true });
+    return Response.json({ fund: proFields, stress, holdings, isPro: true });
 
   } catch (err) {
     console.error('[api/fund-detail]', err.message);

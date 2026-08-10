@@ -135,7 +135,13 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
   const isEquity = equityHoldings.length > 0;
   const top5Pct = activeHoldings.slice(0, 5).reduce((a, h) => a + (h.weightagePct || 0), 0);
   const top10Pct = activeHoldings.slice(0, 10).reduce((a, h) => a + (h.weightagePct || 0), 0);
-  const totalCount = activeHoldings.length;
+  // When the server has already truncated `holdings` to a free-tier preview
+  // (lib/holdingsLookup.js's truncateHoldingsForFreeTier), it also sends the
+  // TRUE count separately so "Showing 10 of N" stays accurate without the
+  // other N-10 holdings ever reaching this browser. Falls back to the
+  // array's own length when the caller sent the full list (Pro users, or
+  // any consumer that hasn't opted into server-side truncation).
+  const totalCount = holdingsData.totalHoldingsCount ?? activeHoldings.length;
 
   const sectorMap = {};
   activeHoldings.forEach((h) => {
@@ -218,7 +224,7 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
                 <td className="scr-hold-pct">{(h.weightagePct || 0).toFixed(2)}%</td>
               </tr>
             ))}
-            {!isPaidOrAdmin && activeHoldings.length > 10 && (
+            {!isPaidOrAdmin && totalCount > 10 && (
               <tr
                 className="scr-hold-row-locked"
                 onClick={() => setShowPaywallModal(true)}
@@ -236,7 +242,7 @@ export default function HoldingsSection({ holdingsData, loading, schemeName }) {
         </table>
       </div>
 
-      {equityHoldings.length > 10 && (
+      {totalCount > 10 && (
         <div className="scr-hold-toggle-wrap">
           {isPaidOrAdmin ? (
             <button className="scr-hold-toggle" onClick={handleToggleClick}>

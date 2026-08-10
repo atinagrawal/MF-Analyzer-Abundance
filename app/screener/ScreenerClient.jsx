@@ -864,13 +864,17 @@ function Detail({ f, stress, onClose }) {
     return () => { alive = false; };
   }, []);
 
+  // Via /api/fund-detail/[code] (not the public /api/proposal-studio/holdings
+  // route directly) so non-Pro visitors never receive full holdings -- that
+  // route already gates its `holdings` field server-side by the viewer's
+  // own plan, same as the dedicated /fund/[code] page.
   useEffect(() => {
     let alive = true;
     setHoldingsLoading(true);
     setHoldingsData(null);
-    fetch(`/api/proposal-studio/holdings?amfiCode=${encodeURIComponent(f.code)}&schemeName=${encodeURIComponent(f.name)}`)
+    fetch(`/api/fund-detail/${encodeURIComponent(f.code)}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (alive) setHoldingsData(d); })
+      .then((d) => { if (alive) setHoldingsData(d?.holdings ?? null); })
       .catch(() => {})
       .finally(() => { if (alive) setHoldingsLoading(false); });
     return () => { alive = false; };
@@ -1107,13 +1111,17 @@ function SifDetail({ s, onClose }) {
   const [holdingsData, setHoldingsData] = useState(null);
   const [holdingsLoading, setHoldingsLoading] = useState(true);
 
+  // Via /api/sif-detail/[id] (not the public /api/proposal-studio/holdings
+  // route directly) so non-Pro visitors only get a top-10 preview -- that
+  // route already gates+truncates its `holdings` field server-side by the
+  // viewer's own plan, same as the dedicated /sif/[id] page.
   useEffect(() => {
     let alive = true;
     setHoldingsLoading(true);
     setHoldingsData(null);
-    fetch(`/api/proposal-studio/holdings?amfiCode=${encodeURIComponent(s.scheme_id)}&schemeName=${encodeURIComponent(s.nav_name)}`)
+    fetch(`/api/sif-detail/${encodeURIComponent(s.scheme_id)}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (alive) setHoldingsData(d); })
+      .then((d) => { if (alive) setHoldingsData(d?.holdings ?? null); })
       .catch(() => {})
       .finally(() => { if (alive) setHoldingsLoading(false); });
     return () => { alive = false; };

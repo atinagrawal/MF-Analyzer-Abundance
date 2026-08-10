@@ -73,29 +73,27 @@ export default function SifDetailClient({ id }) {
   const [chartPeriod,   setChartPeriod]   = useState('All');
   const [chartMode,     setChartMode]     = useState('reindexed');
 
-  // 1. Fetch SIF data
+  // 1. Fetch SIF data -- holdings arrive in the same response, already
+  // plan-gated server-side (lib/holdingsLookup.js's truncateHoldingsForFreeTier
+  // for non-Pro visitors) so this page never fetches full holdings directly
+  // from the public /api/proposal-studio/holdings route.
   useEffect(() => {
-    setLoading(true); setError('');
+    setLoading(true); setError(''); setHoldingsLoad(true);
     fetch(`/api/sif-detail/${encodeURIComponent(id)}`)
       .then((r) => { if (!r.ok) throw new Error('SIF not found'); return r.json(); })
       .then((d) => {
         setSif(d.scheme);
+        setHoldingsData(d.holdings ?? null);
         setBenchIdx(sifDefaultBench(d.scheme?.category));
         setLoading(false);
+        setHoldingsLoad(false);
       })
-      .catch((e) => { setError(e.message || 'Failed to load SIF'); setLoading(false); });
+      .catch((e) => { setError(e.message || 'Failed to load SIF'); setLoading(false); setHoldingsLoad(false); });
   }, [id]);
 
-  // 2. Holdings + NAV history
+  // 2. NAV history
   useEffect(() => {
     if (!sif) return;
-    setHoldingsLoad(true);
-    fetch(`/api/proposal-studio/holdings?amfiCode=${encodeURIComponent(sif.scheme_id)}&schemeName=${encodeURIComponent(sif.nav_name)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setHoldingsData)
-      .catch(() => {})
-      .finally(() => setHoldingsLoad(false));
-
     setHistLoading(true);
     const today = new Date().toISOString().slice(0, 10);
     const from  = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
