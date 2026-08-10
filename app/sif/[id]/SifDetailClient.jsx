@@ -7,6 +7,7 @@ import ProviderAvatar from '@/components/ProviderAvatar';
 import { getSIFLogo } from '@/lib/providerLogos';
 import CompareGrowthChart from '@/app/screener/CompareGrowthChart';
 import HoldingsSection from '@/app/screener/HoldingsSection';
+import { getSchemeFaq } from '@/lib/sifFaq';
 import './sif-detail.css';
 
 const SIF_STRATEGY_LABELS = {
@@ -334,26 +335,13 @@ export default function SifDetailClient({ id }) {
         <div className="sif-card">
           <div className="sif-card-h">❓ Frequently Asked Questions</div>
           <div className="sif-faq-list">
-            {[
-              {
-                q: 'What is a SEBI Specialised Investment Fund (SIF)?',
-                a: 'SIFs are SEBI-regulated investment products introduced in 2024–25 to bridge the gap between Mutual Funds (₹100 minimum) and Portfolio Management Services (₹50 Lakhs minimum). They allow asset managers to run specialized long-short and unconstrained strategies with a ₹10 Lakh minimum.',
-              },
-              {
-                q: `What strategy does ${cleanName} follow?`,
-                a: `${cleanName} follows the "${sif.category}" mandate, managed by ${sif.sif_name}. It combines active security selection with hedging or tactical derivative exposure techniques as defined under SEBI SIF guidelines.`,
-              },
-              {
-                q: 'Why are 3Y / 5Y returns blank?',
-                a: 'SIFs were launched in 2024–25. Longer-duration return metrics (3Y, 5Y) will populate automatically as the fund builds a multi-year NAV track record.',
-              },
-            ].map((item, i) => (
-              <div className="sif-faq-item" key={i}>
+            {schemeFaqs.map((item, i) => (
+              <div className={`sif-faq-item${openFaq === i ? ' open' : ''}`} key={i}>
                 <button className="sif-faq-q" onClick={() => setOpenFaq(openFaq === i ? null : i)}>
                   <span>{item.q}</span>
-                  <span>{openFaq === i ? '▲' : '▼'}</span>
+                  <span className="sif-faq-icon" aria-hidden="true">{openFaq === i ? '−' : '+'}</span>
                 </button>
-                {openFaq === i && <div className="sif-faq-a">{item.a}</div>}
+                {openFaq === i && <div className="sif-faq-a"><p>{item.a}</p></div>}
               </div>
             ))}
           </div>

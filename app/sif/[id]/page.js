@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import pool from '@/lib/db';
 import SifDetailClient from './SifDetailClient';
+import { getSchemeFaq } from '@/lib/sifFaq';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,8 @@ export async function generateMetadata({ params }) {
   const canonicalUrl = `https://mfcalc.getabundance.in/sif/${s.scheme_id}`;
   const ogImageUrl = `https://mfcalc.getabundance.in/api/og-sif?id=${encodeURIComponent(s.scheme_id)}&name=${encodeURIComponent(cleanName)}&house=${encodeURIComponent(s.sif_name)}&cat=${encodeURIComponent(s.category)}&nav=${s.nav}`;
 
+  const schemeFaqs = getSchemeFaq(s, 0);
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -50,40 +53,14 @@ export async function generateMetadata({ params }) {
       },
       {
         '@type': 'FAQPage',
-        mainEntity: [
-          {
-            '@type': 'Question',
-            name: `What is ${cleanName}?`,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: `${cleanName} is a SEBI-regulated Specialised Investment Fund (SIF) under the ${s.category} strategy, managed by ${s.sif_name}. SIFs represent a specialized asset class launched under SEBI guidelines with a minimum investment threshold of ₹10 Lakhs per investor.`,
-            },
+        mainEntity: schemeFaqs.map((faq) => ({
+          '@type': 'Question',
+          name: faq.q,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: faq.a,
           },
-          {
-            '@type': 'Question',
-            name: `Who manages ${cleanName}?`,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: `${cleanName} is offered and managed by ${s.sif_name} (Scheme ID: ${s.scheme_id}). It adheres strictly to SEBI rules for Specialised Investment Funds in India.`,
-            },
-          },
-          {
-            '@type': 'Question',
-            name: `What is the minimum investment for ${cleanName}?`,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: `Under SEBI regulations for Specialised Investment Funds (SIF), the minimum investment threshold is ₹10 Lakhs across SIF strategies.`,
-            },
-          },
-          {
-            '@type': 'Question',
-            name: `Where can I view holdings and performance for ${cleanName}?`,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: `Complete performance history, return metrics (1M, 3M, 6M, Inception), benchmark comparisons, and security-level portfolio holdings for ${cleanName} are available on Abundance (mfcalc.getabundance.in).`,
-            },
-          },
-        ],
+        })),
       },
     ],
   };
