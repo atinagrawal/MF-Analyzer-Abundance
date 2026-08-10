@@ -346,6 +346,284 @@
   cursor: pointer;
 }
 
+/* ── NAV Growth chart (CompareGrowthChart) ───────────────────────
+   Self-contained styling for the shared app/screener/CompareGrowthChart.jsx
+   component -- this page doesn't import app/screener/mf-compare.css (that
+   file also carries ~200 lines of unrelated fund-comparison-modal CSS), so
+   every class the chart renders needs its own rule here rather than relying
+   on a shared base. Mirrors app/fund/[code]/fund-detail.css's ".fd-section
+   .cmp-*" block, which is this component's other, already-styled consumer.
+   ─────────────────────────────────────────────────────────── */
+.sif-chart-card .cmp-chart-wrap {
+  position: relative;
+  padding: 0;
+}
+
+.sif-chart-card .cmp-chart-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  flex-wrap: wrap;
+  color: var(--text);
+}
+
+.sif-chart-card .cmp-chart-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sif-chart-card .cmp-chart-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.sif-chart-card .cmp-chart-svg {
+  width: 100%;
+  height: auto;
+  cursor: crosshair;
+  user-select: none;
+  touch-action: pan-y;
+  display: block;
+}
+
+.sif-chart-card .cmp-tip {
+  position: absolute;
+  top: 8px;
+  background: var(--surface);
+  border: 1.5px solid var(--g3);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 11px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .15);
+  pointer-events: none;
+  z-index: 6;
+  white-space: nowrap;
+}
+
+.sif-chart-card .cmp-tip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sif-chart-card .cmp-drag-date {
+  position: absolute;
+  top: -2px;
+  transform: translateX(-50%);
+  background: var(--g1);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.sif-chart-card .cmp-drag-date.end {
+  background: #e65100;
+}
+
+.sif-chart-card .cmp-hint {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 6px;
+  text-align: center;
+}
+
+.sif-chart-card .cmp-range-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sif-chart-card .cmp-range-clear {
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 10px;
+}
+
+/* Date range picker */
+.sif-chart-card .cmp-range-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+}
+
+.sif-chart-card .cmp-range-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sif-chart-card .cmp-range-label {
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.sif-chart-card .cmp-date-input {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .75rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease;
+  outline: none;
+}
+
+.sif-chart-card .cmp-date-input:hover,
+.sif-chart-card .cmp-date-input:focus {
+  border-color: var(--g2);
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, .12);
+}
+
+.sif-chart-card .cmp-range-reset-btn {
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--g1);
+  cursor: pointer;
+  transition: all .15s ease;
+  margin-left: auto;
+}
+
+.sif-chart-card .cmp-range-reset-btn:hover {
+  background: var(--g-xlight);
+  border-color: var(--g1);
+}
+
+/* On-chart selection popup + summary panel below the chart */
+.sif-chart-card .cmp-onchart-summary {
+  position: absolute;
+  top: 8px;
+  background: var(--surface);
+  border: 1.5px solid var(--g3);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 11px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .15);
+  pointer-events: none;
+  z-index: 6;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  max-width: 320px;
+}
+
+.sif-chart-card .cmp-onchart-header {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+
+.sif-chart-card .cmp-onchart-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 0;
+}
+
+.sif-chart-card .cmp-onchart-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sif-chart-card .cmp-onchart-val {
+  font-size: 12px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.sif-chart-card .cmp-range-summary {
+  margin: 14px 0 0;
+  padding: 14px 16px;
+  background: var(--g-xlight);
+  border: 1.5px solid var(--g3);
+  border-radius: 12px;
+}
+
+.sif-chart-card .cmp-range-summary-h {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--g1);
+  margin-bottom: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sif-chart-card .cmp-range-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.sif-chart-card .cmp-range-row:last-child {
+  border-bottom: none;
+}
+
+.sif-chart-card .cmp-range-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.sif-chart-card .cmp-range-val {
+  font-size: 13px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+@media (max-width: 640px) {
+  .sif-chart-card .cmp-chart-wrap { padding: 0; }
+  .sif-chart-card .cmp-tip,
+  .sif-chart-card .cmp-onchart-summary { font-size: 10px; padding: 6px 9px; }
+  .sif-chart-card .cmp-drag-date { font-size: 9px; padding: 2px 6px; }
+  .sif-chart-card .cmp-range-summary { margin-top: 10px; }
+}
+
 .sif-chart-toolbar {
   display: flex;
   align-items: center;

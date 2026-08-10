@@ -263,7 +263,7 @@ export default function SifDetailClient({ id }) {
         </div>
 
         {/* NAV Chart Card */}
-        <div className="sif-card">
+        <div className="sif-card sif-chart-card">
           {/* Top row: title + benchmark selector */}
           <div className="sif-chart-header">
             <span className="sif-chart-title">📈 NAV Growth &amp; Benchmark</span>
