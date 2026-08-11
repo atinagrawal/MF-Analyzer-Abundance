@@ -8,23 +8,34 @@ import Footer from '@/components/Footer';
 import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows, combinedXirr } from '@/lib/xirr';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getSIFLogo, getMFLogoFromSchemeName } from '@/lib/providerLogos';
-import isinSchemeMaster from '@/data/isin-scheme-master.json';
 import growwByAmfiCode from '@/data/groww-exit-loads.json';
 
-// Precomputed once: normalized fund name → scheme-master entry, used as a
-// fallback when no ISIN is available (e.g. manual holdings). Avoids an
-// O(26k) linear scan on every getExitLoadInfo call, which would otherwise
-// re-run per lot, per render, per override keystroke.
-const nameToSchemeEntry = (() => {
+// isin-scheme-master.json (~8.4MB, ~26k entries) used to be statically
+// imported here -- meaning it shipped to every visitor's BROWSER as part of
+// this page's JS bundle, not just the server build. Now fetched once from
+// /api/scheme-master-facts (R2-backed, see that route) into CasTrackerInner's
+// masterFacts state and threaded through as an explicit parameter to every
+// function below that needs it, rather than closing over a module-level
+// constant -- multiple components (PortfolioRedemptionPlanner, and this
+// module's own top-level functions) need the same data, so it can't just be
+// a value computed inline in one component's body.
+
+// Builds the same normalized-name -> scheme-master-entry index the old
+// module-level IIFE built from the static import, now from the fetched
+// byIsin map. Deliberately uses this file's OWN normalization (not
+// lib/normalizeSchemeName, which the API route's own byNormName index uses
+// for a different consumer) so matching behavior is unchanged from before
+// this migration.
+function buildNameToSchemeEntry(byIsin) {
   const map = {};
-  for (const entry of Object.values(isinSchemeMaster)) {
+  for (const entry of Object.values(byIsin || {})) {
     if (entry.name) {
       const norm = entry.name.toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (norm && !map[norm]) map[norm] = entry; // first-wins on rare name collisions
     }
   }
   return map;
-})();
+}
 
 // data/groww-exit-loads.json is keyed by AMFI code only -- derive a
 // secondary ISIN index once, mirroring app/api/scheme-master-facts/route.js's
@@ -206,7 +217,7 @@ function formatTierPeriod(days) {
   return `${Math.round(days / 365)}y`;
 }
 
-function getExitLoadInfo(fundName, isin) {
+function getExitLoadInfo(fundName, isin, masterFacts) {
   // 1. Verified Groww Exit Loads (Decoupled, high-confidence dataset)
   const growwRec = (isin && growwByIsin[isin]) || (() => {
     const norm = (fundName || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -244,11 +255,11 @@ function getExitLoadInfo(fundName, isin) {
     : result;
 
   // 2. Fallback to existing BSE flag logic
-  let masterEntry = isin && isinSchemeMaster[isin];
+  let masterEntry = isin && masterFacts?.byIsin?.[isin];
   if (!masterEntry && fundName) {
     // Name fallback if ISIN is not passed or empty
     const norm = (fundName || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (norm) masterEntry = nameToSchemeEntry[norm];
+    if (norm) masterEntry = masterFacts?.byNormName?.[norm];
   }
 
   if (masterEntry) {
@@ -292,14 +303,14 @@ function getExitLoadInfo(fundName, isin) {
 // present, else inferred BSE/name-guess rate" logic can't drift between them
 // (a prior version of one path omitted `fund.isin`, silently skipping the
 // ISIN-based BSE lookup for that path only).
-function getEffectiveExitLoadRate(fund, exitLoadOverrides) {
+function getEffectiveExitLoadRate(fund, exitLoadOverrides, masterFacts) {
   return exitLoadOverrides[fund.name] != null
     ? exitLoadOverrides[fund.name]
-    : getExitLoadRate(fund.name, fund.isin)[0]?.rate ?? 0;
+    : getExitLoadRate(fund.name, fund.isin, masterFacts)[0]?.rate ?? 0;
 }
 
-function getExitLoadRate(fundName, isin) {
-  return getExitLoadInfo(fundName, isin).schedule;
+function getExitLoadRate(fundName, isin, masterFacts) {
+  return getExitLoadInfo(fundName, isin, masterFacts).schedule;
 }
 
 // Calculates estimated bank credit calendar date skipping weekends.
@@ -337,13 +348,14 @@ function calcLotExitLoad({
   isin,
   overrideRate,
   totalFundUnits,
-  cumUnitsRedeemed
+  cumUnitsRedeemed,
+  masterFacts
 }) {
   if (lot.synthetic || take <= 0) return { exitLoadAmt: 0, effectiveRate: 0 };
 
   const buyDate = lot.date instanceof Date ? lot.date : new Date(lot.date);
   const heldDays = Math.floor((redeemDate - buyDate) / (24 * 3600 * 1000));
-  const info = getExitLoadInfo(fundName, isin);
+  const info = getExitLoadInfo(fundName, isin, masterFacts);
 
   // A user-entered override takes precedence over the auto-detected
   // hasExitLoad classification — it exists specifically to correct funds
@@ -441,7 +453,7 @@ function fundScore(holding, strategy, today) {
 // strategy picks funds/lots). 'selected' = user hand-picked specific funds
 // (via dashboard checkboxes) and each one redeems its own amount
 // independently — no shared "remaining target" counter across funds.
-function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorName, initialMode = 'target', onClose }) {
+function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorName, initialMode = 'target', onClose, masterFacts }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -471,7 +483,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
       .map(h => ({
         ...h,
         category:     inferCategory(h.name),
-        exitLoadRate: getEffectiveExitLoadRate(h, exitLoadOverrides), // inferred default (or override)
+        exitLoadRate: getEffectiveExitLoadRate(h, exitLoadOverrides, masterFacts), // inferred default (or override)
         score: fundScore(h, strategy, today),
       }))
       .sort((a, b) => a.score - b.score);
@@ -524,7 +536,8 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
           isin: fund.isin,
           overrideRate: exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : undefined,
           totalFundUnits,
-          cumUnitsRedeemed: fundUnits
+          cumUnitsRedeemed: fundUnits,
+          masterFacts
         });
         const netSale   = saleVal - exitLoad;
         const heldMs    = lot.synthetic ? Infinity : (today - buyDate);
@@ -677,7 +690,8 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
           isin: fund.isin,
           overrideRate: exitLoadOverrides[fund.name] != null ? exitLoadOverrides[fund.name] : undefined,
           totalFundUnits,
-          cumUnitsRedeemed: fundUnits
+          cumUnitsRedeemed: fundUnits,
+          masterFacts
         });
         const heldMs   = lot.synthetic ? Infinity : (today - buyDate);
         const isLTCG   = heldMs >= ltcgMs;
@@ -703,7 +717,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
       rows.push({
         name: fund.name, isin: fund.isin, category: cat, isELSS, units: fundUnits, maxRedeemable,
         proceeds: fundProceeds, exitLoad: fundExitLoad,
-        exitLoadRate: getEffectiveExitLoadRate(fund, exitLoadOverrides),
+        exitLoadRate: getEffectiveExitLoadRate(fund, exitLoadOverrides, masterFacts),
         stcg: fundSTCG, ltcg: fundLTCG, stcgTax: fundStcgTax, ltcgTax: fundLtcgTax, tax: fundTax, net: fundNet,
         lotBreakdown, hasSynthetic: lots.some(l => l.synthetic), locked: false,
       });
@@ -931,7 +945,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
                               {row.category.toUpperCase()}
                             </span>
                             {(() => {
-                              const masterRec = row.isin && isinSchemeMaster[row.isin];
+                              const masterRec = row.isin && masterFacts?.byIsin?.[row.isin];
                               const rta = masterRec?.rta;
                               const settlement = masterRec?.settlement || (row.category === 'debt' || row.category === 'liquid' ? 'T+1' : 'T+2');
                               const creditInfo = getEstCreditDate(settlement);
@@ -963,7 +977,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
                         {/* Exit load % — text input avoids toFixed fighting typing */}
                         <div style={{ flexShrink: 0, textAlign: 'right' }}>
                           <div style={{ fontSize: '.52rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 3 }}>
-                            {getExitLoadInfo(row.name, row.isin).label}
+                            {getExitLoadInfo(row.name, row.isin, masterFacts).label}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                             <input type="text" inputMode="decimal"
@@ -1677,6 +1691,25 @@ function CasTrackerInner() {
   const [deleteInFlight, setDeleteInFlight] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
+  // Scheme-master facts (RTA/settlement/exit-load/ELSS-lock data), fetched
+  // once from /api/scheme-master-facts (R2-backed) instead of the ~8.4MB
+  // isin-scheme-master.json this page used to statically import -- that
+  // shipped the whole file to every visitor's browser. Empty maps here are
+  // a safe default: every consumer below already falls through to a
+  // guess-based exit-load estimate when no master-record match is found,
+  // so a brief window before this resolves (or a failed fetch) just means a
+  // slightly lower-confidence estimate, not a crash or wrong-looking UI.
+  const [masterFacts, setMasterFacts] = useState({ byIsin: {}, byNormName: {} });
+  useEffect(() => {
+    fetch('/api/scheme-master-facts')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const byIsin = d?.byIsin || {};
+        setMasterFacts({ byIsin, byNormName: buildNameToSchemeEntry(byIsin) });
+      })
+      .catch(() => { /* keep empty defaults -- existing fallback logic handles this */ });
+  }, []);
+
   async function deleteSavedPortfolio(id) {
     setDeleteInFlight(true);
     setDeleteError('');
@@ -1902,7 +1935,7 @@ function CasTrackerInner() {
           // against its actual source — no isin_reinvest/isin_payout exist;
           // each Growth/IDCW/Reinvest variant is its own separate Scheme
           // entry, each with its own single isin).
-          isELSS: /ELSS|TAX.?SAVER/i.test(scheme.scheme) || (isinSchemeMaster[scheme.isin || '']?.isLocked || false),
+          isELSS: /ELSS|TAX.?SAVER/i.test(scheme.scheme) || (masterFacts.byIsin[scheme.isin || '']?.isLocked || false),
           lockedValue: 0,
           name: scheme.scheme,
           isin: scheme.isin || ''
@@ -2820,6 +2853,7 @@ function CasTrackerInner() {
           initialMode={plannerMode}
           investorName={currentInfo.investorName}
           onClose={() => setPlanPortfolio(false)}
+          masterFacts={masterFacts}
         />
       )}
 

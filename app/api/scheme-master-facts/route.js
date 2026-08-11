@@ -3,19 +3,31 @@
  *
  * GET /api/scheme-master-facts
  *
- * Slim, server-side projection of data/isin-scheme-master.json's
- * operational-facts fields (RTA, cutoffs, settlement, min lumpsum, SIP/SWP
- * eligibility) & data/groww-exit-loads.json for the screener page's fund detail drawer.
+ * Slim, server-side projection of isin-scheme-master.json's operational-facts
+ * fields (RTA, cutoffs, settlement, min lumpsum, SIP/SWP eligibility,
+ * exit-load/ELSS-lock fields) & data/groww-exit-loads.json, for the screener
+ * page's fund detail drawer and app/cas-tracker/page.js's exit-load
+ * estimation (both consumers of this one route rather than each carrying
+ * their own copy of the underlying data).
+ *
+ * isin-scheme-master.json itself (~8.4MB, ~26k entries) is fetched from R2
+ * (scripts/sync_bse_scheme_master.js writes it there monthly) instead of a
+ * static import -- it used to be committed to git and bundled at build time,
+ * which meant every real change triggered a full redeploy, and (worse)
+ * app/cas-tracker/page.js's own former static import shipped the whole file
+ * to every visitor's browser. This route is now the only place that reads
+ * the raw file; every consumer gets only the slim per-ISIN projection below.
  */
 
 import fs from 'fs';
 import path from 'path';
-import isinSchemeMaster from '@/data/isin-scheme-master.json';
+import { r2Get } from '@/lib/r2';
 import { normalizeSchemeName as normalizeName } from '@/lib/normalizeSchemeName';
 
-const FACT_FIELDS = ['name', 'rta', 'settlement', 'purchaseCutoff', 'redeemCutoff', 'minPurchase', 'sip', 'swp', 'purchaseAllowed', 'redemptionAllowed', 'switchAllowed', 'divReinvest'];
+const FACT_FIELDS = ['name', 'rta', 'settlement', 'purchaseCutoff', 'redeemCutoff', 'minPurchase', 'sip', 'swp', 'purchaseAllowed', 'redemptionAllowed', 'switchAllowed', 'divReinvest', 'isLocked', 'hasExitLoad', 'tiers', 'freePercent'];
 const AMFI_NAV_URL = 'https://portal.amfiindia.com/spages/NAVAll.txt';
 const AMFI_TTL_MS = 6 * 60 * 60 * 1000; // 6h -- code-to-ISIN mapping barely changes day to day
+const ISIN_MASTER_TTL_MS = 60 * 60 * 1000; // 1h -- isin-scheme-master.json itself only refreshes monthly
 
 function pickFacts(entry) {
   const out = {};
@@ -44,11 +56,30 @@ const { growwByAmfiCode, growwByIsin } = (() => {
   return { growwByAmfiCode, growwByIsin };
 })();
 
-// byIsin/byNormName built once at module load -- pure, synchronous, no I/O.
-const { byIsin, byNormName } = (() => {
+let _factsCache = null; // { byIsin, byNormName }
+let _factsCacheTime = 0;
+
+// byIsin/byNormName, derived from R2's isin-scheme-master.json, cached
+// in-memory per warm instance. Only overwrites the cache on a SUCCESSFUL R2
+// read -- a transient R2 failure serves the last-known-good result (or an
+// empty fallback if nothing has ever succeeded yet on this instance) rather
+// than locking in an empty result for the full TTL.
+async function buildFacts() {
+  const now = Date.now();
+  if (_factsCache && (now - _factsCacheTime) < ISIN_MASTER_TTL_MS) return _factsCache;
+
+  let isinSchemeMaster = null;
+  try {
+    isinSchemeMaster = await r2Get('isin-scheme-master.json');
+  } catch (e) {
+    console.warn('[scheme-master-facts] Warning fetching isin-scheme-master.json from R2:', e.message);
+  }
+  if (!isinSchemeMaster) {
+    return _factsCache || { byIsin: {}, byNormName: {} };
+  }
+
   const byIsin = {};
   const byNormName = {};
-
   for (const [isin, entry] of Object.entries(isinSchemeMaster)) {
     const facts = pickFacts(entry);
     const growwRec = growwByIsin[isin];
@@ -65,13 +96,15 @@ const { byIsin, byNormName } = (() => {
     }
   }
 
-  return { byIsin, byNormName };
-})();
+  _factsCache = { byIsin, byNormName };
+  _factsCacheTime = now;
+  return _factsCache;
+}
 
 let _amfiCodeCache = null;
 let _amfiCodeCacheTime = 0;
 
-async function buildByAmfiCode() {
+async function buildByAmfiCode(byIsin) {
   const now = Date.now();
   if (_amfiCodeCache && (now - _amfiCodeCacheTime) < AMFI_TTL_MS) return _amfiCodeCache;
 
@@ -118,7 +151,8 @@ async function buildByAmfiCode() {
 }
 
 export async function GET() {
-  const byAmfiCode = await buildByAmfiCode();
+  const { byIsin, byNormName } = await buildFacts();
+  const byAmfiCode = await buildByAmfiCode(byIsin);
   return Response.json(
     { byIsin, byAmfiCode, byNormName },
     { headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' } }

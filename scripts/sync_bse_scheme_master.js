@@ -2,22 +2,27 @@
  * scripts/sync_bse_scheme_master.js
  *
  * Downloads and parses BSE StAR MF Scheme Master files (Physical, Demat, Detail)
- * and generates data/isin-scheme-master.json for precise exit load and lock-in
- * determination in the CAS Redemption Planner.
+ * and writes isin-scheme-master.json to Cloudflare R2 (lib/r2.js) for precise
+ * exit load and lock-in determination, read via app/api/scheme-master-facts.
+ *
+ * Previously wrote data/isin-scheme-master.json locally and committed it to
+ * git -- at ~8.4MB, that meant a fresh multi-MB diff on every real monthly
+ * change, a full production redeploy just to refresh the data, and (since
+ * app/cas-tracker/page.js statically imported it) the whole file shipped to
+ * every visitor's browser. Moved to R2, read exclusively through the slim
+ * server-side projection in app/api/scheme-master-facts/route.js now.
  *
  * Fallback logic:
  * - Attempts to fetch the live report from BSE StAR MF.
  * - If BSE StAR is unavailable, offline, or returns an error for ALL three
  *   report types (e.g. weekends, an outage, or a scrape breaking because BSE
- *   changed its ASP.NET viewstate/markup), the existing
- *   data/isin-scheme-master.json is left untouched rather than being
- *   overwritten with an empty result — this workflow runs on GitHub Actions
- *   (ubuntu-latest, scheduled monthly), so any fallback must work there, not
- *   just on one developer's machine.
+ *   changed its ASP.NET viewstate/markup), the existing R2 copy is left
+ *   untouched rather than being overwritten with an empty result -- this
+ *   workflow runs on GitHub Actions (ubuntu-latest, scheduled monthly), so
+ *   any fallback must work there, not just on one developer's machine.
  */
 
-const fs = require('fs');
-const path = require('path');
+const R2_KEY = 'isin-scheme-master.json';
 
 // Column indices are resolved dynamically from each report's own header
 // row, by matching against these expected label strings, rather than
@@ -268,6 +273,7 @@ function parseReportStream(content, isinMap) {
 
 async function run() {
   console.log('=== Syncing BSE StAR Scheme Master Database ===');
+  const { r2Put, r2Get } = await import('../lib/r2.js');
   const isinMap = new Map();
 
   const options = ['SCHEMEMASTERPHYSICAL', 'SCHEMEMASTERDEMAT', 'SCHEMEMASTER'];
@@ -290,23 +296,22 @@ async function run() {
 
   if (isinMap.size === 0) {
     console.error('[BSE Sync] Error: No ISIN records could be parsed!');
-    const targetFile = path.join(process.cwd(), 'data', 'isin-scheme-master.json');
-    if (fs.existsSync(targetFile)) {
-      console.log('[BSE Sync] Preserving existing data/isin-scheme-master.json cache.');
+    let existing = null;
+    try {
+      existing = await r2Get(R2_KEY);
+    } catch (e) {
+      console.warn(`[BSE Sync] Could not check existing R2 copy: ${e.message}`);
+    }
+    if (existing) {
+      console.log('[BSE Sync] Preserving existing R2 copy.');
       return;
     }
     process.exit(1);
   }
 
   const outObj = Object.fromEntries(isinMap);
-  const targetDir = path.join(process.cwd(), 'data');
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true });
-  }
-
-  const targetFile = path.join(targetDir, 'isin-scheme-master.json');
-  fs.writeFileSync(targetFile, JSON.stringify(outObj), 'utf-8');
-  console.log(`[BSE Sync] Successfully wrote ${isinMap.size} ISIN records to ${targetFile}`);
+  await r2Put(R2_KEY, JSON.stringify(outObj));
+  console.log(`[BSE Sync] Successfully wrote ${isinMap.size} ISIN records to R2 (${R2_KEY})`);
 }
 
 run().catch(console.error);
