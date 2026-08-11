@@ -21,27 +21,9 @@
 
 import { auth } from '@/auth';
 import pool     from '@/lib/db';
+import { PAN_REGEX, resolveOwnerId, authorizedPans } from '@/lib/casAuth';
 
 export const dynamic = 'force-dynamic';
-
-const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-
-/** Resolves which account's saved uploads to authorize against. */
-function resolveOwnerId(session, targetUserId) {
-  return (session.user.role === 'admin' && targetUserId) ? targetUserId : session.user.id;
-}
-
-/** Narrows `pans` down to only those the owner has actually seen in a saved upload. */
-async function authorizedPans(ownerId, pans) {
-  if (!pans.length) return [];
-  const { rows } = await pool.query(
-    `SELECT DISTINCT p AS pan
-       FROM cas_portfolios, unnest(pans) AS p
-      WHERE user_id = $1 AND p = ANY($2)`,
-    [ownerId, pans]
-  );
-  return rows.map(r => r.pan);
-}
 
 export async function GET(request) {
   const session = await auth();

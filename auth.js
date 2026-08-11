@@ -200,6 +200,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.plan          = (isLifetime || isProAnnual) ? 'pro' : 'free';
         session.user.planTier      = isLifetime ? 'lifetime' : isProAnnual ? 'annual' : 'free';
         session.user.planExpiresAt = isProAnnual ? expires.toISOString() : null;
+        // CAS Tracker's default multi-PAN family tab -- see
+        // app/api/cas/default-pan/route.js. Included here so the common
+        // case (viewing your own account) needs no extra fetch; an admin
+        // viewing a CLIENT's family CAS fetches THAT client's default_pan
+        // via the API instead, since it's not on the admin's own session.
+        session.user.defaultPan = user.default_pan ?? null;
       }
       return session;
     },

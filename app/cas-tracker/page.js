@@ -1687,6 +1687,9 @@ function CasTrackerInner() {
   const [editingName, setEditingName] = useState('');
   const [savingPanName, setSavingPanName] = useState(false);
   const [panNameError, setPanNameError] = useState('');
+  const [defaultPan, setDefaultPan] = useState('');      // which PAN opens first in a multi-PAN family CAS
+  const [savingDefaultPan, setSavingDefaultPan] = useState('');  // PAN currently being set as default, or ''
+  const [defaultPanError, setDefaultPanError] = useState('');
   const [selectedIsXlsx, setSelectedIsXlsx] = useState(false); // MF Central .xlsx report vs CAMS/KFintech .pdf
   const [deletingId, setDeletingId] = useState('');   // saved-portfolio id showing delete confirm, or ''
   const [deleteInFlight, setDeleteInFlight] = useState(false);
@@ -1765,6 +1768,30 @@ function CasTrackerInner() {
       setPanNameError('Could not save this name -- check your connection and try again.');
     }
     setSavingPanName(false);
+  }
+
+  // Marks `pan` as the tab this family CAS should open to by default on
+  // future visits (fresh uploads and reloads of a saved CAS both go
+  // through processCasData, which is the only place that reads it back).
+  async function markPanAsDefault(pan) {
+    setSavingDefaultPan(pan);
+    setDefaultPanError('');
+    try {
+      const res = await fetch('/api/cas/default-pan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pan, targetUserId: (isAdmin && viewedUserId) ? viewedUserId : undefined }),
+      });
+      if (res.ok) {
+        setDefaultPan(pan);
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setDefaultPanError(body.error || 'Could not set this as the default.');
+      }
+    } catch {
+      setDefaultPanError('Could not set this as the default -- check your connection and try again.');
+    }
+    setSavingDefaultPan('');
   }
 
   // ── Auth + saved portfolios ──
@@ -2040,8 +2067,27 @@ function CasTrackerInner() {
       }
     } catch { /* non-fatal — fall back to parser-derived names */ }
 
+    // Which tab opens first: the PAN previously marked as default (set by
+    // the user/admin on an earlier visit, see markPanAsDefault below) --
+    // the first PAN casparser happens to list in a family CAS is not
+    // necessarily the actual person using the tool. Self-viewing gets this
+    // for free from the session (auth.js's session callback); admin
+    // viewing a client fetches THAT client's own default, since it's not
+    // on the admin's own session.
+    let resolvedDefaultPan = '';
+    try {
+      if (isAdmin && viewedUserId) {
+        const res = await fetch(`/api/cas/default-pan?targetUserId=${viewedUserId}`);
+        const d = await res.json();
+        resolvedDefaultPan = d.defaultPan || '';
+      } else {
+        resolvedDefaultPan = session?.user?.defaultPan || '';
+      }
+    } catch { /* non-fatal — fall back to first PAN */ }
+    setDefaultPan(resolvedDefaultPan);
+
     setPortfolioDataByPan(portfolioData);
-    setActivePan(pans[0]);
+    setActivePan((resolvedDefaultPan && pans.includes(resolvedDefaultPan)) ? resolvedDefaultPan : pans[0]);
     setFromCache(cached);
     setUploadState('success');
   }
@@ -2584,9 +2630,25 @@ function CasTrackerInner() {
                           ✎
                         </button>
                       )}
+                      {PAN_REGEX.test(pan) && (
+                        <button
+                          className="pan-tab-rename-btn"
+                          disabled={savingDefaultPan === pan}
+                          title={pan === defaultPan ? 'This tab opens first by default' : 'Open this tab by default from now on'}
+                          onClick={() => markPanAsDefault(pan)}
+                          style={{ color: pan === defaultPan ? '#f57f17' : undefined }}
+                        >
+                          {pan === defaultPan ? '★' : '☆'}
+                        </button>
+                      )}
                     </div>
                   );
                 })}
+              </div>
+            )}
+            {defaultPanError && (
+              <div style={{ fontSize: '.7rem', fontWeight: 700, color: '#c62828', margin: '-8px 0 12px' }}>
+                ⚠ {defaultPanError}
               </div>
             )}
 

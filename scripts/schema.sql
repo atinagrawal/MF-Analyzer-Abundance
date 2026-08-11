@@ -187,6 +187,16 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS razorpay_order_id  TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS distributor_id     TEXT REFERENCES users(id) ON DELETE SET NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by         TEXT REFERENCES users(id) ON DELETE SET NULL;
 
+-- Which PAN, among this account's multi-PAN family CAS uploads, the CAS
+-- Tracker should default its "active" tab to -- the first PAN casparser
+-- happens to list is not necessarily the actual person using the tool.
+-- Set via app/api/cas/default-pan/route.js; for an admin viewing a client
+-- (?userId=), this is the CLIENT's own row, not the admin's -- it's a
+-- property of whose family CAS this is, not who's currently looking at it.
+-- No FK to a PANs table (PANs aren't a first-class entity anywhere else in
+-- this schema either, e.g. pan_investor_names.pan is also a bare TEXT key).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS default_pan        TEXT;
+
 -- ── Data-engine tables ───────────────────────────────────────────────────────
 -- Populated by scheduled GitHub Actions workflows running scripts/*.mjs and
 -- scripts/sync_*.js against public data sources (AMFI, BSE, NSE, mfapi.in),
