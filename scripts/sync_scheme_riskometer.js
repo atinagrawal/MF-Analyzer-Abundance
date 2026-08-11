@@ -32,13 +32,20 @@
  *   node scripts/sync_scheme_riskometer.js [--dry-run] [--limit-combos=N]
  *
  * --limit-combos=N processes only the first N (category, subCategory) combos
- * -- for a fast smoke test before committing to the full ~40-combo run.
+ * -- for a fast smoke test before committing to the full ~40-combo run. A
+ * real (non --dry-run) --limit-combos run writes to
+ * "amfi-scheme-risk.json.smoketest" instead of the production key -- its
+ * result is real but partial by design, so it must never land where the app
+ * reads it. Every real production write also backs up the previous value to
+ * "amfi-scheme-risk.json.backup" first.
  */
+
+const { backupThenPut, smoketestKey } = require('./lib/r2SyncSafety');
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const LIMIT_ARG = process.argv.find((a) => a.startsWith('--limit-combos='));
 const LIMIT_COMBOS = LIMIT_ARG ? parseInt(LIMIT_ARG.split('=')[1], 10) : 0;
-const R2_KEY = 'amfi-scheme-risk.json';
+const R2_KEY = smoketestKey('amfi-scheme-risk.json', LIMIT_COMBOS > 0, DRY_RUN);
 
 const BASE = 'https://www.amfiindia.com/gateway/pollingsebi/api/amfi';
 const HEADERS = {
@@ -191,9 +198,10 @@ async function run() {
   console.log(`Unique scheme families written: ${written}`);
   console.log(`Normalization collisions (kept first value): ${collisions}`);
 
+  let existing = null;
   let existingCount = 0;
   try {
-    const existing = await r2Get(R2_KEY);
+    existing = await r2Get(R2_KEY);
     existingCount = Object.keys(existing?.risk || {}).length;
   } catch (e) {
     console.warn(`[Scheme Riskometer Sync] Could not read existing R2 copy to compare record counts: ${e.message}`);
@@ -220,7 +228,7 @@ async function run() {
 
   if (!DRY_RUN) {
     const output = { asOf: reportDate, generatedAt: new Date().toISOString(), count: written, risk };
-    await r2Put(R2_KEY, JSON.stringify(output));
+    await backupThenPut(r2Put, R2_KEY, existing, JSON.stringify(output));
     console.log(`[Scheme Riskometer Sync] Successfully wrote ${written} records to R2 (${R2_KEY})`);
   }
 }

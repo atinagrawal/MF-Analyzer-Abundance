@@ -27,16 +27,21 @@
  *   node scripts/sync_amfi_aum.js [--dry-run] [--limit-amcs=N]
  *
  * --limit-amcs=N processes only the first N AMCs -- for a fast smoke test
- * before committing to the full multi-thousand-scheme run.
+ * before committing to the full multi-thousand-scheme run. A real (non
+ * --dry-run) --limit-amcs run writes to "amfi-aum.json.smoketest" instead
+ * of the production key -- its result is real but partial by design, so it
+ * must never land where the app reads it. Every real production write also
+ * backs up the previous value to "amfi-aum.json.backup" first.
  */
 
 const fs = require('fs');
 const path = require('path');
+const { backupThenPut, smoketestKey } = require('./lib/r2SyncSafety');
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const LIMIT_AMCS_ARG = process.argv.find((a) => a.startsWith('--limit-amcs='));
 const LIMIT_AMCS = LIMIT_AMCS_ARG ? parseInt(LIMIT_AMCS_ARG.split('=')[1], 10) : 0;
-const R2_KEY = 'amfi-aum.json';
+const R2_KEY = smoketestKey('amfi-aum.json', LIMIT_AMCS > 0, DRY_RUN);
 
 const AMFI_BASE = 'https://www.amfiindia.com/api';
 const HEADERS = {
@@ -220,9 +225,10 @@ async function run() {
   console.log(`Plan variants with AUM written: ${variantsWritten}`);
   console.log(`Plan variants with unresolved ISIN (not in NAVAll.txt): ${variantsUnresolved}`);
 
+  let existing = null;
   let existingCount = 0;
   try {
-    const existing = await r2Get(R2_KEY);
+    existing = await r2Get(R2_KEY);
     existingCount = Object.keys(existing || {}).length;
   } catch (e) {
     console.warn(`[AMFI AUM Sync] Could not read existing R2 copy to compare record counts: ${e.message}`);
@@ -253,7 +259,7 @@ async function run() {
   }
 
   if (!DRY_RUN) {
-    await r2Put(R2_KEY, JSON.stringify(result));
+    await backupThenPut(r2Put, R2_KEY, existing, JSON.stringify(result));
     console.log(`[AMFI AUM Sync] Successfully wrote ${variantsWritten} records to R2 (${R2_KEY})`);
   }
 }

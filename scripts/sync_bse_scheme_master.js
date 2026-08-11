@@ -20,8 +20,22 @@
  *   untouched rather than being overwritten with an empty result -- this
  *   workflow runs on GitHub Actions (ubuntu-latest, scheduled monthly), so
  *   any fallback must work there, not just on one developer's machine.
+ * - Partial failure (e.g. only 1 of 3 report types responds -- confirmed to
+ *   happen in practice: BSE StAR's endpoints have timed out for 2 of 3
+ *   report types on multiple real runs, both locally and on GitHub Actions)
+ *   is also guarded against: a result covering suspiciously fewer ISINs
+ *   than the existing R2 copy is refused, matching this project's other
+ *   sync scripts' existingCount * 0.5 threshold. Before ANY real write, the
+ *   current R2 value is also copied to isin-scheme-master.json.backup, so a
+ *   bad write that somehow gets past the guard still has a rollback point.
+ *
+ * Usage:
+ *   node scripts/sync_bse_scheme_master.js [--dry-run]
  */
 
+const { backupThenPut } = require('./lib/r2SyncSafety');
+
+const DRY_RUN = process.argv.includes('--dry-run');
 const R2_KEY = 'isin-scheme-master.json';
 
 // Column indices are resolved dynamically from each report's own header
@@ -273,6 +287,7 @@ function parseReportStream(content, isinMap) {
 
 async function run() {
   console.log('=== Syncing BSE StAR Scheme Master Database ===');
+  if (DRY_RUN) console.log('[Dry Run Mode Active]');
   const { r2Put, r2Get } = await import('../lib/r2.js');
   const isinMap = new Map();
 
@@ -294,14 +309,16 @@ async function run() {
     }
   }
 
+  let existing = null;
+  try {
+    existing = await r2Get(R2_KEY);
+  } catch (e) {
+    console.warn(`[BSE Sync] Could not read existing R2 copy: ${e.message}`);
+  }
+  const existingCount = existing ? Object.keys(existing).length : 0;
+
   if (isinMap.size === 0) {
     console.error('[BSE Sync] Error: No ISIN records could be parsed!');
-    let existing = null;
-    try {
-      existing = await r2Get(R2_KEY);
-    } catch (e) {
-      console.warn(`[BSE Sync] Could not check existing R2 copy: ${e.message}`);
-    }
     if (existing) {
       console.log('[BSE Sync] Preserving existing R2 copy.');
       return;
@@ -309,9 +326,23 @@ async function run() {
     process.exit(1);
   }
 
+  // Partial-failure guard, same reasoning as this project's other sync
+  // scripts: BSE StAR's report endpoints have been observed to time out for
+  // 2 of the 3 report types on real runs (both locally and on GitHub
+  // Actions), which -- absent this check -- silently wrote a materially
+  // incomplete result. Refuse to overwrite good data with a suspiciously
+  // smaller one.
+  if (!DRY_RUN && existingCount > 0 && isinMap.size < existingCount * 0.5) {
+    console.error(`[BSE Sync] Error: New record count (${isinMap.size}) is less than 50% of existing R2 copy's record count (${existingCount}) -- likely a partial BSE StAR fetch failure.`);
+    console.log('[BSE Sync] Preserving existing R2 copy.');
+    process.exit(1);
+  }
+
   const outObj = Object.fromEntries(isinMap);
-  await r2Put(R2_KEY, JSON.stringify(outObj));
-  console.log(`[BSE Sync] Successfully wrote ${isinMap.size} ISIN records to R2 (${R2_KEY})`);
+  if (!DRY_RUN) {
+    await backupThenPut(r2Put, R2_KEY, existing, JSON.stringify(outObj));
+    console.log(`[BSE Sync] Successfully wrote ${isinMap.size} ISIN records to R2 (${R2_KEY})`);
+  }
 }
 
 run().catch(console.error);

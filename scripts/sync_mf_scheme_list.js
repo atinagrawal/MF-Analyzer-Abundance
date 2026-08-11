@@ -22,7 +22,13 @@
  *
  * Requires the same R2_* env vars as lib/r2.js (R2_ACCOUNT_ID,
  * R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME).
+ *
+ * Every real production write backs up the previous value to
+ * "mf-scheme-list.json.backup" first, so a bad write that somehow gets past
+ * the partial-failure guard below still has a rollback point.
  */
+
+const { backupThenPut } = require('./lib/r2SyncSafety');
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const AMFI_URL = 'https://portal.amfiindia.com/spages/NAVAll.txt';
@@ -56,9 +62,10 @@ async function run() {
 
   console.log(`Scheme codes written: ${written}`);
 
+  let existing = null;
   let existingCount = 0;
   try {
-    const existing = await r2Get(R2_KEY);
+    existing = await r2Get(R2_KEY);
     existingCount = Object.keys(existing?.schemes || {}).length;
   } catch (e) {
     console.warn(`[MF Scheme List Sync] Could not read existing R2 copy to compare record counts: ${e.message}`);
@@ -84,7 +91,7 @@ async function run() {
 
   if (!DRY_RUN) {
     const output = { generatedAt: new Date().toISOString(), count: written, schemes };
-    await r2Put(R2_KEY, JSON.stringify(output));
+    await backupThenPut(r2Put, R2_KEY, existing, JSON.stringify(output));
     console.log(`[MF Scheme List Sync] Successfully wrote ${written} scheme names to R2 (${R2_KEY})`);
   }
 }

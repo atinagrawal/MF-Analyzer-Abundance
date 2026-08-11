@@ -37,7 +37,13 @@
  *
  * Usage:
  *   node scripts/sync_sif_aum.js [--dry-run]
+ *
+ * Every real production write backs up the previous value to
+ * "sif-aum.json.backup" first, so a bad write that somehow gets past the
+ * partial-failure guard below still has a rollback point.
  */
+
+const { backupThenPut } = require('./lib/r2SyncSafety');
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const R2_KEY = 'sif-aum.json';
@@ -114,9 +120,10 @@ async function run() {
   console.log(`Scheme plan-variants written: ${written}`);
   console.log(`As-of quarter: ${asOf}`);
 
+  let existing = null;
   let existingCount = 0;
   try {
-    const existing = await r2Get(R2_KEY);
+    existing = await r2Get(R2_KEY);
     existingCount = Object.keys(existing || {}).length;
   } catch (e) {
     console.warn(`[SIF AUM Sync] Could not read existing R2 copy to compare record counts: ${e.message}`);
@@ -141,7 +148,7 @@ async function run() {
   }
 
   if (!DRY_RUN) {
-    await r2Put(R2_KEY, JSON.stringify(result));
+    await backupThenPut(r2Put, R2_KEY, existing, JSON.stringify(result));
     console.log(`[SIF AUM Sync] Successfully wrote ${written} records to R2 (${R2_KEY})`);
   }
 }
