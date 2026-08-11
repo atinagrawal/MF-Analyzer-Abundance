@@ -1686,6 +1686,7 @@ function CasTrackerInner() {
   const [editingPan, setEditingPan] = useState('');   // PAN currently being renamed, or ''
   const [editingName, setEditingName] = useState('');
   const [savingPanName, setSavingPanName] = useState(false);
+  const [panNameError, setPanNameError] = useState('');
   const [selectedIsXlsx, setSelectedIsXlsx] = useState(false); // MF Central .xlsx report vs CAMS/KFintech .pdf
   const [deletingId, setDeletingId] = useState('');   // saved-portfolio id showing delete confirm, or ''
   const [deleteInFlight, setDeleteInFlight] = useState(false);
@@ -1734,8 +1735,9 @@ function CasTrackerInner() {
 
   async function savePanName(pan) {
     const name = editingName.trim();
-    if (!name) { setEditingPan(''); return; }
+    if (!name) { setEditingPan(''); setPanNameError(''); return; }
     setSavingPanName(true);
+    setPanNameError('');
     try {
       const res = await fetch('/api/cas/pan-name', {
         method: 'POST',
@@ -1747,10 +1749,22 @@ function CasTrackerInner() {
           ...prev,
           [pan]: { ...prev[pan], investorName: name },
         }));
+        // Only exit edit mode on CONFIRMED success -- previously this ran
+        // unconditionally, so a failed save (most commonly a 403 because
+        // this CAS was never actually saved to the account in the first
+        // place -- pan-name edits are only allowed for a PAN the server has
+        // seen in a saved upload) closed the edit box with no feedback,
+        // silently reverting to the old name and looking like the edit was
+        // simply discarded.
+        setEditingPan('');
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setPanNameError(body.error || 'Could not save this name.');
       }
-    } catch { /* non-fatal — tab keeps its previous name */ }
+    } catch {
+      setPanNameError('Could not save this name -- check your connection and try again.');
+    }
     setSavingPanName(false);
-    setEditingPan('');
   }
 
   // ── Auth + saved portfolios ──
@@ -1761,6 +1775,7 @@ function CasTrackerInner() {
   const [savedPortfolios, setSavedPortfolios] = useState([]);
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [saveStatus, setSaveStatus] = useState(''); // '', 'saving', 'saved', 'error'
+  const [pendingSaveRetry, setPendingSaveRetry] = useState(null); // { data, fileName, panCount } when saveStatus === 'error'
 
   // ── Manual holdings + SIF NAVs ──
   const [manualHoldings, setManualHoldings] = useState([]);
@@ -2060,12 +2075,21 @@ function CasTrackerInner() {
           ]);
         }
         setSaveStatus('saved');
+        setPendingSaveRetry(null);
       } else {
         setSaveStatus('error');
+        setPendingSaveRetry({ data, fileName, panCount });
       }
     } catch {
       setSaveStatus('error');
+      setPendingSaveRetry({ data, fileName, panCount });
     }
+  }
+
+  // Lets the "Retry save" banner re-attempt without asking the user to
+  // re-upload/re-decrypt the file -- everything needed is already in memory.
+  function retrySave() {
+    if (pendingSaveRetry) saveToBlobIfSignedIn(pendingSaveRetry.data, pendingSaveRetry.fileName, pendingSaveRetry.panCount);
   }
 
   async function handleSubmit(e) {
@@ -2110,12 +2134,21 @@ function CasTrackerInner() {
 
         data = await parseRes.json();
         writeCache(pdfFile, data);
-        // Auto-save to Vercel Blob (fire-and-forget, non-blocking)
+        // Awaited (not fire-and-forget) deliberately: this used to fire the
+        // save and move straight on to showing results, which meant a user
+        // who navigated away as soon as they saw their portfolio could abort
+        // the in-flight save before it ever reached the server -- the parse
+        // succeeded, rendered, and then was gone for good on the next visit.
+        // Awaiting it here means results only appear once the save has
+        // actually resolved (success OR failure), so there's no window where
+        // "looks done" and "actually saved" can diverge. A failure doesn't
+        // block showing the parsed data (still useful on its own) -- it's
+        // surfaced via the saveStatus banner instead, with a retry option.
         const panCount = (data.folios || []).reduce((acc, f) => {
           const pan = (f.PAN || '').toUpperCase().trim();
           return pan && pan.length === 10 ? acc.add(pan) : acc;
         }, new Set()).size;
-        saveToBlobIfSignedIn(data, pdfFile.name, panCount);
+        await saveToBlobIfSignedIn(data, pdfFile.name, panCount);
       }
 
       await processCasData(data, cached);
@@ -2255,8 +2288,22 @@ function CasTrackerInner() {
               </div>
             )}
 
-            {/* Authenticated (or loading): show upload form */}
-            {authStatus !== 'unauthenticated' && (
+            {/* Session still resolving: show a lightweight placeholder, not the
+                form itself. The upload form used to render here too (gated on
+                authStatus !== 'unauthenticated', which is also true during
+                'loading') -- a user who uploaded in that brief window had
+                isSignedIn read false (it requires authStatus === 'authenticated'),
+                so the save was silently skipped with no retry, most often
+                hitting brand-new signups whose session was still resolving on
+                their very first visit to this page. */}
+            {authStatus === 'loading' && (
+              <div className="upload-card" style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center', color: 'var(--muted)' }}>
+                Loading your session…
+              </div>
+            )}
+
+            {/* Authenticated: show upload form */}
+            {authStatus === 'authenticated' && (
             <form id="cas-form" className="upload-card" onSubmit={handleSubmit}>
               <div style={{ marginBottom: '18px' }}>
                 <div className="field-label">CAS PDF or MF Central Excel Report</div>
@@ -2452,6 +2499,42 @@ function CasTrackerInner() {
               </div>
             </div>
 
+            {/* Save status -- visible where it actually matters now that the
+                save is awaited before this view even renders (see
+                handleSubmit's comment). 'saving' is normally too brief to
+                see here in practice (the user was looking at the parsing
+                spinner while it happened); 'error' persists with a retry
+                button until it succeeds, rather than silently vanishing. */}
+            {isSignedIn && saveStatus === 'error' && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                margin: '0 0 16px', padding: '10px 16px',
+                background: '#fff8e1', border: '1.5px solid #ffe082', borderRadius: 10,
+                fontSize: '.78rem', fontWeight: 600, color: '#7a5b00',
+              }}>
+                <span>⚠ This CAS was parsed but couldn't be saved to your account -- it will be lost if you leave this page.</span>
+                <button
+                  onClick={retrySave}
+                  style={{
+                    flexShrink: 0, padding: '6px 14px', borderRadius: 8,
+                    border: '1.5px solid #f57f17', background: '#fff', color: '#7a5b00',
+                    fontWeight: 800, fontSize: '.72rem', cursor: 'pointer', fontFamily: 'Raleway, sans-serif',
+                  }}
+                >
+                  Retry Save
+                </button>
+              </div>
+            )}
+            {isSignedIn && saveStatus === 'saved' && (
+              <div style={{
+                margin: '0 0 16px', padding: '8px 16px',
+                background: 'var(--g-xlight)', border: '1.5px solid var(--g-light)', borderRadius: 10,
+                fontSize: '.75rem', fontWeight: 700, color: 'var(--g1)',
+              }}>
+                ✅ Saved to your account
+              </div>
+            )}
+
             {panKeys.filter(p => p !== '__manual__').length > 1 && (
               <div className="pan-tabs">
                 {panKeys.filter(p => p !== '__manual__').map(pan => {
@@ -2461,17 +2544,24 @@ function CasTrackerInner() {
 
                   if (editingPan === pan) {
                     return (
-                      <div key={pan} className="pan-tab-editing">
-                        <input
-                          autoFocus
-                          value={editingName}
-                          onChange={e => setEditingName(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') savePanName(pan); if (e.key === 'Escape') setEditingPan(''); }}
-                          placeholder="Investor name"
-                          maxLength={100}
-                        />
-                        <button className="pte-save" onClick={() => savePanName(pan)} disabled={savingPanName} title="Save">✓</button>
-                        <button className="pte-cancel" onClick={() => setEditingPan('')} title="Cancel">✕</button>
+                      <div key={pan} className="pan-tab-editing" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <input
+                            autoFocus
+                            value={editingName}
+                            onChange={e => setEditingName(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') savePanName(pan); if (e.key === 'Escape') { setEditingPan(''); setPanNameError(''); } }}
+                            placeholder="Investor name"
+                            maxLength={100}
+                          />
+                          <button className="pte-save" onClick={() => savePanName(pan)} disabled={savingPanName} title="Save">✓</button>
+                          <button className="pte-cancel" onClick={() => { setEditingPan(''); setPanNameError(''); }} title="Cancel">✕</button>
+                        </div>
+                        {panNameError && (
+                          <div style={{ fontSize: '.68rem', fontWeight: 700, color: '#c62828', marginTop: 4 }}>
+                            ⚠ {panNameError}
+                          </div>
+                        )}
                       </div>
                     );
                   }
@@ -2489,7 +2579,7 @@ function CasTrackerInner() {
                         <button
                           className="pan-tab-rename-btn"
                           title="Rename investor"
-                          onClick={() => { setEditingName(hasRealName ? info.investorName : ''); setEditingPan(pan); }}
+                          onClick={() => { setEditingName(hasRealName ? info.investorName : ''); setEditingPan(pan); setPanNameError(''); }}
                         >
                           ✎
                         </button>
