@@ -36,6 +36,7 @@ const path = require('path');
 const DRY_RUN = process.argv.includes('--dry-run');
 const LIMIT_AMCS_ARG = process.argv.find((a) => a.startsWith('--limit-amcs='));
 const LIMIT_AMCS = LIMIT_AMCS_ARG ? parseInt(LIMIT_AMCS_ARG.split('=')[1], 10) : 0;
+const R2_KEY = 'amfi-aum.json';
 
 const AMFI_BASE = 'https://www.amfiindia.com/api';
 const HEADERS = {
@@ -123,11 +124,12 @@ async function run() {
   console.log('=== Syncing AMFI Scheme-Level AUM ===');
   if (DRY_RUN) console.log('[Dry Run Mode Active]');
 
+  const { r2Put, r2Get } = await import('../lib/r2.js');
   const isinToCode = await loadNavAllIsinToCode();
 
   const amcRes = await fetchJsonWithRetry(`${AMFI_BASE}/populate-mf`);
   if (!Array.isArray(amcRes.data) || amcRes.data.length === 0) {
-    console.error('[AMFI AUM Sync] Could not fetch AMC list -- aborting, leaving existing data/amfi-aum.json untouched.');
+    console.error('[AMFI AUM Sync] Could not fetch AMC list -- aborting, leaving existing R2 copy untouched.');
     process.exit(1);
   }
   await sleep(PACING_MS);
@@ -218,20 +220,18 @@ async function run() {
   console.log(`Plan variants with AUM written: ${variantsWritten}`);
   console.log(`Plan variants with unresolved ISIN (not in NAVAll.txt): ${variantsUnresolved}`);
 
-  const targetFile = path.join(process.cwd(), 'data', 'amfi-aum.json');
   let existingCount = 0;
-  if (fs.existsSync(targetFile)) {
-    try {
-      existingCount = Object.keys(JSON.parse(fs.readFileSync(targetFile, 'utf8'))).length;
-    } catch (e) {
-      console.warn(`[AMFI AUM Sync] Could not parse existing data/amfi-aum.json to compare record counts: ${e.message}`);
-    }
+  try {
+    const existing = await r2Get(R2_KEY);
+    existingCount = Object.keys(existing || {}).length;
+  } catch (e) {
+    console.warn(`[AMFI AUM Sync] Could not read existing R2 copy to compare record counts: ${e.message}`);
   }
 
   if (variantsWritten === 0) {
     console.error('[AMFI AUM Sync] Error: No AUM records could be resolved!');
-    if (fs.existsSync(targetFile)) {
-      console.log('[AMFI AUM Sync] Preserving existing data/amfi-aum.json cache.');
+    if (existingCount > 0) {
+      console.log('[AMFI AUM Sync] Preserving existing R2 copy.');
       return;
     }
     process.exit(1);
@@ -241,23 +241,20 @@ async function run() {
   // but a few succeed), variantsWritten would still be > 0 but drastically
   // smaller than the existing cache. Refuse to overwrite good data with a
   // truncated result -- this script runs unattended on a monthly GitHub
-  // Actions schedule that auto-commits its output with no human review.
-  // Only applies to a genuine full, unrestricted, non-dry-run sync -- a
-  // deliberately scoped --limit-amcs=N smoke test (per this script's own
-  // header comment) or a --dry-run legitimately writes far fewer records
-  // than the full dataset, which isn't a failure signal.
+  // Actions schedule with no human review. Only applies to a genuine full,
+  // unrestricted, non-dry-run sync -- a deliberately scoped --limit-amcs=N
+  // smoke test (per this script's own header comment) or a --dry-run
+  // legitimately writes far fewer records than the full dataset, which
+  // isn't a failure signal.
   if (!DRY_RUN && LIMIT_AMCS === 0 && existingCount > 0 && variantsWritten < existingCount * 0.5) {
-    console.error(`[AMFI AUM Sync] Error: New record count (${variantsWritten}) is less than 50% of existing data/amfi-aum.json's record count (${existingCount}) -- likely a partial AMFI API failure.`);
-    console.log('[AMFI AUM Sync] Preserving existing data/amfi-aum.json cache.');
+    console.error(`[AMFI AUM Sync] Error: New record count (${variantsWritten}) is less than 50% of existing R2 copy's record count (${existingCount}) -- likely a partial AMFI API failure.`);
+    console.log('[AMFI AUM Sync] Preserving existing R2 copy.');
     process.exit(1);
   }
 
   if (!DRY_RUN) {
-    const dataDir = path.join(process.cwd(), 'data');
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-    const targetFile = path.join(dataDir, 'amfi-aum.json');
-    fs.writeFileSync(targetFile, JSON.stringify(result), 'utf8');
-    console.log(`[AMFI AUM Sync] Successfully wrote ${variantsWritten} records to ${targetFile}`);
+    await r2Put(R2_KEY, JSON.stringify(result));
+    console.log(`[AMFI AUM Sync] Successfully wrote ${variantsWritten} records to R2 (${R2_KEY})`);
   }
 }
 

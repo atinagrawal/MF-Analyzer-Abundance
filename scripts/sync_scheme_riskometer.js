@@ -35,12 +35,10 @@
  * -- for a fast smoke test before committing to the full ~40-combo run.
  */
 
-const fs = require('fs');
-const path = require('path');
-
 const DRY_RUN = process.argv.includes('--dry-run');
 const LIMIT_ARG = process.argv.find((a) => a.startsWith('--limit-combos='));
 const LIMIT_COMBOS = LIMIT_ARG ? parseInt(LIMIT_ARG.split('=')[1], 10) : 0;
+const R2_KEY = 'amfi-scheme-risk.json';
 
 const BASE = 'https://www.amfiindia.com/gateway/pollingsebi/api/amfi';
 const HEADERS = {
@@ -135,10 +133,12 @@ async function run() {
   console.log('=== Syncing AMFI Scheme-Level Riskometer ===');
   if (DRY_RUN) console.log('[Dry Run Mode Active]');
 
+  const { r2Put, r2Get } = await import('../lib/r2.js');
+
   const filtersRes = await fetchJsonWithRetry(`${BASE}/fundperformancefilters`, {});
   const reportDate = filtersRes.data?.data?.reportDate;
   if (!reportDate) {
-    console.error('[Scheme Riskometer Sync] Could not fetch reportDate -- aborting, leaving existing data/amfi-scheme-risk.json untouched.');
+    console.error('[Scheme Riskometer Sync] Could not fetch reportDate -- aborting, leaving existing R2 copy untouched.');
     process.exit(1);
   }
   console.log(`Report date: ${reportDate}`);
@@ -191,41 +191,37 @@ async function run() {
   console.log(`Unique scheme families written: ${written}`);
   console.log(`Normalization collisions (kept first value): ${collisions}`);
 
-  const targetFile = path.join(process.cwd(), 'data', 'amfi-scheme-risk.json');
   let existingCount = 0;
-  if (fs.existsSync(targetFile)) {
-    try {
-      existingCount = Object.keys(JSON.parse(fs.readFileSync(targetFile, 'utf8')).risk || {}).length;
-    } catch (e) {
-      console.warn(`[Scheme Riskometer Sync] Could not parse existing data/amfi-scheme-risk.json to compare record counts: ${e.message}`);
-    }
+  try {
+    const existing = await r2Get(R2_KEY);
+    existingCount = Object.keys(existing?.risk || {}).length;
+  } catch (e) {
+    console.warn(`[Scheme Riskometer Sync] Could not read existing R2 copy to compare record counts: ${e.message}`);
   }
 
   if (written === 0) {
     console.error('[Scheme Riskometer Sync] Error: No risk records could be resolved!');
-    if (fs.existsSync(targetFile)) {
-      console.log('[Scheme Riskometer Sync] Preserving existing data/amfi-scheme-risk.json cache.');
+    if (existingCount > 0) {
+      console.log('[Scheme Riskometer Sync] Preserving existing R2 copy.');
       return;
     }
     process.exit(1);
   }
 
   // Partial-failure guard, same reasoning as sync_amfi_aum.js: this runs
-  // unattended on a monthly schedule and auto-commits, so refuse to
-  // overwrite good data with a run that's suspiciously smaller than what's
-  // already there. Only applies to a genuine full, unrestricted, non-dry-run sync.
+  // unattended on a monthly schedule, so refuse to overwrite good data with
+  // a run that's suspiciously smaller than what's already there. Only
+  // applies to a genuine full, unrestricted, non-dry-run sync.
   if (!DRY_RUN && LIMIT_COMBOS === 0 && existingCount > 0 && written < existingCount * 0.5) {
-    console.error(`[Scheme Riskometer Sync] Error: New record count (${written}) is less than 50% of existing data/amfi-scheme-risk.json's record count (${existingCount}) -- likely a partial AMFI API failure.`);
-    console.log('[Scheme Riskometer Sync] Preserving existing data/amfi-scheme-risk.json cache.');
+    console.error(`[Scheme Riskometer Sync] Error: New record count (${written}) is less than 50% of existing R2 copy's record count (${existingCount}) -- likely a partial AMFI API failure.`);
+    console.log('[Scheme Riskometer Sync] Preserving existing R2 copy.');
     process.exit(1);
   }
 
   if (!DRY_RUN) {
-    const dataDir = path.join(process.cwd(), 'data');
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
     const output = { asOf: reportDate, generatedAt: new Date().toISOString(), count: written, risk };
-    fs.writeFileSync(targetFile, JSON.stringify(output), 'utf8');
-    console.log(`[Scheme Riskometer Sync] Successfully wrote ${written} records to ${targetFile}`);
+    await r2Put(R2_KEY, JSON.stringify(output));
+    console.log(`[Scheme Riskometer Sync] Successfully wrote ${written} records to R2 (${R2_KEY})`);
   }
 }
 

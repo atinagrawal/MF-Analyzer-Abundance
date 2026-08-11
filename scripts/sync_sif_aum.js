@@ -39,10 +39,8 @@
  *   node scripts/sync_sif_aum.js [--dry-run]
  */
 
-const fs = require('fs');
-const path = require('path');
-
 const DRY_RUN = process.argv.includes('--dry-run');
+const R2_KEY = 'sif-aum.json';
 
 const URL = 'https://www.amfiindia.com/api/sif-average-aum-schemewise?strType=Categorywise&fyId=1&periodId=1&SIF_Id=0';
 const HEADERS = {
@@ -70,15 +68,17 @@ async function run() {
   console.log('=== Syncing SIF Scheme-Level Average AUM ===');
   if (DRY_RUN) console.log('[Dry Run Mode Active]');
 
+  const { r2Put, r2Get } = await import('../lib/r2.js');
+
   const res = await fetch(URL, { headers: HEADERS, signal: AbortSignal.timeout(20000) });
   if (!res.ok) {
-    console.error(`[SIF AUM Sync] AMFI API returned HTTP ${res.status} -- aborting, leaving existing data/sif-aum.json untouched.`);
+    console.error(`[SIF AUM Sync] AMFI API returned HTTP ${res.status} -- aborting, leaving existing R2 copy untouched.`);
     process.exit(1);
   }
   const json = await res.json();
   const groups = Array.isArray(json.data) ? json.data : [];
   if (groups.length === 0) {
-    console.error('[SIF AUM Sync] Empty response -- aborting, leaving existing data/sif-aum.json untouched.');
+    console.error('[SIF AUM Sync] Empty response -- aborting, leaving existing R2 copy untouched.');
     process.exit(1);
   }
 
@@ -114,39 +114,35 @@ async function run() {
   console.log(`Scheme plan-variants written: ${written}`);
   console.log(`As-of quarter: ${asOf}`);
 
-  const targetFile = path.join(process.cwd(), 'data', 'sif-aum.json');
   let existingCount = 0;
-  if (fs.existsSync(targetFile)) {
-    try {
-      existingCount = Object.keys(JSON.parse(fs.readFileSync(targetFile, 'utf8'))).length;
-    } catch (e) {
-      console.warn(`[SIF AUM Sync] Could not parse existing data/sif-aum.json to compare record counts: ${e.message}`);
-    }
+  try {
+    const existing = await r2Get(R2_KEY);
+    existingCount = Object.keys(existing || {}).length;
+  } catch (e) {
+    console.warn(`[SIF AUM Sync] Could not read existing R2 copy to compare record counts: ${e.message}`);
   }
 
   if (written === 0) {
     console.error('[SIF AUM Sync] Error: No AUM records could be resolved!');
-    if (fs.existsSync(targetFile)) {
-      console.log('[SIF AUM Sync] Preserving existing data/sif-aum.json cache.');
+    if (existingCount > 0) {
+      console.log('[SIF AUM Sync] Preserving existing R2 copy.');
       return;
     }
     process.exit(1);
   }
 
   // Partial-failure guard, same reasoning as this project's other sync
-  // scripts: this runs unattended on a schedule and auto-commits, so refuse
-  // to overwrite good data with a suspiciously smaller result.
+  // scripts: this runs unattended on a schedule, so refuse to overwrite
+  // good data with a suspiciously smaller result.
   if (!DRY_RUN && existingCount > 0 && written < existingCount * 0.5) {
-    console.error(`[SIF AUM Sync] Error: New record count (${written}) is less than 50% of existing data/sif-aum.json's record count (${existingCount}) -- likely a partial AMFI API failure.`);
-    console.log('[SIF AUM Sync] Preserving existing data/sif-aum.json cache.');
+    console.error(`[SIF AUM Sync] Error: New record count (${written}) is less than 50% of existing R2 copy's record count (${existingCount}) -- likely a partial AMFI API failure.`);
+    console.log('[SIF AUM Sync] Preserving existing R2 copy.');
     process.exit(1);
   }
 
   if (!DRY_RUN) {
-    const dataDir = path.join(process.cwd(), 'data');
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-    fs.writeFileSync(targetFile, JSON.stringify(result), 'utf8');
-    console.log(`[SIF AUM Sync] Successfully wrote ${written} records to ${targetFile}`);
+    await r2Put(R2_KEY, JSON.stringify(result));
+    console.log(`[SIF AUM Sync] Successfully wrote ${written} records to R2 (${R2_KEY})`);
   }
 }
 
