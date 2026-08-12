@@ -1824,8 +1824,14 @@ function CasTrackerInner() {
     const paramName = decodeURIComponent(searchParams.get('uname') || '');
     if (loadKey) {
       const parts = loadKey.split('/');
-      if (parts.length >= 2) setViewedUserId(parts[1]);
-      const t = setTimeout(() => loadSavedPortfolio(loadKey), 100);
+      const keyUserId = parts.length >= 2 ? parts[1] : undefined;
+      if (keyUserId) setViewedUserId(keyUserId);
+      // Passing keyUserId straight into loadSavedPortfolio (rather than
+      // having it read viewedUserId off component state once this timeout
+      // fires) is deliberate: setViewedUserId above won't have landed by
+      // the time this closure was created, no matter the delay -- see
+      // processCasData's own comment on effectiveTargetUserId for why.
+      const t = setTimeout(() => loadSavedPortfolio(loadKey, keyUserId), 100);
       return () => clearTimeout(t);
     } else if (paramUid) {
       setViewedUserId(paramUid);
@@ -1891,7 +1897,18 @@ function CasTrackerInner() {
     return () => { cancelled = true; };
   }, [isSignedIn, isAdmin, viewedUserId]);
 
-  async function processCasData(data, cached) {
+  async function processCasData(data, cached, targetUserIdOverride) {
+    // The admin ?load= auto-open effect below calls this (via
+    // loadSavedPortfolio) from inside a setTimeout scheduled in the SAME
+    // render that also calls setViewedUserId -- that timeout's callback
+    // closes over viewedUserId as it was AT SCHEDULING TIME, not after the
+    // state update lands, no matter the delay (a classic stale-closure
+    // trap, not something a longer timeout fixes). Accepting the resolved
+    // target id as an explicit argument sidesteps relying on the closure
+    // ever seeing the fresh value. Everywhere else (manual tab clicks,
+    // fresh uploads) this is undefined and viewedUserId (already correct
+    // by then, since the user is interacting after render) is used as before.
+    const effectiveTargetUserId = targetUserIdOverride || ((isAdmin && viewedUserId) ? viewedUserId : undefined);
     const portfolioData = {};
     const panInvestorMap = data.pan_investor_map || {};
     
@@ -2058,7 +2075,7 @@ function CasTrackerInner() {
     try {
       const realPans = pans.filter(p => p !== 'UNKNOWN' && PAN_REGEX.test(p));
       if (realPans.length) {
-        const targetQS = (isAdmin && viewedUserId) ? `&targetUserId=${viewedUserId}` : '';
+        const targetQS = effectiveTargetUserId ? `&targetUserId=${effectiveTargetUserId}` : '';
         const res = await fetch(`/api/cas/pan-name?pans=${realPans.join(',')}${targetQS}`);
         const { names } = await res.json();
         Object.entries(names || {}).forEach(([pan, name]) => {
@@ -2076,8 +2093,8 @@ function CasTrackerInner() {
     // on the admin's own session.
     let resolvedDefaultPan = '';
     try {
-      if (isAdmin && viewedUserId) {
-        const res = await fetch(`/api/cas/default-pan?targetUserId=${viewedUserId}`);
+      if (effectiveTargetUserId) {
+        const res = await fetch(`/api/cas/default-pan?targetUserId=${effectiveTargetUserId}`);
         const d = await res.json();
         resolvedDefaultPan = d.defaultPan || '';
       } else {
@@ -2228,7 +2245,7 @@ function CasTrackerInner() {
     });
   }
 
-  async function loadSavedPortfolio(blobKey) {
+  async function loadSavedPortfolio(blobKey, targetUserIdOverride) {
     setUploadState('loading');
     setLoadingText('Loading saved portfolio…');
     try {
@@ -2236,7 +2253,7 @@ function CasTrackerInner() {
       const res = await fetch(`/api/cas/load?key=${encodeURIComponent(blobKey)}`);
       if (!res.ok) throw new Error('Could not load saved portfolio.');
       const data = await res.json();
-      await processCasData(data, false);
+      await processCasData(data, false, targetUserIdOverride);
     } catch (err) {
       setErrorText(err.message);
       setUploadState('error');
