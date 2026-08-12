@@ -1682,6 +1682,7 @@ function CasTrackerInner() {
   const [errorText, setErrorText] = useState('');
   const [portfolioDataByPan, setPortfolioDataByPan] = useState({});
   const [activePan, setActivePan] = useState('');
+  const [familyPans, setFamilyPans] = useState([]);  // 2+ PANs checked together = combined family view
   const [fromCache, setFromCache] = useState(false);
   const [editingPan, setEditingPan] = useState('');   // PAN currently being renamed, or ''
   const [editingName, setEditingName] = useState('');
@@ -2261,7 +2262,30 @@ function CasTrackerInner() {
   }
 
   const panKeys = Object.keys(portfolioDataByPan);
-  const currentInfo = portfolioDataByPan[activePan] || { current: 0, invested: 0, holdings: [], investorName: '' };
+  const isFamilyView = familyPans.length > 1;
+
+  // Pools holdings + totals across every checked family member -- each
+  // holding keeps its own owner tag (__ownerPan/__ownerName) rather than
+  // merging two people's holdings of the same fund into one row, since
+  // their FIFO tax lots and capital gains are legally separate per
+  // investor. Only used when 2+ members are checked at once; a single
+  // check (or none) falls straight through to the normal per-PAN view.
+  function mergeFamilyView(pans) {
+    let current = 0, invested = 0;
+    const holdings = [];
+    pans.forEach(pan => {
+      const info = portfolioDataByPan[pan];
+      if (!info) return;
+      current  += info.current  || 0;
+      invested += info.invested || 0;
+      (info.holdings || []).forEach(h => holdings.push({ ...h, __ownerPan: pan, __ownerName: info.investorName }));
+    });
+    return { investorName: `${pans.length} Family Members`, current, invested, holdings };
+  }
+
+  const currentInfo = isFamilyView
+    ? mergeFamilyView(familyPans)
+    : (portfolioDataByPan[activePan] || { current: 0, invested: 0, holdings: [], investorName: '' });
   const gain = currentInfo.current - currentInfo.invested;
   const gainPct = currentInfo.invested > 0 ? ((gain / currentInfo.invested) * 100).toFixed(2) : '0.00';
   const isProfit = gain >= 0;
@@ -2534,7 +2558,7 @@ function CasTrackerInner() {
             <div className="dash-header">
               <div>
                 <h2 className="dash-title">
-                  {currentInfo.investorName}'s Portfolio
+                  {isFamilyView ? `👨‍👩‍👧‍👦 Combined Portfolio — ${currentInfo.investorName}` : `${currentInfo.investorName}'s Portfolio`}
                   {fromCache && <span className="cache-badge">⚡ Cached</span>}
                 </h2>
                 <p className="dash-sub">Computed using FIFO accounting · Live NAVs from AMFI</p>
@@ -2542,16 +2566,19 @@ function CasTrackerInner() {
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <button
                   onClick={() => { setPlannerMode('target'); setPlanPortfolio(true); }}
+                  disabled={isFamilyView}
+                  title={isFamilyView ? 'Check just one family member to plan a redemption -- capital gains and tax lots are per-investor, so a combined plan across people isn\'t meaningful' : undefined}
                   style={{
                     padding: '8px 16px', borderRadius: 9,
                     border: '1.5px solid var(--g2)',
-                    background: 'var(--g-xlight)', cursor: 'pointer',
+                    background: 'var(--g-xlight)', cursor: isFamilyView ? 'not-allowed' : 'pointer',
                     fontSize: '.72rem', fontWeight: 800,
                     color: 'var(--g1)', fontFamily: 'Raleway, sans-serif',
                     letterSpacing: '-.2px', whiteSpace: 'nowrap',
                     transition: 'all .15s',
+                    opacity: isFamilyView ? 0.5 : 1,
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background='var(--g1)'; e.currentTarget.style.color='#fff'; }}
+                  onMouseEnter={e => { if (!isFamilyView) { e.currentTarget.style.background='var(--g1)'; e.currentTarget.style.color='#fff'; } }}
                   onMouseLeave={e => { e.currentTarget.style.background='var(--g-xlight)'; e.currentTarget.style.color='var(--g1)'; }}
                 >
                   📊 Redemption Planner
@@ -2599,7 +2626,27 @@ function CasTrackerInner() {
             )}
 
             {panKeys.filter(p => p !== '__manual__').length > 1 && (
-              <div className="pan-tabs">
+              <div className="pan-tabs" style={{ alignItems: 'center' }}>
+                <button
+                  className={`pan-tab ${isFamilyView ? 'active' : ''}`}
+                  title="Combine every family member's holdings into one pooled view (redemption planning is disabled in this mode, since capital gains are per-investor)"
+                  onClick={() => setFamilyPans(prev =>
+                    prev.length === panKeys.filter(p => p !== '__manual__').length
+                      ? []
+                      : panKeys.filter(p => p !== '__manual__')
+                  )}
+                >
+                  <span>👨‍👩‍👧‍👦 All Family</span>
+                </button>
+                {familyPans.length > 0 && (
+                  <button
+                    className="pan-tab-rename-btn"
+                    title="Exit family view"
+                    onClick={() => setFamilyPans([])}
+                  >
+                    ✕
+                  </button>
+                )}
                 {panKeys.filter(p => p !== '__manual__').map(pan => {
                   const info = portfolioDataByPan[pan];
                   const firstName = info.investorName.split(' ')[0];
@@ -2631,9 +2678,18 @@ function CasTrackerInner() {
 
                   return (
                     <div key={pan} className="pan-tab-outer">
+                      <input
+                        type="checkbox"
+                        checked={familyPans.includes(pan)}
+                        onChange={() => setFamilyPans(prev =>
+                          prev.includes(pan) ? prev.filter(p => p !== pan) : [...prev, pan]
+                        )}
+                        title={`Include ${firstName} in a combined family view`}
+                        style={{ width: 15, height: 15, accentColor: 'var(--g1)', cursor: 'pointer', flexShrink: 0 }}
+                      />
                       <button
-                        onClick={() => setActivePan(pan)}
-                        className={`pan-tab ${pan === activePan ? 'active' : ''}`}
+                        onClick={() => { setActivePan(pan); setFamilyPans([]); }}
+                        className={`pan-tab ${!isFamilyView && pan === activePan ? 'active' : ''}`}
                       >
                         <span className="pan-code">{pan}</span>
                         <span>{firstName}'s Portfolio</span>
@@ -2785,7 +2841,13 @@ function CasTrackerInner() {
 
               const casHoldings = (currentInfo.holdings || []).map(h => ({
                 ...h, source: 'cas', fund_type: 'Mutual Fund',
-                id: `cas-${activePan}-${h.folio || ''}-${h.amfiCode || h.name}`,
+                // h.__ownerPan is only present in family view (mergeFamilyView
+                // tags it) -- falls back to activePan in the normal single-PAN
+                // view. Using activePan unconditionally here would collide two
+                // different family members' ids for the same fund in family
+                // view, since a plain checkbox/redemption selection is keyed
+                // by this id.
+                id: `cas-${h.__ownerPan || activePan}-${h.folio || ''}-${h.amfiCode || h.name}`,
               }));
 
               const allHoldings = [...casHoldings, ...manualMapped];
@@ -2806,7 +2868,7 @@ function CasTrackerInner() {
                       <div key={fund.id || idx} className="fund-card">
                         <div>
                           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 6 }}>
-                            {!isManual && (
+                            {!isManual && !isFamilyView && (
                               <input
                                 type="checkbox"
                                 checked={!!redeemSelection[fund.id]}
@@ -2833,6 +2895,13 @@ function CasTrackerInner() {
 
                           {/* Type + source badges */}
                           <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
+                            {isFamilyView && fund.__ownerName && (
+                              <span style={{
+                                fontSize: '.52rem', fontWeight: 800, padding: '2px 7px', borderRadius: 4,
+                                background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)',
+                                fontFamily: "'JetBrains Mono', monospace", letterSpacing: '.5px',
+                              }}>{fund.__ownerName}</span>
+                            )}
                             {fund.fund_type === 'SIF' && (
                               <span style={{
                                 fontSize: '.52rem', fontWeight: 800, padding: '2px 7px', borderRadius: 4,
