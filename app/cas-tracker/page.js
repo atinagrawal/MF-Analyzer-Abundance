@@ -85,14 +85,17 @@ function buildAllHoldings(currentInfo, manualHoldings, sifNavMap, activePan) {
       source:        'manual',
       fund_type:     h.fund_type,
       amfiCode:      h.amfi_code || null,
-      // Manually-added holdings (including SIF, which never appear in a
-      // CAS PDF) have no real transaction log -- but they DO have exactly
-      // one known purchase (date/NAV/units), which is precisely the shape
-      // the Transaction History drawer's single-transaction path already
-      // handles well (Rate Journey strip + on-demand NAV history). Only
-      // synthesized when a purchase date was actually recorded -- without
-      // one, `new Date(null)` silently resolves to the 1970 epoch instead
-      // of throwing, which would otherwise plot a bogus, decades-early point.
+      // Manually-added holdings (used for SIF and other funds not yet
+      // reflected in an uploaded CAS -- SIF itself DOES appear in CAS
+      // statements with full transaction history when it's already there,
+      // see processCasData's resolveSif) have no real transaction log of
+      // their own -- but they DO have exactly one known purchase (date/NAV/
+      // units), which is precisely the shape the Transaction History
+      // drawer's single-transaction path already handles well (Rate
+      // Journey strip + on-demand NAV history). Only synthesized when a
+      // purchase date was actually recorded -- without one, `new Date(null)`
+      // silently resolves to the 1970 epoch instead of throwing, which
+      // would otherwise plot a bogus, decades-early point.
       transactions: (pu > 0 && u > 0 && h.purchase_date)
         ? [{ date: h.purchase_date, type: 'PURCHASE', amount: pu * u, units: u, nav: pu }]
         : [],
@@ -100,7 +103,12 @@ function buildAllHoldings(currentInfo, manualHoldings, sifNavMap, activePan) {
   });
 
   const casHoldings = (currentInfo.holdings || []).map(h => ({
-    ...h, source: 'cas', fund_type: 'Mutual Fund',
+    ...h, source: 'cas',
+    // processCasData already resolves each holding's fund_type ('SIF' or
+    // 'Mutual Fund') by matching against the AMFI SIF scheme master -- CAS
+    // statements DO include SIF holdings with full transaction history,
+    // this is only a fallback for holdings processed before that existed.
+    fund_type: h.fund_type || 'Mutual Fund',
     // h.__ownerPan is only present in family view (mergeFamilyView tags it)
     // -- falls back to activePan in the normal single-PAN view. Using
     // activePan unconditionally here would collide two different family
@@ -2562,33 +2570,61 @@ function CasTrackerInner() {
       allHoldings.map(({ h }) => h.scheme.amfi).filter(Boolean)
     )];
 
-    // 2. Fetch all unique NAVs in one round trip — the server fans the
-    //    per-code mfapi.in/AMFI calls out concurrently, same as this loop
-    //    used to do from the browser, just without N separate client→server
-    //    hops (see /api/mf's ?codes= batch mode).
+    // 2. Fetch all unique MF NAVs in one round trip (see /api/mf's ?codes=
+    //    batch mode), and the full SIF scheme master in parallel -- CAS
+    //    statements DO include SIF holdings with full transaction history,
+    //    just like any mutual fund scheme, but casparser reports scheme.amfi
+    //    as null for them (SIFs have no AMFI scheme code), so they need to
+    //    be identified some other way and resolved to their AMFI-assigned
+    //    SIF scheme_id (e.g. "SIF-34") for live NAV and history lookups.
+    //    Fetched unconditionally (cheap, 4h-cached server-side) since there's
+    //    no way to know in advance whether this CAS contains any SIF holdings.
+    const [mfNavResult, sifResult] = await Promise.all([
+      uniqueAmfi.length > 0
+        ? fetch(`/api/mf?codes=${uniqueAmfi.join(',')}&latest=1`).then(r => r.ok ? r.json() : null).catch(() => null)
+        : Promise.resolve(null),
+      fetch('/api/sif-nav').then(r => r.ok ? r.json() : null).catch(() => null),
+    ]);
+
     const navMap = {};
-    if (uniqueAmfi.length > 0) {
-      try {
-        const navRes = await fetch(`/api/mf?codes=${uniqueAmfi.join(',')}&latest=1`);
-        if (navRes.ok) {
-          const resJson = await navRes.json();
-          if (resJson.status === 'SUCCESS' && resJson.navs) {
-            for (const [amfi, nav] of Object.entries(resJson.navs)) {
-              navMap[amfi] = parseFloat(nav);
-            }
-          }
-        }
-      } catch {
-        // Non-fatal — holdings will fall back to their CAS-reported NAV below
+    if (mfNavResult?.status === 'SUCCESS' && mfNavResult.navs) {
+      for (const [amfi, nav] of Object.entries(mfNavResult.navs)) {
+        navMap[amfi] = parseFloat(nav);
       }
+    }
+
+    // ISIN is the reliable match (unique per scheme); normalised name is a
+    // fallback for the rare case a scheme's ISIN isn't in either source.
+    const sifByIsin = {};
+    const sifByName = {};
+    (sifResult?.schemes || []).forEach(s => {
+      if (s.isin_po) sifByIsin[s.isin_po] = s;
+      if (s.isin_ri) sifByIsin[s.isin_ri] = s;
+      const norm = (s.nav_name || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (norm) sifByName[norm] = s;
+    });
+    function resolveSif(scheme) {
+      if (scheme.isin && sifByIsin[scheme.isin]) return sifByIsin[scheme.isin];
+      const norm = (scheme.scheme || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      return sifByName[norm] || null;
     }
 
     // 3. Apply resolved NAVs and compute metrics for every holding.
     for (const { h, pan } of allHoldings) {
       const scheme = h.scheme;
-      if (scheme.amfi && navMap[scheme.amfi] !== undefined) {
-        h.liveNav = navMap[scheme.amfi];
-        h.isLive  = true;
+      const sifMatch = resolveSif(scheme);
+      if (sifMatch) {
+        h.fund_type = 'SIF';
+        h.amfiCode  = sifMatch.scheme_id;  // e.g. "SIF-34" -- used for both live NAV and history lookups
+        h.liveNav   = sifMatch.nav;
+        h.isLive    = true;
+      } else {
+        h.fund_type = 'Mutual Fund';
+        h.amfiCode  = scheme.amfi || null;  // preserved for FIFO planner
+        if (scheme.amfi && navMap[scheme.amfi] !== undefined) {
+          h.liveNav = navMap[scheme.amfi];
+          h.isLive  = true;
+        }
       }
       const currentNav = h.liveNav;
       const fifo = calculateFifoCost(scheme, currentNav);
@@ -2598,7 +2634,6 @@ function CasTrackerInner() {
       h.buyLots     = fifo.buyLots;  // FIFO lots for redemption planner
       const casCost = parseFloat(scheme.valuation?.cost || 0);
       h.avgPurchaseNav = h.units > 0 && casCost > 0 ? casCost / h.units : 0;
-      h.amfiCode       = scheme.amfi || null;  // preserved for FIFO planner
       h.xirr           = schemeXirr(scheme, h.value);  // null if transaction history is incomplete
       h.xirrFlows      = schemeCashFlows(scheme);       // raw flows, pooled for portfolio-level XIRR
       h.transactions   = scheme.transactions || [];      // preserved for the Transaction History drawer
@@ -2793,9 +2828,10 @@ function CasTrackerInner() {
   // is cached (keyed by navHistoryCacheKey) so re-opening the same fund's
   // drawer never re-fetches.
   //
-  // SIF holdings (always manual -- no CAS PDF includes them yet) use
-  // AMFI's separate SIF NAV history API, keyed by scheme_id (stored in
-  // amfi_code) rather than an AMFI scheme code, and unlike mfapi.in it
+  // SIF holdings -- whether parsed straight out of a CAS (processCasData
+  // resolves these against the AMFI SIF scheme master) or added manually --
+  // use AMFI's separate SIF NAV history API, keyed by scheme_id (stored in
+  // amfiCode) rather than an AMFI scheme code, and unlike mfapi.in it
   // requires an explicit date range instead of always returning full
   // history -- which conveniently means since-first-purchase scoping is
   // just what we ask for, not something to filter after the fact.
@@ -3738,9 +3774,10 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                           </div>
 
                           {/* Redemption planning needs real FIFO purchase-lot history, which
-                              only CAS holdings have -- Transactions just needs at least one
-                              known purchase, which manual/SIF holdings also have (a single
-                              synthesized entry from their purchase date/NAV/units, see
+                              only CAS-derived holdings have (CAS-parsed SIF included -- see
+                              processCasData's resolveSif) -- Transactions just needs at least
+                              one known purchase, which manually-added holdings also have (a
+                              single synthesized entry from their purchase date/NAV/units, see
                               buildAllHoldings), so it's available there too. */}
                           {(!isManual || fund.transactions?.length > 0) && (
                             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>

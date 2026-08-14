@@ -54,6 +54,6 @@ export const CAS_FAQ = [
   },
   {
     q: 'Does this support SIF (Specialised Investment Funds)?',
-    a: 'Yes. SIF holdings added by your distributor appear alongside mutual funds with live NAVs from AMFI. Standard CAS PDFs do not yet include SIF statements, so your distributor adds them separately.',
+    a: 'Yes. SIF holdings in your CAS are recognised automatically, with live NAVs and full transaction history just like a mutual fund. For SIF investments not yet reflected in your CAS, your distributor can also add them manually with live NAVs from AMFI.',
   },
 ];
