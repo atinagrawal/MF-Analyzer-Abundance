@@ -69,6 +69,51 @@ def build_pan_name_map(raw_text: str) -> dict:
     return pan_name_map
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Folio-level "Transmission of Folios" event detector
+#
+# When mutual fund units are transmitted (typically inherited on the original
+# holder's death), some AMCs/RTAs (confirmed for CAMS-registered folios, e.g.
+# PPFAS) record this as a folio LIFECYCLE event, not a transaction -- a note
+# like "***Transmission of Folios - From 12331135 - Raj Kumar Sukhija
+# UNITS:- 2786.043***" sitting alongside other folio-level annotations
+# (***Registration of Nominee***, ***Address Updated from KRA Data***, etc.).
+# casparser's structured Scheme/Transaction models have no field for this at
+# all -- it's invisible unless the raw PDF text is searched directly, which
+# is exactly why the CAS's own per-transaction PURCHASE/PURCHASE_SIP records
+# in that folio carry no "Transmission" wording of their own (contrast with
+# BSE StAR-routed AMCs, e.g. Nippon India, which instead tag INDIVIDUAL
+# transactions "Purchase Transmission In From F. No. X On DATE").
+# ─────────────────────────────────────────────────────────────────────────────
+def build_folio_transmission_map(raw_text: str) -> dict:
+    result = {}
+
+    if not raw_text or len(raw_text) < 50:
+        return result
+
+    # Split into one chunk per folio, using "Folio No: XXXXX" as the
+    # boundary -- each chunk then only contains that folio's own event notes.
+    folio_sections = re.split(r'(?=Folio No[:\s]+\S)', raw_text)
+
+    for section in folio_sections:
+        folio_match = re.match(r'Folio No[:\s]+(\S+)', section)
+        if not folio_match:
+            continue
+        folio_no = folio_match.group(1).strip()
+
+        trans_match = re.search(
+            r'Transmission of Folios\s*-\s*From\s+(\S+)\s*-\s*([A-Za-z .\']+?)\s+UNITS',
+            section
+        )
+        if trans_match:
+            result[folio_no] = {
+                'from_folio': trans_match.group(1).strip(),
+                'from_name': trans_match.group(2).strip(),
+            }
+
+    return result
+
+
 @app.post("/api/parse")
 async def parse_cas_statement(
     password: str = Form(...),
@@ -106,12 +151,15 @@ async def parse_cas_statement(
 
         # ── 3. Build PAN → Investor Name map from raw text ────────────────────
         pan_investor_map = {}
+        folio_transmission_map = {}
 
         try:
             raw_text = extract_text(temp_pdf_path, password=password)
             if raw_text and len(raw_text) > 50:
                 pan_investor_map = build_pan_name_map(raw_text)
                 print(f"📋 PAN→Name map from text: {pan_investor_map}")
+                folio_transmission_map = build_folio_transmission_map(raw_text)
+                print(f"🔄 Folio transmission map: {folio_transmission_map}")
             else:
                 print("⚠️  pdfminer returned empty/short text — skipping text enrichment")
         except Exception as e:
@@ -142,8 +190,9 @@ async def parse_cas_statement(
         print(f"📋 All PANs from casparser: {all_pans}")
         print(f"📋 investor_info.name: {global_investor_name!r}")
 
-        # Attach the map so frontend can use it
+        # Attach the maps so frontend can use them
         dict_data['pan_investor_map'] = pan_investor_map
+        dict_data['folio_transmissions'] = folio_transmission_map
 
         return JSONResponse(content=dict_data)
 

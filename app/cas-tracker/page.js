@@ -154,7 +154,7 @@ function fmtDec(val, decimals = 4) {
 }
 
 // FIFO cost basis calculation
-function calculateFifoCost(scheme, currentNav) {
+function calculateFifoCost(scheme, currentNav, isTransmittedFolio = false) {
   const units = parseFloat(scheme.close) || 0;
   if (units === 0) return { invested: 0, lockedValue: 0 };
 
@@ -178,15 +178,18 @@ function calculateFifoCost(scheme, currentNav) {
         amount: amount,
         nav: amount / txnUnits,
         date: new Date(txn.date),
-        // "Transmission" only ever shows up in the free-text description
-        // (casparser gives it no distinct type) -- these units came in via
-        // inheritance/transmission from another folio. lot.nav/lot.date are
-        // already this transaction's own preserved original purchase rate
-        // and date (verified against a real CAS: transmitted history keeps
-        // each transaction's real period NAV, not one bulk transmission-day
-        // entry), so no special cost-basis handling is needed here -- just
-        // flagged for the Redemption Planner to label informationally.
-        isTransmission: isTransmissionTxn(txn.description),
+        // "Transmission" is flagged either per-transaction, from free-text
+        // description wording some AMCs use (casparser gives it no distinct
+        // type), or -- when isTransmittedFolio is set -- because the WHOLE
+        // folio came via a folio-level "Transmission of Folios" event that
+        // other AMCs record instead, invisible on any individual
+        // transaction (see api/parse.py's build_folio_transmission_map).
+        // Either way lot.nav/lot.date are already this transaction's own
+        // preserved original purchase rate and date (verified against real
+        // CAS data for both patterns), so no special cost-basis handling is
+        // needed here -- just flagged for the Redemption Planner to label
+        // informationally.
+        isTransmission: isTransmissionTxn(txn.description) || isTransmittedFolio,
       });
     } else if (/REDEMPTION|SWITCH.?OUT/.test(type)) {
       let rem = Math.abs(txnUnits);
@@ -1703,7 +1706,9 @@ function RedemptionPlanner({ fund, onClose }) {
               <strong style={{ color: '#f57f17' }}>ℹ Includes transmitted units</strong>
               <div style={{ color: '#795548', marginTop: 3 }}>
                 One or more lots above (marked "Transmitted") came in via unit transmission from
-                another folio, typically inheritance. Your CAS preserves each transaction's
+                another folio{fund.folioTransmission
+                  ? <> (folio {fund.folioTransmission.from_folio}, previously held by {fund.folioTransmission.from_name})</>
+                  : ', typically inheritance'}. Your CAS preserves each transaction's
                 original purchase date and rate, so the cost basis and holding period above
                 already reflect that — nothing extra to account for in the figures below.
               </div>
@@ -1848,7 +1853,7 @@ const TXN_BADGE_STYLE = {
 
 // Plain, factual observations only -- no "you should" language. Returns
 // JSX nodes (not HTML strings) so nothing here ever needs dangerouslySetInnerHTML.
-function commentaryItems(rows, stats, currentNav, navHistory) {
+function commentaryItems(rows, stats, currentNav, navHistory, folioTransmission) {
   const fmtD = (d) => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   const multi = rows.length > 1;
   const parts = [];
@@ -1887,7 +1892,9 @@ function commentaryItems(rows, stats, currentNav, navHistory) {
   if (stats.transmissionCount > 0) {
     items.push(
       <>{stats.transmissionCount > 1 ? <>{stats.transmissionCount} of these transactions were</> : 'One of these transactions was'} transmitted
-        in from another folio (typically inherited) — your CAS preserves the original purchase date and rate for{' '}
+        in from another folio{folioTransmission
+          ? <> (folio <b>{folioTransmission.from_folio}</b>, previously held by <b>{folioTransmission.from_name}</b>)</>
+          : ' (typically inherited)'} — your CAS preserves the original purchase date and rate for{' '}
         {stats.transmissionCount > 1 ? 'each one' : 'it'}, so {stats.transmissionCount > 1 ? "they're" : "it's"} already reflected correctly above.</>
     );
   }
@@ -1948,6 +1955,15 @@ function LegendLine({ color, label, dashed = true }) {
 
 function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose }) {
   const rows = useMemo(() => {
+    // Some AMCs (e.g. Nippon India, via BSE StAR) tag INDIVIDUAL transmitted
+    // transactions in their own description text. Others (e.g. PPFAS, via
+    // CAMS) instead record a single folio-level "Transmission of Folios"
+    // event with no per-transaction wording at all -- fund.folioTransmission
+    // carries that (see processCasData / api/parse.py's
+    // build_folio_transmission_map). When it's set, every buy in this
+    // folio is known to have come via that transmission, so relabel them
+    // all rather than only the (nonexistent) description-tagged ones.
+    const wholeFolioTransmitted = !!fund.folioTransmission;
     return (fund.transactions || [])
       .map(t => {
         const rawType = (t.type || '').toUpperCase();
@@ -1955,7 +1971,7 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
         // only the free-text description says "Transmission" -- so relabel
         // it here for display while still counting as a buy everywhere else
         // (TXN_BUY_RE matches TRANSMISSION_IN too).
-        const type = isTransmissionTxn(t.description) && TXN_BUY_RE.test(rawType) ? 'TRANSMISSION_IN' : rawType;
+        const type = (wholeFolioTransmitted || isTransmissionTxn(t.description)) && TXN_BUY_RE.test(rawType) ? 'TRANSMISSION_IN' : rawType;
         return {
           date: new Date(t.date),
           type,
@@ -2259,7 +2275,7 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
               </div>
               <div style={{ background: 'var(--g-xlight)', border: '1.5px solid var(--g-light)', borderRadius: 10, padding: '14px 16px' }}>
                 <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  {commentaryItems(rows, stats, currentNav, navHistory).map((node, i) => (
+                  {commentaryItems(rows, stats, currentNav, navHistory, fund.folioTransmission).map((node, i) => (
                     <li key={i} style={{ fontSize: '.74rem', lineHeight: 1.7, color: 'var(--text2)', marginBottom: 4 }}>{node}</li>
                   ))}
                 </ul>
@@ -2547,6 +2563,11 @@ function CasTrackerInner() {
     const effectiveTargetUserId = targetUserIdOverride || ((isAdmin && viewedUserId) ? viewedUserId : undefined);
     const portfolioData = {};
     const panInvestorMap = data.pan_investor_map || {};
+    // Folio-level "Transmission of Folios" events (see api/parse.py's
+    // build_folio_transmission_map) -- keyed by the base folio number
+    // (no "/ 0" suffix some AMCs append), since these are folio lifecycle
+    // notes rather than a field on any individual transaction.
+    const folioTransmissions = data.folio_transmissions || {};
     
     // Global investor name from casparser (safe for single-PAN CAS)
     const globalName = (data.investor_info?.name || '').trim();
@@ -2602,6 +2623,13 @@ function CasTrackerInner() {
         };
       }
 
+      // Base folio number (strip any "/ 0" suffix BSE-routed folios carry)
+      // -- api/parse.py's regex on "Folio No: XXXXX" stops at whitespace,
+      // so folio_transmissions keys never have that suffix even when
+      // folio.folio does.
+      const baseFolioNo = (folio.folio || '').split('/')[0].trim();
+      const folioTransmission = folioTransmissions[baseFolioNo] || null;
+
       (folio.schemes || []).forEach(scheme => {
         const units = parseFloat(scheme.close) || 0;
         if (units < 0.001) return;
@@ -2633,7 +2661,12 @@ function CasTrackerInner() {
           isELSS: /ELSS|TAX.?SAVER/i.test(scheme.scheme) || (masterFacts.byIsin[scheme.isin || '']?.isLocked || false),
           lockedValue: 0,
           name: scheme.scheme,
-          isin: scheme.isin || ''
+          isin: scheme.isin || '',
+          // { from_folio, from_name } when this whole folio originated via
+          // a folio-level transmission event (see folioTransmissions above)
+          // -- distinct from per-transaction "Transmission In" wording,
+          // which some AMCs use instead (see calculateFifoCost).
+          folioTransmission,
         });
       });
     });
@@ -2711,7 +2744,7 @@ function CasTrackerInner() {
         }
       }
       const currentNav = h.liveNav;
-      const fifo = calculateFifoCost(scheme, currentNav);
+      const fifo = calculateFifoCost(scheme, currentNav, !!h.folioTransmission);
       h.value       = h.units * currentNav;
       h.invested    = fifo.invested;
       h.lockedValue = fifo.lockedValue;
@@ -3749,7 +3782,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                                 fontFamily: "'JetBrains Mono', monospace", letterSpacing: '.5px',
                               }}>SIF</span>
                             )}
-                            {(fund.transactions || []).some(t => isTransmissionTxn(t.description)) && (
+                            {(fund.folioTransmission || (fund.transactions || []).some(t => isTransmissionTxn(t.description))) && (
                               <span style={{
                                 fontSize: '.52rem', fontWeight: 800, padding: '2px 7px', borderRadius: 4,
                                 background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)',
