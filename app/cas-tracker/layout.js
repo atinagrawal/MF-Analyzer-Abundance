@@ -1,5 +1,6 @@
 import { getPageMeta } from '@/lib/metadata';
 import Script from 'next/script';
+import { CAS_FAQ } from './faqData';
 
 export const metadata = getPageMeta('cas-tracker');
 
@@ -34,54 +35,31 @@ export default function CasTrackerLayout({ children }) {
       "areaServed": "IN",
       "description": "AMFI Registered Mutual Fund Distributor — ARN-251838, Haldwani, Uttarakhand"
     },
-    "screenshot": "https://mfcalc.getabundance.in/og-cas.png"
+    "screenshot": "https://mfcalc.getabundance.in/og-cas.png",
+    "dateModified": "2026-08-14"
   };
 
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.getabundance.in" },
+      { "@type": "ListItem", "position": 2, "name": "MF Calculator", "item": "https://mfcalc.getabundance.in" },
+      { "@type": "ListItem", "position": 3, "name": "CAS Portfolio Tracker", "item": "https://mfcalc.getabundance.in/cas-tracker" }
+    ]
+  };
+
+  // Sourced from faqData.js -- the exact same list rendered as visible
+  // <details> on the page itself, so this can never drift out of sync
+  // with what a crawler (or a user) actually sees again.
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "Is it safe to upload my CAS PDF with my PAN password?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Yes. The PDF is parsed inside an isolated serverless function and deleted immediately after. Your password is never stored. For signed-in users, only the parsed portfolio data (not the PDF) is saved privately — only you and your AMFI-registered distributor (ARN-251838) can view it." }
-      },
-      {
-        "@type": "Question",
-        "name": "What is a Consolidated Account Statement (CAS)?",
-        "acceptedAnswer": { "@type": "Answer", "text": "A CAS consolidates all your mutual fund holdings across every AMC linked to your PAN. Download it from camsonline.com or kfintech.com using your PAN and registered email. Use your PAN in ALL CAPS as the PDF password." }
-      },
-      {
-        "@type": "Question",
-        "name": "Does this tool support Family CAS with multiple PANs?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Yes. The parser detects multiple PANs in a single CAS and builds a separate dashboard tab for each family member. Switch between PANs with one click." }
-      },
-      {
-        "@type": "Question",
-        "name": "How is current mutual fund portfolio value calculated?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Current Value = Units x Live NAV fetched from AMFI's official NAV data, updated end-of-day and fetched fresh on each page load." }
-      },
-      {
-        "@type": "Question",
-        "name": "What is FIFO cost calculation and why does it matter for mutual funds?",
-        "acceptedAnswer": { "@type": "Answer", "text": "FIFO (First In, First Out) is the SEBI-mandated method for computing capital gains on mutual fund redemptions. The tracker uses purchase history from your CAS to compute unrealised gain/loss correctly under FIFO, helping you plan redemptions tax-efficiently." }
-      },
-      {
-        "@type": "Question",
-        "name": "How does ELSS lock-in tracking work?",
-        "acceptedAnswer": { "@type": "Answer", "text": "ELSS investments are locked for 3 years from each purchase date. The tracker computes the locked rupee value (still within the 3-year window) and the unlocked portion for each ELSS fund separately." }
-      },
-      {
-        "@type": "Question",
-        "name": "Which CAS formats are supported — CAMS or KFintech?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Both CAMS (camsonline.com) and KFintech (kfintech.com) password-protected CAS PDFs are supported. If parsing fails, ensure you are using your PAN in ALL CAPS as the password." }
-      },
-      {
-        "@type": "Question",
-        "name": "Does this support SIF (Specialised Investment Funds)?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Yes. SIF holdings added by your distributor appear alongside mutual funds with live NAVs from AMFI's SIF endpoint. Standard CAS PDFs do not yet include SIF, so your distributor adds them manually." }
-      }
-    ]
+    "mainEntity": CAS_FAQ.map(({ q, a }) => ({
+      "@type": "Question",
+      "name": q,
+      "acceptedAnswer": { "@type": "Answer", "text": a },
+    })),
   };
 
   const howToSchema = {
@@ -102,6 +80,8 @@ export default function CasTrackerLayout({ children }) {
     <>
       <Script id="cas-software-schema" type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }} />
+      <Script id="cas-breadcrumb-schema" type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <Script id="cas-faq-schema" type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <Script id="cas-howto-schema" type="application/ld+json"

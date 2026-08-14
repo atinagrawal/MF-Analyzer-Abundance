@@ -9,6 +9,7 @@ import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows,
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getSIFLogo, getMFLogoFromSchemeName } from '@/lib/providerLogos';
 import growwByAmfiCode from '@/data/groww-exit-loads.json';
+import { CAS_FAQ } from './faqData';
 
 // isin-scheme-master.json (~8.4MB, ~26k entries) used to be statically
 // imported here -- meaning it shipped to every visitor's BROWSER as part of
@@ -1720,6 +1721,328 @@ function RedemptionPlanner({ fund, onClose }) {
   );
 }
 
+// ── Transaction History drawer ──────────────────────────────────────────
+// Every field it needs (date/type/amount/units/nav) already comes straight
+// out of the parsed CAS -- see processCasData's `h.transactions = scheme.
+// transactions` -- so this never fetches anything on its own. The one
+// exception is the optional full-NAV-history overlay, which the caller
+// fetches lazily (see fetchNavHistory in CasTrackerInner) only when the
+// user explicitly asks for it.
+
+const TXN_BUY_RE  = /PURCHASE|SIP|SWITCH.?IN|REINVEST/;
+const TXN_SELL_RE = /REDEMPTION|SWITCH.?OUT/;
+
+const TXN_TYPE_META = {
+  PURCHASE:     { label: 'Purchase',   color: 'var(--g2)',   cls: 'buy' },
+  PURCHASE_SIP: { label: 'SIP',        color: 'var(--g3)',   cls: 'buy' },
+  SWITCH_IN:    { label: 'Switch In',  color: 'var(--warn)', cls: 'switch' },
+  REDEMPTION:   { label: 'Redemption', color: 'var(--neg)',  cls: 'sell' },
+  SWITCH_OUT:   { label: 'Switch Out', color: 'var(--neg)',  cls: 'sell' },
+};
+function txnMeta(type) {
+  return TXN_TYPE_META[type] || { label: type, color: 'var(--g2)', cls: 'buy' };
+}
+const TXN_BADGE_STYLE = {
+  buy:    { bg: 'var(--g-xlight)', fg: 'var(--g1)' },
+  sell:   { bg: 'var(--neg-bg)',   fg: 'var(--neg)' },
+  switch: { bg: 'var(--warn-bg)',  fg: 'var(--warn)' },
+};
+
+// Plain, factual observations only -- no "you should" language. Returns
+// JSX nodes (not HTML strings) so nothing here ever needs dangerouslySetInnerHTML.
+function commentaryItems(rows, stats, currentNav, navHistory) {
+  const fmtD = (d) => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const parts = [];
+  if (stats.lumpCount)   parts.push(`${stats.lumpCount} lump-sum purchase${stats.lumpCount > 1 ? 's' : ''}`);
+  if (stats.sipCount)    parts.push(`${stats.sipCount} SIP installment${stats.sipCount > 1 ? 's' : ''}`);
+  if (stats.switchCount) parts.push(`${stats.switchCount} switch-in${stats.switchCount > 1 ? 's' : ''}`);
+  if (stats.redeemCount) parts.push(`${stats.redeemCount} redemption${stats.redeemCount > 1 ? 's' : ''}`);
+
+  const items = [
+    <>{parts.join(', ')} between <b>{fmtD(rows[0].date)}</b> and <b>{fmtD(rows[rows.length - 1].date)}</b>.</>,
+  ];
+  if (Number.isFinite(currentNav) && stats.avgNav > 0) {
+    const pct = (currentNav - stats.avgNav) / stats.avgNav * 100;
+    items.push(
+      <>Your amount-weighted average purchase NAV is <b>₹{stats.avgNav.toFixed(2)}</b>, against a
+        current NAV of <b>₹{currentNav.toFixed(2)}</b> — {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%{' '}
+        {pct >= 0 ? 'above' : 'below'} your average entry.</>
+    );
+  }
+  items.push(
+    <>Lowest entry: <b>₹{stats.minTxn.nav.toFixed(2)}</b> on {fmtD(stats.minTxn.date)} · Highest entry:{' '}
+      <b>₹{stats.maxTxn.nav.toFixed(2)}</b> on {fmtD(stats.maxTxn.date)}.</>
+  );
+  if (navHistory?.points?.length) {
+    const histNavs = navHistory.points.map(p => p.nav);
+    const histMin = Math.min(...histNavs), histMax = Math.max(...histNavs);
+    items.push(
+      <>Across the fund's full NAV history (<b>₹{histMin.toFixed(2)}</b>–<b>₹{histMax.toFixed(2)}</b>),
+        your entries ranged <b>₹{stats.minTxn.nav.toFixed(2)}</b>–<b>₹{stats.maxTxn.nav.toFixed(2)}</b>.</>
+    );
+  }
+  return items;
+}
+
+function LegendDot({ color, label }) {
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '.62rem', color: 'var(--text2)', fontWeight: 600 }}>
+      <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
+      {label}
+    </span>
+  );
+}
+function LegendLine({ color, label }) {
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '.62rem', color: 'var(--text2)', fontWeight: 600 }}>
+      <span style={{ width: 16, height: 0, borderTop: `2px dashed ${color}`, display: 'inline-block', flexShrink: 0 }} />
+      {label}
+    </span>
+  );
+}
+
+function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose }) {
+  const rows = useMemo(() => {
+    return (fund.transactions || [])
+      .map(t => ({
+        date: new Date(t.date),
+        type: (t.type || '').toUpperCase(),
+        amount: parseFloat(t.amount) || 0,
+        units: parseFloat(t.units) || 0,
+        nav: parseFloat(t.nav) || 0,
+      }))
+      // Non-financial CAS rows (stamp duty, etc.) report null units/nav --
+      // there's no "rate" to plot for those, so they're dropped entirely.
+      .filter(t => t.nav > 0 && t.units !== 0 && !isNaN(t.date.getTime()) && (TXN_BUY_RE.test(t.type) || TXN_SELL_RE.test(t.type)))
+      .sort((a, b) => a.date - b.date);
+  }, [fund.transactions]);
+
+  const hasHistory = rows.length > 0;
+  const currentNav = fund.liveNav;
+
+  const stats = useMemo(() => {
+    if (!hasHistory) return null;
+    const buys = rows.filter(t => TXN_BUY_RE.test(t.type));
+    const totalBuyAmount = buys.reduce((s, t) => s + t.amount, 0);
+    const totalBuyUnits  = buys.reduce((s, t) => s + t.units, 0);
+    return {
+      avgNav: totalBuyUnits > 0 ? totalBuyAmount / totalBuyUnits : 0,
+      minTxn: rows.reduce((a, b) => (b.nav < a.nav ? b : a)),
+      maxTxn: rows.reduce((a, b) => (b.nav > a.nav ? b : a)),
+      sipCount:    rows.filter(t => /SIP/.test(t.type)).length,
+      lumpCount:   rows.filter(t => t.type === 'PURCHASE').length,
+      switchCount: rows.filter(t => /SWITCH.?IN/.test(t.type)).length,
+      redeemCount: rows.filter(t => TXN_SELL_RE.test(t.type)).length,
+    };
+  }, [rows, hasHistory]);
+
+  const fmtD = (d) => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  // ── Chart geometry (plain SVG, no charting library) ──
+  const W = 640, H = 260, padL = 50, padR = 14, padT = 14, padB = 26;
+  let chart = null;
+  if (hasHistory) {
+    const histPoints = navHistory?.points || [];
+    const x0 = Math.min(rows[0].date.getTime(), histPoints[0]?.t ?? Infinity);
+    const x1 = Date.now();
+    const navPool = rows.map(t => t.nav)
+      .concat(Number.isFinite(currentNav) ? [currentNav] : [])
+      .concat(stats.avgNav ? [stats.avgNav] : [])
+      .concat(histPoints.map(p => p.nav));
+    const yMin = Math.min(...navPool) * 0.94;
+    const yMax = Math.max(...navPool) * 1.06;
+    const px = (t) => padL + (t - x0) / Math.max(1, x1 - x0) * (W - padL - padR);
+    const py = (v) => padT + (1 - (v - yMin) / Math.max(0.0001, yMax - yMin)) * (H - padT - padB);
+
+    const yTicks = [0, 1, 2, 3, 4].map(i => yMin + (yMax - yMin) * i / 4);
+    const startYear = new Date(x0).getFullYear(), endYear = new Date(x1).getFullYear();
+    const yearTicks = [];
+    for (let y = startYear; y <= endYear; y++) yearTicks.push(y);
+
+    chart = (
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H}>
+        {yTicks.map((v, i) => (
+          <g key={'y' + i}>
+            <line x1={padL} x2={W - padR} y1={py(v)} y2={py(v)} stroke="var(--s3)" strokeWidth={1} />
+            <text x={padL - 6} y={py(v) + 3} textAnchor="end" fontSize={9} fill="var(--muted)" fontFamily="'JetBrains Mono', monospace">₹{v.toFixed(0)}</text>
+          </g>
+        ))}
+        {yearTicks.map(yr => {
+          const t = new Date(yr, 0, 1).getTime();
+          if (t < x0 || t > x1) return null;
+          return (
+            <g key={'x' + yr}>
+              <line x1={px(t)} x2={px(t)} y1={padT} y2={H - padB} stroke="var(--s3)" strokeWidth={1} />
+              <text x={px(t)} y={H - padB + 14} textAnchor="middle" fontSize={9} fill="var(--muted)" fontFamily="'JetBrains Mono', monospace">{yr}</text>
+            </g>
+          );
+        })}
+        {histPoints.length > 0 && (
+          <polyline points={histPoints.map(p => `${px(p.t)},${py(p.nav)}`).join(' ')} fill="none" stroke="var(--border2)" strokeWidth={1.5} />
+        )}
+        <line x1={padL} x2={W - padR} y1={py(stats.avgNav)} y2={py(stats.avgNav)} stroke="var(--g1)" strokeWidth={1.5} strokeDasharray="5,4" />
+        {Number.isFinite(currentNav) && (
+          <line x1={padL} x2={W - padR} y1={py(currentNav)} y2={py(currentNav)} stroke="var(--muted)" strokeWidth={1.5} strokeDasharray="5,4" />
+        )}
+        <polyline points={rows.map(t => `${px(t.date.getTime())},${py(t.nav)}`).join(' ')} fill="none" stroke="var(--g-light)" strokeWidth={2} />
+        {rows.map((t, i) => {
+          const cx = px(t.date.getTime()), cy = py(t.nav);
+          const meta = txnMeta(t.type);
+          const title = `${fmtD(t.date)} · ${meta.label} · ₹${Math.abs(t.amount).toLocaleString('en-IN')} · ${Math.abs(t.units).toFixed(3)} units · NAV ₹${t.nav.toFixed(2)}`;
+          if (meta.cls === 'sell') {
+            return <rect key={i} x={cx - 4} y={cy - 4} width={8} height={8} fill={meta.color} transform={`rotate(45 ${cx} ${cy})`}><title>{title}</title></rect>;
+          }
+          if (meta.cls === 'switch') {
+            return <polygon key={i} points={`${cx - 5},${cy + 4} ${cx + 5},${cy + 4} ${cx},${cy - 5}`} fill={meta.color}><title>{title}</title></polygon>;
+          }
+          return <circle key={i} cx={cx} cy={cy} r={t.type === 'PURCHASE' ? 5 : 3.5} fill={meta.color}><title>{title}</title></circle>;
+        })}
+        {Number.isFinite(currentNav) && (
+          <circle cx={px(x1)} cy={py(currentNav)} r={4} fill="var(--muted)"><title>Today · NAV ₹{currentNav.toFixed(2)}</title></circle>
+        )}
+      </svg>
+    );
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }} onClick={onClose}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.35)', backdropFilter: 'blur(2px)' }} />
+      <div onClick={e => e.stopPropagation()} style={{
+        position: 'relative', zIndex: 1, width: '100%', maxWidth: 'min(680px, 100vw)',
+        height: '100dvh', overflowY: 'auto', background: 'var(--surface)',
+        boxShadow: '-8px 0 40px rgba(0,0,0,.15)', display: 'flex', flexDirection: 'column',
+      }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1.5px solid var(--border)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontSize: '.6rem', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 6 }}>
+                Transaction History
+              </div>
+              <div style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1.3, maxWidth: 420 }}>
+                {fund.name}
+              </div>
+              <div style={{ fontSize: '.65rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginTop: 4 }}>
+                {fund.folio ? `Folio ${fund.folio} · ` : ''}{rows.length} transaction{rows.length !== 1 ? 's' : ''}{fund.__ownerName ? ` · ${fund.__ownerName}` : ''}
+              </div>
+            </div>
+            <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--muted)', padding: '4px 8px', marginTop: -4 }}>✕</button>
+          </div>
+        </div>
+
+        <div style={{ padding: '20px 24px 32px', flex: 1 }}>
+          {!hasHistory ? (
+            <div style={{ padding: '10px 14px', background: '#fff8e1', border: '1.5px solid #ffe082', borderRadius: 10, fontSize: '.7rem', lineHeight: 1.6 }}>
+              <strong style={{ color: '#f57f17' }}>⚠ No transaction-level history</strong>
+              <div style={{ color: '#795548', marginTop: 3 }}>
+                Your CAS doesn't include per-transaction detail for this fund — either a Summary CAS,
+                or units carried over from before the statement period. Download a <strong>Detailed CAS</strong> from{' '}
+                <a href="https://www.camsonline.com" target="_blank" rel="noopener noreferrer" style={{ color: '#f57f17' }}>camsonline.com</a> or{' '}
+                <a href="https://www.kfintech.com" target="_blank" rel="noopener noreferrer" style={{ color: '#f57f17' }}>kfintech.com</a> for the full rate history.
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 20 }}>
+                <div style={{ background: 'var(--s2)', border: '1.5px solid var(--border)', borderRadius: 9, padding: '9px 11px' }}>
+                  <div style={{ fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.7px', color: 'var(--muted)', marginBottom: 4, fontFamily: "'JetBrains Mono', monospace" }}>Avg. Purchase NAV</div>
+                  <div style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--g1)', fontFamily: "'JetBrains Mono', monospace" }}>₹{stats.avgNav.toFixed(2)}</div>
+                </div>
+                <div style={{ background: 'var(--s2)', border: '1.5px solid var(--border)', borderRadius: 9, padding: '9px 11px' }}>
+                  <div style={{ fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.7px', color: 'var(--muted)', marginBottom: 4, fontFamily: "'JetBrains Mono', monospace" }}>Current NAV</div>
+                  <div style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--g1)', fontFamily: "'JetBrains Mono', monospace" }}>{Number.isFinite(currentNav) ? `₹${currentNav.toFixed(2)}` : '—'}</div>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '.62rem', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--muted)', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'JetBrains Mono', monospace" }}>
+                NAV at Each Transaction
+                <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              </div>
+              <div style={{ border: '1.5px solid var(--border)', borderRadius: 12, padding: '14px 14px 10px' }}>
+                {chart}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 6, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                  <LegendDot color="var(--g2)" label="Purchase / SIP" />
+                  <LegendDot color="var(--neg)" label="Redemption" />
+                  <LegendDot color="var(--warn)" label="Switch-in" />
+                  <LegendLine color="var(--g1)" label="Your avg. purchase NAV" />
+                  <LegendLine color="var(--muted)" label="Current NAV" />
+                  {navHistory?.points && <LegendLine color="var(--border2)" label="Fund's full NAV history" />}
+                </div>
+                {!navHistory?.points && (
+                  <div style={{ marginTop: 12 }}>
+                    <button
+                      onClick={onFetchNavHistory}
+                      disabled={!fund.amfiCode || navHistory?.loading}
+                      style={{
+                        padding: '7px 14px', borderRadius: 8, border: '1.5px solid var(--border2)',
+                        background: 'var(--s2)', color: 'var(--g2)', fontSize: '.68rem', fontWeight: 800,
+                        cursor: fund.amfiCode ? 'pointer' : 'not-allowed', fontFamily: 'Raleway, sans-serif',
+                        opacity: fund.amfiCode ? 1 : .5,
+                      }}
+                    >
+                      {navHistory?.loading ? 'Loading…' : "📉 Overlay fund's full NAV history"}
+                    </button>
+                    {navHistory?.error && (
+                      <div style={{ fontSize: '.65rem', color: 'var(--neg)', marginTop: 6 }}>Couldn't load NAV history — try again.</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ fontSize: '.62rem', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--muted)', margin: '22px 0 10px', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'JetBrains Mono', monospace" }}>
+                What This Shows
+                <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              </div>
+              <div style={{ background: 'var(--g-xlight)', border: '1.5px solid var(--g-light)', borderRadius: 10, padding: '14px 16px' }}>
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {commentaryItems(rows, stats, currentNav, navHistory).map((node, i) => (
+                    <li key={i} style={{ fontSize: '.74rem', lineHeight: 1.7, color: 'var(--text2)', marginBottom: 4 }}>{node}</li>
+                  ))}
+                </ul>
+                <div style={{ marginTop: 10, padding: '8px 11px', borderRadius: 7, background: 'var(--warn-bg)', borderLeft: '3px solid var(--warn)', fontSize: '.6rem', color: '#5d4037', lineHeight: 1.6, fontFamily: "'JetBrains Mono', monospace" }}>
+                  ⚠ Computed from your uploaded CAS. Informational only — not investment advice. Past performance is not indicative of future results.
+                </div>
+              </div>
+
+              <div style={{ fontSize: '.62rem', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--muted)', margin: '22px 0 10px', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'JetBrains Mono', monospace" }}>
+                All Transactions
+                <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.65rem' }}>
+                  <thead>
+                    <tr>
+                      {['Date', 'Type', 'Amount', 'Units', 'NAV'].map((h, i) => (
+                        <th key={h} style={{ textAlign: i < 2 ? 'left' : 'right', padding: '6px 8px', fontSize: '.56rem', fontWeight: 800, letterSpacing: '.4px', textTransform: 'uppercase', color: '#fff', background: 'var(--g1)', fontFamily: "'JetBrains Mono', monospace" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.slice().reverse().map((t, i) => {
+                      const meta = txnMeta(t.type);
+                      const badge = TXN_BADGE_STYLE[meta.cls];
+                      return (
+                        <tr key={i} style={{ background: i % 2 ? 'var(--s2)' : 'transparent' }}>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--s3)', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--muted)' }}>{fmtD(t.date)}</td>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--s3)' }}>
+                            <span style={{ fontSize: '.52rem', fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: badge.bg, color: badge.fg }}>{meta.label}</span>
+                          </td>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--s3)', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text2)' }}>₹{Math.abs(t.amount).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--s3)', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text2)' }}>{Math.abs(t.units).toFixed(3)}</td>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--s3)', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text2)' }}>₹{t.nav.toFixed(2)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CasTrackerInner() {
   const [uploadState, setUploadState] = useState('idle'); // idle, loading, error, success
   const [loadingText, setLoadingText] = useState('');
@@ -1860,6 +2183,8 @@ function CasTrackerInner() {
   const [planPortfolio,  setPlanPortfolio]  = useState(false); // portfolio-level redemption planner
   const [plannerMode,    setPlannerMode]    = useState('target'); // initial tab when planPortfolio opens
   const [redeemSelection, setRedeemSelection] = useState({}); // fund.id → fund object, checked via dashboard checkboxes
+  const [txnDrawerFund,  setTxnDrawerFund]  = useState(null);  // holding object for the Transaction History drawer
+  const [navHistoryCache, setNavHistoryCache] = useState({});  // amfiCode → { loading, points, error } -- only populated on demand (see fetchNavHistory)
 
   // Auto-load via ?load=blobKey (admin CAS view) or ?userId= (manual-only client)
   useEffect(() => {
@@ -2103,6 +2428,7 @@ function CasTrackerInner() {
       h.amfiCode       = scheme.amfi || null;  // preserved for FIFO planner
       h.xirr           = schemeXirr(scheme, h.value);  // null if transaction history is incomplete
       h.xirrFlows      = schemeCashFlows(scheme);       // raw flows, pooled for portfolio-level XIRR
+      h.transactions   = scheme.transactions || [];      // preserved for the Transaction History drawer
       portfolioData[pan].current  += h.value;
       portfolioData[pan].invested += h.invested;
       delete h.scheme;
@@ -2285,6 +2611,31 @@ function CasTrackerInner() {
     return viewFilter === 'sif' ? allHoldings.filter(h => h.fund_type === 'SIF')
          : viewFilter === 'mf'  ? allHoldings.filter(h => h.fund_type !== 'SIF')
          : allHoldings;
+  }
+
+  // Full historical NAV curve for the Transaction History drawer's optional
+  // chart overlay -- deliberately NOT fetched automatically for every
+  // holding on every page load (unlike the batched *live* NAV in
+  // processCasData above). Only runs once per amfiCode per session, on an
+  // explicit click, and the result is cached so re-opening the same fund's
+  // drawer never re-fetches.
+  async function fetchNavHistory(amfiCode) {
+    if (!amfiCode || navHistoryCache[amfiCode]?.points || navHistoryCache[amfiCode]?.loading) return;
+    setNavHistoryCache(prev => ({ ...prev, [amfiCode]: { loading: true } }));
+    try {
+      const res = await fetch(`/api/mf?code=${amfiCode}`);
+      const json = await res.json();
+      const points = (json.data || [])
+        .map(d => {
+          const [dd, mm, yyyy] = d.date.split('-').map(Number);
+          return { t: new Date(yyyy, mm - 1, dd).getTime(), nav: parseFloat(d.nav) };
+        })
+        .filter(p => Number.isFinite(p.nav))
+        .sort((a, b) => a.t - b.t);
+      setNavHistoryCache(prev => ({ ...prev, [amfiCode]: { loading: false, points } }));
+    } catch {
+      setNavHistoryCache(prev => ({ ...prev, [amfiCode]: { loading: false, error: true } }));
+    }
   }
 
   // xlsx is only ever needed here, on an explicit user click -- dynamic
@@ -3184,24 +3535,41 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                             </div>
                           </div>
 
-                          {/* Plan Redemption button — CAS holdings only, always visible */}
+                          {/* Plan Redemption + Transactions buttons — CAS holdings only, always visible */}
                           {!isManual && (
-                            <button
-                              onClick={() => setPlanFund(fund)}
-                              style={{
-                                marginTop: 12, width: '100%',
-                                padding: '9px 0', borderRadius: 8,
-                                border: 'none',
-                                background: 'var(--g1)', cursor: 'pointer',
-                                fontSize: '.72rem', fontWeight: 800,
-                                color: '#fff', fontFamily: 'Raleway, sans-serif',
-                                letterSpacing: '-.2px', transition: 'background .15s',
-                              }}
-                              onMouseEnter={e => e.currentTarget.style.background = 'var(--g2)'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
-                            >
-                              📊 Plan Redemption
-                            </button>
+                            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                              <button
+                                onClick={() => setPlanFund(fund)}
+                                style={{
+                                  flex: 1, padding: '9px 0', borderRadius: 8,
+                                  border: 'none',
+                                  background: 'var(--g1)', cursor: 'pointer',
+                                  fontSize: '.72rem', fontWeight: 800,
+                                  color: '#fff', fontFamily: 'Raleway, sans-serif',
+                                  letterSpacing: '-.2px', transition: 'background .15s',
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--g2)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
+                              >
+                                📊 Plan
+                              </button>
+                              <button
+                                onClick={() => setTxnDrawerFund(fund)}
+                                title="View transaction-by-transaction rate history"
+                                style={{
+                                  flex: 1, padding: '9px 0', borderRadius: 8,
+                                  border: '1.5px solid var(--border2)',
+                                  background: 'var(--s2)', cursor: 'pointer',
+                                  fontSize: '.72rem', fontWeight: 800,
+                                  color: 'var(--g2)', fontFamily: 'Raleway, sans-serif',
+                                  letterSpacing: '-.2px', transition: 'background .15s',
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--s3)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'var(--s2)'}
+                              >
+                                📈 Transactions
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -3251,6 +3619,14 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 
       {/* ── FIFO Redemption Planner overlays ─────────────────────────────── */}
       {planFund && <RedemptionPlanner fund={planFund} onClose={() => setPlanFund(null)} />}
+      {txnDrawerFund && (
+        <TransactionHistoryDrawer
+          fund={txnDrawerFund}
+          navHistory={txnDrawerFund.amfiCode ? navHistoryCache[txnDrawerFund.amfiCode] : null}
+          onFetchNavHistory={() => fetchNavHistory(txnDrawerFund.amfiCode)}
+          onClose={() => setTxnDrawerFund(null)}
+        />
+      )}
       {planPortfolio && (
         <PortfolioRedemptionPlanner
           holdings={currentInfo.holdings || []}
@@ -3272,26 +3648,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
             Frequently Asked Questions
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {[
-              ['Is it safe to upload my CAS PDF with my PAN password?',
-               'Yes. The PDF is parsed inside an isolated serverless function and deleted immediately after. Your password is never stored. For signed-in users, only the parsed portfolio data (not the PDF) is saved privately — only you and your AMFI-registered distributor can view it.'],
-              ['What is a Consolidated Account Statement (CAS)?',
-               'A CAS consolidates all your mutual fund holdings across every AMC linked to your PAN. Download it from camsonline.com or kfintech.com using your PAN and registered email. Use your PAN in ALL CAPS as the PDF password.'],
-              ['Does this support Family CAS with multiple PANs?',
-               'Yes. The parser detects multiple PANs in one CAS and creates separate dashboard tabs per family member. Switch between them with one click.'],
-              ['Can I name each investor in a multi-PAN family CAS?',
-               'Yes. Click the ✎ next to any PAN tab to label it with the investor’s name. We store that name against the PAN so it’s remembered the next time that PAN appears in a CAS upload — it’s only ever shown to you and your AMFI-registered distributor.'],
-              ['How is current value calculated?',
-               'Current Value = Units x Live NAV from AMFI official end-of-day data, fetched fresh on each page load.'],
-              ['What is FIFO capital gains calculation?',
-               'FIFO (First In, First Out) is the SEBI-mandated method for mutual fund redemptions. Our tracker uses CAS purchase history to compute unrealised gain/loss correctly under FIFO accounting.'],
-              ['How does ELSS lock-in tracking work?',
-               'ELSS investments are locked for 3 years from each purchase date. We compute the locked value and unlocked portion for each ELSS fund separately so you know exactly what is redeemable today.'],
-              ['Which CAS formats are supported?',
-               'CAMS (camsonline.com) and KFintech (kfintech.com) password-protected PDFs, plus MF Central\'s (mfcentral.com) "Detailed Report" Excel download — no password needed for the Excel format. For PDFs, enter your PAN in ALL CAPS as the password.'],
-              ['Does this support SIF (Specialised Investment Funds)?',
-               'Yes. SIF holdings added by your distributor appear alongside mutual funds with live NAVs from AMFI. Standard CAS PDFs do not yet include SIF statements, so your distributor adds them separately.'],
-            ].map(([q, a], i, arr) => (
+            {CAS_FAQ.map(({ q, a }, i, arr) => (
               <details key={i} style={{
                 borderTop: '1px solid var(--border)',
                 borderBottom: i === arr.length - 1 ? '1px solid var(--border)' : 'none',
