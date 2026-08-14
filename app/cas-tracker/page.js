@@ -1792,10 +1792,10 @@ function LegendDot({ color, label }) {
     </span>
   );
 }
-function LegendLine({ color, label }) {
+function LegendLine({ color, label, dashed = true }) {
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '.62rem', color: 'var(--text2)', fontWeight: 600 }}>
-      <span style={{ width: 16, height: 0, borderTop: `2px dashed ${color}`, display: 'inline-block', flexShrink: 0 }} />
+      <span style={{ width: 16, height: 0, borderTop: `2px ${dashed ? 'dashed' : 'solid'} ${color}`, display: 'inline-block', flexShrink: 0 }} />
       {label}
     </span>
   );
@@ -1838,10 +1838,28 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
 
   const fmtD = (d) => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-  // ── Chart geometry (plain SVG, no charting library) ──
+  // ── "Rate Journey" strip: entry -> today, always computable from a
+  // single transaction, unlike the line chart below which needs 2+ points
+  // to show a trend. Doubles as the primary, unambiguous depiction of
+  // avg/current NAV that a legend-only chart made easy to miss.
+  const hasMultipleTxns = rows.length > 1;
+  const journeyEntryNav   = hasHistory ? (hasMultipleTxns ? stats.avgNav : rows[0].nav) : null;
+  const journeyEntryLabel = hasHistory ? (hasMultipleTxns ? `Since ${fmtD(rows[0].date)}` : fmtD(rows[0].date)) : '';
+  const journeyPct = hasHistory && Number.isFinite(currentNav) && journeyEntryNav > 0
+    ? (currentNav - journeyEntryNav) / journeyEntryNav * 100
+    : null;
+  const journeyUp = journeyPct == null || journeyPct >= 0;
+
+  // ── Chart geometry (plain SVG, no charting library). A single transaction
+  // has no trend of its own to draw -- but once the fund's full NAV history
+  // is loaded (see the "load NAV history" affordance below), even one
+  // transaction can be plotted meaningfully against that curve, so the
+  // gate is "is there ANY line to draw", not just "2+ own transactions".
   const W = 640, H = 260, padL = 50, padR = 14, padT = 14, padB = 26;
+  const hasHistPoints = (navHistory?.points?.length ?? 0) > 0;
+  const canShowChart = hasMultipleTxns || hasHistPoints;
   let chart = null;
-  if (hasHistory) {
+  if (canShowChart) {
     const histPoints = navHistory?.points || [];
     const x0 = Math.min(rows[0].date.getTime(), histPoints[0]?.t ?? Infinity);
     const x1 = Date.now();
@@ -1880,10 +1898,33 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
         {histPoints.length > 0 && (
           <polyline points={histPoints.map(p => `${px(p.t)},${py(p.nav)}`).join(' ')} fill="none" stroke="var(--border2)" strokeWidth={1.5} />
         )}
-        <line x1={padL} x2={W - padR} y1={py(stats.avgNav)} y2={py(stats.avgNav)} stroke="var(--g1)" strokeWidth={1.5} strokeDasharray="5,4" />
-        {Number.isFinite(currentNav) && (
-          <line x1={padL} x2={W - padR} y1={py(currentNav)} y2={py(currentNav)} stroke="var(--muted)" strokeWidth={1.5} strokeDasharray="5,4" />
-        )}
+        {(() => {
+          // Avg-NAV (dashed) and current-NAV (solid) reference lines get
+          // their own inline value labels at the right edge -- distinct
+          // dash pattern AND an explicit "Avg ₹x" / "Now ₹x" callout, since
+          // two same-style dashed lines close together were easy to
+          // mistake for one another. Nudge the labels apart when the two
+          // lines land within a few px of each other.
+          const avgY = py(stats.avgNav);
+          const curY = Number.isFinite(currentNav) ? py(currentNav) : null;
+          let avgLabelY = avgY - 5, curLabelY = curY != null ? curY - 5 : null;
+          if (curY != null && Math.abs(avgY - curY) < 13) {
+            if (avgY <= curY) { avgLabelY = avgY - 5; curLabelY = curY + 12; }
+            else               { avgLabelY = avgY + 12; curLabelY = curY - 5; }
+          }
+          return (
+            <>
+              <line x1={padL} x2={W - padR} y1={avgY} y2={avgY} stroke="var(--g1)" strokeWidth={1.5} strokeDasharray="5,4" />
+              <text x={W - padR} y={avgLabelY} textAnchor="end" fontSize={9} fontWeight="700" fill="var(--g1)" fontFamily="'JetBrains Mono', monospace">Avg ₹{stats.avgNav.toFixed(2)}</text>
+              {curY != null && (
+                <>
+                  <line x1={padL} x2={W - padR} y1={curY} y2={curY} stroke="var(--muted)" strokeWidth={1.75} />
+                  <text x={W - padR} y={curLabelY} textAnchor="end" fontSize={9} fontWeight="700" fill="var(--muted)" fontFamily="'JetBrains Mono', monospace">Now ₹{currentNav.toFixed(2)}</text>
+                </>
+              )}
+            </>
+          );
+        })()}
         <polyline points={rows.map(t => `${px(t.date.getTime())},${py(t.nav)}`).join(' ')} fill="none" stroke="var(--g-light)" strokeWidth={2} />
         {rows.map((t, i) => {
           const cx = px(t.date.getTime()), cy = py(t.nav);
@@ -1942,51 +1983,107 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
             </div>
           ) : (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 20 }}>
-                <div style={{ background: 'var(--s2)', border: '1.5px solid var(--border)', borderRadius: 9, padding: '9px 11px' }}>
-                  <div style={{ fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.7px', color: 'var(--muted)', marginBottom: 4, fontFamily: "'JetBrains Mono', monospace" }}>Avg. Purchase NAV</div>
-                  <div style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--g1)', fontFamily: "'JetBrains Mono', monospace" }}>₹{stats.avgNav.toFixed(2)}</div>
+              {/* ── Rate Journey: entry -> today, the clear headline comparison ── */}
+              <div style={{
+                border: '1.5px solid var(--border)', borderRadius: 12, padding: '16px 18px', marginBottom: 20,
+                background: journeyPct == null ? 'var(--s2)' : journeyUp ? 'linear-gradient(135deg, var(--g-xlight), var(--surface) 70%)' : 'linear-gradient(135deg, var(--neg-bg), var(--surface) 70%)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                  <div>
+                    <div style={{ fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.7px', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+                      {hasMultipleTxns ? 'Avg. Entry' : 'Entry'}
+                    </div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)', fontFamily: "'JetBrains Mono', monospace" }}>₹{journeyEntryNav.toFixed(2)}</div>
+                    <div style={{ fontSize: '.6rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>{journeyEntryLabel}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', flexShrink: 0, paddingTop: 2 }}>
+                    <div style={{ fontSize: '1.3rem', lineHeight: 1, color: journeyPct == null ? 'var(--muted)' : journeyUp ? 'var(--g1)' : 'var(--neg)' }}>
+                      {journeyPct == null ? '—' : journeyUp ? '↗' : '↘'}
+                    </div>
+                    {journeyPct != null && (
+                      <div style={{ fontSize: '.9rem', fontWeight: 900, color: journeyUp ? 'var(--g1)' : 'var(--neg)', fontFamily: "'JetBrains Mono', monospace" }}>
+                        {journeyUp ? '+' : ''}{journeyPct.toFixed(1)}%
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.7px', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>Today</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)', fontFamily: "'JetBrains Mono', monospace" }}>{Number.isFinite(currentNav) ? `₹${currentNav.toFixed(2)}` : '—'}</div>
+                    <div style={{ fontSize: '.6rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>{fmtD(new Date())}</div>
+                  </div>
                 </div>
-                <div style={{ background: 'var(--s2)', border: '1.5px solid var(--border)', borderRadius: 9, padding: '9px 11px' }}>
-                  <div style={{ fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.7px', color: 'var(--muted)', marginBottom: 4, fontFamily: "'JetBrains Mono', monospace" }}>Current NAV</div>
-                  <div style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--g1)', fontFamily: "'JetBrains Mono', monospace" }}>{Number.isFinite(currentNav) ? `₹${currentNav.toFixed(2)}` : '—'}</div>
-                </div>
+                {journeyPct != null && (
+                  <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'var(--s3)', marginTop: 14 }}>
+                    <div style={{
+                      position: 'absolute', inset: 0, borderRadius: 4,
+                      background: journeyUp
+                        ? 'linear-gradient(90deg, var(--g-light), var(--g1))'
+                        : 'linear-gradient(90deg, var(--neg-light), var(--neg))',
+                    }} />
+                    <div style={{ position: 'absolute', left: -3, top: -3, width: 14, height: 14, borderRadius: '50%', background: 'var(--surface)', border: `3px solid ${journeyUp ? 'var(--g1)' : 'var(--neg)'}` }} />
+                    <div style={{ position: 'absolute', right: -3, top: -3, width: 14, height: 14, borderRadius: '50%', background: journeyUp ? 'var(--g1)' : 'var(--neg)', border: '3px solid var(--surface)' }} />
+                  </div>
+                )}
               </div>
 
               <div style={{ fontSize: '.62rem', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--muted)', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'JetBrains Mono', monospace" }}>
                 NAV at Each Transaction
                 <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
               </div>
-              <div style={{ border: '1.5px solid var(--border)', borderRadius: 12, padding: '14px 14px 10px' }}>
-                {chart}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 6, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-                  <LegendDot color="var(--g2)" label="Purchase / SIP" />
-                  <LegendDot color="var(--neg)" label="Redemption" />
-                  <LegendDot color="var(--warn)" label="Switch-in" />
-                  <LegendLine color="var(--g1)" label="Your avg. purchase NAV" />
-                  <LegendLine color="var(--muted)" label="Current NAV" />
-                  {navHistory?.points && <LegendLine color="var(--border2)" label="Fund's full NAV history" />}
-                </div>
-                {!navHistory?.points && (
-                  <div style={{ marginTop: 12 }}>
-                    <button
-                      onClick={onFetchNavHistory}
-                      disabled={!fund.amfiCode || navHistory?.loading}
-                      style={{
-                        padding: '7px 14px', borderRadius: 8, border: '1.5px solid var(--border2)',
-                        background: 'var(--s2)', color: 'var(--g2)', fontSize: '.68rem', fontWeight: 800,
-                        cursor: fund.amfiCode ? 'pointer' : 'not-allowed', fontFamily: 'Raleway, sans-serif',
-                        opacity: fund.amfiCode ? 1 : .5,
-                      }}
-                    >
-                      {navHistory?.loading ? 'Loading…' : "📉 Overlay fund's full NAV history"}
-                    </button>
-                    {navHistory?.error && (
-                      <div style={{ fontSize: '.65rem', color: 'var(--neg)', marginTop: 6 }}>Couldn't load NAV history — try again.</div>
-                    )}
+              {canShowChart ? (
+                <div style={{ border: '1.5px solid var(--border)', borderRadius: 12, padding: '14px 14px 10px' }}>
+                  {chart}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 6, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                    <LegendDot color="var(--g2)" label="Purchase / SIP" />
+                    <LegendDot color="var(--neg)" label="Redemption" />
+                    <LegendDot color="var(--warn)" label="Switch-in" />
+                    <LegendLine color="var(--g1)" label="Your avg. purchase NAV" />
+                    <LegendLine color="var(--muted)" label="Current NAV" dashed={false} />
+                    {hasHistPoints && <LegendLine color="var(--border2)" label="Fund's full NAV history" />}
                   </div>
-                )}
-              </div>
+                  {!hasHistPoints && (
+                    <div style={{ marginTop: 12 }}>
+                      <button
+                        onClick={onFetchNavHistory}
+                        disabled={!fund.amfiCode || navHistory?.loading}
+                        style={{
+                          padding: '7px 14px', borderRadius: 8, border: '1.5px solid var(--border2)',
+                          background: 'var(--s2)', color: 'var(--g2)', fontSize: '.68rem', fontWeight: 800,
+                          cursor: fund.amfiCode ? 'pointer' : 'not-allowed', fontFamily: 'Raleway, sans-serif',
+                          opacity: fund.amfiCode ? 1 : .5,
+                        }}
+                      >
+                        {navHistory?.loading ? 'Loading…' : "📉 Overlay fund's full NAV history"}
+                      </button>
+                      {navHistory?.error && (
+                        <div style={{ fontSize: '.65rem', color: 'var(--neg)', marginTop: 6 }}>Couldn't load NAV history — try again.</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ border: '1.5px solid var(--border)', borderRadius: 12, padding: '18px 20px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '.74rem', color: 'var(--text2)', marginBottom: 12, lineHeight: 1.6 }}>
+                    Only one transaction on record for this holding — not enough on its own to draw a trend line.
+                    Load the fund's full NAV history to see that single entry in context instead.
+                  </div>
+                  <button
+                    onClick={onFetchNavHistory}
+                    disabled={!fund.amfiCode || navHistory?.loading}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, border: 'none',
+                      background: 'var(--g1)', color: '#fff', fontSize: '.7rem', fontWeight: 800,
+                      cursor: fund.amfiCode ? 'pointer' : 'not-allowed', fontFamily: 'Raleway, sans-serif',
+                      opacity: fund.amfiCode ? 1 : .5,
+                    }}
+                  >
+                    {navHistory?.loading ? 'Loading…' : "📉 Load fund's full NAV history"}
+                  </button>
+                  {navHistory?.error && (
+                    <div style={{ fontSize: '.65rem', color: 'var(--neg)', marginTop: 8 }}>Couldn't load NAV history — try again.</div>
+                  )}
+                </div>
+              )}
 
               <div style={{ fontSize: '.62rem', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--muted)', margin: '22px 0 10px', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'JetBrains Mono', monospace" }}>
                 What This Shows
@@ -3550,8 +3647,9 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                                 }}
                                 onMouseEnter={e => e.currentTarget.style.background = 'var(--g2)'}
                                 onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
+                                title="Plan a tax-efficient redemption for this fund"
                               >
-                                📊 Plan
+                                📊 Redemption
                               </button>
                               <button
                                 onClick={() => setTxnDrawerFund(fund)}
