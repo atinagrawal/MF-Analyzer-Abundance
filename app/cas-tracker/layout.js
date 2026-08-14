@@ -12,7 +12,7 @@ export default function CasTrackerLayout({ children }) {
     "name": "Abundance CAS Portfolio Tracker",
     "alternateName": "CAS Portfolio Tracker",
     "url": "https://mfcalc.getabundance.in/cas-tracker",
-    "description": "Parse CAMS or KFintech Consolidated Account Statements. Track all mutual fund holdings with live AMFI NAVs, FIFO capital gains, ELSS lock-in status, SIF holdings, and multi-PAN family support.",
+    "description": "Parse CAMS or KFintech Consolidated Account Statements. Track all mutual fund holdings with live AMFI NAVs, FIFO capital gains, ELSS lock-in status, SIF holdings, per-transaction NAV rate history, and multi-PAN family support.",
     "applicationCategory": "FinanceApplication",
     "applicationSubCategory": "Mutual Fund Portfolio Tracker",
     "operatingSystem": "Web Browser",
@@ -21,10 +21,12 @@ export default function CasTrackerLayout({ children }) {
     "featureList": [
       "CAMS and KFintech CAS PDF parsing",
       "Live AMFI NAV fetching",
-      "Multi-PAN family CAS support",
+      "Multi-PAN family CAS support with combined family portfolio view",
       "FIFO capital gains calculation",
       "ELSS 3-year lock-in tracking",
       "SIF (Specialised Investment Fund) holdings with live NAVs",
+      "Per-transaction NAV rate chart for every holding",
+      "PDF and Excel export of holdings",
       "Cloud-saved portfolio for registered clients",
       "Advisor and nominee extraction"
     ],
@@ -72,7 +74,7 @@ export default function CasTrackerLayout({ children }) {
       { "@type": "HowToStep", "position": 1, "name": "Download your CAS PDF", "text": "Visit camsonline.com or kfintech.com. Enter your PAN and registered email to receive a password-protected CAS PDF." },
       { "@type": "HowToStep", "position": 2, "name": "Sign in to Abundance", "text": "Sign in via Google or email magic link. Your portfolio will be saved so you never re-upload." },
       { "@type": "HowToStep", "position": 3, "name": "Upload your CAS PDF", "text": "Select the PDF and enter your PAN in ALL CAPS as the password. Click Parse & Track." },
-      { "@type": "HowToStep", "position": 4, "name": "View your live portfolio", "text": "Your full mutual fund portfolio appears with live NAVs, FIFO gains, ELSS lock-in status, and per-fund performance." }
+      { "@type": "HowToStep", "position": 4, "name": "View your live portfolio", "text": "Your full mutual fund portfolio appears with live NAVs, FIFO gains, ELSS lock-in status, and per-fund performance. Click Transactions on any holding to see a rate chart of every purchase, SIP, switch, or redemption." }
     ]
   };
 

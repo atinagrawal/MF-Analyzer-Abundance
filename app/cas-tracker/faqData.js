@@ -41,6 +41,14 @@ export const CAS_FAQ = [
     a: 'ELSS investments are locked for 3 years from each purchase date. We compute the locked value and unlocked portion for each ELSS fund separately so you know exactly what is redeemable today.',
   },
   {
+    q: 'Can I see the rate at which each of my transactions happened?',
+    a: 'Yes. Click "Transactions" on any fund card to open a chart of the NAV at every purchase, SIP instalment, switch, or redemption — alongside your average entry NAV versus today\'s NAV, and an option to overlay the fund\'s own NAV history since your first purchase.',
+  },
+  {
+    q: 'Can I export my portfolio to PDF or Excel?',
+    a: 'Yes. Use the PDF and Excel buttons above your holdings to download a printable summary or a spreadsheet of everything currently shown — respecting the Mutual Fund/SIF filter and, in combined family view, tagging each row with its owning family member.',
+  },
+  {
     q: 'Which CAS formats are supported?',
     a: 'CAMS (camsonline.com) and KFintech (kfintech.com) password-protected PDFs, plus MF Central\'s (mfcentral.com) "Detailed Report" Excel download — no password needed for the Excel format. For PDFs, enter your PAN in ALL CAPS as the password.',
   },

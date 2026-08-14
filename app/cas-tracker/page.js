@@ -1776,33 +1776,63 @@ const TXN_BADGE_STYLE = {
 // JSX nodes (not HTML strings) so nothing here ever needs dangerouslySetInnerHTML.
 function commentaryItems(rows, stats, currentNav, navHistory) {
   const fmtD = (d) => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const multi = rows.length > 1;
   const parts = [];
   if (stats.lumpCount)   parts.push(`${stats.lumpCount} lump-sum purchase${stats.lumpCount > 1 ? 's' : ''}`);
   if (stats.sipCount)    parts.push(`${stats.sipCount} SIP installment${stats.sipCount > 1 ? 's' : ''}`);
   if (stats.switchCount) parts.push(`${stats.switchCount} switch-in${stats.switchCount > 1 ? 's' : ''}`);
   if (stats.redeemCount) parts.push(`${stats.redeemCount} redemption${stats.redeemCount > 1 ? 's' : ''}`);
 
+  // Same day for every transaction (always true for exactly one) reads
+  // oddly as "between 24 Feb 2026 and 24 Feb 2026" -- collapse to "on".
+  const sameDate = rows[0].date.getTime() === rows[rows.length - 1].date.getTime();
   const items = [
-    <>{parts.join(', ')} between <b>{fmtD(rows[0].date)}</b> and <b>{fmtD(rows[rows.length - 1].date)}</b>.</>,
+    sameDate
+      ? <>{parts.join(', ')} on <b>{fmtD(rows[0].date)}</b>.</>
+      : <>{parts.join(', ')} between <b>{fmtD(rows[0].date)}</b> and <b>{fmtD(rows[rows.length - 1].date)}</b>.</>,
   ];
+
   if (Number.isFinite(currentNav) && stats.avgNav > 0) {
     const pct = (currentNav - stats.avgNav) / stats.avgNav * 100;
     items.push(
-      <>Your amount-weighted average purchase NAV is <b>₹{stats.avgNav.toFixed(2)}</b>, against a
+      <>Your {multi ? 'amount-weighted average purchase' : 'purchase'} NAV {multi ? 'is' : 'was'} <b>₹{stats.avgNav.toFixed(2)}</b>, against a
         current NAV of <b>₹{currentNav.toFixed(2)}</b> — {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%{' '}
-        {pct >= 0 ? 'above' : 'below'} your average entry.</>
+        {pct >= 0 ? 'above' : 'below'} your {multi ? 'average entry' : 'entry'}.</>
     );
   }
-  items.push(
-    <>Lowest entry: <b>₹{stats.minTxn.nav.toFixed(2)}</b> on {fmtD(stats.minTxn.date)} · Highest entry:{' '}
-      <b>₹{stats.maxTxn.nav.toFixed(2)}</b> on {fmtD(stats.maxTxn.date)}.</>
-  );
+
+  // Lowest/highest is only informative with 2+ transactions at DIFFERENT
+  // rates -- for a single transaction (or several at an identical NAV,
+  // e.g. same-day switches) it degenerates into repeating one number
+  // twice, which reads as a copy bug rather than a real range.
+  if (multi) {
+    if (stats.minTxn.nav === stats.maxTxn.nav) {
+      items.push(<>All {rows.length} transactions were at the same NAV: <b>₹{stats.minTxn.nav.toFixed(2)}</b>.</>);
+    } else {
+      items.push(
+        <>Lowest entry: <b>₹{stats.minTxn.nav.toFixed(2)}</b> on {fmtD(stats.minTxn.date)} · Highest entry:{' '}
+          <b>₹{stats.maxTxn.nav.toFixed(2)}</b> on {fmtD(stats.maxTxn.date)}.</>
+      );
+    }
+  }
+
   if (navHistory?.points?.length) {
     const histNavs = navHistory.points.map(p => p.nav);
     const histMin = Math.min(...histNavs), histMax = Math.max(...histNavs);
+    const rangeWidth = histMax - histMin;
+    const describePosition = (nav) => {
+      if (rangeWidth <= 0) return 'the only rate in that window';
+      const frac = (nav - histMin) / rangeWidth;
+      if (frac <= 0.15) return 'near the low end of that range';
+      if (frac >= 0.85) return 'near the high end of that range';
+      return 'roughly mid-range';
+    };
     items.push(
-      <>Across the fund's full NAV history (<b>₹{histMin.toFixed(2)}</b>–<b>₹{histMax.toFixed(2)}</b>),
-        your entries ranged <b>₹{stats.minTxn.nav.toFixed(2)}</b>–<b>₹{stats.maxTxn.nav.toFixed(2)}</b>.</>
+      multi
+        ? <>Across the fund's NAV history since your first purchase (<b>₹{histMin.toFixed(2)}</b>–<b>₹{histMax.toFixed(2)}</b>),
+            your entries ranged <b>₹{stats.minTxn.nav.toFixed(2)}</b>–<b>₹{stats.maxTxn.nav.toFixed(2)}</b>, averaging {describePosition(stats.avgNav)}.</>
+        : <>Across the fund's NAV history since your purchase (<b>₹{histMin.toFixed(2)}</b>–<b>₹{histMax.toFixed(2)}</b>),
+            your entry at <b>₹{stats.minTxn.nav.toFixed(2)}</b> sits {describePosition(stats.minTxn.nav)}.</>
     );
   }
   return items;
@@ -2079,6 +2109,9 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
                       >
                         {navHistory?.loading ? 'Loading…' : '📉 Overlay NAV history since your first purchase'}
                       </button>
+                      {!fund.amfiCode && (
+                        <div style={{ fontSize: '.65rem', color: 'var(--muted)', marginTop: 6 }}>AMFI scheme code not available for this fund — can't fetch its NAV history.</div>
+                      )}
                       {navHistory?.error && (
                         <div style={{ fontSize: '.65rem', color: 'var(--neg)', marginTop: 6 }}>Couldn't load NAV history — try again.</div>
                       )}
@@ -2103,6 +2136,9 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
                   >
                     {navHistory?.loading ? 'Loading…' : '📉 Load NAV history since your purchase'}
                   </button>
+                  {!fund.amfiCode && (
+                    <div style={{ fontSize: '.65rem', color: 'var(--muted)', marginTop: 8 }}>AMFI scheme code not available for this fund — can't fetch its NAV history.</div>
+                  )}
                   {navHistory?.error && (
                     <div style={{ fontSize: '.65rem', color: 'var(--neg)', marginTop: 8 }}>Couldn't load NAV history — try again.</div>
                   )}
