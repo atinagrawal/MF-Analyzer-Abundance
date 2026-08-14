@@ -55,6 +55,50 @@ function getFileKey(file) {
   return CACHE_PREFIX + [file.name, file.size, file.lastModified].join('|');
 }
 
+// Shared by the fund-grid render and the PDF/Excel export functions, so both
+// always see the exact same holdings list -- normalises manual holdings into
+// the same shape as CAS holdings and tags each with a stable id.
+function buildAllHoldings(currentInfo, manualHoldings, sifNavMap, activePan) {
+  const manualMapped = manualHoldings.map(h => {
+    const pu = parseFloat(h.purchase_nav);
+    const u  = parseFloat(h.units);
+    const ln = h.fund_type === 'SIF' ? (sifNavMap[h.amfi_code] ?? null) : null;
+    const val = (ln ?? pu) * u;
+    return {
+      id:            `manual-${h.id}`,
+      name:          h.fund_name,
+      folio:         h.folio || null,
+      units:         u,
+      liveNav:       ln ?? pu,
+      isLive:        ln != null,
+      invested:      pu * u,
+      value:         val,
+      avgPurchaseNav:pu,
+      isELSS:        false,
+      lockedValue:   0,
+      nominee:       null,
+      advisor:       null,
+      notes:         h.notes || null,
+      xirr:          manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: val }),
+      xirrFlows:     manualHoldingCashFlows({ purchaseDate: h.purchase_date, invested: pu * u }),
+      source:        'manual',
+      fund_type:     h.fund_type,
+    };
+  });
+
+  const casHoldings = (currentInfo.holdings || []).map(h => ({
+    ...h, source: 'cas', fund_type: 'Mutual Fund',
+    // h.__ownerPan is only present in family view (mergeFamilyView tags it)
+    // -- falls back to activePan in the normal single-PAN view. Using
+    // activePan unconditionally here would collide two different family
+    // members' ids for the same fund in family view, since a plain
+    // checkbox/redemption selection is keyed by this id.
+    id: `cas-${h.__ownerPan || activePan}-${h.folio || ''}-${h.amfiCode || h.name}`,
+  }));
+
+  return [...casHoldings, ...manualMapped];
+}
+
 function readCache(file) {
   if (typeof window === 'undefined') return null;
   try {
@@ -1683,6 +1727,7 @@ function CasTrackerInner() {
   const [portfolioDataByPan, setPortfolioDataByPan] = useState({});
   const [activePan, setActivePan] = useState('');
   const [familyPans, setFamilyPans] = useState([]);  // 2+ PANs checked together = combined family view
+  const [tabSearch, setTabSearch] = useState('');    // filters the tab list for large families -- doesn't affect familyPans selection
   const [fromCache, setFromCache] = useState(false);
   const [editingPan, setEditingPan] = useState('');   // PAN currently being renamed, or ''
   const [editingName, setEditingName] = useState('');
@@ -2233,6 +2278,131 @@ function CasTrackerInner() {
     setSelectedIsXlsx(false);
   }
 
+  // Shared by both export functions: same holdings the fund grid is
+  // currently showing (respects the All/MF/SIF filter and family view).
+  function getExportRows() {
+    const allHoldings = buildAllHoldings(currentInfo, manualHoldings, sifNavMap, activePan);
+    return viewFilter === 'sif' ? allHoldings.filter(h => h.fund_type === 'SIF')
+         : viewFilter === 'mf'  ? allHoldings.filter(h => h.fund_type !== 'SIF')
+         : allHoldings;
+  }
+
+  // xlsx is only ever needed here, on an explicit user click -- dynamic
+  // import keeps SheetJS's full parser (large; already a dependency for
+  // server-side MF Central report parsing) out of this page's normal JS
+  // bundle and code-splits it into its own chunk.
+  async function exportExcel() {
+    const rows = getExportRows();
+    if (!rows.length) return;
+    const XLSX = await import('xlsx');
+    const sheetRows = rows.map(fund => {
+      const gain = fund.value - fund.invested;
+      const gainPct = fund.invested > 0 ? (gain / fund.invested) * 100 : 0;
+      return {
+        ...(isFamilyView ? { Member: fund.__ownerName || '' } : {}),
+        Fund: fund.name,
+        Type: fund.fund_type === 'SIF' ? 'SIF' : (fund.source === 'manual' ? fund.fund_type : 'Mutual Fund'),
+        Folio: fund.folio || '',
+        Units: fund.units ? Number(fund.units.toFixed(3)) : 0,
+        'Avg NAV': fund.avgPurchaseNav ? Number(fund.avgPurchaseNav.toFixed(4)) : 0,
+        'Current NAV': fund.liveNav ? Number(fund.liveNav.toFixed(4)) : 0,
+        'Invested (Rs)': Math.round(fund.invested),
+        'Current Value (Rs)': Math.round(fund.value),
+        'Gain (Rs)': Math.round(gain),
+        'Gain %': Number(gainPct.toFixed(2)),
+        'XIRR %': Number.isFinite(fund.xirr) ? Number((fund.xirr * 100).toFixed(2)) : '',
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(sheetRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Holdings');
+    const safeName = (currentInfo.investorName || 'Portfolio').replace(/[^A-Za-z0-9]+/g, '-').slice(0, 40);
+    XLSX.writeFile(wb, `${safeName}-holdings-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  // Branded print window, same pattern as app/backtest/page.js's doExport --
+  // an isolated window with its own inline stylesheet prints/saves-as-PDF
+  // cleanly without fighting this page's own @media print rules (which are
+  // scoped to the Redemption Planner's fixed-position modal only).
+  function exportPdf() {
+    const rows = getExportRows();
+    if (!rows.length) return;
+    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const totalInvested = rows.reduce((s, f) => s + (f.invested || 0), 0);
+    const totalValue    = rows.reduce((s, f) => s + (f.value || 0), 0);
+    const totalGain     = totalValue - totalInvested;
+    const totalGainPct  = totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0;
+    const kpi = (l, v) => `<div class="banner-cell"><div class="banner-lbl">${l}</div><div class="banner-val">${v}</div></div>`;
+    const banner = [
+      kpi('Invested', '₹' + fmtINR(totalInvested)),
+      kpi('Current Value', '₹' + fmtINR(totalValue)),
+      kpi('Gain', (totalGain >= 0 ? '+₹' : '−₹') + fmtINR(Math.abs(totalGain))),
+      kpi('Gain %', (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + '%'),
+    ].join('');
+    const rowsHTML = rows.map(fund => {
+      const gain = fund.value - fund.invested;
+      const gainPct = fund.invested > 0 ? (gain / fund.invested) * 100 : 0;
+      return `<tr>
+        <td style="text-align:left">${esc(fund.name)}</td>
+        ${isFamilyView ? `<td style="text-align:left">${esc(fund.__ownerName || '')}</td>` : ''}
+        <td style="text-align:left">${esc(fund.folio || '—')}</td>
+        <td>₹${fmtINR(fund.invested)}</td>
+        <td>₹${fmtINR(fund.value)}</td>
+        <td class="${gain >= 0 ? 'pos' : 'neg'}">${gain >= 0 ? '+' : ''}${gainPct.toFixed(1)}%</td>
+        <td>${Number.isFinite(fund.xirr) ? (fund.xirr * 100).toFixed(1) + '%' : '—'}</td>
+      </tr>`;
+    }).join('');
+
+    const win = window.open('', '_blank', 'width=960,height=760');
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>${esc(currentInfo.investorName)} Portfolio | Abundance Financial Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px 36px}
+.ph{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:2.5px solid #2e7d32;margin-bottom:18px}
+.pt{font-size:1.05rem;font-weight:800;color:#2e7d32}.pa{font-size:.6rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:2px}
+.logo{height:44px;object-fit:contain;mix-blend-mode:multiply}
+.sec{font-size:.56rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#5e8a5e;margin:16px 0 8px;display:flex;align-items:center;gap:7px}
+.sec::after{content:"";flex:1;height:1px;background:#c2dfc2}
+.banner-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.banner-cell{background:#edf6ed;border:1.5px solid #c2dfc2;border-radius:8px;padding:10px 12px;text-align:center}
+.banner-lbl{font-size:.52rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#5e8a5e;margin-bottom:3px}
+.banner-val{font-family:"JetBrains Mono",monospace;font-size:.9rem;font-weight:700;color:#1b5e20}
+.risk-table{width:100%;border-collapse:collapse;font-size:.62rem}
+.risk-table th{background:#1e4d20;color:#fff;font-size:.58rem;font-weight:700;letter-spacing:.5px;padding:6px 8px;text-align:right}
+.risk-table th:first-child,.risk-table th:nth-child(2){text-align:left}
+.risk-table td{padding:5px 8px;border-bottom:1px solid #e8f5e9;text-align:right;font-family:"JetBrains Mono",monospace;font-size:.65rem;font-weight:600}
+.risk-table td:first-child{text-align:left;font-family:"Raleway",sans-serif;font-weight:700;max-width:200px}
+.risk-table tr:nth-child(even) td{background:#f5fbf5}
+.pos{color:#1b5e20}.neg{color:#b71c1c}
+.meta{font-size:.55rem;color:#5e8a5e;font-family:"JetBrains Mono",monospace;margin-top:6px}
+.dis{padding:9px 13px;border-radius:7px;background:#fffde7;border-left:3px solid #f9a825;font-size:.6rem;color:#5d4037;line-height:1.65;font-family:"JetBrains Mono",monospace;margin-top:14px}
+@media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}
+</style></head><body>
+<div class="ph">
+  <div><div class="pt">${esc(currentInfo.investorName)}'s Portfolio — ${rows.length} Holding${rows.length > 1 ? 's' : ''}</div>
+  <div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds &amp; SIF Distributor</div></div>
+  <img class="logo" src="/logo-og.png" onerror="this.style.display='none'">
+</div>
+<div class="sec">At a Glance</div>
+<div class="banner-grid">${banner}</div>
+<div class="sec">Holdings</div>
+<table class="risk-table"><thead><tr>
+  <th style="text-align:left">Fund</th>
+  ${isFamilyView ? '<th style="text-align:left">Member</th>' : ''}
+  <th style="text-align:left">Folio</th>
+  <th>Invested</th><th>Value</th><th>Gain</th><th>XIRR</th>
+</tr></thead><tbody>${rowsHTML}</tbody></table>
+<div class="meta">Generated ${esc(new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }))} · mfcalc.getabundance.in/cas-tracker</div>
+<div class="dis">⚠️ <strong style="color:#e65100">Disclaimer:</strong> Figures computed from your uploaded CAS using FIFO accounting and live NAVs; for informational purposes only, not investment advice. Mutual fund investments are subject to market risks; read all scheme-related documents carefully. | ARN-251838 | Abundance Financial Services</div>
+</body></html>`);
+    win.document.close();
+    win.onload = () => setTimeout(() => { win.focus(); win.print(); }, 600);
+    setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} }, 1400);
+  }
+
   // Redemption-selection checkboxes are scoped to whichever PAN is active —
   // clear them whenever the active PAN changes (new upload, switching tabs,
   // loading a saved portfolio) so a stale fund from a different investor's
@@ -2585,6 +2755,12 @@ function CasTrackerInner() {
                 >
                   📊 Redemption Planner
                 </button>
+                <button onClick={exportPdf} className="new-upload-btn" title="Open a printable summary in a new tab (use your browser's Print → Save as PDF)">
+                  ⤓ PDF
+                </button>
+                <button onClick={exportExcel} className="new-upload-btn" title="Download holdings as an Excel spreadsheet">
+                  ⊞ Excel
+                </button>
                 <button onClick={handleNewUpload} className="new-upload-btn">
                   ↑ New Upload
                 </button>
@@ -2627,15 +2803,38 @@ function CasTrackerInner() {
               </div>
             )}
 
-            {panKeys.filter(p => p !== '__manual__').length > 1 && (
+            {(() => {
+              const realPanKeys = panKeys.filter(p => p !== '__manual__');
+              if (realPanKeys.length <= 1) return null;
+              const q = tabSearch.trim().toLowerCase();
+              const visiblePanKeys = q
+                ? realPanKeys.filter(pan =>
+                    pan.toLowerCase().includes(q) ||
+                    (portfolioDataByPan[pan]?.investorName || '').toLowerCase().includes(q)
+                  )
+                : realPanKeys;
+
+              return (
+              <>
+              {realPanKeys.length > 5 && (
+                <input
+                  type="text"
+                  value={tabSearch}
+                  onChange={e => setTabSearch(e.target.value)}
+                  placeholder={`Search ${realPanKeys.length} family members by name or PAN…`}
+                  style={{
+                    display: 'block', width: '100%', maxWidth: 320, marginBottom: 10,
+                    padding: '7px 12px', borderRadius: 8, border: '1.5px solid var(--border)',
+                    fontFamily: 'Raleway, sans-serif', fontSize: '.72rem', outline: 'none',
+                  }}
+                />
+              )}
               <div className="pan-tabs" style={{ alignItems: 'center' }}>
                 <button
                   className={`pan-tab ${isFamilyView ? 'active' : ''}`}
                   title="Combine every family member's holdings into one pooled view (redemption planning is disabled in this mode, since capital gains are per-investor)"
                   onClick={() => setFamilyPans(prev =>
-                    prev.length === panKeys.filter(p => p !== '__manual__').length
-                      ? []
-                      : panKeys.filter(p => p !== '__manual__')
+                    prev.length === realPanKeys.length ? [] : realPanKeys
                   )}
                 >
                   <span>👨‍👩‍👧‍👦 All Family</span>
@@ -2649,7 +2848,12 @@ function CasTrackerInner() {
                     ✕
                   </button>
                 )}
-                {panKeys.filter(p => p !== '__manual__').map(pan => {
+                {visiblePanKeys.length === 0 && (
+                  <span style={{ fontSize: '.72rem', color: 'var(--muted)', padding: '10px 4px' }}>
+                    No family members match "{tabSearch}"
+                  </span>
+                )}
+                {visiblePanKeys.map(pan => {
                   const info = portfolioDataByPan[pan];
                   const firstName = info.investorName.split(' ')[0];
                   const hasRealName = PAN_REGEX.test(pan) && !isPanLike(info.investorName) && info.investorName !== 'Unknown Investor' && !info.investorName.startsWith('Investor (');
@@ -2720,7 +2924,9 @@ function CasTrackerInner() {
                   );
                 })}
               </div>
-            )}
+              </>
+              );
+            })()}
             {defaultPanError && (
               <div style={{ fontSize: '.7rem', fontWeight: 700, color: '#c62828', margin: '-8px 0 12px' }}>
                 ⚠ {defaultPanError}
@@ -2811,48 +3017,7 @@ function CasTrackerInner() {
 
             {/* ── Unified fund grid: CAS + manual holdings ── */}
             {(() => {
-              // Normalise manual holdings into the same shape as CAS holdings
-              const manualMapped = manualHoldings.map(h => {
-                const pu = parseFloat(h.purchase_nav);
-                const u  = parseFloat(h.units);
-                const ln = h.fund_type === 'SIF' ? (sifNavMap[h.amfi_code] ?? null) : null;
-                const val = (ln ?? pu) * u;
-                return {
-                  id:            `manual-${h.id}`,
-                  // shared display fields
-                  name:          h.fund_name,
-                  folio:         h.folio || null,
-                  units:         u,
-                  liveNav:       ln ?? pu,
-                  isLive:        ln != null,
-                  invested:      pu * u,
-                  value:         val,
-                  avgPurchaseNav:pu,
-                  isELSS:        false,
-                  lockedValue:   0,
-                  nominee:       null,
-                  advisor:       null,
-                  notes:         h.notes || null,
-                  xirr:          manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: val }),
-                  xirrFlows:     manualHoldingCashFlows({ purchaseDate: h.purchase_date, invested: pu * u }),
-                  // classification
-                  source:        'manual',
-                  fund_type:     h.fund_type,
-                };
-              });
-
-              const casHoldings = (currentInfo.holdings || []).map(h => ({
-                ...h, source: 'cas', fund_type: 'Mutual Fund',
-                // h.__ownerPan is only present in family view (mergeFamilyView
-                // tags it) -- falls back to activePan in the normal single-PAN
-                // view. Using activePan unconditionally here would collide two
-                // different family members' ids for the same fund in family
-                // view, since a plain checkbox/redemption selection is keyed
-                // by this id.
-                id: `cas-${h.__ownerPan || activePan}-${h.folio || ''}-${h.amfiCode || h.name}`,
-              }));
-
-              const allHoldings = [...casHoldings, ...manualMapped];
+              const allHoldings = buildAllHoldings(currentInfo, manualHoldings, sifNavMap, activePan);
               const filtered    = viewFilter === 'sif' ? allHoldings.filter(h => h.fund_type === 'SIF')
                                 : viewFilter === 'mf'  ? allHoldings.filter(h => h.fund_type !== 'SIF')
                                 : allHoldings;
