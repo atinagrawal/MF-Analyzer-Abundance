@@ -177,7 +177,14 @@ function calculateFifoCost(scheme, currentNav) {
         units: txnUnits,
         amount: amount,
         nav: amount / txnUnits,
-        date: new Date(txn.date)
+        date: new Date(txn.date),
+        // "Transmission" only ever shows up in the free-text description
+        // (casparser gives it no distinct type) -- these units came in via
+        // inheritance/transmission from another folio, so this lot's
+        // nav/date is when the transmission was recorded, not the original
+        // holder's actual acquisition cost/date. Flagged for the
+        // Redemption Planner's FIFO breakdown (see isTransmissionTxn).
+        isTransmission: isTransmissionTxn(txn.description),
       });
     } else if (/REDEMPTION|SWITCH.?OUT/.test(type)) {
       let rem = Math.abs(txnUnits);
@@ -654,6 +661,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
         net:          fundNet,
         lotBreakdown,
         hasSynthetic: (fund.buyLots || []).some(l => l.synthetic),
+        hasTransmission: (fund.buyLots || []).some(l => l.isTransmission),
       });
 
       totalProceeds += fundProceeds;
@@ -727,6 +735,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
           name: fund.name, isin: fund.isin, category: cat, isELSS, units: 0, maxRedeemable,
           proceeds: 0, exitLoad: 0, exitLoadRate: 0, stcg: 0, ltcg: 0, tax: 0, net: 0,
           lotBreakdown: [], hasSynthetic: lots.some(l => l.synthetic),
+          hasTransmission: lots.some(l => l.isTransmission),
           locked: maxRedeemable < 0.0001,
         });
         continue;
@@ -784,7 +793,8 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
         proceeds: fundProceeds, exitLoad: fundExitLoad,
         exitLoadRate: getEffectiveExitLoadRate(fund, exitLoadOverrides, masterFacts),
         stcg: fundSTCG, ltcg: fundLTCG, stcgTax: fundStcgTax, ltcgTax: fundLtcgTax, tax: fundTax, net: fundNet,
-        lotBreakdown, hasSynthetic: lots.some(l => l.synthetic), locked: false,
+        lotBreakdown, hasSynthetic: lots.some(l => l.synthetic),
+        hasTransmission: lots.some(l => l.isTransmission), locked: false,
       });
 
       totalProceeds += fundProceeds;
@@ -1035,6 +1045,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
                             })()}
                             {row.isELSS      && <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: '#fff8e1', color: '#f57f17', border: '1px solid #ffe082', fontFamily: "'JetBrains Mono', monospace" }}>ELSS</span>}
                             {row.hasSynthetic && <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)', fontFamily: "'JetBrains Mono', monospace" }}>SUM CAS</span>}
+                            {row.hasTransmission && <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: '#fff8e1', color: '#f57f17', border: '1px solid #ffe082', fontFamily: "'JetBrains Mono', monospace" }} title="Includes transmitted units -- cost/date may not reflect the original holder's actual acquisition">TRANSMITTED</span>}
                           </div>
                           </div>
                         </div>
@@ -1468,6 +1479,7 @@ function RedemptionPlanner({ fund, onClose }) {
         isLTCG,
         heldDays,
         isGrandfathered,
+        isTransmission: !!lot.isTransmission,
       });
     }
 
@@ -1646,7 +1658,14 @@ function RedemptionPlanner({ fund, onClose }) {
                   <tbody>
                     {result.lotRows.map((row, i) => (
                       <tr key={i} style={{ borderBottom: i < result.lotRows.length-1 ? '1px solid var(--border)' : 'none' }}>
-                        <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>{row.date}</td>
+                        <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>
+                          {row.date}
+                          {row.isTransmission && (
+                            <div style={{ fontSize: '.48rem', color: 'var(--warn)', fontWeight: 800 }} title="Transmitted in from another folio -- cost/date may not reflect the original holder's actual acquisition">
+                              Transmitted
+                            </div>
+                          )}
+                        </td>
                         <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace", textAlign: 'right' }}>{fmtD(row.units)}</td>
                         <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace" }}>
                           ₹{row.buyNav.toFixed(4)}
@@ -1669,6 +1688,24 @@ function RedemptionPlanner({ fund, onClose }) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {result?.lotRows.some(r => r.isTransmission) && (
+            <div style={{
+              marginBottom: 16, padding: '10px 14px',
+              background: '#fff8e1', border: '1.5px solid #ffe082',
+              borderRadius: 10, fontSize: '.7rem', lineHeight: 1.6,
+            }}>
+              <strong style={{ color: '#f57f17' }}>⚠ Includes transmitted units</strong>
+              <div style={{ color: '#795548', marginTop: 3 }}>
+                One or more lots above (marked "Transmitted") came in via unit transmission from
+                another folio, typically inheritance. Their cost and date shown are when the
+                transmission was recorded — Indian tax law generally carries over the original
+                holder's actual acquisition cost and date for these units, which this CAS can't
+                show us (that history lives in the original holder's own folio). The gain and tax
+                figures below may not match what's actually owed for these specific units.
               </div>
             </div>
           )}
@@ -1749,8 +1786,23 @@ function RedemptionPlanner({ fund, onClose }) {
 // fetches lazily (see fetchNavHistory in CasTrackerInner) only when the
 // user explicitly asks for it.
 
-const TXN_BUY_RE  = /PURCHASE|SIP|SWITCH.?IN|REINVEST/;
+const TXN_BUY_RE  = /PURCHASE|SIP|SWITCH.?IN|REINVEST|TRANSMISSION/;
 const TXN_SELL_RE = /REDEMPTION|SWITCH.?OUT/;
+
+// casparser never gives transmission (units inherited/transmitted in from
+// another folio, typically on the original holder's death) its own
+// transaction type -- it's folded into plain PURCHASE/PURCHASE_SIP, with
+// "Transmission" only appearing in the free-text description (e.g.
+// "Purchase Transmission In From F. No. 409199590893 On 17/02/2025").
+// Detecting it here lets the UI label these distinctly and flag that their
+// cost basis is the transmission-date rate, not the original holder's
+// actual acquisition cost/date (which Section 49 says should carry over
+// for capital-gains purposes, but which isn't visible from this CAS at all
+// -- it lived in the deceased holder's own folio).
+const TRANSMISSION_RE = /transmission/i;
+function isTransmissionTxn(description) {
+  return TRANSMISSION_RE.test(description || '');
+}
 
 // Earliest date among a fund's real (financial) transactions, or null if
 // there are none. Shared by the NAV-history fetch and its cache key below
@@ -1777,19 +1829,21 @@ function navHistoryCacheKey(fund) {
 }
 
 const TXN_TYPE_META = {
-  PURCHASE:     { label: 'Purchase',   color: 'var(--g2)',   cls: 'buy' },
-  PURCHASE_SIP: { label: 'SIP',        color: 'var(--g3)',   cls: 'buy' },
-  SWITCH_IN:    { label: 'Switch In',  color: 'var(--warn)', cls: 'switch' },
-  REDEMPTION:   { label: 'Redemption', color: 'var(--neg)',  cls: 'sell' },
-  SWITCH_OUT:   { label: 'Switch Out', color: 'var(--neg)',  cls: 'sell' },
+  PURCHASE:        { label: 'Purchase',        color: 'var(--g2)',   cls: 'buy' },
+  PURCHASE_SIP:    { label: 'SIP',             color: 'var(--g3)',   cls: 'buy' },
+  SWITCH_IN:       { label: 'Switch In',       color: 'var(--warn)', cls: 'switch' },
+  TRANSMISSION_IN: { label: 'Transmission In', color: 'var(--muted)', cls: 'transmission' },
+  REDEMPTION:      { label: 'Redemption',      color: 'var(--neg)',  cls: 'sell' },
+  SWITCH_OUT:      { label: 'Switch Out',      color: 'var(--neg)',  cls: 'sell' },
 };
 function txnMeta(type) {
   return TXN_TYPE_META[type] || { label: type, color: 'var(--g2)', cls: 'buy' };
 }
 const TXN_BADGE_STYLE = {
-  buy:    { bg: 'var(--g-xlight)', fg: 'var(--g1)' },
-  sell:   { bg: 'var(--neg-bg)',   fg: 'var(--neg)' },
-  switch: { bg: 'var(--warn-bg)',  fg: 'var(--warn)' },
+  buy:          { bg: 'var(--g-xlight)', fg: 'var(--g1)' },
+  sell:         { bg: 'var(--neg-bg)',   fg: 'var(--neg)' },
+  switch:       { bg: 'var(--warn-bg)',  fg: 'var(--warn)' },
+  transmission: { bg: 'var(--s2)',       fg: 'var(--muted)' },
 };
 
 // Plain, factual observations only -- no "you should" language. Returns
@@ -1798,10 +1852,11 @@ function commentaryItems(rows, stats, currentNav, navHistory) {
   const fmtD = (d) => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   const multi = rows.length > 1;
   const parts = [];
-  if (stats.lumpCount)   parts.push(`${stats.lumpCount} lump-sum purchase${stats.lumpCount > 1 ? 's' : ''}`);
-  if (stats.sipCount)    parts.push(`${stats.sipCount} SIP installment${stats.sipCount > 1 ? 's' : ''}`);
-  if (stats.switchCount) parts.push(`${stats.switchCount} switch-in${stats.switchCount > 1 ? 's' : ''}`);
-  if (stats.redeemCount) parts.push(`${stats.redeemCount} redemption${stats.redeemCount > 1 ? 's' : ''}`);
+  if (stats.lumpCount)        parts.push(`${stats.lumpCount} lump-sum purchase${stats.lumpCount > 1 ? 's' : ''}`);
+  if (stats.sipCount)         parts.push(`${stats.sipCount} SIP installment${stats.sipCount > 1 ? 's' : ''}`);
+  if (stats.switchCount)      parts.push(`${stats.switchCount} switch-in${stats.switchCount > 1 ? 's' : ''}`);
+  if (stats.transmissionCount) parts.push(`${stats.transmissionCount} transmission${stats.transmissionCount > 1 ? 's' : ''} in`);
+  if (stats.redeemCount)      parts.push(`${stats.redeemCount} redemption${stats.redeemCount > 1 ? 's' : ''}`);
 
   // Same day for every transaction (always true for exactly one) reads
   // oddly as "between 24 Feb 2026 and 24 Feb 2026" -- collapse to "on".
@@ -1818,6 +1873,21 @@ function commentaryItems(rows, stats, currentNav, navHistory) {
       <>Your {multi ? 'amount-weighted average purchase' : 'purchase'} NAV {multi ? 'is' : 'was'} <b>₹{stats.avgNav.toFixed(2)}</b>, against a
         current NAV of <b>₹{currentNav.toFixed(2)}</b> — {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%{' '}
         {pct >= 0 ? 'above' : 'below'} your {multi ? 'average entry' : 'entry'}.</>
+    );
+  }
+
+  // Transmitted units carry the transmission-date rate here, not the
+  // original holder's actual acquisition cost/date -- which Indian tax law
+  // (Sec. 49) says should carry over for capital gains, but which this CAS
+  // has no visibility into (it lived in the deceased holder's own folio).
+  // Flagged wherever a gain/NAV figure could be read as that holder's true
+  // cost -- this bullet, and the Redemption Planner's lot breakdown.
+  if (stats.transmissionCount > 0) {
+    items.push(
+      <><b>{stats.transmissionCount}</b> of these {stats.transmissionCount > 1 ? 'transactions are' : 'transaction is'} unit{' '}
+        transmission{stats.transmissionCount > 1 ? 's' : ''} in (typically inherited from another folio), not fresh purchases —
+        the rate and date shown {stats.transmissionCount > 1 ? 'are' : 'is'} when the transmission was recorded, not the original
+        holder's actual acquisition cost or date, which may matter for capital gains.</>
     );
   }
 
@@ -1878,13 +1948,21 @@ function LegendLine({ color, label, dashed = true }) {
 function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose }) {
   const rows = useMemo(() => {
     return (fund.transactions || [])
-      .map(t => ({
-        date: new Date(t.date),
-        type: (t.type || '').toUpperCase(),
-        amount: parseFloat(t.amount) || 0,
-        units: parseFloat(t.units) || 0,
-        nav: parseFloat(t.nav) || 0,
-      }))
+      .map(t => {
+        const rawType = (t.type || '').toUpperCase();
+        // casparser reports transmission-in as plain PURCHASE/PURCHASE_SIP --
+        // only the free-text description says "Transmission" -- so relabel
+        // it here for display while still counting as a buy everywhere else
+        // (TXN_BUY_RE matches TRANSMISSION_IN too).
+        const type = isTransmissionTxn(t.description) && TXN_BUY_RE.test(rawType) ? 'TRANSMISSION_IN' : rawType;
+        return {
+          date: new Date(t.date),
+          type,
+          amount: parseFloat(t.amount) || 0,
+          units: parseFloat(t.units) || 0,
+          nav: parseFloat(t.nav) || 0,
+        };
+      })
       // Non-financial CAS rows (stamp duty, etc.) report null units/nav --
       // there's no "rate" to plot for those, so they're dropped entirely.
       .filter(t => t.nav > 0 && t.units !== 0 && !isNaN(t.date.getTime()) && (TXN_BUY_RE.test(t.type) || TXN_SELL_RE.test(t.type)))
@@ -1903,10 +1981,11 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
       avgNav: totalBuyUnits > 0 ? totalBuyAmount / totalBuyUnits : 0,
       minTxn: rows.reduce((a, b) => (b.nav < a.nav ? b : a)),
       maxTxn: rows.reduce((a, b) => (b.nav > a.nav ? b : a)),
-      sipCount:    rows.filter(t => /SIP/.test(t.type)).length,
-      lumpCount:   rows.filter(t => t.type === 'PURCHASE').length,
-      switchCount: rows.filter(t => /SWITCH.?IN/.test(t.type)).length,
-      redeemCount: rows.filter(t => TXN_SELL_RE.test(t.type)).length,
+      sipCount:         rows.filter(t => t.type === 'PURCHASE_SIP').length,
+      lumpCount:        rows.filter(t => t.type === 'PURCHASE').length,
+      switchCount:      rows.filter(t => t.type === 'SWITCH_IN').length,
+      transmissionCount: rows.filter(t => t.type === 'TRANSMISSION_IN').length,
+      redeemCount:      rows.filter(t => TXN_SELL_RE.test(t.type)).length,
     };
   }, [rows, hasHistory]);
 
@@ -2009,6 +2088,9 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
           }
           if (meta.cls === 'switch') {
             return <polygon key={i} points={`${cx - 5},${cy + 4} ${cx + 5},${cy + 4} ${cx},${cy - 5}`} fill={meta.color}><title>{title}</title></polygon>;
+          }
+          if (meta.cls === 'transmission') {
+            return <rect key={i} x={cx - 3.5} y={cy - 3.5} width={7} height={7} fill={meta.color}><title>{title}</title></rect>;
           }
           return <circle key={i} cx={cx} cy={cy} r={t.type === 'PURCHASE' ? 5 : 3.5} fill={meta.color}><title>{title}</title></circle>;
         })}
@@ -2115,6 +2197,7 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
                     <LegendDot color="var(--g2)" label="Purchase / SIP" />
                     <LegendDot color="var(--neg)" label="Redemption" />
                     <LegendDot color="var(--warn)" label="Switch-in" />
+                    {stats.transmissionCount > 0 && <LegendDot color="var(--muted)" label="Transmission In" />}
                     <LegendLine color="var(--g1)" label="Your avg. purchase NAV" />
                     <LegendLine color="var(--muted)" label="Current NAV" dashed={false} />
                     {hasHistPoints && <LegendLine color="var(--border2)" label="Fund's NAV since your first purchase" />}
