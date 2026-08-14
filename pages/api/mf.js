@@ -25,6 +25,12 @@
  *   /api/mf?q=hdfc           → search by name
  *   /api/mf?code=125497      → full NAV history
  *   /api/mf?code=125497&latest=1 → latest NAV only
+ *   /api/mf?codes=125497,119551&latest=1 → latest NAV for many codes in one
+ *     round trip -- same mfapi.in-then-AMFI resolution as the single-code
+ *     path above, just fanned out server-side instead of once per code from
+ *     the browser. Response shape is deliberately different from the
+ *     single-code path ({ navs: { code: nav } } vs { meta, data: [...] } )
+ *     since callers here only ever want the number, not scheme metadata.
  */
 
 import { r2Get } from '../../lib/r2';
@@ -236,10 +242,47 @@ export default async function handler(req, res) {
   const url    = new URL(req.url, 'https://x');
   const q      = url.searchParams.get('q');
   const code   = url.searchParams.get('code');
+  const codes  = url.searchParams.get('codes');
   const latest = url.searchParams.get('latest');
 
-  if (q === null && !code) {
-    return sendError(res, 400, 'Provide ?q= for search or ?code= for NAV data', 'BAD_REQUEST');
+  if (q === null && !code && !codes) {
+    return sendError(res, 400, 'Provide ?q= for search, ?code= for NAV data, or ?codes= for batch latest NAV', 'BAD_REQUEST');
+  }
+
+  // ── BATCH LATEST NAV (?codes=A,B,C&latest=1) ──
+  if (codes) {
+    if (!latest) {
+      return sendError(res, 400, '?codes= currently only supports &latest=1 (batch full-history fetch is not supported)', 'BAD_REQUEST');
+    }
+    const uniqueCodes = [...new Set(codes.split(',').map(c => c.trim()).filter(Boolean))];
+    if (!uniqueCodes.length) {
+      return sendError(res, 400, '?codes= must contain at least one scheme code', 'BAD_REQUEST');
+    }
+
+    const navs = {};
+    await Promise.allSettled(uniqueCodes.map(async (c) => {
+      try {
+        const r = await fetch(
+          `https://api.mfapi.in/mf/${c}/latest`,
+          { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(4000) }
+        );
+        if (r.ok) {
+          const data = await r.json();
+          if (data?.data?.length) {
+            navs[c] = data.data[0].nav;
+            return;
+          }
+        }
+      } catch (_) { /* fall through to AMFI */ }
+
+      try {
+        const amfi = await getAmfiMap();
+        const fund = amfi.get(String(c));
+        if (fund) navs[c] = fund.nav;
+      } catch (_) { /* leave unresolved -- caller falls back to CAS-reported NAV */ }
+    }));
+
+    return sendOk(res, { status: 'SUCCESS', navs }, 's-maxage=3600, stale-while-revalidate=7200');
   }
 
   // ── SEARCH ──

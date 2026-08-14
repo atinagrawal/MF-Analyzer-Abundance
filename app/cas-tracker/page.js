@@ -2019,24 +2019,26 @@ function CasTrackerInner() {
       allHoldings.map(({ h }) => h.scheme.amfi).filter(Boolean)
     )];
 
-    // 2. Fetch all unique NAVs concurrently. allSettled so one failure
-    //    doesn't abort the rest. Build amfiCode → nav lookup map.
+    // 2. Fetch all unique NAVs in one round trip — the server fans the
+    //    per-code mfapi.in/AMFI calls out concurrently, same as this loop
+    //    used to do from the browser, just without N separate client→server
+    //    hops (see /api/mf's ?codes= batch mode).
     const navMap = {};
-    await Promise.allSettled(
-      uniqueAmfi.map(async (amfi) => {
-        try {
-          const navRes = await fetch(`/api/mf?code=${amfi}&latest=1`);
-          if (navRes.ok) {
-            const resJson = await navRes.json();
-            if (resJson.status === 'SUCCESS' && resJson.data?.length > 0) {
-              navMap[amfi] = parseFloat(resJson.data[0].nav);
+    if (uniqueAmfi.length > 0) {
+      try {
+        const navRes = await fetch(`/api/mf?codes=${uniqueAmfi.join(',')}&latest=1`);
+        if (navRes.ok) {
+          const resJson = await navRes.json();
+          if (resJson.status === 'SUCCESS' && resJson.navs) {
+            for (const [amfi, nav] of Object.entries(resJson.navs)) {
+              navMap[amfi] = parseFloat(nav);
             }
           }
-        } catch {
-          // Non-fatal — holdings for this fund will use CAS-reported NAV
         }
-      })
-    );
+      } catch {
+        // Non-fatal — holdings will fall back to their CAS-reported NAV below
+      }
+    }
 
     // 3. Apply resolved NAVs and compute metrics for every holding.
     for (const { h, pan } of allHoldings) {
