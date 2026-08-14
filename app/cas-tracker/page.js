@@ -1732,6 +1732,30 @@ function RedemptionPlanner({ fund, onClose }) {
 const TXN_BUY_RE  = /PURCHASE|SIP|SWITCH.?IN|REINVEST/;
 const TXN_SELL_RE = /REDEMPTION|SWITCH.?OUT/;
 
+// Earliest date among a fund's real (financial) transactions, or null if
+// there are none. Shared by the NAV-history fetch and its cache key below
+// so a lookup always matches the fetch that would produce it.
+function earliestTxnDate(transactions) {
+  const dates = (transactions || [])
+    .filter(t => {
+      const type = (t.type || '').toUpperCase();
+      return parseFloat(t.nav) > 0 && (TXN_BUY_RE.test(type) || TXN_SELL_RE.test(type));
+    })
+    .map(t => new Date(t.date).getTime())
+    .filter(t => !isNaN(t));
+  return dates.length ? Math.min(...dates) : null;
+}
+
+// Keyed on both amfiCode AND the fund's earliest transaction date -- two
+// different folios/family members holding the same fund can have very
+// different first-purchase dates, and reusing one's cached (already
+// date-filtered) NAV history for the other would silently clip real history
+// off the front of their chart.
+function navHistoryCacheKey(fund) {
+  if (!fund?.amfiCode) return null;
+  return `${fund.amfiCode}@${earliestTxnDate(fund.transactions) ?? 'full'}`;
+}
+
 const TXN_TYPE_META = {
   PURCHASE:     { label: 'Purchase',   color: 'var(--g2)',   cls: 'buy' },
   PURCHASE_SIP: { label: 'SIP',        color: 'var(--g3)',   cls: 'buy' },
@@ -2039,7 +2063,7 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
                     <LegendDot color="var(--warn)" label="Switch-in" />
                     <LegendLine color="var(--g1)" label="Your avg. purchase NAV" />
                     <LegendLine color="var(--muted)" label="Current NAV" dashed={false} />
-                    {hasHistPoints && <LegendLine color="var(--border2)" label="Fund's full NAV history" />}
+                    {hasHistPoints && <LegendLine color="var(--border2)" label="Fund's NAV since your first purchase" />}
                   </div>
                   {!hasHistPoints && (
                     <div style={{ marginTop: 12 }}>
@@ -2053,7 +2077,7 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
                           opacity: fund.amfiCode ? 1 : .5,
                         }}
                       >
-                        {navHistory?.loading ? 'Loading…' : "📉 Overlay fund's full NAV history"}
+                        {navHistory?.loading ? 'Loading…' : '📉 Overlay NAV history since your first purchase'}
                       </button>
                       {navHistory?.error && (
                         <div style={{ fontSize: '.65rem', color: 'var(--neg)', marginTop: 6 }}>Couldn't load NAV history — try again.</div>
@@ -2065,7 +2089,7 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
                 <div style={{ border: '1.5px solid var(--border)', borderRadius: 12, padding: '18px 20px', textAlign: 'center' }}>
                   <div style={{ fontSize: '.74rem', color: 'var(--text2)', marginBottom: 12, lineHeight: 1.6 }}>
                     Only one transaction on record for this holding — not enough on its own to draw a trend line.
-                    Load the fund's full NAV history to see that single entry in context instead.
+                    Load the fund's NAV history since your purchase date to see that single entry in context instead.
                   </div>
                   <button
                     onClick={onFetchNavHistory}
@@ -2077,7 +2101,7 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
                       opacity: fund.amfiCode ? 1 : .5,
                     }}
                   >
-                    {navHistory?.loading ? 'Loading…' : "📉 Load fund's full NAV history"}
+                    {navHistory?.loading ? 'Loading…' : '📉 Load NAV history since your purchase'}
                   </button>
                   {navHistory?.error && (
                     <div style={{ fontSize: '.65rem', color: 'var(--neg)', marginTop: 8 }}>Couldn't load NAV history — try again.</div>
@@ -2281,7 +2305,7 @@ function CasTrackerInner() {
   const [plannerMode,    setPlannerMode]    = useState('target'); // initial tab when planPortfolio opens
   const [redeemSelection, setRedeemSelection] = useState({}); // fund.id → fund object, checked via dashboard checkboxes
   const [txnDrawerFund,  setTxnDrawerFund]  = useState(null);  // holding object for the Transaction History drawer
-  const [navHistoryCache, setNavHistoryCache] = useState({});  // amfiCode → { loading, points, error } -- only populated on demand (see fetchNavHistory)
+  const [navHistoryCache, setNavHistoryCache] = useState({});  // navHistoryCacheKey(fund) → { loading, points, error } -- only populated on demand (see fetchNavHistory)
 
   // Auto-load via ?load=blobKey (admin CAS view) or ?userId= (manual-only client)
   useEffect(() => {
@@ -2710,28 +2734,37 @@ function CasTrackerInner() {
          : allHoldings;
   }
 
-  // Full historical NAV curve for the Transaction History drawer's optional
+  // Historical NAV curve for the Transaction History drawer's optional
   // chart overlay -- deliberately NOT fetched automatically for every
   // holding on every page load (unlike the batched *live* NAV in
-  // processCasData above). Only runs once per amfiCode per session, on an
-  // explicit click, and the result is cached so re-opening the same fund's
+  // processCasData above). Only runs on an explicit click, and the result
+  // is cached (keyed by navHistoryCacheKey) so re-opening the same fund's
   // drawer never re-fetches.
-  async function fetchNavHistory(amfiCode) {
-    if (!amfiCode || navHistoryCache[amfiCode]?.points || navHistoryCache[amfiCode]?.loading) return;
-    setNavHistoryCache(prev => ({ ...prev, [amfiCode]: { loading: true } }));
+  //
+  // mfapi.in's history endpoint has no date-range parameter, so the fetch
+  // itself always returns the fund's full inception-to-date series -- but
+  // years of pre-purchase NAV data is noise here, not signal, so only the
+  // window from just before the holding's first real transaction onward
+  // is kept.
+  async function fetchNavHistory(fund) {
+    const key = navHistoryCacheKey(fund);
+    if (!key || navHistoryCache[key]?.points || navHistoryCache[key]?.loading) return;
+    setNavHistoryCache(prev => ({ ...prev, [key]: { loading: true } }));
     try {
-      const res = await fetch(`/api/mf?code=${amfiCode}`);
+      const res = await fetch(`/api/mf?code=${fund.amfiCode}`);
       const json = await res.json();
+      const earliest = earliestTxnDate(fund.transactions);
+      const cutoffMs = earliest != null ? earliest - 7 * 24 * 3600 * 1000 : null; // small lookback buffer, not full inception
       const points = (json.data || [])
         .map(d => {
           const [dd, mm, yyyy] = d.date.split('-').map(Number);
           return { t: new Date(yyyy, mm - 1, dd).getTime(), nav: parseFloat(d.nav) };
         })
-        .filter(p => Number.isFinite(p.nav))
+        .filter(p => Number.isFinite(p.nav) && (cutoffMs == null || p.t >= cutoffMs))
         .sort((a, b) => a.t - b.t);
-      setNavHistoryCache(prev => ({ ...prev, [amfiCode]: { loading: false, points } }));
+      setNavHistoryCache(prev => ({ ...prev, [key]: { loading: false, points } }));
     } catch {
-      setNavHistoryCache(prev => ({ ...prev, [amfiCode]: { loading: false, error: true } }));
+      setNavHistoryCache(prev => ({ ...prev, [key]: { loading: false, error: true } }));
     }
   }
 
@@ -3720,8 +3753,8 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
       {txnDrawerFund && (
         <TransactionHistoryDrawer
           fund={txnDrawerFund}
-          navHistory={txnDrawerFund.amfiCode ? navHistoryCache[txnDrawerFund.amfiCode] : null}
-          onFetchNavHistory={() => fetchNavHistory(txnDrawerFund.amfiCode)}
+          navHistory={navHistoryCache[navHistoryCacheKey(txnDrawerFund)]}
+          onFetchNavHistory={() => fetchNavHistory(txnDrawerFund)}
           onClose={() => setTxnDrawerFund(null)}
         />
       )}
