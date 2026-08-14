@@ -70,21 +70,32 @@ def build_pan_name_map(raw_text: str) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Folio-level "Transmission of Folios" event detector
+# Folio-level "Transmission" event detector
 #
 # When mutual fund units are transmitted (typically inherited on the original
 # holder's death), some AMCs/RTAs (confirmed for CAMS-registered folios, e.g.
-# PPFAS) record this as a folio LIFECYCLE event, not a transaction -- a note
-# like "***Transmission of Folios - From 12331135 - Raj Kumar Sukhija
-# UNITS:- 2786.043***" sitting alongside other folio-level annotations
-# (***Registration of Nominee***, ***Address Updated from KRA Data***, etc.).
-# casparser's structured Scheme/Transaction models have no field for this at
-# all -- it's invisible unless the raw PDF text is searched directly, which
-# is exactly why the CAS's own per-transaction PURCHASE/PURCHASE_SIP records
-# in that folio carry no "Transmission" wording of their own (contrast with
-# BSE StAR-routed AMCs, e.g. Nippon India, which instead tag INDIVIDUAL
-# transactions "Purchase Transmission In From F. No. X On DATE").
+# PPFAS, ICICI Prudential) record this as a folio LIFECYCLE event, not a
+# transaction -- a note like "***Transmission of Folios - From 12331135 -
+# Raj Kumar Sukhija UNITS:- 2786.043***" sitting alongside other folio-level
+# annotations (***Registration of Nominee***, ***Address Updated from KRA
+# Data***, etc.). casparser's structured Scheme/Transaction models have no
+# field for this at all -- it's invisible unless the raw PDF text is
+# searched directly, which is exactly why the CAS's own per-transaction
+# PURCHASE/PURCHASE_SIP records in that folio carry no "Transmission"
+# wording of their own (contrast with BSE StAR-routed AMCs, e.g. Nippon
+# India, which instead tag INDIVIDUAL transactions "Purchase Transmission
+# In From F. No. X On DATE").
+#
+# Confirmed against a real CAS that even AMCs sharing the same registrar
+# (CAMS) phrase this differently -- PPFAS: "Transmission of Folios - From
+# <folio> - <name>"; ICICI Prudential: "Transmission From Folio Number -
+# <folio> - <name>". Rather than enumerate every AMC's exact wording (more
+# will surely exist), the pattern below only anchors on "Transmission"
+# followed by a folio-number-shaped run of digits and a dash-separated
+# name, which both real phrasings (and plausible future ones) satisfy.
 # ─────────────────────────────────────────────────────────────────────────────
+TRANSMISSION_EVENT_RE = re.compile(r'Transmission[^\n]{0,60}?(\d{6,})\s*-\s*([^\n]+)', re.IGNORECASE)
+
 def build_folio_transmission_map(raw_text: str) -> dict:
     result = {}
 
@@ -101,14 +112,17 @@ def build_folio_transmission_map(raw_text: str) -> dict:
             continue
         folio_no = folio_match.group(1).strip()
 
-        trans_match = re.search(
-            r'Transmission of Folios\s*-\s*From\s+(\S+)\s*-\s*([A-Za-z .\']+?)\s+UNITS',
-            section
-        )
+        trans_match = TRANSMISSION_EVENT_RE.search(section)
         if trans_match:
+            from_folio = trans_match.group(1).strip()
+            # Some AMCs put "Name     UNITS:-" on the same line (rather than
+            # UNITS starting a new line/section) -- strip that back off.
+            from_name = re.sub(r'\s*UNITS.*$', '', trans_match.group(2), flags=re.IGNORECASE).strip()
+            if not from_name:
+                continue
             result[folio_no] = {
-                'from_folio': trans_match.group(1).strip(),
-                'from_name': trans_match.group(2).strip(),
+                'from_folio': from_folio,
+                'from_name': from_name,
             }
 
     return result
