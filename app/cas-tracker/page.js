@@ -180,10 +180,12 @@ function calculateFifoCost(scheme, currentNav) {
         date: new Date(txn.date),
         // "Transmission" only ever shows up in the free-text description
         // (casparser gives it no distinct type) -- these units came in via
-        // inheritance/transmission from another folio, so this lot's
-        // nav/date is when the transmission was recorded, not the original
-        // holder's actual acquisition cost/date. Flagged for the
-        // Redemption Planner's FIFO breakdown (see isTransmissionTxn).
+        // inheritance/transmission from another folio. lot.nav/lot.date are
+        // already this transaction's own preserved original purchase rate
+        // and date (verified against a real CAS: transmitted history keeps
+        // each transaction's real period NAV, not one bulk transmission-day
+        // entry), so no special cost-basis handling is needed here -- just
+        // flagged for the Redemption Planner to label informationally.
         isTransmission: isTransmissionTxn(txn.description),
       });
     } else if (/REDEMPTION|SWITCH.?OUT/.test(type)) {
@@ -1045,7 +1047,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
                             })()}
                             {row.isELSS      && <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: '#fff8e1', color: '#f57f17', border: '1px solid #ffe082', fontFamily: "'JetBrains Mono', monospace" }}>ELSS</span>}
                             {row.hasSynthetic && <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)', fontFamily: "'JetBrains Mono', monospace" }}>SUM CAS</span>}
-                            {row.hasTransmission && <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: '#fff8e1', color: '#f57f17', border: '1px solid #ffe082', fontFamily: "'JetBrains Mono', monospace" }} title="Includes transmitted units -- cost/date may not reflect the original holder's actual acquisition">TRANSMITTED</span>}
+                            {row.hasTransmission && <span style={{ fontSize: '.5rem', fontWeight: 800, padding: '1px 5px', borderRadius: 3, background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)', fontFamily: "'JetBrains Mono', monospace" }} title="Includes transmitted units -- your CAS preserves the original purchase date and rate for these">TRANSMITTED</span>}
                           </div>
                           </div>
                         </div>
@@ -1661,7 +1663,7 @@ function RedemptionPlanner({ fund, onClose }) {
                         <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>
                           {row.date}
                           {row.isTransmission && (
-                            <div style={{ fontSize: '.48rem', color: 'var(--warn)', fontWeight: 800 }} title="Transmitted in from another folio -- cost/date may not reflect the original holder's actual acquisition">
+                            <div style={{ fontSize: '.48rem', color: 'var(--muted)', fontWeight: 800 }} title="Transmitted in from another folio -- your CAS preserves the original purchase date and rate for this lot">
                               Transmitted
                             </div>
                           )}
@@ -1698,14 +1700,12 @@ function RedemptionPlanner({ fund, onClose }) {
               background: '#fff8e1', border: '1.5px solid #ffe082',
               borderRadius: 10, fontSize: '.7rem', lineHeight: 1.6,
             }}>
-              <strong style={{ color: '#f57f17' }}>⚠ Includes transmitted units</strong>
+              <strong style={{ color: '#f57f17' }}>ℹ Includes transmitted units</strong>
               <div style={{ color: '#795548', marginTop: 3 }}>
                 One or more lots above (marked "Transmitted") came in via unit transmission from
-                another folio, typically inheritance. Their cost and date shown are when the
-                transmission was recorded — Indian tax law generally carries over the original
-                holder's actual acquisition cost and date for these units, which this CAS can't
-                show us (that history lives in the original holder's own folio). The gain and tax
-                figures below may not match what's actually owed for these specific units.
+                another folio, typically inheritance. Your CAS preserves each transaction's
+                original purchase date and rate, so the cost basis and holding period above
+                already reflect that — nothing extra to account for in the figures below.
               </div>
             </div>
           )}
@@ -1876,18 +1876,19 @@ function commentaryItems(rows, stats, currentNav, navHistory) {
     );
   }
 
-  // Transmitted units carry the transmission-date rate here, not the
-  // original holder's actual acquisition cost/date -- which Indian tax law
-  // (Sec. 49) says should carry over for capital gains, but which this CAS
-  // has no visibility into (it lived in the deceased holder's own folio).
-  // Flagged wherever a gain/NAV figure could be read as that holder's true
-  // cost -- this bullet, and the Redemption Planner's lot breakdown.
+  // Real CAS data (verified against an actual statement) shows the RTA
+  // preserves each transaction's own original purchase date and rate when
+  // a folio's history is transmitted in from another folio -- e.g. a
+  // decade of monthly SIP instalments each at that month's real NAV, not
+  // one bulk entry at the transmission-processing date. So the cost basis
+  // and holding period computed from these should already reflect the
+  // original holder's actual acquisition -- this is informational, not a
+  // data-accuracy warning.
   if (stats.transmissionCount > 0) {
     items.push(
-      <><b>{stats.transmissionCount}</b> of these {stats.transmissionCount > 1 ? 'transactions are' : 'transaction is'} unit{' '}
-        transmission{stats.transmissionCount > 1 ? 's' : ''} in (typically inherited from another folio), not fresh purchases —
-        the rate and date shown {stats.transmissionCount > 1 ? 'are' : 'is'} when the transmission was recorded, not the original
-        holder's actual acquisition cost or date, which may matter for capital gains.</>
+      <>{stats.transmissionCount > 1 ? <>{stats.transmissionCount} of these transactions were</> : 'One of these transactions was'} transmitted
+        in from another folio (typically inherited) — your CAS preserves the original purchase date and rate for{' '}
+        {stats.transmissionCount > 1 ? 'each one' : 'it'}, so {stats.transmissionCount > 1 ? "they're" : "it's"} already reflected correctly above.</>
     );
   }
 
@@ -3747,6 +3748,15 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                                 background: '#e0f2f1', color: '#00695c', border: '1px solid #b2dfdb',
                                 fontFamily: "'JetBrains Mono', monospace", letterSpacing: '.5px',
                               }}>SIF</span>
+                            )}
+                            {(fund.transactions || []).some(t => isTransmissionTxn(t.description)) && (
+                              <span style={{
+                                fontSize: '.52rem', fontWeight: 800, padding: '2px 7px', borderRadius: 4,
+                                background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)',
+                                fontFamily: "'JetBrains Mono', monospace", letterSpacing: '.5px',
+                              }} title="Includes units transmitted in from another folio (e.g. inheritance) -- your CAS preserves the original purchase date and rate for these">
+                                🔄 Transmitted
+                              </span>
                             )}
                             {/* Admin-only badge: admin can see source, clients cannot */}
                             {isAdmin && isManual && (
