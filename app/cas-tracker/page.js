@@ -84,6 +84,18 @@ function buildAllHoldings(currentInfo, manualHoldings, sifNavMap, activePan) {
       xirrFlows:     manualHoldingCashFlows({ purchaseDate: h.purchase_date, invested: pu * u }),
       source:        'manual',
       fund_type:     h.fund_type,
+      amfiCode:      h.amfi_code || null,
+      // Manually-added holdings (including SIF, which never appear in a
+      // CAS PDF) have no real transaction log -- but they DO have exactly
+      // one known purchase (date/NAV/units), which is precisely the shape
+      // the Transaction History drawer's single-transaction path already
+      // handles well (Rate Journey strip + on-demand NAV history). Only
+      // synthesized when a purchase date was actually recorded -- without
+      // one, `new Date(null)` silently resolves to the 1970 epoch instead
+      // of throwing, which would otherwise plot a bogus, decades-early point.
+      transactions: (pu > 0 && u > 0 && h.purchase_date)
+        ? [{ date: h.purchase_date, type: 'PURCHASE', amount: pu * u, units: u, nav: pu }]
+        : [],
     };
   });
 
@@ -2029,10 +2041,14 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
             <div style={{ padding: '10px 14px', background: '#fff8e1', border: '1.5px solid #ffe082', borderRadius: 10, fontSize: '.7rem', lineHeight: 1.6 }}>
               <strong style={{ color: '#f57f17' }}>⚠ No transaction-level history</strong>
               <div style={{ color: '#795548', marginTop: 3 }}>
-                Your CAS doesn't include per-transaction detail for this fund — either a Summary CAS,
-                or units carried over from before the statement period. Download a <strong>Detailed CAS</strong> from{' '}
-                <a href="https://www.camsonline.com" target="_blank" rel="noopener noreferrer" style={{ color: '#f57f17' }}>camsonline.com</a> or{' '}
-                <a href="https://www.kfintech.com" target="_blank" rel="noopener noreferrer" style={{ color: '#f57f17' }}>kfintech.com</a> for the full rate history.
+                {fund.source === 'manual' ? (
+                  <>This holding has no purchase date on record, so there's no rate to plot. Edit it to add one.</>
+                ) : (
+                  <>Your CAS doesn't include per-transaction detail for this fund — either a Summary CAS,
+                    or units carried over from before the statement period. Download a <strong>Detailed CAS</strong> from{' '}
+                    <a href="https://www.camsonline.com" target="_blank" rel="noopener noreferrer" style={{ color: '#f57f17' }}>camsonline.com</a> or{' '}
+                    <a href="https://www.kfintech.com" target="_blank" rel="noopener noreferrer" style={{ color: '#f57f17' }}>kfintech.com</a> for the full rate history.</>
+                )}
               </div>
             </div>
           ) : (
@@ -2110,7 +2126,7 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
                         {navHistory?.loading ? 'Loading…' : '📉 Overlay NAV history since your first purchase'}
                       </button>
                       {!fund.amfiCode && (
-                        <div style={{ fontSize: '.65rem', color: 'var(--muted)', marginTop: 6 }}>AMFI scheme code not available for this fund — can't fetch its NAV history.</div>
+                        <div style={{ fontSize: '.65rem', color: 'var(--muted)', marginTop: 6 }}>Scheme code not available for this fund — can't fetch its NAV history.</div>
                       )}
                       {navHistory?.error && (
                         <div style={{ fontSize: '.65rem', color: 'var(--neg)', marginTop: 6 }}>Couldn't load NAV history — try again.</div>
@@ -2137,7 +2153,7 @@ function TransactionHistoryDrawer({ fund, navHistory, onFetchNavHistory, onClose
                     {navHistory?.loading ? 'Loading…' : '📉 Load NAV history since your purchase'}
                   </button>
                   {!fund.amfiCode && (
-                    <div style={{ fontSize: '.65rem', color: 'var(--muted)', marginTop: 8 }}>AMFI scheme code not available for this fund — can't fetch its NAV history.</div>
+                    <div style={{ fontSize: '.65rem', color: 'var(--muted)', marginTop: 8 }}>Scheme code not available for this fund — can't fetch its NAV history.</div>
                   )}
                   {navHistory?.error && (
                     <div style={{ fontSize: '.65rem', color: 'var(--neg)', marginTop: 8 }}>Couldn't load NAV history — try again.</div>
@@ -2777,27 +2793,47 @@ function CasTrackerInner() {
   // is cached (keyed by navHistoryCacheKey) so re-opening the same fund's
   // drawer never re-fetches.
   //
-  // mfapi.in's history endpoint has no date-range parameter, so the fetch
-  // itself always returns the fund's full inception-to-date series -- but
-  // years of pre-purchase NAV data is noise here, not signal, so only the
-  // window from just before the holding's first real transaction onward
-  // is kept.
+  // SIF holdings (always manual -- no CAS PDF includes them yet) use
+  // AMFI's separate SIF NAV history API, keyed by scheme_id (stored in
+  // amfi_code) rather than an AMFI scheme code, and unlike mfapi.in it
+  // requires an explicit date range instead of always returning full
+  // history -- which conveniently means since-first-purchase scoping is
+  // just what we ask for, not something to filter after the fact.
   async function fetchNavHistory(fund) {
     const key = navHistoryCacheKey(fund);
     if (!key || navHistoryCache[key]?.points || navHistoryCache[key]?.loading) return;
     setNavHistoryCache(prev => ({ ...prev, [key]: { loading: true } }));
     try {
-      const res = await fetch(`/api/mf?code=${fund.amfiCode}`);
-      const json = await res.json();
       const earliest = earliestTxnDate(fund.transactions);
       const cutoffMs = earliest != null ? earliest - 7 * 24 * 3600 * 1000 : null; // small lookback buffer, not full inception
-      const points = (json.data || [])
-        .map(d => {
-          const [dd, mm, yyyy] = d.date.split('-').map(Number);
-          return { t: new Date(yyyy, mm - 1, dd).getTime(), nav: parseFloat(d.nav) };
-        })
-        .filter(p => Number.isFinite(p.nav) && (cutoffMs == null || p.t >= cutoffMs))
-        .sort((a, b) => a.t - b.t);
+      let points;
+
+      if (fund.fund_type === 'SIF') {
+        const iso = (d) => d.toISOString().slice(0, 10);
+        const fromDate = new Date(cutoffMs ?? Date.now() - 365 * 24 * 3600 * 1000);
+        const res = await fetch(`/api/sif-history?sd_id=${encodeURIComponent(fund.amfiCode)}&from=${iso(fromDate)}&to=${iso(new Date())}`);
+        const json = await res.json();
+        points = (json.records || [])
+          .map(r => ({ t: new Date(r.date).getTime(), nav: parseFloat(r.nav) }))
+          .filter(p => Number.isFinite(p.nav) && !isNaN(p.t))
+          .sort((a, b) => a.t - b.t);
+      } else {
+        // mfapi.in's history endpoint has no date-range parameter, so the
+        // fetch itself always returns the fund's full inception-to-date
+        // series -- years of pre-purchase NAV data is noise here, not
+        // signal, so only the window from just before the holding's first
+        // real transaction onward is kept.
+        const res = await fetch(`/api/mf?code=${fund.amfiCode}`);
+        const json = await res.json();
+        points = (json.data || [])
+          .map(d => {
+            const [dd, mm, yyyy] = d.date.split('-').map(Number);
+            return { t: new Date(yyyy, mm - 1, dd).getTime(), nav: parseFloat(d.nav) };
+          })
+          .filter(p => Number.isFinite(p.nav) && (cutoffMs == null || p.t >= cutoffMs))
+          .sort((a, b) => a.t - b.t);
+      }
+
       setNavHistoryCache(prev => ({ ...prev, [key]: { loading: false, points } }));
     } catch {
       setNavHistoryCache(prev => ({ ...prev, [key]: { loading: false, error: true } }));
@@ -3701,41 +3737,49 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                             </div>
                           </div>
 
-                          {/* Plan Redemption + Transactions buttons — CAS holdings only, always visible */}
-                          {!isManual && (
+                          {/* Redemption planning needs real FIFO purchase-lot history, which
+                              only CAS holdings have -- Transactions just needs at least one
+                              known purchase, which manual/SIF holdings also have (a single
+                              synthesized entry from their purchase date/NAV/units, see
+                              buildAllHoldings), so it's available there too. */}
+                          {(!isManual || fund.transactions?.length > 0) && (
                             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                              <button
-                                onClick={() => setPlanFund(fund)}
-                                style={{
-                                  flex: 1, padding: '9px 0', borderRadius: 8,
-                                  border: 'none',
-                                  background: 'var(--g1)', cursor: 'pointer',
-                                  fontSize: '.72rem', fontWeight: 800,
-                                  color: '#fff', fontFamily: 'Raleway, sans-serif',
-                                  letterSpacing: '-.2px', transition: 'background .15s',
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.background = 'var(--g2)'}
-                                onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
-                                title="Plan a tax-efficient redemption for this fund"
-                              >
-                                📊 Redemption
-                              </button>
-                              <button
-                                onClick={() => setTxnDrawerFund(fund)}
-                                title="View transaction-by-transaction rate history"
-                                style={{
-                                  flex: 1, padding: '9px 0', borderRadius: 8,
-                                  border: '1.5px solid var(--border2)',
-                                  background: 'var(--s2)', cursor: 'pointer',
-                                  fontSize: '.72rem', fontWeight: 800,
-                                  color: 'var(--g2)', fontFamily: 'Raleway, sans-serif',
-                                  letterSpacing: '-.2px', transition: 'background .15s',
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.background = 'var(--s3)'}
-                                onMouseLeave={e => e.currentTarget.style.background = 'var(--s2)'}
-                              >
-                                📈 Transactions
-                              </button>
+                              {!isManual && (
+                                <button
+                                  onClick={() => setPlanFund(fund)}
+                                  style={{
+                                    flex: 1, padding: '9px 0', borderRadius: 8,
+                                    border: 'none',
+                                    background: 'var(--g1)', cursor: 'pointer',
+                                    fontSize: '.72rem', fontWeight: 800,
+                                    color: '#fff', fontFamily: 'Raleway, sans-serif',
+                                    letterSpacing: '-.2px', transition: 'background .15s',
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.background = 'var(--g2)'}
+                                  onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
+                                  title="Plan a tax-efficient redemption for this fund"
+                                >
+                                  📊 Redemption
+                                </button>
+                              )}
+                              {fund.transactions?.length > 0 && (
+                                <button
+                                  onClick={() => setTxnDrawerFund(fund)}
+                                  title="View transaction-by-transaction rate history"
+                                  style={{
+                                    flex: 1, padding: '9px 0', borderRadius: 8,
+                                    border: '1.5px solid var(--border2)',
+                                    background: 'var(--s2)', cursor: 'pointer',
+                                    fontSize: '.72rem', fontWeight: 800,
+                                    color: 'var(--g2)', fontFamily: 'Raleway, sans-serif',
+                                    letterSpacing: '-.2px', transition: 'background .15s',
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.background = 'var(--s3)'}
+                                  onMouseLeave={e => e.currentTarget.style.background = 'var(--s2)'}
+                                >
+                                  📈 Transactions
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
