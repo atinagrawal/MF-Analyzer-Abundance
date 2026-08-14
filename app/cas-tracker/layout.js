@@ -24,8 +24,9 @@ export default function CasTrackerLayout({ children }) {
       "Multi-PAN family CAS support with combined family portfolio view",
       "FIFO capital gains calculation",
       "ELSS 3-year lock-in tracking",
-      "SIF (Specialised Investment Fund) holdings with live NAVs",
+      "Automatic SIF (Specialised Investment Fund) detection from your CAS, with live NAVs",
       "Per-transaction NAV rate chart for every holding",
+      "Transmitted / inherited unit detection in transaction history",
       "PDF and Excel export of holdings",
       "Cloud-saved portfolio for registered clients",
       "Advisor and nominee extraction"
@@ -38,7 +39,7 @@ export default function CasTrackerLayout({ children }) {
       "description": "AMFI Registered Mutual Fund Distributor — ARN-251838, Haldwani, Uttarakhand"
     },
     "screenshot": "https://mfcalc.getabundance.in/og-cas.png",
-    "dateModified": "2026-08-14"
+    "dateModified": "2026-08-15"
   };
 
   const breadcrumbSchema = {

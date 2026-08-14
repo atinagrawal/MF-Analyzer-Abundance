@@ -56,4 +56,8 @@ export const CAS_FAQ = [
     q: 'Does this support SIF (Specialised Investment Funds)?',
     a: 'Yes. SIF holdings in your CAS are recognised automatically, with live NAVs and full transaction history just like a mutual fund. For SIF investments not yet reflected in your CAS, your distributor can also add them manually with live NAVs from AMFI.',
   },
+  {
+    q: 'I inherited mutual fund units — does this tool handle transmission?',
+    a: 'Yes. When units are transmitted into a folio (typically after the original holder\'s death), we detect this automatically from your CAS and label those transactions "Transmission In" in the fund\'s transaction history, separately from your own purchases and SIPs. Your CAS preserves each transaction\'s original purchase date and rate, so FIFO cost basis and holding-period calculations already account for them correctly.',
+  },
 ];
