@@ -12,6 +12,11 @@
  *   day14_winback — signed up 14+ days ago AND (never active again, or
  *                   inactive 14+ days). Re-engagement nudge.
  *
+ * Both are scoped to role = 'client' — admin/distributor accounts (the
+ * business's own staff, not leads) are excluded. Learned the hard way on
+ * the first-ever run: without this filter, the founder's own admin account
+ * got a "we miss you" email.
+ *
  * Safe to re-run / run more than once a day: the WHERE NOT EXISTS guards
  * are a first filter, and the INSERT ... ON CONFLICT DO NOTHING in
  * sendLifecycleEmail() is the actual guard against a double-send.
@@ -110,7 +115,8 @@ async function main() {
   const nudgeCandidates = await pool.query(`
     SELECT u.id, u.name, u.email
     FROM users u
-    WHERE u.created_at <= NOW() - INTERVAL '3 days'
+    WHERE u.role = 'client'
+      AND u.created_at <= NOW() - INTERVAL '3 days'
       AND NOT EXISTS (SELECT 1 FROM cas_portfolios cp WHERE cp.user_id = u.id)
       AND NOT EXISTS (SELECT 1 FROM lifecycle_emails_sent l WHERE l.user_id = u.id AND l.email_type = 'day3_nudge')
       AND u.email IS NOT NULL
@@ -132,7 +138,8 @@ async function main() {
   const winbackCandidates = await pool.query(`
     SELECT u.id, u.name, u.email
     FROM users u
-    WHERE u.created_at <= NOW() - INTERVAL '14 days'
+    WHERE u.role = 'client'
+      AND u.created_at <= NOW() - INTERVAL '14 days'
       AND (u.last_active_at IS NULL OR u.last_active_at <= NOW() - INTERVAL '14 days')
       AND NOT EXISTS (SELECT 1 FROM lifecycle_emails_sent l WHERE l.user_id = u.id AND l.email_type = 'day14_winback')
       AND u.email IS NOT NULL
