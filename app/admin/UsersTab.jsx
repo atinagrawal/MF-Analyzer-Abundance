@@ -499,8 +499,14 @@ export default function UsersTab({ session }) {
         </div>
 
         {selectedUser && (
-          <div className="table-card" style={{ height: 'fit-content' }}>
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+          <div className="table-card" style={{
+            height: 'fit-content',
+            position: 'sticky',
+            top: 20,
+            maxHeight: 'calc(100vh - 40px)',
+            overflowY: 'auto',
+          }}>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ fontSize: '.78rem', fontWeight: 800, color: 'var(--text)' }}>
