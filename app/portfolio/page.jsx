@@ -25,7 +25,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows, combinedXirr } from '@/lib/xirr';
 import ProviderAvatar from '@/components/ProviderAvatar';
-import { getMFLogoFromSchemeName } from '@/lib/providerLogos';
+import { getMFLogoFromSchemeName, getSIFLogo } from '@/lib/providerLogos';
 import { FundDetailDrawer, SifDetailDrawer } from '@/components/HoldingDetailDrawer';
 import { PORTFOLIO_FAQ } from './faqData';
 
@@ -105,6 +105,109 @@ const CATEGORY_COLOR = {
   sif:     { bg: 'rgba(0,105,92,.12)',   fg: '#00695c', label: 'SIF'    },
 };
 
+// ── FIFO cost basis + ELSS lock-in (ported from app/cas-tracker/page.js's
+// calculateFifoCost, verbatim — same math, same edge cases, so this page's
+// numbers always agree with CAS Tracker's rather than drifting from a
+// second, subtly-different implementation) ────────────────────────────────
+const TRANSMISSION_RE = /transmission/i;
+function isTransmissionTxn(description) {
+  return TRANSMISSION_RE.test(description || '');
+}
+
+function calculateFifoCost(scheme, currentNav, isTransmittedFolio = false) {
+  const units = parseFloat(scheme.close) || 0;
+  if (units === 0) return { invested: 0, lockedValue: 0 };
+
+  const directCost = parseFloat(scheme.valuation?.cost || scheme.cost || 0);
+  let buyLots = [];
+  let lockedUnits = 0;
+
+  const threeYearsAgo = new Date();
+  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+  const isELSS = /ELSS|TAX.?SAVER/i.test(scheme.scheme);
+
+  (scheme.transactions || []).forEach(txn => {
+    const type = (txn.type || '').toUpperCase();
+    const txnUnits = parseFloat(txn.units) || 0;
+    const amount = parseFloat(txn.amount) || 0;
+    if (txnUnits === 0) return;
+
+    if (/PURCHASE|SIP|SWITCH.?IN|REINVEST/.test(type)) {
+      buyLots.push({
+        units: txnUnits,
+        amount: amount,
+        nav: amount / txnUnits,
+        date: new Date(txn.date),
+        isTransmission: isTransmissionTxn(txn.description) || isTransmittedFolio,
+      });
+    } else if (/REDEMPTION|SWITCH.?OUT/.test(type)) {
+      let rem = Math.abs(txnUnits);
+      while (rem > 0 && buyLots.length > 0) {
+        if (buyLots[0].units <= rem) {
+          rem -= buyLots[0].units;
+          buyLots.shift();
+        } else {
+          buyLots[0].units -= rem;
+          buyLots[0].amount = buyLots[0].units * buyLots[0].nav;
+          rem = 0;
+        }
+      }
+    }
+  });
+
+  let fifoInvested = 0;
+  buyLots.forEach(lot => {
+    fifoInvested += lot.amount;
+    if (isELSS && lot.date > threeYearsAgo) {
+      lockedUnits += lot.units;
+    }
+  });
+
+  // PARTIAL/TRUNCATED CAS: if sum of buy lots is less than current unit balance,
+  // the difference represents opening balance / older holdings before the CAS start date.
+  const totalBuyUnits = buyLots.reduce((sum, l) => sum + l.units, 0);
+  if (units > totalBuyUnits + 0.001) {
+    const unaccountedUnits = units - totalBuyUnits;
+    const casCost = parseFloat(scheme.valuation?.cost || scheme.cost || 0);
+    const unaccountedCost = Math.max(0, casCost - fifoInvested);
+    const avgNav = unaccountedCost > 0 ? (unaccountedCost / unaccountedUnits) : currentNav;
+
+    buyLots.unshift({
+      units: unaccountedUnits,
+      amount: unaccountedCost,
+      nav: avgNav,
+      date: new Date(0),
+      synthetic: true,
+    });
+    fifoInvested += unaccountedCost;
+  }
+
+  let finalInvested = fifoInvested;
+  if (directCost > 0 && (fifoInvested === 0 || fifoInvested < directCost * 0.5)) {
+    finalInvested = directCost;
+  }
+
+  return {
+    invested:    Math.max(0, finalInvested),
+    lockedValue: lockedUnits * currentNav,
+    buyLots,
+  };
+}
+
+// Slim, server-fetched projection of the ISIN scheme master — fetched once
+// and cached across the page's lifetime, same pattern as
+// components/HoldingDetailDrawer.jsx's own copy (kept separate since the
+// two never share a page load).
+let schemeMasterFactsPromise = null;
+function getSchemeMasterFacts() {
+  if (!schemeMasterFactsPromise) {
+    schemeMasterFactsPromise = fetch('/api/scheme-master-facts')
+      .then(r => r.ok ? r.json() : { byIsin: {}, byAmfiCode: {}, byNormName: {} })
+      .catch(() => ({ byIsin: {}, byAmfiCode: {}, byNormName: {} }));
+  }
+  return schemeMasterFactsPromise;
+}
+
 // ── Mini sparkline (SVG path) ─────────────────────────────────────────────────
 function Sparkline({ positive, style }) {
   // Simple decorative wave line
@@ -116,6 +219,31 @@ function Sparkline({ positive, style }) {
       <path d={d} stroke={positive ? '#43a047' : '#ef5350'} strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
+}
+
+// ── Best-effort pooled XIRR ────────────────────────────────────────────────────
+// combinedXirr() (lib/xirr.js) is deliberately all-or-nothing: if even one
+// holding in the group lacks a trustworthy transaction history, the whole
+// figure comes back null. That's the right contract for a number claiming to
+// be precise, but for a family CAS the odds that AT LEAST ONE holding across
+// everyone's history is untrustworthy (an old transfer-in, a pre-2018 folio,
+// a switch not captured) are high — "Portfolio XIRR" would go missing almost
+// always. Falls back to pooling only the holdings that DO have valid flows,
+// closing the position at exactly their combined current value (not the
+// group's full value — mixing in excluded holdings' value would distort the
+// return), and reports how many holdings were actually included so the UI
+// can caveat it honestly instead of presenting a partial number as exact.
+function bestEffortXirr(holdingsForGroup, totalValue) {
+  const total = holdingsForGroup.length;
+  const validHoldings = holdingsForGroup.filter(h => Array.isArray(h.xirrFlows));
+  if (!validHoldings.length) return { xirr: null, partial: false, included: 0, total };
+
+  const strict = total ? combinedXirr(holdingsForGroup.map(h => h.xirrFlows), totalValue) : null;
+  if (strict != null) return { xirr: strict, partial: false, included: total, total };
+
+  const partialValue = validHoldings.reduce((s, h) => s + h.value, 0);
+  const partial = combinedXirr(validHoldings.map(h => h.xirrFlows), partialValue);
+  return { xirr: partial, partial: true, included: validHoldings.length, total };
 }
 
 // ── Main portfolio inner ──────────────────────────────────────────────────────
@@ -143,6 +271,10 @@ function PortfolioInner() {
   const [activeTab, setActiveTab]  = useState('overview'); // overview | holdings | uploads
   const [errMsg, setErrMsg]        = useState('');
   const [detailHolding, setDetailHolding] = useState(null); // holding object for the fund/SIF details drawer
+  const [refreshKey, setRefreshKey] = useState(0); // bump to re-run the main data fetch (e.g. after deleting a statement)
+  const [deletingId, setDeletingId] = useState('');   // upload id in inline "confirm delete?" state
+  const [deleteInFlight, setDeleteInFlight] = useState(false);
+  const [deleteErr, setDeleteErr]   = useState('');
 
   // Derived values
   const [panPortfolios, setPanPortfolios] = useState({}); // PAN → {name, current, invested, holdings}
@@ -165,11 +297,14 @@ function PortfolioInner() {
 
     async function loadAll() {
       try {
-        // 1. Fetch CAS list + manual holdings concurrently
+        // 1. Fetch CAS list + manual holdings concurrently, plus the scheme
+        // master (for ELSS lock-in detection beyond a name-regex match —
+        // some ELSS funds don't literally say "ELSS" in their name).
         const userIdQS = isViewingOther ? `?userId=${encodeURIComponent(viewUserId)}` : '';
-        const [listRes, holdingsRes] = await Promise.all([
+        const [listRes, holdingsRes, masterFacts] = await Promise.all([
           fetch(`/api/cas/list${userIdQS}`),
           fetch(`/api/holdings${userIdQS}`),
+          getSchemeMasterFacts(),
         ]);
 
         const listData     = await listRes.json();
@@ -190,12 +325,18 @@ function PortfolioInner() {
         let localSifMap = {};
         const sifByIsin = {};
         const sifByName = {};
+        // scheme_id → sif_name (e.g. "SIF-34" → "Altiva SIF") — the SIF *house*
+        // name getSIFLogo() actually needs, distinct from the scheme's own
+        // display name. Needed separately from sifByIsin/sifByName because a
+        // manually-added SIF holding is only identified by its scheme_id.
+        const sifNameByCode = {};
         try {
           const sifRes = await fetch('/api/sif-nav');
           if (sifRes.ok) {
             const sifData = await sifRes.json();
             (sifData.schemes || []).forEach(s => {
               localSifMap[s.scheme_id] = s.nav;
+              sifNameByCode[s.scheme_id] = s.sif_name;
               if (s.isin_po) sifByIsin[s.isin_po] = s;
               if (s.isin_ri) sifByIsin[s.isin_ri] = s;
               const norm = (s.nav_name || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -243,7 +384,12 @@ function PortfolioInner() {
               const keptSchemes = (folio.schemes || []).filter(scheme => {
                 const units = parseFloat(scheme.close) || 0;
                 if (units < 0.001) return false;
-                const fundKey = scheme.amfi || (scheme.scheme || '').trim().toLowerCase();
+                // AMFI code is null for every SIF holding (casparser can't report
+                // one), so falling straight through to the scheme name risked two
+                // pulls of the same SIF not deduping if minor formatting (spacing,
+                // case) differed between statements. ISIN is stable and unique per
+                // scheme (same tier used by resolveSif below), so try it first.
+                const fundKey = scheme.amfi || scheme.isin || (scheme.scheme || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
                 const dedupKey = `${pan}|${folioNo}|${fundKey}`;
                 if (seenKeys.has(dedupKey)) return false;
                 seenKeys.add(dedupKey);
@@ -338,14 +484,19 @@ function PortfolioInner() {
               (folio.schemes || []).forEach(scheme => {
                 const units = parseFloat(scheme.close) || 0;
                 if (units < 0.001) return;
-                const casCost = parseFloat(scheme.valuation?.cost || 0);
                 // CAS statements DO include SIF holdings, but casparser reports
                 // scheme.amfi as null for them — resolveSif matches by ISIN/name
                 // against the AMFI SIF scheme master instead (see comment above).
                 const sifMatch = resolveSif(scheme);
                 const liveNav = sifMatch ? sifMatch.nav : (navMap[scheme.amfi] || parseFloat(scheme.valuation?.nav || 0));
                 const value   = units * liveNav;
-                const invested = casCost > 0 ? casCost : value;
+                // FIFO cost basis (not the CAS's own declared "cost", which is
+                // just units × avg NAV and doesn't drive ELSS lock-in or match
+                // what CAS Tracker itself shows) — same calculateFifoCost used
+                // there, so the two pages always agree.
+                const fifo = calculateFifoCost(scheme, liveNav, false);
+                const invested = fifo.invested;
+                const isELSS = !sifMatch && (/ELSS|TAX.?SAVER/i.test(scheme.scheme) || (masterFacts.byIsin[scheme.isin || '']?.isLocked || false));
                 casCurrent  += value;
                 casInvested += invested;
                 panMap[validPan].current  += value;
@@ -358,6 +509,9 @@ function PortfolioInner() {
                   isLive:   sifMatch ? true : !!navMap[scheme.amfi],
                   category: sifMatch ? 'sif' : inferCategory(scheme.scheme),
                   isSIF:    !!sifMatch,
+                  sifName:  sifMatch ? sifMatch.sif_name : null,
+                  isELSS,
+                  lockedValue: fifo.lockedValue,
                   xirr:     schemeXirr(scheme, value),
                   xirrFlows: schemeCashFlows(scheme),
                 };
@@ -365,6 +519,24 @@ function PortfolioInner() {
                 holdings.push(h);
               });
             });
+
+            // Saved investor-name labels (set via CAS Tracker's ✎ editor on a
+            // previous visit) take priority over whatever the transaction text
+            // happened to say — same resolution app/cas-tracker/page.js already
+            // does. Without this, /portfolio only ever showed the transaction-
+            // guessed name or a masked PAN, even for a PAN the user had already
+            // labelled.
+            try {
+              const realPans = Object.keys(panMap).filter(p => p !== 'SHARED' && PAN_RE.test(p));
+              if (realPans.length) {
+                const targetQS = isViewingOther ? `&targetUserId=${encodeURIComponent(viewUserId)}` : '';
+                const res = await fetch(`/api/cas/pan-name?pans=${realPans.join(',')}${targetQS}`);
+                const { names } = await res.json();
+                Object.entries(names || {}).forEach(([pan, name]) => {
+                  if (panMap[pan] && name) panMap[pan].name = name;
+                });
+              }
+            } catch { /* non-fatal — fall back to transaction-derived names */ }
 
             // Manual holdings: attribute to specific PAN if set, always include in 'all'
             let manualVal = 0;
@@ -380,6 +552,7 @@ function PortfolioInner() {
                 liveNav: ln ?? pu, units: u, isLive: ln != null,
                 category: h.fund_type === 'SIF' ? 'sif' : inferCategory(h.fund_name),
                 isSIF: h.fund_type === 'SIF', isManual: true,
+                sifName: h.fund_type === 'SIF' ? (sifNameByCode[h.amfi_code] || null) : null,
                 xirr: manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: val }),
                 xirrFlows: manualHoldingCashFlows({ purchaseDate: h.purchase_date, invested: pu * u }),
               };
@@ -393,20 +566,26 @@ function PortfolioInner() {
               }
             });
 
-            // Portfolio-level XIRR: only shown when every holding — CAS and
-            // manual alike — has a trustworthy transaction history. Computed
-            // per PAN (so the PAN selector shows the right scoped number)
-            // and once for the full combined portfolio.
+            // Portfolio-level XIRR — best-effort (see bestEffortXirr above):
+            // exact when every holding has a trustworthy history, otherwise
+            // pooled from whichever holdings do, with a caveat the UI shows.
+            // Computed per PAN (so the PAN selector shows the right scoped
+            // number) and once for the full combined family portfolio.
             Object.values(panMap).forEach(p => {
-              const flows = p.holdings.map(h => h.xirrFlows);
-              p.xirr = flows.length ? combinedXirr(flows, p.current) : null;
+              const info = bestEffortXirr(p.holdings, p.current);
+              p.xirr = info.xirr;
+              p.xirrPartial = info.partial;
+              p.xirrIncluded = info.included;
+              p.xirrTotal = info.total;
             });
-            const overallXirr = holdings.length
-              ? combinedXirr(holdings.map(h => h.xirrFlows), casCurrent + manualVal)
-              : null;
+            const overallXirrInfo = bestEffortXirr(holdings, casCurrent + manualVal);
 
             setPanPortfolios(panMap);
-            setTotals({ current: casCurrent + manualVal, invested: casInvested, manual: manualVal, xirr: overallXirr });
+            setTotals({
+              current: casCurrent + manualVal, invested: casInvested, manual: manualVal,
+              xirr: overallXirrInfo.xirr, xirrPartial: overallXirrInfo.partial,
+              xirrIncluded: overallXirrInfo.included, xirrTotal: overallXirrInfo.total,
+            });
             setTopHoldings(holdings.sort((a, b) => b.value - a.value).slice(0, 6));
             setPhase('ready');
           } else {
@@ -432,15 +611,18 @@ function PortfolioInner() {
               isLive:   ln != null,
               category: h.fund_type === 'SIF' ? 'sif' : inferCategory(h.fund_name),
               isSIF:    h.fund_type === 'SIF',
+              sifName:  h.fund_type === 'SIF' ? (sifNameByCode[h.amfi_code] || null) : null,
               isManual: true,
               xirr:     manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: (ln ?? pu) * u }),
               xirrFlows: manualHoldingCashFlows({ purchaseDate: h.purchase_date, invested: pu * u }),
             });
           });
-          const manualOnlyXirr = mhList.length
-            ? combinedXirr(mhList.map(h => h.xirrFlows), manualVal)
-            : null;
-          setTotals({ current: manualVal, invested: 0, manual: manualVal, xirr: manualOnlyXirr });
+          const manualOnlyXirrInfo = bestEffortXirr(mhList, manualVal);
+          setTotals({
+            current: manualVal, invested: 0, manual: manualVal,
+            xirr: manualOnlyXirrInfo.xirr, xirrPartial: manualOnlyXirrInfo.partial,
+            xirrIncluded: manualOnlyXirrInfo.included, xirrTotal: manualOnlyXirrInfo.total,
+          });
           setTopHoldings(mhList.sort((a, b) => b.value - a.value).slice(0, 6));
           setInvestorName((isViewingOther ? viewUname : session.user.name) || 'Investor');
           setPhase(manual.length > 0 ? 'ready' : 'empty');
@@ -453,7 +635,7 @@ function PortfolioInner() {
     }
 
     loadAll();
-  }, [status, session, viewUserId, isViewingOther, canViewOthers]);
+  }, [status, session, viewUserId, isViewingOther, canViewOthers, refreshKey]);
 
   // ── Unauthenticated gate ─────────────────────────────────────────────────────
   if (status === 'unauthenticated') {
@@ -583,7 +765,11 @@ function PortfolioInner() {
     ? panPortfolios[activePan].holdings
     : topHoldings;
   const displayTotals = (activePan !== 'all' && panPortfolios[activePan])
-    ? { current: panPortfolios[activePan].current, invested: panPortfolios[activePan].invested, manual: 0, xirr: panPortfolios[activePan].xirr }
+    ? {
+        current: panPortfolios[activePan].current, invested: panPortfolios[activePan].invested, manual: 0,
+        xirr: panPortfolios[activePan].xirr, xirrPartial: panPortfolios[activePan].xirrPartial,
+        xirrIncluded: panPortfolios[activePan].xirrIncluded, xirrTotal: panPortfolios[activePan].xirrTotal,
+      }
     : totals;
   const displayName = (activePan !== 'all' && panPortfolios[activePan])
     ? panPortfolios[activePan].name
@@ -593,6 +779,29 @@ function PortfolioInner() {
   const gainPct    = displayTotals.invested > 0 ? ((gain / displayTotals.invested) * 100).toFixed(2) : '0.00';
   const isProfit   = gain >= 0;
   const { g, first } = greeting(displayName);
+
+  // Delete a saved statement — /api/cas/delete already allows this for the
+  // statement's own owner (usually whoever uploaded it) or an admin, so no
+  // extra permission check is needed client-side; it 403s cleanly if not.
+  async function deleteStatement(id) {
+    setDeleteInFlight(true);
+    setDeleteErr('');
+    try {
+      const res = await fetch('/api/cas/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || 'Could not delete this statement.');
+      setDeletingId('');
+      setRefreshKey(k => k + 1);
+    } catch (err) {
+      setDeleteErr(err.message);
+    } finally {
+      setDeleteInFlight(false);
+    }
+  }
 
   // ── Error state (e.g. permission denied viewing someone else's portfolio) ──
   if (phase === 'error') {
@@ -736,8 +945,15 @@ function PortfolioInner() {
                 </div>
               )}
               {signed && Number.isFinite(displayTotals.xirr) && (
-                <div className="pf-stat-sub" style={{ color: displayTotals.xirr >= 0 ? 'var(--g3)' : 'var(--neg-light)' }}>
+                <div className="pf-stat-sub" style={{ color: displayTotals.xirr >= 0 ? 'var(--g3)' : 'var(--neg-light)' }}
+                  title={displayTotals.xirrPartial ? `Based on ${displayTotals.xirrIncluded} of ${displayTotals.xirrTotal} holdings with a complete transaction history — the rest couldn't be verified against your CAS.` : undefined}>
                   {displayTotals.xirr >= 0 ? '+' : ''}{(displayTotals.xirr * 100).toFixed(1)}% Portfolio XIRR
+                  {displayTotals.xirrPartial && <span style={{ opacity: .7 }}> *</span>}
+                </div>
+              )}
+              {signed && displayTotals.xirrPartial && Number.isFinite(displayTotals.xirr) && (
+                <div className="pf-stat-sub" style={{ color: 'var(--muted)', fontSize: '.6rem', marginTop: 1 }}>
+                  * based on {displayTotals.xirrIncluded}/{displayTotals.xirrTotal} holdings
                 </div>
               )}
             </div>
@@ -780,8 +996,8 @@ function PortfolioInner() {
                   return (
                     <div key={h.id || i} className="pf-holding-row">
                       <ProviderAvatar
-                        name={h.name.split(' ')[0]}
-                        logoPath={getMFLogoFromSchemeName(h.name)}
+                        name={h.isSIF ? (h.sifName || h.name.split(' ')[0]) : h.name.split(' ')[0]}
+                        logoPath={h.isSIF ? getSIFLogo(h.sifName) : getMFLogoFromSchemeName(h.name)}
                         size={24}
                         radius={6}
                         style={{ flexShrink: 0, marginRight: 4 }}
@@ -819,14 +1035,15 @@ function PortfolioInner() {
 
             {/* Action cards */}
             <div className="pf-actions">
-              <a href="/cas-tracker" className="pf-action-card pf-action-primary">
+              <button onClick={() => setActiveTab('holdings')} className="pf-action-card pf-action-primary"
+                style={{ font: 'inherit', textAlign: 'left', width: '100%' }}>
                 <div className="pf-action-icon">📋</div>
                 <div>
                   <div className="pf-action-title">Full Portfolio Analysis</div>
                   <div className="pf-action-sub">Live NAVs · ELSS lock-in · FIFO gains</div>
                 </div>
                 <span className="pf-action-arrow">→</span>
-              </a>
+              </button>
               <a href="/cas-tracker#upload-section" className="pf-action-card">
                 <div className="pf-action-icon">📤</div>
                 <div>
@@ -877,14 +1094,19 @@ function PortfolioInner() {
                     <div className="pf-hc-head">
                       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
                         <ProviderAvatar
-                          name={h.name.split(' ')[0]}
-                          logoPath={getMFLogoFromSchemeName(h.name)}
+                          name={h.isSIF ? (h.sifName || h.name.split(' ')[0]) : h.name.split(' ')[0]}
+                          logoPath={h.isSIF ? getSIFLogo(h.sifName) : getMFLogoFromSchemeName(h.name)}
                           size={28}
                           radius={7}
                         />
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <div className="pf-hc-cat" style={{ background: cat.bg, color: cat.fg }}>{cat.label}</div>
                           {h.isManual && <div className="pf-hc-cat" style={{ background: 'var(--s3)', color: 'var(--muted)' }}>Manual</div>}
+                          {!h.isManual && h.isELSS && (
+                            h.lockedValue > 0
+                              ? <div className="elss-badge elss-locked" style={{ margin: 0 }}>🔒 ₹{fmtINR(h.lockedValue)} Locked</div>
+                              : <div className="elss-badge elss-unlocked" style={{ margin: 0 }}>🔓 Unlocked</div>
+                          )}
                         </div>
                       </div>
                       <div className="pf-hc-pct">{pct}% of portfolio</div>
@@ -954,11 +1176,35 @@ function PortfolioInner() {
                       <div className="pf-upload-meta">
                         {p.pan_count} PAN{p.pan_count !== 1 ? 's' : ''} · {fmtDate(p.uploaded_at)}
                       </div>
+                      {deletingId === p.id && deleteErr && (
+                        <div style={{ fontSize: '.62rem', color: 'var(--neg)', marginTop: 4 }}>{deleteErr}</div>
+                      )}
                     </div>
-                    <a href={`/cas-tracker?load=${encodeURIComponent(p.blob_key)}`}
-                      className="pf-upload-btn">
-                      Analyse →
-                    </a>
+                    {deletingId === p.id ? (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                        <span style={{ fontSize: '.68rem', color: 'var(--text2)', fontWeight: 600 }}>Delete?</span>
+                        <button onClick={() => deleteStatement(p.id)} disabled={deleteInFlight}
+                          style={{ fontSize: '.65rem', fontWeight: 800, color: '#fff', background: 'var(--neg)', border: 'none', borderRadius: 7, padding: '7px 12px', cursor: deleteInFlight ? 'wait' : 'pointer' }}>
+                          {deleteInFlight ? '…' : 'Yes'}
+                        </button>
+                        <button onClick={() => { setDeletingId(''); setDeleteErr(''); }} disabled={deleteInFlight}
+                          style={{ fontSize: '.65rem', fontWeight: 700, color: 'var(--muted)', background: 'none', border: '1.5px solid var(--border)', borderRadius: 7, padding: '7px 12px', cursor: 'pointer' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                        <button onClick={() => { setDeletingId(p.id); setDeleteErr(''); }}
+                          title="Delete this statement"
+                          style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.8rem', color: 'var(--muted)', background: 'var(--s2)', border: '1.5px solid var(--border)', borderRadius: 8, cursor: 'pointer' }}>
+                          🗑
+                        </button>
+                        <a href={`/cas-tracker?load=${encodeURIComponent(p.blob_key)}`}
+                          className="pf-upload-btn">
+                          Analyse →
+                        </a>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

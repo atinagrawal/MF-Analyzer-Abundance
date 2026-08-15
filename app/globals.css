@@ -5786,8 +5786,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   gap: 2px;
 }
 .pf-holding-row {
+  /* 6 grid items: avatar, category pill, name, % bar, value, gain% —
+     was 5 explicit columns for 6 children, so the gain% figure silently
+     wrapped to its own row (and every column after the pill was off by
+     one) at every breakpoint. */
   display: grid;
-  grid-template-columns: 52px 1fr 140px 80px 52px;
+  grid-template-columns: 44px 48px 1fr 140px 78px 58px;
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
@@ -6111,14 +6115,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .pf-stat-row { grid-template-columns: 1fr; gap: 10px; margin-top: -20px; }
   .pf-actions { grid-template-columns: 1fr; }
   .pf-holdings-full { grid-template-columns: 1fr; }
-  .pf-holding-row { grid-template-columns: 40px 1fr 60px 60px; }
+  .pf-holding-row { grid-template-columns: 36px 44px 1fr 60px 52px; }
   .pf-holding-bar-wrap { display: none; }
 }
 @media (max-width: 480px) {
   .pf-wealth-num { font-size: 2rem; }
   .pf-gain-pill { font-size: .68rem; padding: 6px 12px; }
   .pf-stat-row { margin-top: -16px; }
-  .pf-holding-row { grid-template-columns: 1fr auto auto; }
+  .pf-holding-row { grid-template-columns: 36px 1fr auto auto; }
   .pf-holding-cat { display: none; }
   .pf-advisor-card { flex-wrap: wrap; }
 }

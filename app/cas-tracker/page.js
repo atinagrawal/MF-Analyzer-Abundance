@@ -60,7 +60,7 @@ function getFileKey(file) {
 // Shared by the fund-grid render and the PDF/Excel export functions, so both
 // always see the exact same holdings list -- normalises manual holdings into
 // the same shape as CAS holdings and tags each with a stable id.
-function buildAllHoldings(currentInfo, manualHoldings, sifNavMap, activePan) {
+function buildAllHoldings(currentInfo, manualHoldings, sifNavMap, activePan, sifNameMap = {}) {
   const manualMapped = manualHoldings.map(h => {
     const pu = parseFloat(h.purchase_nav);
     const u  = parseFloat(h.units);
@@ -69,6 +69,7 @@ function buildAllHoldings(currentInfo, manualHoldings, sifNavMap, activePan) {
     return {
       id:            `manual-${h.id}`,
       name:          h.fund_name,
+      sifHouseName:  h.fund_type === 'SIF' ? (sifNameMap[h.amfi_code] || null) : null,
       folio:         h.folio || null,
       units:         u,
       liveNav:       ln ?? pu,
@@ -2458,6 +2459,7 @@ function CasTrackerInner() {
   // ── Manual holdings + SIF NAVs ──
   const [manualHoldings, setManualHoldings] = useState([]);
   const [sifNavMap,      setSifNavMap]      = useState({}); // scheme_id → nav
+  const [sifNameMap,     setSifNameMap]     = useState({}); // scheme_id → sif_name, for manual SIF holdings' logo lookup
   const [manualLoading,  setManualLoading]  = useState(false);
   const [viewFilter,     setViewFilter]     = useState('all'); // 'all' | 'mf' | 'sif'
   const [viewedUserId,   setViewedUserId]   = useState('');   // client userId when admin viewing
@@ -2538,11 +2540,14 @@ function CasTrackerInner() {
           if (r2?.ok) {
             const sifData = await r2.json();
             const navMap = {};
+            const nameMap = {};
             (sifData.schemes || []).forEach(s => {
               navMap[s.scheme_id] = s.nav;
               if (s.isin_po) navMap[s.isin_po] = s.nav;
+              nameMap[s.scheme_id] = s.sif_name;
             });
             setSifNavMap(navMap);
+            setSifNameMap(nameMap);
           }
         }
       })
@@ -2735,6 +2740,7 @@ function CasTrackerInner() {
       if (sifMatch) {
         h.fund_type = 'SIF';
         h.amfiCode  = sifMatch.scheme_id;  // e.g. "SIF-34" -- used for both live NAV and history lookups
+        h.sifHouseName = sifMatch.sif_name;  // e.g. "Altiva SIF" -- the logo lookup key, distinct from the scheme's own display name
         h.liveNav   = sifMatch.nav;
         h.isLive    = true;
       } else {
@@ -3758,7 +3764,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 
             {/* ── Unified fund grid: CAS + manual holdings ── */}
             {(() => {
-              const allHoldings = buildAllHoldings(currentInfo, manualHoldings, sifNavMap, activePan);
+              const allHoldings = buildAllHoldings(currentInfo, manualHoldings, sifNavMap, activePan, sifNameMap);
               const filtered    = viewFilter === 'sif' ? allHoldings.filter(h => h.fund_type === 'SIF')
                                 : viewFilter === 'mf'  ? allHoldings.filter(h => h.fund_type !== 'SIF')
                                 : allHoldings;
@@ -3787,10 +3793,10 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                               />
                             )}
                             <ProviderAvatar
-                              name={fund.name.split(' - ')[0] || fund.name}
+                              name={fund.fund_type === 'SIF' ? (fund.sifHouseName || fund.name.split(' - ')[0] || fund.name) : (fund.name.split(' - ')[0] || fund.name)}
                               logoPath={
                                 fund.fund_type === 'SIF'
-                                  ? getSIFLogo(fund.name.split(' - ')[0] || fund.name)
+                                  ? getSIFLogo(fund.sifHouseName)
                                   : getMFLogoFromSchemeName(fund.name)
                               }
                               size={32}
