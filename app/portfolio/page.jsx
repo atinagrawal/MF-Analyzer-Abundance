@@ -26,6 +26,7 @@ import Footer from '@/components/Footer';
 import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows, combinedXirr } from '@/lib/xirr';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogoFromSchemeName } from '@/lib/providerLogos';
+import { FundDetailDrawer, SifDetailDrawer } from '@/components/HoldingDetailDrawer';
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
 
@@ -128,6 +129,7 @@ function PortfolioInner() {
   const [sifNavMap, setSifNavMap]  = useState({});
   const [activeTab, setActiveTab]  = useState('overview'); // overview | holdings | uploads
   const [errMsg, setErrMsg]        = useState('');
+  const [detailHolding, setDetailHolding] = useState(null); // holding object for the fund/SIF details drawer
 
   // Derived values
   const [panPortfolios, setPanPortfolios] = useState({}); // PAN → {name, current, invested, holdings}
@@ -159,19 +161,37 @@ function PortfolioInner() {
         setPortfolios(ports);
         setManualHoldings(manual);
 
-        // 2. SIF NAVs — localSifMap used directly in computation (state update is async)
+        // 2. SIF NAVs — localSifMap used directly in computation (state update is async).
+        // Fetched unconditionally (cheap, server-cached) rather than only when a manual
+        // holding is tagged SIF: CAS statements DO include SIF holdings with full
+        // transaction history, but casparser reports scheme.amfi as null for them, so
+        // there's no way to know in advance whether THIS CAS contains one without already
+        // having this list to match against (isin_po/isin_ri/nav_name below) — same
+        // resolution app/cas-tracker/page.js already does for the same reason.
         let localSifMap = {};
-        const hasSIF = manual.some(h => h.fund_type === 'SIF');
-        if (hasSIF) {
-          try {
-            const sifRes = await fetch('/api/sif-nav');
-            if (sifRes.ok) {
-              const sifData = await sifRes.json();
-              (sifData.schemes || []).forEach(s => { localSifMap[s.scheme_id] = s.nav; });
-              setSifNavMap(localSifMap);
-              if (sifData.nav_date) setNavDate(sifData.nav_date);
-            }
-          } catch {}
+        const sifByIsin = {};
+        const sifByName = {};
+        try {
+          const sifRes = await fetch('/api/sif-nav');
+          if (sifRes.ok) {
+            const sifData = await sifRes.json();
+            (sifData.schemes || []).forEach(s => {
+              localSifMap[s.scheme_id] = s.nav;
+              if (s.isin_po) sifByIsin[s.isin_po] = s;
+              if (s.isin_ri) sifByIsin[s.isin_ri] = s;
+              const norm = (s.nav_name || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+              if (norm) sifByName[norm] = s;
+            });
+            setSifNavMap(localSifMap);
+            if (sifData.nav_date) setNavDate(sifData.nav_date);
+          }
+        } catch {}
+        // ISIN is the reliable match (unique per scheme); normalised name is a
+        // fallback for the rare case a scheme's ISIN isn't in either source.
+        function resolveSif(scheme) {
+          if (scheme.isin && sifByIsin[scheme.isin]) return sifByIsin[scheme.isin];
+          const norm = (scheme.scheme || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+          return sifByName[norm] || null;
         }
 
         // 3. Load ALL saved CAS files — not just the latest — so holdings
@@ -300,7 +320,11 @@ function PortfolioInner() {
                 const units = parseFloat(scheme.close) || 0;
                 if (units < 0.001) return;
                 const casCost = parseFloat(scheme.valuation?.cost || 0);
-                const liveNav = navMap[scheme.amfi] || parseFloat(scheme.valuation?.nav || 0);
+                // CAS statements DO include SIF holdings, but casparser reports
+                // scheme.amfi as null for them — resolveSif matches by ISIN/name
+                // against the AMFI SIF scheme master instead (see comment above).
+                const sifMatch = resolveSif(scheme);
+                const liveNav = sifMatch ? sifMatch.nav : (navMap[scheme.amfi] || parseFloat(scheme.valuation?.nav || 0));
                 const value   = units * liveNav;
                 const invested = casCost > 0 ? casCost : value;
                 casCurrent  += value;
@@ -310,10 +334,11 @@ function PortfolioInner() {
                 const h = {
                   id: `${validPan}-${folio.folio || ''}-${scheme.amfi || scheme.scheme}`,
                   name:     scheme.scheme,
+                  code:     sifMatch ? sifMatch.scheme_id : (scheme.amfi || null),
                   value, invested, liveNav, units,
-                  isLive:   !!navMap[scheme.amfi],
-                  category: inferCategory(scheme.scheme),
-                  isSIF:    false,
+                  isLive:   sifMatch ? true : !!navMap[scheme.amfi],
+                  category: sifMatch ? 'sif' : inferCategory(scheme.scheme),
+                  isSIF:    !!sifMatch,
                   xirr:     schemeXirr(scheme, value),
                   xirrFlows: schemeCashFlows(scheme),
                 };
@@ -332,7 +357,7 @@ function PortfolioInner() {
               manualVal += val;
               const mh = {
                 id: `manual-${h.id}`,
-                name: h.fund_name, value: val, invested: pu * u,
+                name: h.fund_name, code: h.amfi_code || null, value: val, invested: pu * u,
                 liveNav: ln ?? pu, units: u, isLive: ln != null,
                 category: h.fund_type === 'SIF' ? 'sif' : inferCategory(h.fund_name),
                 isSIF: h.fund_type === 'SIF', isManual: true,
@@ -380,6 +405,7 @@ function PortfolioInner() {
             mhList.push({
               id:       `manual-${h.id}`,
               name:     h.fund_name,
+              code:     h.amfi_code || null,
               value:    (ln ?? pu) * u,
               invested: pu * u,
               liveNav:  ln ?? pu,
@@ -680,7 +706,18 @@ function PortfolioInner() {
                           {cat.label}
                         </span>
                       </div>
-                      <div className="pf-holding-name" title={h.name}>{h.name}</div>
+                      {h.code ? (
+                        <button
+                          onClick={() => setDetailHolding(h)}
+                          title="View fund details"
+                          className="pf-holding-name pf-holding-name-link"
+                          style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', font: 'inherit', textAlign: 'left', minWidth: 0, width: '100%' }}
+                        >
+                          {h.name}
+                        </button>
+                      ) : (
+                        <div className="pf-holding-name" title={h.name}>{h.name}</div>
+                      )}
                       <div className="pf-holding-bar-wrap">
                         <div className="pf-holding-bar" style={{ width: `${pct}%`, background: cat.fg + '30' }} />
                         <span className="pf-holding-pct">{pct}%</span>
@@ -767,7 +804,18 @@ function PortfolioInner() {
                       </div>
                       <div className="pf-hc-pct">{pct}% of portfolio</div>
                     </div>
-                    <div className="pf-hc-name">{h.name}</div>
+                    {h.code ? (
+                      <button
+                        onClick={() => setDetailHolding(h)}
+                        title="View fund details"
+                        className="pf-hc-name pf-holding-name-link"
+                        style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', font: 'inherit', textAlign: 'left', display: 'block', width: '100%' }}
+                      >
+                        {h.name}
+                      </button>
+                    ) : (
+                      <div className="pf-hc-name">{h.name}</div>
+                    )}
                     <div className="pf-hc-bar">
                       <div className="pf-hc-bar-fill" style={{ width: `${pct}%`, background: cat.fg + '40' }} />
                     </div>
@@ -835,6 +883,12 @@ function PortfolioInner() {
 
         <div style={{ height: 48 }} />
       </div>
+
+      {detailHolding && (
+        detailHolding.isSIF
+          ? <SifDetailDrawer schemeId={detailHolding.code} onClose={() => setDetailHolding(null)} />
+          : <FundDetailDrawer code={detailHolding.code} onClose={() => setDetailHolding(null)} />
+      )}
 
       <Footer />
     </>

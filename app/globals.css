@@ -2099,6 +2099,10 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 4px;
 }
 
+/* Clickable variant — opens the fund/SIF details drawer (CAS Tracker, Portfolio) */
+.fund-name-link { transition: color .12s; }
+.fund-name-link:hover { color: var(--g2); text-decoration: underline; }
+
 .fund-code {
   font-size: 0.65rem;
   color: var(--muted);
@@ -5984,6 +5988,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   line-height: 1.4;
   margin-bottom: 10px;
 }
+
+/* Clickable variant — opens the fund/SIF details drawer */
+.pf-holding-name-link { transition: color .12s; }
+.pf-holding-name-link:hover { color: var(--g2); text-decoration: underline; }
 .pf-hc-bar {
   height: 3px;
   background: var(--s3);

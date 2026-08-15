@@ -10,6 +10,7 @@ import ProviderAvatar from '@/components/ProviderAvatar';
 import { getSIFLogo, getMFLogoFromSchemeName } from '@/lib/providerLogos';
 import growwByAmfiCode from '@/data/groww-exit-loads.json';
 import { CAS_FAQ } from './faqData';
+import { FundDetailDrawer, SifDetailDrawer } from '@/components/HoldingDetailDrawer';
 
 // isin-scheme-master.json (~8.4MB, ~26k entries) used to be statically
 // imported here -- meaning it shipped to every visitor's BROWSER as part of
@@ -2466,6 +2467,7 @@ function CasTrackerInner() {
   const [redeemSelection, setRedeemSelection] = useState({}); // fund.id → fund object, checked via dashboard checkboxes
   const [txnDrawerFund,  setTxnDrawerFund]  = useState(null);  // holding object for the Transaction History drawer
   const [navHistoryCache, setNavHistoryCache] = useState({});  // navHistoryCacheKey(fund) → { loading, points, error } -- only populated on demand (see fetchNavHistory)
+  const [detailFund,     setDetailFund]     = useState(null);  // holding object for the fund/SIF details drawer (same one screener uses)
 
   // Auto-load via ?load=blobKey (admin CAS view) or ?userId= (manual-only client)
   useEffect(() => {
@@ -3795,7 +3797,22 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                               radius={8}
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div className="fund-name" style={{ marginBottom: 0 }}>{fund.name}</div>
+                              {fund.amfiCode ? (
+                                <button
+                                  onClick={() => setDetailFund(fund)}
+                                  title="View fund details"
+                                  style={{
+                                    display: 'block', width: '100%', textAlign: 'left',
+                                    background: 'none', border: 0, padding: 0, cursor: 'pointer',
+                                    font: 'inherit',
+                                  }}
+                                  className="fund-name fund-name-link"
+                                >
+                                  {fund.name}
+                                </button>
+                              ) : (
+                                <div className="fund-name" style={{ marginBottom: 0 }}>{fund.name}</div>
+                              )}
                             </div>
                           </div>
 
@@ -4043,6 +4060,11 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
           onClose={() => setPlanPortfolio(false)}
           masterFacts={masterFacts}
         />
+      )}
+      {detailFund && (
+        detailFund.fund_type === 'SIF'
+          ? <SifDetailDrawer schemeId={detailFund.amfiCode} onClose={() => setDetailFund(null)} />
+          : <FundDetailDrawer code={detailFund.amfiCode} onClose={() => setDetailFund(null)} />
       )}
 
       {/* ── FAQ — visible to all, crawlable ─────────────────────────────── */}
