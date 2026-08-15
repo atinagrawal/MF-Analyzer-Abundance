@@ -27,6 +27,7 @@ import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows,
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogoFromSchemeName } from '@/lib/providerLogos';
 import { FundDetailDrawer, SifDetailDrawer } from '@/components/HoldingDetailDrawer';
+import { PORTFOLIO_FAQ } from './faqData';
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
 
@@ -487,6 +488,39 @@ function PortfolioInner() {
             </div>
           </div>
         </div>
+
+        {/* ── FAQ — visible to all, crawlable, mirrors the FAQPage JSON-LD in layout.js ── */}
+        <section style={{ padding: '64px 0', maxWidth: 800, margin: '0 auto' }}>
+          <div style={{ padding: '0 20px' }}>
+            <div className="page-eyebrow" style={{ marginBottom: 10 }}>
+              <span className="eyebrow-text">Help & Support</span>
+            </div>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-.4px', marginBottom: 28 }}>
+              Frequently Asked Questions
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {PORTFOLIO_FAQ.map(({ q, a }, i, arr) => (
+                <details key={i} style={{
+                  borderTop: '1px solid var(--border)',
+                  borderBottom: i === arr.length - 1 ? '1px solid var(--border)' : 'none',
+                }}>
+                  <summary style={{
+                    padding: '16px 4px', cursor: 'pointer', listStyle: 'none',
+                    fontSize: '.82rem', fontWeight: 800, color: 'var(--text)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  }}>
+                    {q}
+                    <span style={{ fontSize: '1rem', color: 'var(--muted)', flexShrink: 0, marginLeft: 12 }}>+</span>
+                  </summary>
+                  <div style={{ padding: '0 4px 16px', fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.7 }}>
+                    {a}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <Footer />
       </>
     );
