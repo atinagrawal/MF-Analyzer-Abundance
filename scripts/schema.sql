@@ -197,6 +197,27 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by         TEXT REFERENCES us
 -- this schema either, e.g. pan_investor_names.pan is also a bare TEXT key).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS default_pan        TEXT;
 
+-- Last time this user's session was checked by the app (throttled to at
+-- most once/hour per user in the auth.js session callback, so this is
+-- "active within the last hour" resolution, not exact). Powers "days since
+-- last visit" in the admin panel and the lifecycle-email drip script's
+-- win-back window -- neither of which had ANY usage signal before this,
+-- since sessions rows are just NextAuth's token store, not a usage log.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at      TIMESTAMPTZ;
+
+-- Dedup log for automated lifecycle emails (scripts/send_lifecycle_emails.mjs
+-- and auth.js's createUser welcome-email hook). UNIQUE(user_id, email_type)
+-- is the actual guard against double-sends -- both callers INSERT ... ON
+-- CONFLICT DO NOTHING rather than pre-checking, so a race between two runs
+-- can't send the same email twice.
+CREATE TABLE IF NOT EXISTS lifecycle_emails_sent (
+  id         TEXT        NOT NULL DEFAULT gen_random_uuid()::text PRIMARY KEY,
+  user_id    TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  email_type TEXT        NOT NULL,  -- 'welcome' | 'day3_nudge' | 'day14_winback'
+  sent_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, email_type)
+);
+
 -- ── Data-engine tables ───────────────────────────────────────────────────────
 -- Populated by scheduled GitHub Actions workflows running scripts/*.mjs and
 -- scripts/sync_*.js against public data sources (AMFI, BSE, NSE, mfapi.in),

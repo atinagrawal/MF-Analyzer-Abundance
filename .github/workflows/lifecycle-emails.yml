@@ -1,0 +1,29 @@
+name: Daily Lifecycle Emails
+
+on:
+  schedule:
+    # 09:00 IST daily (03:30 UTC) — mid-morning send time, not a 3am inbox drop.
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  send-lifecycle-emails:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install deps
+        run: npm install pg --no-save
+
+      - name: Send lifecycle emails
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+          RESEND_KEY:   ${{ secrets.RESEND_KEY }}
+        run: node scripts/send_lifecycle_emails.mjs

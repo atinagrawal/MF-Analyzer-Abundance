@@ -26,10 +26,13 @@ export async function GET() {
         u.distributor_id,
         d.name AS distributor_name,
         u.created_at,
-        COUNT(cp.id)::int AS portfolio_count,
-        MAX(cp.uploaded_at) AS last_upload
+        u.last_active_at,
+        COUNT(DISTINCT cp.id)::int AS portfolio_count,
+        MAX(cp.uploaded_at) AS last_upload,
+        COUNT(DISTINCT p.id)::int AS proposal_count
       FROM users u
       LEFT JOIN cas_portfolios cp ON cp.user_id = u.id
+      LEFT JOIN proposals p ON p.user_id = u.id
       LEFT JOIN users d ON d.id = u.distributor_id
       GROUP BY u.id, d.name
       ORDER BY u.created_at DESC

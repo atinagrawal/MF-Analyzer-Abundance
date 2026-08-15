@@ -4,6 +4,7 @@ import { SITE, SITE_NAME, THEME_COLOR } from '@/lib/metadata';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import AuthProvider from '@/components/AuthProvider';
 import ProfileCompletionGate from '@/components/ProfileCompletionGate';
+import PostHogProvider from '@/components/PostHogProvider';
 
 /**
  * app/layout.js — Root layout for the entire application
@@ -12,8 +13,10 @@ import ProfileCompletionGate from '@/components/ProfileCompletionGate';
  * - Raleway + JetBrains Mono fonts via Google Fonts
  * - Global metadata (site name, theme color, PWA manifest, favicons)
  * - Vercel Speed Insights
- * - Google Analytics (gtag) via next/script
+ * - Google Analytics (gtag) via next/script — aggregate/anonymous traffic only
  * - AuthProvider (NextAuth SessionProvider) for useSession() in client components
+ * - PostHogProvider — pageviews + per-user identify() once signed in (no-ops
+ *   until NEXT_PUBLIC_POSTHOG_KEY is set)
  *
  * Individual pages export their own metadata via getPageMeta() which
  * merges with these defaults.
@@ -86,10 +89,14 @@ export default function RootLayout({ children }) {
         <link rel="icon" type="image/x-icon" href="https://www.getabundance.in/favicon.ico" />
       </head>
       <body>
-        {/* AuthProvider makes useSession() available in all client components */}
+        {/* AuthProvider makes useSession() available in all client components.
+            PostHogProvider must nest INSIDE it — it calls useSession() itself
+            to identify() the current user once signed in. */}
         <AuthProvider>
-          <ProfileCompletionGate />
-          {children}
+          <PostHogProvider>
+            <ProfileCompletionGate />
+            {children}
+          </PostHogProvider>
         </AuthProvider>
         <SpeedInsights />
 

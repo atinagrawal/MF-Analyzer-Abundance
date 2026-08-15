@@ -47,6 +47,31 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function daysSince(d) {
+  if (!d) return Infinity;
+  return (Date.now() - new Date(d).getTime()) / 86400000;
+}
+
+/** Recency dot + label for last_active_at — the only usage signal that
+ *  exists for a user beyond what they've explicitly saved (CAS/proposals).
+ *  Thresholds mirror the lifecycle-email windows (day 3 nudge, day 14 win-back). */
+function ActivityDot({ lastActiveAt }) {
+  const days = daysSince(lastActiveAt);
+  let color, label;
+  if (!lastActiveAt)      { color = 'var(--muted)'; label = 'Never'; }
+  else if (days <= 7)     { color = '#2e7d32'; label = 'Active this week'; }
+  else if (days <= 30)    { color = '#e65100'; label = 'Active this month'; }
+  else                    { color = 'var(--neg)'; label = 'Inactive 30+ days'; }
+  return (
+    <span title={label} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+      <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0 }} />
+      <span style={{ fontSize: '.65rem', fontFamily: "'JetBrains Mono', monospace", color: 'var(--muted)' }}>
+        {lastActiveAt ? fmtDate(lastActiveAt) : 'Never'}
+      </span>
+    </span>
+  );
+}
+
 /** Role, Plan, & Distributor dropdowns — reused in desktop side panel and mobile drill-down. */
 function RoleAndPlanSelect({ user, sessionUserId, distributors = [], roleChanging, planChanging, distributorChanging, onRoleChange, onPlanChange, onDistributorChange }) {
   return (
@@ -379,6 +404,12 @@ export default function UsersTab({ session }) {
                 <div style={{ fontSize: '.62rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
                   {selectedUser.email}
                 </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                  <ActivityDot lastActiveAt={selectedUser.last_active_at} />
+                  <span style={{ fontSize: '.62rem', color: 'var(--muted)' }}>
+                    {selectedUser.proposal_count || 0} proposal{selectedUser.proposal_count === 1 ? '' : 's'}
+                  </span>
+                </div>
               </div>
               <div style={{ padding: '12px 16px' }}>
                 <RoleAndPlanSelect
@@ -413,7 +444,7 @@ export default function UsersTab({ session }) {
                     {u.id === session.user.id && <span style={{ fontSize: '.55rem', color: 'var(--muted)', marginLeft: 5 }}>(you)</span>}
                   </div>
                   <div className="admin-user-card-email">{u.email}</div>
-                  <div className="admin-user-card-sub">{u.portfolio_count || 0} portfolio{u.portfolio_count === 1 ? '' : 's'} · joined {fmtDate(u.created_at)}</div>
+                  <div className="admin-user-card-sub">{u.portfolio_count || 0} portfolio{u.portfolio_count === 1 ? '' : 's'} · active {u.last_active_at ? fmtDate(u.last_active_at) : 'never'}</div>
                 </div>
                 <RoleBadge role={u.role} />
               </button>
@@ -434,6 +465,7 @@ export default function UsersTab({ session }) {
                   <th>Role</th>
                   <th>Portfolios</th>
                   <th>Last Upload</th>
+                  <th>Last Active</th>
                   <th>Joined</th>
                 </tr>
               </thead>
@@ -441,7 +473,7 @@ export default function UsersTab({ session }) {
                 {loading ? (
                   [...Array(5)].map((_, i) => (
                     <tr key={i}>
-                      {[180, 60, 50, 80, 80].map((w, j) => (
+                      {[180, 60, 50, 80, 80, 80].map((w, j) => (
                         <td key={j}><div className="sk" style={{ width: w, height: 13 }} /></td>
                       ))}
                     </tr>
@@ -489,6 +521,7 @@ export default function UsersTab({ session }) {
                       {u.portfolio_count || 0}
                     </td>
                     <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.65rem' }}>{fmtDate(u.last_upload)}</td>
+                    <td><ActivityDot lastActiveAt={u.last_active_at} /></td>
                     <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.65rem' }}>{fmtDate(u.created_at)}</td>
                   </tr>
                 ))}
@@ -520,6 +553,12 @@ export default function UsersTab({ session }) {
                   style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '.9rem', color: 'var(--muted)', padding: 4 }}>
                   ✕
                 </button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                <ActivityDot lastActiveAt={selectedUser.last_active_at} />
+                <span style={{ fontSize: '.62rem', color: 'var(--muted)' }}>
+                  {selectedUser.proposal_count || 0} proposal{selectedUser.proposal_count === 1 ? '' : 's'}
+                </span>
               </div>
             </div>
             <div style={{ padding: '12px 16px' }}>

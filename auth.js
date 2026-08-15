@@ -79,6 +79,86 @@ export function buildEmail({ url, host, code }) {
   };
 }
 
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+// ── Welcome email — sent once, from events.createUser below ────────────────────
+// Warm/personal on purpose, not a corporate onboarding drip: the actual
+// product here is Atin's advisory relationship, and the free tools are how
+// people discover that. Points at the 3 tools a brand-new, unknown signup
+// is most likely to get value from immediately, then offers a human reply
+// as the differentiator versus a pure SaaS tool.
+
+function buildWelcomeEmail({ name }) {
+  const brand = '#1a7a4a';
+  const muted = '#64748b';
+  const first = (name || '').trim().split(' ')[0] || 'there';
+  return {
+    subject: 'Welcome to Abundance — here’s where to start',
+    html: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f8fafb;font-family:'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafb;padding:40px 16px;">
+<tr><td align="center"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
+  <tr><td align="center" style="padding-bottom:24px;">
+    <img src="https://mfcalc.getabundance.in/logo-192.png" alt="Abundance Financial Services" width="80" height="80" style="display:block;margin:0 auto 14px;border-radius:14px;border:1.5px solid #e2e8f0;" />
+    <div style="font-size:20px;font-weight:900;color:${brand};letter-spacing:-.5px;">Abundance Financial Services</div>
+    <div style="font-size:12px;color:${muted};margin-top:4px;font-family:'Courier New',monospace;">ARN-251838 · Haldwani, Uttarakhand</div>
+  </td></tr>
+  <tr><td style="background:#fff;border-radius:12px;border:1.5px solid #e2e8f0;border-top:4px solid ${brand};padding:36px 32px;box-shadow:0 4px 20px rgba(0,0,0,.06);">
+    <h1 style="margin:0 0 12px;font-size:20px;font-weight:800;color:#1e293b;letter-spacing:-.4px;">Hi ${esc(first)}, welcome aboard 👋</h1>
+    <p style="margin:0 0 18px;font-size:14px;color:${muted};line-height:1.6;">Thanks for signing up. This isn't just a software product — it's a set of free tools built by a real AMFI-registered advisor (that's me, Atin) to help you actually understand your money. A few places worth starting:</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
+      <tr><td style="padding:10px 0;border-top:1px solid #f1f5f9;">
+        <div style="font-size:14px;font-weight:700;color:#1e293b;">📋 CAS Tracker</div>
+        <div style="font-size:13px;color:${muted};line-height:1.5;margin-top:2px;">Upload your Consolidated Account Statement to see every fund you own, live gains, and ELSS lock-in status in one place.</div>
+      </td></tr>
+      <tr><td style="padding:10px 0;border-top:1px solid #f1f5f9;">
+        <div style="font-size:14px;font-weight:700;color:#1e293b;">🔎 Fund Screener</div>
+        <div style="font-size:13px;color:${muted};line-height:1.5;margin-top:2px;">Compare mutual funds, SIFs, and PMS strategies on real historical returns and risk — not brochure numbers.</div>
+      </td></tr>
+      <tr><td style="padding:10px 0;border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9;">
+        <div style="font-size:14px;font-weight:700;color:#1e293b;">🧪 Backtester</div>
+        <div style="font-size:13px;color:${muted};line-height:1.5;margin-top:2px;">Stress-test a SIP or lumpsum idea against real historical NAVs before you commit money to it.</div>
+      </td></tr>
+    </table>
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding-top:22px;">
+      <a href="https://mfcalc.getabundance.in/portfolio" style="display:inline-block;padding:14px 32px;background:${brand};color:#fff;font-size:15px;font-weight:700;border-radius:10px;text-decoration:none;letter-spacing:-.2px;">Open your portfolio →</a>
+    </td></tr></table>
+    <p style="margin:24px 0 0;font-size:13px;color:${muted};line-height:1.6;border-top:1px solid #f1f5f9;padding-top:16px;">Have a question about your investments, or want to talk it through with a person instead of a screen? Just reply to this email — it comes straight to me.</p>
+  </td></tr>
+  <tr><td align="center" style="padding-top:20px;">
+    <p style="margin:0;font-size:11px;color:${muted};font-family:'Courier New',monospace;">Abundance Financial Services · ARN-251838 · mfcalc.getabundance.in</p>
+  </td></tr>
+</table></td></tr></table>
+</body></html>`,
+    text: `Hi ${first}, welcome to Abundance.\n\nThis is a set of free tools built by a real AMFI-registered advisor (Atin) to help you understand your money:\n\n- CAS Tracker: see every fund you own, live gains, ELSS lock-in — https://mfcalc.getabundance.in/portfolio\n- Fund Screener: compare mutual funds, SIFs, and PMS on real returns and risk — https://mfcalc.getabundance.in/screener\n- Backtester: stress-test a SIP or lumpsum idea against real historical NAVs — https://mfcalc.getabundance.in/backtest\n\nHave a question about your investments? Just reply to this email — it comes straight to me.\n\nAbundance Financial Services · ARN-251838`,
+  };
+}
+
+async function sendLifecycleEmail(userId, email, emailType, { subject, html, text }) {
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method:  'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_KEY}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({ from: 'Abundance Financial Services <noreply@getabundance.in>', to: email, subject, html, text }),
+    });
+    if (!res.ok) {
+      console.error(`[lifecycle email:${emailType}] Resend error`, res.status, await res.text().catch(() => ''));
+      return;
+    }
+    // ON CONFLICT DO NOTHING: UNIQUE(user_id, email_type) is the real guard
+    // against double-sends, not this check-then-insert.
+    await pool.query(
+      `INSERT INTO lifecycle_emails_sent (user_id, email_type) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [userId, emailType]
+    );
+  } catch (e) {
+    console.error(`[lifecycle email:${emailType}] failed`, e.message);
+  }
+}
+
 // ── Auth config ───────────────────────────────────────────────────────────────
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -206,12 +286,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // viewing a CLIENT's family CAS fetches THAT client's default_pan
         // via the API instead, since it's not on the admin's own session.
         session.user.defaultPan = user.default_pan ?? null;
+
+        // Fire-and-forget, throttled to at most once/hour per user — this
+        // callback runs on essentially every useSession()/auth() check, so
+        // writing on every call would turn routine page loads into DB
+        // writes. Before this, there was NO usage signal at all beyond
+        // created_at and whatever a user explicitly saved (CAS uploads,
+        // proposals) — this is what "last active" in the admin panel and
+        // the lifecycle-email win-back window read from.
+        pool.query(
+          `UPDATE users SET last_active_at = NOW()
+           WHERE id = $1 AND (last_active_at IS NULL OR last_active_at < NOW() - INTERVAL '1 hour')`,
+          [user.id]
+        ).catch(e => console.error('[last_active_at]', e.message));
       }
       return session;
     },
   },
 
   events: {
+    // Fires exactly once, on first signup (both Google and email/OTP go
+    // through this — @auth/core only calls createUser for a brand-new row,
+    // never on a returning sign-in). Fire-and-forget: a failed welcome
+    // email must never block or fail the sign-in itself.
+    async createUser({ user }) {
+      if (!user.email) return;
+      sendLifecycleEmail(user.id, user.email, 'welcome', buildWelcomeEmail({ name: user.name }));
+    },
+
     // When allowDangerousEmailAccountLinking links a Google sign-in to a
     // PRE-EXISTING nameless row (an admin-invited placeholder from
     // app/api/admin/clients, or an account that first signed up via
