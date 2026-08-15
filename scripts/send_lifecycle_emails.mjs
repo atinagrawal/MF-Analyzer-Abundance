@@ -30,7 +30,8 @@ import pg from 'pg';
 
 const BRAND = '#1a7a4a';
 const MUTED = '#64748b';
-const FROM  = 'Abundance Financial Services <noreply@getabundance.in>';
+const FROM     = 'Abundance Financial Services <noreply@getabundance.in>';
+const REPLY_TO = 'contact@getabundance.in'; // both templates invite a reply — noreply@ can't honor that
 
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
@@ -90,7 +91,7 @@ async function sendLifecycleEmail(pool, resendKey, userId, email, emailType, { s
   const res = await fetch('https://api.resend.com/emails', {
     method:  'POST',
     headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: FROM, to: email, subject, html, text }),
+    body: JSON.stringify({ from: FROM, reply_to: REPLY_TO, to: email, subject, html, text }),
   });
   if (!res.ok) {
     throw new Error(`Resend ${res.status}: ${await res.text().catch(() => '')}`);

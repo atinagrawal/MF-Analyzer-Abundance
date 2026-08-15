@@ -142,7 +142,11 @@ async function sendLifecycleEmail(userId, email, emailType, { subject, html, tex
         'Authorization': `Bearer ${process.env.RESEND_KEY}`,
         'Content-Type':  'application/json',
       },
-      body: JSON.stringify({ from: 'Abundance Financial Services <noreply@getabundance.in>', to: email, subject, html, text }),
+      body: JSON.stringify({
+        from: 'Abundance Financial Services <noreply@getabundance.in>',
+        reply_to: 'contact@getabundance.in', // these templates invite a reply ("comes straight to me") — noreply@ can't honor that, so replies route here instead
+        to: email, subject, html, text,
+      }),
     });
     if (!res.ok) {
       console.error(`[lifecycle email:${emailType}] Resend error`, res.status, await res.text().catch(() => ''));
