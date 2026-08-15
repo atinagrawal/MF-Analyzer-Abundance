@@ -116,7 +116,7 @@ export default function PortfolioLayout({ children }) {
     "description": "Sign in and see your full mutual fund portfolio with live NAVs, FIFO gains, and ELSS lock-in status — no re-upload needed after the first time.",
     "totalTime": "PT1M",
     "step": [
-      { "@type": "HowToStep", "position": 1, "name": "Sign in to Abundance", "text": "Sign in via Google or email magic link." },
+      { "@type": "HowToStep", "position": 1, "name": "Sign in to Abundance", "text": "Sign in via Google, or with your email using a one-click link or a 6-digit code." },
       { "@type": "HowToStep", "position": 2, "name": "Upload your CAS once (first-time only)", "text": "If you haven't already, upload your CAMS or KFintech CAS statement via CAS Tracker. It's saved to your account permanently." },
       { "@type": "HowToStep", "position": 3, "name": "Return to My Portfolio anytime", "text": "Your dashboard loads automatically with the latest AMFI NAVs — total wealth, top holdings, FIFO gains, and ELSS lock-in status, updated every visit." }
     ]

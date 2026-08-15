@@ -4,10 +4,12 @@
  * app/login/page.jsx — Login page
  *
  * Sign-in methods:
- *   1. Email magic link — enter email → receive one-click sign-in link
- *   2. Google OAuth     — for users with Google accounts
+ *   1. Email — enter email → receive one email with BOTH a one-click link
+ *      and a 6-digit code (see auth.js's Resend provider); either works.
+ *   2. Google OAuth — for users with Google accounts
  *
- * After sending a magic link, a confirmation state is shown.
+ * After sending, a confirmation state is shown (either the "check your
+ * email, click the link" state or the code-entry state — deliveryMode).
  * ?verify=1 (set by NextAuth verifyRequest redirect) also shows it.
  */
 

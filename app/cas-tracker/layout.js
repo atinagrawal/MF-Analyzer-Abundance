@@ -73,7 +73,7 @@ export default function CasTrackerLayout({ children }) {
     "totalTime": "PT2M",
     "step": [
       { "@type": "HowToStep", "position": 1, "name": "Download your CAS PDF", "text": "Visit camsonline.com/Investors/Statements/Consolidated-Account-Statement (or kfintech.com), choose Detailed statement type, and enter your registered email to receive a password-protected CAS PDF." },
-      { "@type": "HowToStep", "position": 2, "name": "Sign in to Abundance", "text": "Sign in via Google or email magic link. Your portfolio will be saved so you never re-upload." },
+      { "@type": "HowToStep", "position": 2, "name": "Sign in to Abundance", "text": "Sign in via Google, or with your email using a one-click link or a 6-digit code. Your portfolio will be saved so you never re-upload." },
       { "@type": "HowToStep", "position": 3, "name": "Upload your CAS PDF", "text": "Select the PDF and enter your PAN in ALL CAPS as the password. Click Parse & Track." },
       { "@type": "HowToStep", "position": 4, "name": "View your live portfolio", "text": "Your full mutual fund portfolio appears with live NAVs, FIFO gains, ELSS lock-in status, and per-fund performance. Click Transactions on any holding to see a rate chart of every purchase, SIP, switch, or redemption." }
     ]
