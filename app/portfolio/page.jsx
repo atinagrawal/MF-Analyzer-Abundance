@@ -20,7 +20,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows, combinedXirr } from '@/lib/xirr';
@@ -121,6 +121,18 @@ function Sparkline({ positive, style }) {
 function PortfolioInner() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Admin/distributor viewing a client's portfolio via ?userId=&uname= (same
+  // pattern app/cas-tracker/page.js already uses). The APIs enforce this
+  // server-side via canManageUser() regardless of what's checked here — this
+  // is just so an unprivileged visitor sees a clear message instead of a
+  // silently-empty dashboard from a wall of 403s.
+  const viewUserId    = searchParams.get('userId') || '';
+  const viewUname     = searchParams.get('uname')  || '';
+  const viewerRole    = session?.user?.role;
+  const canViewOthers = viewerRole === 'admin' || viewerRole === 'distributor';
+  const isViewingOther = Boolean(viewUserId) && viewUserId !== session?.user?.id;
 
   const [phase, setPhase]         = useState('loading'); // loading | ready | empty | error
   const [portfolios, setPortfolios] = useState([]);
@@ -144,13 +156,19 @@ function PortfolioInner() {
   // Main data fetch
   useEffect(() => {
     if (status !== 'authenticated') return;
+    if (isViewingOther && !canViewOthers) {
+      setErrMsg("You don't have permission to view this portfolio.");
+      setPhase('error');
+      return;
+    }
 
     async function loadAll() {
       try {
         // 1. Fetch CAS list + manual holdings concurrently
+        const userIdQS = isViewingOther ? `?userId=${encodeURIComponent(viewUserId)}` : '';
         const [listRes, holdingsRes] = await Promise.all([
-          fetch('/api/cas/list'),
-          fetch('/api/holdings'),
+          fetch(`/api/cas/list${userIdQS}`),
+          fetch(`/api/holdings${userIdQS}`),
         ]);
 
         const listData     = await listRes.json();
@@ -257,7 +275,7 @@ function PortfolioInner() {
             });
 
             // Investor name
-            setInvestorName(gName || session.user.name || 'Investor');
+            setInvestorName(gName || (isViewingOther ? viewUname : session.user.name) || 'Investor');
 
             // Collect holdings with concurrent NAV fetch
             const allAmfi = new Set();
@@ -423,7 +441,7 @@ function PortfolioInner() {
             : null;
           setTotals({ current: manualVal, invested: 0, manual: manualVal, xirr: manualOnlyXirr });
           setTopHoldings(mhList.sort((a, b) => b.value - a.value).slice(0, 6));
-          setInvestorName(session.user.name || 'Investor');
+          setInvestorName((isViewingOther ? viewUname : session.user.name) || 'Investor');
           setPhase(manual.length > 0 ? 'ready' : 'empty');
         }
       } catch (err) {
@@ -434,7 +452,7 @@ function PortfolioInner() {
     }
 
     loadAll();
-  }, [status, session]);
+  }, [status, session, viewUserId, isViewingOther, canViewOthers]);
 
   // ── Unauthenticated gate ─────────────────────────────────────────────────────
   if (status === 'unauthenticated') {
@@ -542,6 +560,27 @@ function PortfolioInner() {
   const isProfit   = gain >= 0;
   const { g, first } = greeting(displayName);
 
+  // ── Error state (e.g. permission denied viewing someone else's portfolio) ──
+  if (phase === 'error') {
+    return (
+      <>
+        <div className="pf-hero pf-hero-empty">
+          <div className="container">
+            <Navbar activePage="portfolio" />
+            <div className="pf-hero-inner">
+              <h1 className="pf-gate-title" style={{ fontSize: 'clamp(1.6rem,5vw,2.6rem)' }}>Can't open this portfolio</h1>
+              <p className="pf-gate-sub">{errMsg || 'Something went wrong loading this portfolio.'}</p>
+              <div className="pf-gate-actions">
+                <a href="/portfolio" className="pf-gate-btn-primary">Go to my portfolio</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
   // ── Empty state ─────────────────────────────────────────────────────────────
   if (phase === 'empty') {
     return (
@@ -572,6 +611,18 @@ function PortfolioInner() {
       <div className="pf-hero">
         <div className="container">
           <Navbar activePage="portfolio" />
+
+          {isViewingOther && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
+              margin: '0 0 18px', padding: '10px 16px', borderRadius: 10,
+              background: 'rgba(255,255,255,.14)', border: '1px solid rgba(255,255,255,.25)',
+              fontSize: '.78rem', fontWeight: 700, color: '#fff',
+            }}>
+              <span>👁 Viewing <strong>{displayName || 'this client'}</strong>'s portfolio ({viewerRole} view) — read-only.</span>
+              <a href="/admin" style={{ color: '#fff', textDecoration: 'underline', flexShrink: 0 }}>← Back to {viewerRole === 'admin' ? 'Admin Panel' : 'My Clients'}</a>
+            </div>
+          )}
 
           <div className="pf-hero-inner">
             {/* Greeting */}

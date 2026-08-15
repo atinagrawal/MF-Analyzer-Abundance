@@ -450,13 +450,13 @@ function UserAvatar({ session, onNavClose }) {
             📋 CAS Tracker
           </a>
 
-          {/* Admin panel — admin only */}
-          {role === 'admin' && (
+          {/* Admin panel — admin (full) or distributor (scoped to their own clients) */}
+          {(role === 'admin' || role === 'distributor') && (
             <a href="/admin" onClick={() => { setOpen(false); onNavClose?.(); }}
               style={{ display: 'block', padding: '10px 14px', fontSize: '.75rem', fontWeight: 600, color: 'var(--text)', textDecoration: 'none', borderBottom: '1px solid var(--border)', transition: 'background .12s' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--s2)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              ⚙ Admin Panel
+              {role === 'admin' ? '⚙ Admin Panel' : '👥 My Clients'}
             </a>
           )}
 

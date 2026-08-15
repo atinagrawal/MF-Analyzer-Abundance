@@ -72,8 +72,27 @@ function ActivityDot({ lastActiveAt }) {
   );
 }
 
-/** Role, Plan, & Distributor dropdowns — reused in desktop side panel and mobile drill-down. */
-function RoleAndPlanSelect({ user, sessionUserId, distributors = [], roleChanging, planChanging, distributorChanging, onRoleChange, onPlanChange, onDistributorChange }) {
+/** Role, Plan, & Distributor dropdowns — reused in desktop side panel and mobile drill-down.
+ *  Distributors see read-only badges instead of the selects: reassigning a distributor,
+ *  granting Pro, or changing someone's role are admin-only actions (server-enforced —
+ *  the PATCH endpoint 403s a distributor regardless — this just avoids showing controls
+ *  that wouldn't work). */
+function RoleAndPlanSelect({ user, sessionUserId, distributors = [], roleChanging, planChanging, distributorChanging, onRoleChange, onPlanChange, onDistributorChange, isAdmin = true }) {
+  if (!isAdmin) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+        <div className="admin-role-row">
+          <span className="admin-role-row-label">Role</span>
+          <RoleBadge role={user.role} />
+        </div>
+        <div className="admin-role-row">
+          <span className="admin-role-row-label">Plan</span>
+          {user.plan && user.plan !== 'free' ? <PlanBadge plan={user.plan} /> : <span style={{ fontSize: '.68rem', color: 'var(--muted)' }}>Free</span>}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
       <div className="admin-role-row">
@@ -241,6 +260,7 @@ function PortfolioList({ selectedUser, portfolios, portsLoading, deletingId, set
 }
 
 export default function UsersTab({ session }) {
+  const isAdmin = session.user.role === 'admin';
   const [users, setUsers]               = useState([]);
   const [distributors, setDistributors] = useState([]);
   const [loading, setLoading]           = useState(true);
@@ -410,6 +430,17 @@ export default function UsersTab({ session }) {
                     {selectedUser.proposal_count || 0} proposal{selectedUser.proposal_count === 1 ? '' : 's'}
                   </span>
                 </div>
+                <a
+                  href={`/portfolio?userId=${selectedUser.id}&uname=${encodeURIComponent(selectedUser.name || selectedUser.email || '')}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 10,
+                    fontSize: '.68rem', fontWeight: 700, color: 'var(--g1)', textDecoration: 'none',
+                    padding: '6px 11px', borderRadius: 7, border: '1.5px solid var(--g-light)', background: 'var(--g-xlight)',
+                  }}
+                >
+                  📊 View Full Dashboard →
+                </a>
               </div>
               <div style={{ padding: '12px 16px' }}>
                 <RoleAndPlanSelect
@@ -422,6 +453,7 @@ export default function UsersTab({ session }) {
                   onRoleChange={changeRole}
                   onPlanChange={changePlan}
                   onDistributorChange={changeDistributor}
+                  isAdmin={isAdmin}
                 />
                 <PortfolioList {...detailProps} />
               </div>
@@ -560,6 +592,17 @@ export default function UsersTab({ session }) {
                   {selectedUser.proposal_count || 0} proposal{selectedUser.proposal_count === 1 ? '' : 's'}
                 </span>
               </div>
+              <a
+                href={`/portfolio?userId=${selectedUser.id}&uname=${encodeURIComponent(selectedUser.name || selectedUser.email || '')}`}
+                target="_blank" rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 10,
+                  fontSize: '.68rem', fontWeight: 700, color: 'var(--g1)', textDecoration: 'none',
+                  padding: '6px 11px', borderRadius: 7, border: '1.5px solid var(--g-light)', background: 'var(--g-xlight)',
+                }}
+              >
+                📊 View Full Dashboard →
+              </a>
             </div>
             <div style={{ padding: '12px 16px' }}>
               <RoleAndPlanSelect
@@ -572,6 +615,7 @@ export default function UsersTab({ session }) {
                 onRoleChange={changeRole}
                 onPlanChange={changePlan}
                 onDistributorChange={changeDistributor}
+                isAdmin={isAdmin}
               />
               <PortfolioList {...detailProps} />
             </div>

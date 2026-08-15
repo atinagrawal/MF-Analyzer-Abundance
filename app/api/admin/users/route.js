@@ -2,8 +2,11 @@
  * app/api/admin/users/route.js
  *
  * GET /api/admin/users
- * Admin only. Returns all users with their portfolio upload count,
- * sorted by most recent sign-in first.
+ * Admin: returns every user. Distributor: returns only clients assigned to
+ * or created by them (distributor_id/created_by), and an empty
+ * `distributors` list — the "Assigned MFD" reassignment control is
+ * admin-only, so there's no reason to hand a distributor the full roster.
+ * Sorted by most recent sign-in first.
  */
 
 import { auth } from '@/auth';
@@ -12,8 +15,12 @@ import pool      from '@/lib/db';
 export async function GET() {
   try {
     const session = await auth();
-    if (!session?.user?.id)               return Response.json({ error: 'Unauthorised' }, { status: 401 });
-    if (session.user.role !== 'admin')    return Response.json({ error: 'Forbidden' },     { status: 403 });
+    if (!session?.user?.id) return Response.json({ error: 'Unauthorised' }, { status: 401 });
+    const role = session.user.role;
+    if (role !== 'admin' && role !== 'distributor') {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    const isAdmin = role === 'admin';
 
     const result = await pool.query(`
       SELECT
@@ -34,17 +41,18 @@ export async function GET() {
       LEFT JOIN cas_portfolios cp ON cp.user_id = u.id
       LEFT JOIN proposals p ON p.user_id = u.id
       LEFT JOIN users d ON d.id = u.distributor_id
+      ${isAdmin ? '' : 'WHERE u.distributor_id = $1 OR u.created_by = $1'}
       GROUP BY u.id, d.name
       ORDER BY u.created_at DESC
-    `);
+    `, isAdmin ? [] : [session.user.id]);
 
-    const dists = await pool.query(`
+    const dists = isAdmin ? await pool.query(`
       SELECT id, name, email FROM users
       WHERE role = 'distributor' OR role = 'admin'
       ORDER BY name ASC
-    `);
+    `) : { rows: [] };
 
-    return Response.json({ users: result.rows, distributors: dists.rows });
+    return Response.json({ users: result.rows, distributors: dists.rows, isAdmin });
 
   } catch (err) {
     console.error('[admin/users]', err.name, err.message);

@@ -4,7 +4,8 @@
  * GET /api/cas/load?key=cas/{userId}/{file}.json
  *
  * Verifies the session, confirms the requested blob key belongs to
- * the current user (or that the user is admin), fetches the object from
+ * the current user (or that the user can manage that user — admin, or
+ * their assigned distributor, per canManageUser), fetches the object from
  * R2 with the server-side credentials, and streams the JSON back to the
  * client. The client never sees the R2 access keys.
  */
@@ -12,6 +13,7 @@
 import { auth } from '@/auth';
 import pool      from '@/lib/db';
 import { r2Get } from '@/lib/r2';
+import { canManageUser } from '@/lib/permissions';
 
 export async function GET(req) {
   try {
@@ -38,9 +40,8 @@ export async function GET(req) {
     }
 
     const owner = ownership.rows[0].user_id;
-    const isAdmin = session.user.role === 'admin';
 
-    if (owner !== session.user.id && !isAdmin) {
+    if (owner !== session.user.id && !(await canManageUser(session, owner))) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 

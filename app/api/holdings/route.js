@@ -29,6 +29,7 @@
 
 import { auth } from '@/auth';
 import pool      from '@/lib/db';
+import { canManageUser } from '@/lib/permissions';
 
 const VALID_FUND_TYPES = ['Equity MF', 'Debt MF', 'Hybrid MF', 'Index Fund / ETF', 'SIF', 'Other'];
 
@@ -51,8 +52,8 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const targetUserId = searchParams.get('userId');
 
-    // Non-admins can only read their own holdings
-    if (targetUserId && targetUserId !== session.user.id && session.user.role !== 'admin') {
+    // Self access always allowed; otherwise admin, or the target's assigned distributor
+    if (targetUserId && targetUserId !== session.user.id && !(await canManageUser(session, targetUserId))) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
