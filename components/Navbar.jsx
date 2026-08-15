@@ -3,9 +3,12 @@
 /**
  * components/Navbar.jsx — Shared navigation bar
  *
- * Desktop (>768px): scrollable horizontal nav row, always visible.
- * Mobile (≤768px):  hamburger button opens a slide-down menu panel.
- *                   Logo + hamburger + auth always visible.
+ * Desktop (≥1101px): single-row nav — direct links + grouped mega-menu
+ *                     dropdowns (Screeners / Market Data / Tools) + a
+ *                     Ctrl/Cmd+K command palette for every destination.
+ * Mobile (≤1100px):  hamburger button opens a slide-down menu panel,
+ *                     fed by the same flat destination list.
+ *                     Logo + hamburger + auth always visible.
  *
  * Key change from v1: "My Portfolio" replaces "CAS Tracker" in nav.
  * CAS Tracker is accessible from the Portfolio page.
@@ -14,83 +17,287 @@
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useRef, useEffect } from 'react';
 
-// ── Primary nav: core product + calculators (always visible on desktop) ────
-const NAV_PRIMARY = [
-  { key: 'home',         label: '🏠 Home',           href: 'https://www.getabundance.in', external: true },
-  { key: 'calculator',   label: '📊 MF Calculator',  href: '/' },
-  { key: 'rolling',      label: '📉 Rolling Returns', href: '/rolling' },
-  { key: 'backtest',     label: '🧪 Backtester',      href: '/backtest' },
-  { key: 'portfolio',    label: '💼 My Portfolio',   href: '/portfolio' },
-  { key: 'sifs',         label: '🔬 SIF Screener',   href: '/sifs' },
-  { key: 'market-watch', label: '📡 Market Watch',   href: '/market-watch' },
+// ── Direct links: shown flat on the desktop nav row ─────────────────────────
+const NAV_DIRECT = [
+  { key: 'home',       label: '🏠 Home',          href: 'https://www.getabundance.in', external: true },
+  { key: 'calculator', label: '📊 MF Calculator', href: '/' },
+  { key: 'portfolio',  label: '💼 My Portfolio',  href: '/portfolio' },
 ];
 
-// ── Secondary nav: market data & screeners (second row on desktop) ─────────
-const NAV_TOOLS = [
-  { key: 'industry',     label: '📈 Industry Pulse',  href: '/industry' },
-  { key: 'report',       label: '📋 Report Card',     href: '/report' },
-  { key: 'geography',    label: '🗺 Geography',       href: '/geography' },
-  { key: 'indices',      label: '📊 Index Dashboard', href: '/indices' },
-  { key: 'pms-screener', label: '🏆 PMS Screener',    href: '/pms-screener' },
-  { key: 'screener',     label: '🔎 MF Screener',     href: '/screener' },
-  { key: 'breadth',        label: '📊 Market Breadth',    href: '/market-breadth' },
-  { key: 'proposal-studio', label: '🧩 Proposal Studio', href: '/proposal-studio' },
-  { key: 'contact',        label: '📞 Contact',          href: 'https://www.getabundance.in/contact-us', external: true },
+// ── Grouped links: shown as mega-menu dropdowns on desktop ──────────────────
+const NAV_GROUPS = [
+  {
+    key: 'screeners', label: 'Screeners',
+    items: [
+      { key: 'screener',     label: '🔎 MF Screener',  href: '/screener',     desc: 'Filter and rank mutual funds' },
+      { key: 'sifs',         label: '🔬 SIF Screener', href: '/sifs',         desc: 'Specialised Investment Funds' },
+      { key: 'pms-screener', label: '🏆 PMS Screener', href: '/pms-screener', desc: 'Portfolio Management Services' },
+      { key: 'report',       label: '📋 Report Card',  href: '/report',       desc: 'AMC-wise performance report' },
+    ],
+  },
+  {
+    key: 'market', label: 'Market Data',
+    items: [
+      { key: 'market-watch', label: '📡 Market Watch',    href: '/market-watch',   desc: 'Live indices and sector moves' },
+      { key: 'breadth',      label: '📊 Market Breadth',  href: '/market-breadth', desc: 'Advance/decline and highs-lows' },
+      { key: 'indices',      label: '📊 Index Dashboard', href: '/indices',        desc: 'Nifty and benchmark indices' },
+      { key: 'industry',     label: '📈 Industry Pulse',  href: '/industry',       desc: 'Sector-wise fund flows' },
+      { key: 'geography',    label: '🗺 Geography',       href: '/geography',      desc: 'State-wise AUM distribution' },
+    ],
+  },
+  {
+    key: 'tools', label: 'Tools',
+    items: [
+      { key: 'rolling',          label: '📉 Rolling Returns',  href: '/rolling',          desc: 'Consistency across time windows' },
+      { key: 'backtest',         label: '🧪 Backtester',       href: '/backtest',         desc: 'Simulate historical SIP/lumpsum' },
+      { key: 'proposal-studio',  label: '🧩 Proposal Studio',  href: '/proposal-studio',  desc: 'Build client-ready proposals' },
+      { key: 'contact',          label: '📞 Contact',          href: 'https://www.getabundance.in/contact-us', external: true, desc: 'Reach Abundance Financial Services' },
+    ],
+  },
 ];
 
-// Combined for mobile hamburger menu
-const NAV_ITEMS = [...NAV_PRIMARY, ...NAV_TOOLS];
+// Flat list of every destination — feeds the mobile hamburger panel and the command palette
+const NAV_ITEMS = [...NAV_DIRECT, ...NAV_GROUPS.flatMap(g => g.items)];
 
 /* ──────────────────────────────────────────────────────────────────────────
- * Desktop-only (≥1101px) design polish for the two-tier nav.
- * Scope is deliberately limited to LAYOUT / SHAPE / SIZING — no color,
- * background, or border properties — so the dark-hero variants
- * (.pf-hero / .sif-hero / .mw-hero / home) keep full control of theming.
+ * Desktop-only (≥1101px) design polish for the single-row nav + mega-menus.
+ * Top-level trigger pills reuse .nav-link/.nav-tag on purpose — those
+ * classes already carry the dark-hero overrides (.pf-hero/.sif-hero/
+ * .mw-hero) so this file never has to duplicate that theming. Overlay
+ * surfaces (mega-menu panel, command palette) are self-contained light
+ * cards, matching the existing account-menu dropdown's precedent.
  * Mobile (≤1100px, the hamburger) is untouched.
  * ──────────────────────────────────────────────────────────────────────── */
 const DESKTOP_NAV_CSS = `
 @media (min-width:1101px){
-  /* keep clear space between the logo and the nav block */
   .navbar{ gap:20px; }
 
-  /* two tiers, flush right; can shrink (min-width:0) so it never pushes the logo */
-  .navbar .nav-two-row{ gap:6px; align-items:flex-end; min-width:0; flex:1 1 auto; }
+  .navbar .nav-row{ gap:5px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
 
-  /* CRITICAL: rows WRAP (right-aligned) instead of overflowing left under the logo.
-     Each tier wraps within itself, so primary items stay grouped above tools. */
-  .navbar .nav-row{ gap:5px; flex-wrap:wrap; justify-content:flex-end; }
-  .navbar .nav-row-tools{ gap:5px; }
-
-  /* PRIMARY tier — one consistent pill family (sized to fit a single row at common widths) */
-  .navbar .nav-row-primary .nav-link{
+  .navbar .nav-row .nav-link{
     font-size:.7rem; font-weight:700; padding:6px 11px;
     border-radius:9px; line-height:1.1; letter-spacing:0; white-space:nowrap;
   }
-  /* active primary item: a filled pill that matches the links —
-     drops the old UPPERCASE / letter-spaced "tag" look that clashed */
-  .navbar .nav-row-primary .nav-tag{
+  .navbar .nav-row .nav-tag{
     font-size:.7rem !important; font-weight:800; padding:6px 11px !important;
     border-radius:9px; line-height:1.1; text-transform:none !important;
     letter-spacing:0 !important; white-space:nowrap;
   }
 
-  /* TOOLS tier — lighter, clearly secondary, same family */
-  .navbar .nav-row-tools .nav-link-sm{
-    font-size:.63rem; font-weight:600; padding:4px 9px;
-    border-radius:7px; line-height:1.1; white-space:nowrap;
+  .navbar .nav-row .nav-link,
+  .navbar .nav-row .nav-group-trigger{ transition:transform .14s ease, color .14s ease, background .14s ease, border-color .14s ease; }
+  .navbar .nav-row .nav-link:hover{ transform:translateY(-1px); }
+
+  /* ── Mega-menu group trigger ── */
+  .nav-group{ position:relative; }
+  .nav-group-trigger{ display:inline-flex; align-items:center; gap:5px; cursor:pointer; font-family:inherit; }
+  .nav-group-trigger.active{ position:relative; }
+  .nav-group-trigger.active::after{
+    content:''; position:absolute; left:11px; right:11px; bottom:3px;
+    height:2px; border-radius:2px; background:currentColor; opacity:.55;
   }
-  .navbar .nav-row-tools .nav-tag-sm{
-    font-size:.63rem; font-weight:800; padding:4px 9px;
-    border-radius:7px; line-height:1.1; white-space:nowrap;
+  .nav-caret{ transition:transform .18s ease; opacity:.7; flex-shrink:0; }
+  .nav-group-trigger[aria-expanded="true"] .nav-caret{ transform:rotate(180deg); }
+
+  /* Panel sits below the trigger; padding-top bridges the visual gap so
+     the pointer never leaves a hoverable box while crossing it. */
+  .nav-mega{
+    position:absolute; top:100%; right:0;
+    padding-top:10px; z-index:10000;
+    animation:navMegaIn .16s ease-out both;
+  }
+  @keyframes navMegaIn{ from{ opacity:0; transform:translateY(-4px);} to{ opacity:1; transform:translateY(0);} }
+  .nav-mega-inner{
+    background:var(--surface); border:1.5px solid var(--border); border-radius:12px;
+    box-shadow:0 12px 32px rgba(0,0,0,.16);
+    padding:8px; width:250px; display:flex; flex-direction:column; gap:2px;
+  }
+  .nav-mega-item{
+    display:flex; flex-direction:column; gap:1px; padding:8px 10px;
+    border-radius:8px; text-decoration:none; transition:background .12s;
+  }
+  .nav-mega-item:hover, .nav-mega-item.active{ background:var(--s2); }
+  .nav-mega-item-label{ font-size:.74rem; font-weight:700; color:var(--text); }
+  .nav-mega-item.active .nav-mega-item-label{ color:var(--g2); }
+  .nav-mega-item-desc{ font-size:.62rem; color:var(--muted); }
+
+  /* ── Command palette trigger button ── */
+  .nav-cp-btn{ display:inline-flex; align-items:center; gap:6px; }
+  .nav-cp-kbd{
+    font-family:'JetBrains Mono', monospace; font-size:.58rem; font-weight:700;
+    padding:1px 5px; border-radius:4px; border:1px solid currentColor; opacity:.6;
+  }
+}
+
+/* ── Command palette overlay (all viewports — reachable via Ctrl/Cmd+K) ── */
+.cp-backdrop{
+  position:fixed; inset:0; z-index:10050;
+  background:rgba(20,30,25,.4); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+  display:flex; align-items:flex-start; justify-content:center;
+  padding:14vh 16px 16px;
+  animation:cpFadeIn .15s ease-out both;
+}
+@keyframes cpFadeIn{ from{ opacity:0; } to{ opacity:1; } }
+.cp-panel{
+  width:100%; max-width:520px;
+  background:var(--surface); border:1.5px solid var(--border); border-radius:14px;
+  box-shadow:0 20px 60px rgba(0,0,0,.28);
+  overflow:hidden; animation:cpPanelIn .18s cubic-bezier(.2,.8,.3,1) both;
+}
+@keyframes cpPanelIn{ from{ opacity:0; transform:translateY(-8px) scale(.98); } to{ opacity:1; transform:translateY(0) scale(1); } }
+.cp-search-row{ display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1.5px solid var(--border); color:var(--muted); }
+.cp-input{ flex:1; border:none; outline:none; background:transparent; font-size:.85rem; font-family:inherit; color:var(--text); }
+.cp-close{
+  border:none; background:var(--s2); color:var(--muted); cursor:pointer;
+  width:22px; height:22px; border-radius:6px; font-size:.7rem; line-height:1;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.cp-close:hover{ background:var(--s3); }
+.cp-list{ max-height:min(50vh, 380px); overflow-y:auto; padding:6px; }
+.cp-empty{ padding:16px; text-align:center; font-size:.75rem; color:var(--muted); }
+.cp-item{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  width:100%; text-align:left; border:none; background:transparent; cursor:pointer;
+  padding:9px 10px; border-radius:8px; font-size:.78rem; font-weight:600; color:var(--text);
+  font-family:inherit;
+}
+.cp-item.active{ background:var(--g-xlight); color:var(--g2); }
+.cp-item-ext{ font-size:.7rem; opacity:.6; }
+.cp-hint{
+  display:flex; gap:12px; padding:9px 16px; border-top:1.5px solid var(--border);
+  font-size:.6rem; color:var(--muted); font-family:'JetBrains Mono', monospace;
+}
+.cp-hint kbd{ font-family:inherit; }
+@media (max-width:600px){ .cp-backdrop{ padding:8vh 10px 10px; } }
+`;
+
+// ── Mega-menu group (hover-intent with a cancellable close-delay, so the
+//    dropdown survives the visual gap between trigger and panel) ───────────
+function NavGroup({ group, activePage, openKey, setOpenKey }) {
+  const isOpen = openKey === group.key;
+  const hasActive = group.items.some(i => i.key === activePage);
+  const closeTimer = useRef(null);
+
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
+
+  function cancelClose() { clearTimeout(closeTimer.current); }
+  function scheduleClose() {
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => {
+      setOpenKey(k => (k === group.key ? null : k));
+    }, 220);
   }
 
-  /* gentle hover lift, theme-agnostic */
-  .navbar .nav-row .nav-link,
-  .navbar .nav-row .nav-link-sm{ transition:transform .14s ease, color .14s ease, background .14s ease, border-color .14s ease; }
-  .navbar .nav-row .nav-link:hover,
-  .navbar .nav-row .nav-link-sm:hover{ transform:translateY(-1px); }
+  return (
+    <div
+      className="nav-group"
+      onMouseEnter={() => { cancelClose(); setOpenKey(group.key); }}
+      onMouseLeave={scheduleClose}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) scheduleClose(); }}
+    >
+      <button
+        type="button"
+        className={`nav-link nav-group-trigger${hasActive ? ' active' : ''}`}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        onFocus={() => { cancelClose(); setOpenKey(group.key); }}
+        onClick={() => setOpenKey(k => (k === group.key ? null : group.key))}
+      >
+        {group.label}
+        <svg className="nav-caret" width="9" height="6" viewBox="0 0 9 6" fill="none" aria-hidden="true">
+          <path d="M1 1L4.5 4.5L8 1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div className="nav-mega" onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
+          <div className="nav-mega-inner">
+            {group.items.map(item => {
+              const linkProps = item.external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
+              return (
+                <a key={item.key} href={item.href} {...linkProps}
+                  className={`nav-mega-item${item.key === activePage ? ' active' : ''}`}
+                  onClick={() => setOpenKey(null)}>
+                  <span className="nav-mega-item-label">{item.label}</span>
+                  <span className="nav-mega-item-desc">{item.desc}</span>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
-`;
+
+// ── Ctrl/Cmd+K command palette — fuzzy-free substring search across every
+//    site destination. Closes on outside click, ✕, or Escape (not just Escape). ─
+function CommandPalette({ open, onClose, items }) {
+  const [q, setQ] = useState('');
+  const [idx, setIdx] = useState(0);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (open) {
+      setQ('');
+      setIdx(0);
+      const t = setTimeout(() => inputRef.current?.focus(), 10);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
+
+  const filtered = q.trim()
+    ? items.filter(i => i.label.toLowerCase().includes(q.trim().toLowerCase()))
+    : items;
+
+  useEffect(() => { setIdx(0); }, [q]);
+
+  function go(item) {
+    if (!item) return;
+    onClose();
+    if (item.external) window.open(item.href, '_blank', 'noopener,noreferrer');
+    else window.location.href = item.href;
+  }
+
+  function onKeyDown(e) {
+    if (e.key === 'Escape') { onClose(); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setIdx(i => Math.min(i + 1, filtered.length - 1)); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); setIdx(i => Math.max(i - 1, 0)); }
+    if (e.key === 'Enter') { e.preventDefault(); go(filtered[idx]); }
+  }
+
+  if (!open) return null;
+
+  return (
+    <div className="cp-backdrop" onClick={onClose}>
+      <div className="cp-panel" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Search pages">
+        <div className="cp-search-row">
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.6" />
+            <line x1="14" y1="14" x2="18" y2="18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+          <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)} onKeyDown={onKeyDown}
+            placeholder="Search pages…" className="cp-input" aria-label="Search pages" />
+          <button type="button" className="cp-close" onClick={onClose} aria-label="Close search">✕</button>
+        </div>
+        <div className="cp-list" role="listbox">
+          {filtered.length === 0 && <div className="cp-empty">No matches</div>}
+          {filtered.map((item, i) => (
+            <button key={item.key} type="button"
+              className={`cp-item${i === idx ? ' active' : ''}`}
+              onMouseEnter={() => setIdx(i)}
+              onClick={() => go(item)}
+              role="option"
+              aria-selected={i === idx}>
+              <span>{item.label}</span>
+              {item.external && <span className="cp-item-ext">↗</span>}
+            </button>
+          ))}
+        </div>
+        <div className="cp-hint"><kbd>↑↓</kbd>&nbsp;navigate&nbsp;&nbsp;<kbd>↵</kbd>&nbsp;open&nbsp;&nbsp;<kbd>esc</kbd>&nbsp;close</div>
+      </div>
+    </div>
+  );
+}
 
 // ── Avatar dropdown ──────────────────────────────────────────────────────────
 function UserAvatar({ session, onNavClose }) {
@@ -288,6 +495,13 @@ export default function Navbar({ activePage, variant = 'default' }) {
   const isHome = variant === 'home';
   const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openGroup, setOpenGroup] = useState(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [isMac, setIsMac] = useState(false);
+
+  useEffect(() => {
+    setIsMac(/Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent || ''));
+  }, []);
 
   // Close mobile menu on route change / resize
   useEffect(() => {
@@ -295,6 +509,21 @@ export default function Navbar({ activePage, variant = 'default' }) {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  // Ctrl/Cmd+K opens the command palette from anywhere; Escape closes
+  // whichever mega-menu is open even when focus isn't inside it.
+  useEffect(() => {
+    function onKeyDown(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(o => !o);
+      } else if (e.key === 'Escape' && openGroup) {
+        setOpenGroup(null);
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [openGroup]);
 
   const navbarStyle = isHome
     ? { borderBottom: 'none', marginBottom: 0, paddingBottom: 16 }
@@ -326,11 +555,10 @@ export default function Navbar({ activePage, variant = 'default' }) {
           </div>
         </a>
 
-        {/* ── Desktop nav: two rows ── */}
-        <div className="nav-desktop nav-two-row">
-          {/* Row 1: primary */}
-          <div className="nav-row nav-row-primary">
-            {NAV_PRIMARY.map(item => {
+        {/* ── Desktop nav: direct links + grouped mega-menus + search ── */}
+        <div className="nav-desktop">
+          <div className="nav-row">
+            {NAV_DIRECT.map(item => {
               const isActive = item.key === activePage;
               const linkProps = item.external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
               if (isActive) {
@@ -339,16 +567,18 @@ export default function Navbar({ activePage, variant = 'default' }) {
               }
               return <a key={item.key} className="nav-link" href={item.href} {...linkProps}>{item.label}</a>;
             })}
-          </div>
-          {/* Row 2: tools (smaller, subtle) */}
-          <div className="nav-row nav-row-tools">
-            {NAV_TOOLS.map(item => {
-              const isActive = item.key === activePage;
-              if (isActive) {
-                return <div key={item.key} className="nav-tag nav-tag-sm">{item.label}</div>;
-              }
-              return <a key={item.key} className="nav-link nav-link-sm" href={item.href}>{item.label}</a>;
-            })}
+            {NAV_GROUPS.map(group => (
+              <NavGroup key={group.key} group={group} activePage={activePage}
+                openKey={openGroup} setOpenKey={setOpenGroup} />
+            ))}
+            <button type="button" className="nav-link nav-cp-btn" onClick={() => setPaletteOpen(true)}
+              aria-label="Search pages">
+              <svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.6" />
+                <line x1="14" y1="14" x2="18" y2="18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+              <kbd className="nav-cp-kbd">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
+            </button>
           </div>
         </div>
 
@@ -399,6 +629,9 @@ export default function Navbar({ activePage, variant = 'default' }) {
           })}
         </div>
       </div>
+
+      {/* ── Ctrl/Cmd+K command palette ── */}
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} items={NAV_ITEMS} />
     </>
   );
 }
