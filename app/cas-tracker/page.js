@@ -3250,6 +3250,13 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                     </div>
                   ))}
                 </div>
+                <p style={{ fontSize: '.72rem', color: 'var(--muted)', marginTop: 16 }}>
+                  Don't have a CAS yet?{' '}
+                  <a href="https://www.camsonline.com/Investors/Statements/Consolidated-Account-Statement"
+                    target="_blank" rel="noopener noreferrer" style={{ color: 'var(--g1)', fontWeight: 700 }}>
+                    Get one free from CAMS →
+                  </a>
+                </p>
               </div>
             )}
 
@@ -3270,6 +3277,32 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
             {/* Authenticated: show upload form */}
             {authStatus === 'authenticated' && (
             <form id="cas-form" className="upload-card" onSubmit={handleSubmit}>
+              <details style={{
+                marginBottom: 18, padding: '12px 16px', borderRadius: 10,
+                background: 'var(--s2)', border: '1px solid var(--border)',
+              }}>
+                <summary style={{
+                  cursor: 'pointer', fontSize: '.78rem', fontWeight: 800, color: 'var(--g1)',
+                  listStyle: 'none', display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  📄 Don't have your CAS yet? Here's how to get one
+                </summary>
+                <ol style={{ margin: '12px 0 0', paddingLeft: 20, fontSize: '.75rem', color: 'var(--text2)', lineHeight: 1.8 }}>
+                  <li>Open CAMS's{' '}
+                    <a href="https://www.camsonline.com/Investors/Statements/Consolidated-Account-Statement"
+                      target="_blank" rel="noopener noreferrer" style={{ color: 'var(--g1)', fontWeight: 700 }}>
+                      Consolidated Account Statement request page
+                    </a>{' '}(covers CAMS- and KFintech-serviced folios together).
+                  </li>
+                  <li>Under <strong>Statement Type</strong>, choose <strong>Detailed</strong> — not Summary. Only
+                    Detailed includes the transaction history this tool's FIFO gains, ELSS lock-in, and rate charts need.</li>
+                  <li>Enter the <strong>email address registered against your folios</strong> — the statement is sent
+                    only there, so a different email won't receive it.</li>
+                  <li>Set a <strong>password</strong> when asked (8–15 characters, one uppercase letter, one number, one
+                    of @ # $ * _). Write it down — you'll enter this same password below to open the file here.</li>
+                  <li>The password-protected PDF arrives by email, usually within a few minutes.</li>
+                </ol>
+              </details>
               <div style={{ marginBottom: '18px' }}>
                 <div className="field-label">CAS PDF or MF Central Excel Report</div>
                 <input

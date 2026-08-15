@@ -17,8 +17,8 @@ export const CAS_FAQ = [
     a: 'Yes. The PDF is parsed inside an isolated serverless function and deleted immediately after. Your password is never stored. For signed-in users, only the parsed portfolio data (not the PDF) is saved privately — only you and your AMFI-registered distributor can view it.',
   },
   {
-    q: 'What is a Consolidated Account Statement (CAS)?',
-    a: 'A CAS consolidates all your mutual fund holdings across every AMC linked to your PAN. Download it from camsonline.com or kfintech.com using your PAN and registered email. Use your PAN in ALL CAPS as the PDF password.',
+    q: 'What is a Consolidated Account Statement (CAS), and how do I get one?',
+    a: 'A CAS consolidates all your mutual fund holdings across every AMC linked to your PAN. Request one free from camsonline.com/Investors/Statements/Consolidated-Account-Statement (choose "Detailed", not Summary, so it includes the transaction history this tool needs) or from kfintech.com, using your registered email address — it arrives by email as a password-protected PDF, either your PAN in ALL CAPS or a password you set yourself, depending on which service generated it.',
   },
   {
     q: 'Does this support Family CAS with multiple PANs?',
