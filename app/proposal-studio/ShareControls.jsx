@@ -132,7 +132,7 @@ export default function ShareControls({ proposalId, initialShareToken, clientEma
             value={emailTo}
             onChange={(e) => setEmailTo(e.target.value)}
           />
-          <button type="submit" className="pfc-save-btn" disabled={emailStatus === 'sending'}>
+          <button type="submit" className="pfc-save-btn" disabled={emailStatus === 'sending' || arnBlocked}>
             {emailStatus === 'sending' ? 'Sending…' : 'Send'}
           </button>
           {emailStatus === 'sent' && <span className="pfc-hint">Email sent.</span>}

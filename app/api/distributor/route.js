@@ -18,6 +18,7 @@
  * See docs/superpowers/specs/2026-08-16-amfi-distributor-proposal-studio-design.md.
  */
 
+import { auth } from '@/auth';
 import { r2Get, r2Put } from '@/lib/r2';
 import { extractArnDigits, fetchDistributorByArn } from '@/lib/amfiDistributor';
 
@@ -45,6 +46,11 @@ async function blobPut(key, payload) {
 }
 
 export async function GET(req) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return Response.json({ error: 'Unauthorised' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const arn = extractArnDigits(searchParams.get('arn') || '');
   if (!arn) {

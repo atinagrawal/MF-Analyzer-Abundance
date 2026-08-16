@@ -351,21 +351,28 @@ function ProposalStudioTool() {
   // Live AMFI ARN verification -- see lib/amfiDistributor.js and
   // docs/superpowers/specs/2026-08-16-amfi-distributor-proposal-studio-design.md.
   const [arnLookup, setArnLookup] = useState({ status: 'idle', data: null }); // 'idle'|'loading'|'ok'|'not_found'|'error'
+  // "Latest call wins" sequence guard -- checkArn has three trigger points
+  // (mount-effect default check, ARN-field blur, loadSavedProposal's
+  // re-check) and without this an older in-flight request could resolve
+  // after a newer one and overwrite arnLookup with stale data.
+  const arnCheckSeqRef = useRef(0);
 
   // Fires on ARN-field blur, and once on mount (see the mount effect below)
   // so a saved proposal's already-populated ARN gets checked too, not just
   // freshly-typed ones. Auto-fill only ever writes an EMPTY field -- never
   // overwrites something the distributor already typed themselves.
   async function checkArn(rawArn) {
+    const seq = ++arnCheckSeqRef.current;
     const arn = extractArnDigits(rawArn);
     if (!arn) {
-      setArnLookup({ status: 'idle', data: null });
+      if (seq === arnCheckSeqRef.current) setArnLookup({ status: 'idle', data: null });
       return;
     }
-    setArnLookup({ status: 'loading', data: null });
+    if (seq === arnCheckSeqRef.current) setArnLookup({ status: 'loading', data: null });
     try {
       const res = await fetch(`/api/distributor?arn=${arn}`);
       const data = await res.json();
+      if (seq !== arnCheckSeqRef.current) return; // a newer check has already superseded this one
       if (!res.ok) {
         setArnLookup({ status: 'error', data: null });
         return;
@@ -384,7 +391,7 @@ function ProposalStudioTool() {
       setAdvisorEmail(prev => prev || data.distributor.email);
       setAdvisorEuin(prev => prev || data.distributor.euin);
     } catch {
-      setArnLookup({ status: 'error', data: null });
+      if (seq === arnCheckSeqRef.current) setArnLookup({ status: 'error', data: null });
     }
   }
 
@@ -556,7 +563,7 @@ function ProposalStudioTool() {
     // verified to show later, so ProposalReadOnlyView falls back to plain
     // ARN text for those (see Task 5).
     const advisorArnVerified = arnLookup.status === 'ok'
-      ? { kydCompliant: arnLookup.data.kydCompliant, arnValidTill: arnLookup.data.arnValidTill, checkedAt: new Date().toISOString() }
+      ? { arn: arnLookup.data.arn, kydCompliant: arnLookup.data.kydCompliant, arnValidTill: arnLookup.data.arnValidTill, checkedAt: new Date().toISOString() }
       : null;
     try {
       const res = await fetch('/api/proposal-studio/save', {

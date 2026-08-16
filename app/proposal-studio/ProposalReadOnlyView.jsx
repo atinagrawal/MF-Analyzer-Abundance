@@ -18,7 +18,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useMCapIndex, ProposalAnalysisBlock, prettifySchemeName } from './ProposalSections';
-import { isArnBlocked, arnBlockedReason } from '@/lib/amfiDistributor';
+import { isArnBlocked, arnBlockedReason, extractArnDigits } from '@/lib/amfiDistributor';
 
 const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
 
@@ -73,7 +73,7 @@ export default function ProposalReadOnlyView({
           <div className="pfc-readonly-name">{advisorName || 'Advisor'}</div>
           {advisorPhone && <div className="pfc-readonly-detail">{advisorPhone}</div>}
           {advisorEmail && <div className="pfc-readonly-detail">{advisorEmail}</div>}
-          {advisorArnVerified ? (
+          {advisorArnVerified && advisorArnVerified.arn === extractArnDigits(advisorArn) ? (
             isArnBlocked(advisorArnVerified) ? (
               <div className="pfc-readonly-detail" style={{ color: '#e65100', fontWeight: 700 }}>
                 ⚠ {advisorArn}{advisorEuin ? ` · EUIN: ${advisorEuin}` : ''} — {arnBlockedReason(advisorArnVerified)}
