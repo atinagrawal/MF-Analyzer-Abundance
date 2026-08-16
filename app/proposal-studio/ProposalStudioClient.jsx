@@ -211,7 +211,7 @@ function AdvisorDetailsCard({ advisorName, setAdvisorName, advisorPhone, setAdvi
       </div>
       {arnLookup.status === 'loading' && <div className="pfc-hint">⏳ Verifying ARN…</div>}
       {arnLookup.status === 'ok' && isArnBlocked(arnLookup.data) && (
-        <div style={{ fontSize: '.7rem', color: '#e65100', marginTop: 6, fontWeight: 700 }}>
+        <div className="pfc-hint" style={{ color: '#e65100', fontWeight: 700 }}>
           ⚠ {arnBlockedReason(arnLookup.data)}
         </div>
       )}
@@ -375,10 +375,14 @@ function ProposalStudioTool() {
         return;
       }
       setArnLookup({ status: 'ok', data: data.distributor });
-      if (!advisorName)  setAdvisorName(data.distributor.name);
-      if (!advisorPhone) setAdvisorPhone(data.distributor.phone);
-      if (!advisorEmail) setAdvisorEmail(data.distributor.email);
-      if (!advisorEuin)  setAdvisorEuin(data.distributor.euin);
+      // Functional-update form so this always reads the LATEST field value at
+      // apply time, not whatever it was when checkArn's closure was created --
+      // a plain `if (!advisorName)` check here would read stale pre-await (or
+      // pre-load, from loadSavedProposal) state and could clobber fresher input.
+      setAdvisorName(prev => prev || data.distributor.name);
+      setAdvisorPhone(prev => prev || data.distributor.phone);
+      setAdvisorEmail(prev => prev || data.distributor.email);
+      setAdvisorEuin(prev => prev || data.distributor.euin);
     } catch {
       setArnLookup({ status: 'error', data: null });
     }
@@ -413,10 +417,21 @@ function ProposalStudioTool() {
     if (session?.user?.name) setAdvisorName(session.user.name);
   }, [session, advisorFieldsTouched]);
 
+  // Read here (rather than down by the loadSavedProposal-triggering effect
+  // below) so the ARN mount-check right after can see it -- see that effect's
+  // guard comment for why.
+  const searchParams = useSearchParams();
+  const loadParam = searchParams.get('load');
+
   // Verify the ARN once on mount too (not just on blur) -- covers the
   // 'ARN-251838' default on a fresh session. loadSavedProposal() below
-  // separately re-checks whatever ARN a loaded proposal carries.
+  // separately re-checks whatever ARN a loaded proposal carries. Skipped
+  // when a `?load=<id>` navigation is about to load a saved proposal --
+  // that flow's own checkArn() call (once the load completes) supersedes
+  // this one; without the guard, both fetches race and whichever resolves
+  // last wins arnLookup, possibly showing a stale/wrong status.
   useEffect(() => {
+    if (loadParam) return;
     checkArn(advisorArn);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -458,9 +473,8 @@ function ProposalStudioTool() {
   // Lets app/proposal-studio/mine/[id]/page.js's "Edit this proposal"
   // button navigate here and have that proposal load automatically,
   // reusing the same loadSavedProposal flow a saved-list row click already
-  // triggers.
-  const searchParams = useSearchParams();
-  const loadParam = searchParams.get('load');
+  // triggers. (searchParams/loadParam themselves are declared earlier, by
+  // the ARN mount-check effect, which needs to read loadParam too.)
   useEffect(() => {
     if (loadParam) loadSavedProposal(loadParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
