@@ -18,9 +18,9 @@ import Script from 'next/script';
 import { PORTFOLIO_FAQ } from './faqData';
 
 export const metadata = {
-  title: 'My Portfolio — Track Your Mutual Funds | Abundance Financial Services',
-  description: 'Your personal mutual fund portfolio dashboard. Track holdings across all AMCs with live AMFI NAVs, FIFO capital gains, ELSS 3-year lock-in status, SIF holdings, family CAS support, and a FIFO redemption planner. Free for clients of Abundance Financial Services (ARN-251838).',
-  keywords: 'mutual fund portfolio tracker India, live NAV portfolio, FIFO capital gains calculator, ELSS lock-in tracker, family CAS multi PAN, SIF holdings tracker, Abundance Financial Services, ARN-251838, CAMS KFintech portfolio',
+  title: 'My Portfolio — Track Your Mutual Funds & XIRR | Abundance Financial Services',
+  description: 'Your personal mutual fund portfolio dashboard. Track holdings across all AMCs with live AMFI NAVs, portfolio XIRR, FIFO capital gains, ELSS 3-year lock-in status, SIF holdings, and family CAS support. Free for clients of Abundance Financial Services (ARN-251838).',
+  keywords: 'mutual fund portfolio tracker India, live NAV portfolio, portfolio XIRR calculator, FIFO capital gains calculator, ELSS lock-in tracker, family CAS multi PAN, SIF holdings tracker, Abundance Financial Services, ARN-251838, CAMS KFintech portfolio',
   robots: {
     index:     true,    // allow indexing — logged-out users see the gate, not personal data
     follow:    true,
@@ -30,8 +30,8 @@ export const metadata = {
     canonical: 'https://mfcalc.getabundance.in/portfolio',
   },
   openGraph: {
-    title: 'My Portfolio — Track Your Mutual Funds | Abundance',
-    description: 'Free mutual fund portfolio tracker. Live AMFI NAVs, FIFO gains, ELSS lock-in, SIF holdings, and family CAS with multi-PAN support. By Abundance Financial Services, ARN-251838.',
+    title: 'My Portfolio — Track Your Mutual Funds & XIRR | Abundance',
+    description: 'Free mutual fund portfolio tracker. Live AMFI NAVs, portfolio XIRR, FIFO gains, ELSS lock-in, SIF holdings, and family CAS with multi-PAN support. By Abundance Financial Services, ARN-251838.',
     url: 'https://mfcalc.getabundance.in/portfolio',
     images: [{
       url:    'https://mfcalc.getabundance.in/api/og-portfolio',
@@ -58,7 +58,7 @@ export default function PortfolioLayout({ children }) {
     "name": "Abundance Portfolio Dashboard",
     "alternateName": "My Portfolio",
     "url": "https://mfcalc.getabundance.in/portfolio",
-    "description": "Personal mutual fund wealth dashboard — always-on view of holdings across all AMCs with live AMFI NAVs, FIFO capital gains, ELSS 3-year lock-in status, combined multi-PAN family view, SIF holdings, and a FIFO redemption planner.",
+    "description": "Personal mutual fund wealth dashboard — always-on view of holdings across all AMCs with live AMFI NAVs, portfolio XIRR, FIFO capital gains, ELSS 3-year lock-in status, combined multi-PAN family view, and SIF holdings.",
     "applicationCategory": "FinanceApplication",
     "applicationSubCategory": "Personal Wealth Dashboard",
     "operatingSystem": "Web Browser",
@@ -66,14 +66,15 @@ export default function PortfolioLayout({ children }) {
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR", "availability": "https://schema.org/InStock" },
     "featureList": [
       "Live AMFI NAV portfolio valuation",
-      "Combined multi-PAN family portfolio view",
+      "Portfolio XIRR (money-weighted return) calculation",
+      "Combined multi-PAN family portfolio view with saved investor names",
       "FIFO capital gains calculation",
       "ELSS 3-year lock-in tracking",
       "SIF (Specialised Investment Fund) holdings with live NAVs",
       "Manually-added holdings for investments not yet in a CAS",
-      "FIFO redemption planner",
+      "Per-fund detail view with NAV history, portfolio holdings, and stress-test data",
       "Cloud-saved portfolio — no re-upload needed on return visits",
-      "PDF and Excel export"
+      "Self-serve deletion of outdated CAS statements"
     ],
     "provider": {
       "@type": "FinancialService",
@@ -83,7 +84,7 @@ export default function PortfolioLayout({ children }) {
       "description": "AMFI Registered Mutual Fund Distributor — ARN-251838, Haldwani, Uttarakhand"
     },
     "screenshot": "https://mfcalc.getabundance.in/api/og-portfolio",
-    "dateModified": "2026-08-15"
+    "dateModified": "2026-08-16"
   };
 
   const breadcrumbSchema = {

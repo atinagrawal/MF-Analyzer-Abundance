@@ -670,7 +670,7 @@ function PortfolioInner() {
                 </a>
               </div>
               <div className="pf-gate-features">
-                {['Live AMFI NAVs', 'FIFO capital gains', 'ELSS lock-in tracker', 'SIF holdings', 'Redemption planner'].map(f => (
+                {['Live AMFI NAVs', 'Portfolio XIRR', 'FIFO capital gains', 'ELSS lock-in tracker', 'SIF holdings'].map(f => (
                   <span key={f} className="pf-gate-feature">✓ {f}</span>
                 ))}
               </div>

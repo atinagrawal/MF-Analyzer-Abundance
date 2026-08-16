@@ -38,4 +38,8 @@ export const PORTFOLIO_FAQ = [
     q: 'Do I need to re-upload my CAS every time I visit?',
     a: 'No. Once uploaded via CAS Tracker, your statement is saved securely to your account. My Portfolio loads it automatically on every visit — no re-upload needed unless you want to add a newer statement.',
   },
+  {
+    q: 'What is Portfolio XIRR, and why does it sometimes say "based on N of M holdings"?',
+    a: "XIRR (Extended Internal Rate of Return) is your true money-weighted annual return, accounting for every purchase, SIP instalment, and switch on the exact date it happened — not just a simple gain percentage. It's only shown when at least one holding has a complete, verifiable transaction history from your CAS. If some of your holdings have a partial history (e.g. an older folio, or a transfer where the very first transaction predates your uploaded statement), the figure is still shown using the holdings that do have full history, with a note on how many were included, rather than hiding it entirely.",
+  },
 ];
