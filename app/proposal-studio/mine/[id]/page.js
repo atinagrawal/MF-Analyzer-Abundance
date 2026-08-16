@@ -93,6 +93,7 @@ export default function ProposalOwnerViewPage() {
           advisorEmail={data.advisorEmail}
           advisorArn={data.advisorArn}
           advisorEuin={data.advisorEuin}
+          advisorArnVerified={data.advisorArnVerified}
           proposalType={data.proposalType}
           sipFrequency={data.sipFrequency}
           selectedFunds={data.selectedFunds || []}

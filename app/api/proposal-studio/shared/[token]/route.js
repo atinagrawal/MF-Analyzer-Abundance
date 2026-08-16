@@ -45,6 +45,7 @@ export async function GET(req, { params }) {
       advisorEmail: payload.advisorEmail,
       advisorArn: payload.advisorArn,
       advisorEuin: payload.advisorEuin,
+      advisorArnVerified: payload.advisorArnVerified,
       proposalType: payload.proposalType,
       sipFrequency: payload.sipFrequency,
       selectedFunds: payload.selectedFunds,

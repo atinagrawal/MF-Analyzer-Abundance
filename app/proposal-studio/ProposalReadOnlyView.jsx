@@ -18,12 +18,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useMCapIndex, ProposalAnalysisBlock, prettifySchemeName } from './ProposalSections';
+import { isArnBlocked, arnBlockedReason } from '@/lib/amfiDistributor';
 
 const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
 
 export default function ProposalReadOnlyView({
   clientName, clientEmail, clientPhone,
-  advisorName, advisorPhone, advisorEmail, advisorArn, advisorEuin,
+  advisorName, advisorPhone, advisorEmail, advisorArn, advisorEuin, advisorArnVerified,
   proposalType, sipFrequency, selectedFunds: rawSelectedFunds, proposalId,
 }) {
   const [holdingsByFund, setHoldingsByFund] = useState({});
@@ -72,7 +73,15 @@ export default function ProposalReadOnlyView({
           <div className="pfc-readonly-name">{advisorName || 'Advisor'}</div>
           {advisorPhone && <div className="pfc-readonly-detail">{advisorPhone}</div>}
           {advisorEmail && <div className="pfc-readonly-detail">{advisorEmail}</div>}
-          <div className="pfc-readonly-detail">{advisorArn}{advisorEuin ? ` · EUIN: ${advisorEuin}` : ''}</div>
+          {advisorArnVerified ? (
+            <div className="pfc-readonly-detail">
+              {isArnBlocked(advisorArnVerified)
+                ? <>⚠ {advisorArn}{advisorEuin ? ` · EUIN: ${advisorEuin}` : ''} — {arnBlockedReason(advisorArnVerified)}</>
+                : <>✓ AMFI Registered · {advisorArn}{advisorArnVerified.arnValidTill ? ` · Valid till ${new Date(advisorArnVerified.arnValidTill).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}` : ''}</>}
+            </div>
+          ) : (
+            <div className="pfc-readonly-detail">{advisorArn}{advisorEuin ? ` · EUIN: ${advisorEuin}` : ''}</div>
+          )}
         </div>
       </div>
 

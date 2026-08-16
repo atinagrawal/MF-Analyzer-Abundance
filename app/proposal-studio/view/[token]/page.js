@@ -55,6 +55,7 @@ export default function ProposalPublicViewPage() {
               advisorEmail={state.data.advisorEmail}
               advisorArn={state.data.advisorArn}
               advisorEuin={state.data.advisorEuin}
+              advisorArnVerified={state.data.advisorArnVerified}
               proposalType={state.data.proposalType}
               sipFrequency={state.data.sipFrequency}
               selectedFunds={state.data.selectedFunds || []}
