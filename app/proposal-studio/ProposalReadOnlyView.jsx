@@ -74,11 +74,15 @@ export default function ProposalReadOnlyView({
           {advisorPhone && <div className="pfc-readonly-detail">{advisorPhone}</div>}
           {advisorEmail && <div className="pfc-readonly-detail">{advisorEmail}</div>}
           {advisorArnVerified ? (
-            <div className="pfc-readonly-detail">
-              {isArnBlocked(advisorArnVerified)
-                ? <>⚠ {advisorArn}{advisorEuin ? ` · EUIN: ${advisorEuin}` : ''} — {arnBlockedReason(advisorArnVerified)}</>
-                : <>✓ AMFI Registered · {advisorArn}{advisorArnVerified.arnValidTill ? ` · Valid till ${new Date(advisorArnVerified.arnValidTill).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}` : ''}</>}
-            </div>
+            isArnBlocked(advisorArnVerified) ? (
+              <div className="pfc-readonly-detail" style={{ color: '#e65100', fontWeight: 700 }}>
+                ⚠ {advisorArn}{advisorEuin ? ` · EUIN: ${advisorEuin}` : ''} — {arnBlockedReason(advisorArnVerified)}
+              </div>
+            ) : (
+              <div className="pfc-readonly-detail" style={{ color: 'var(--g1)', fontWeight: 700 }}>
+                ✓ AMFI Registered · {advisorArn}{advisorArnVerified.arnValidTill ? ` · Valid till ${new Date(advisorArnVerified.arnValidTill).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}` : ''}
+              </div>
+            )
           ) : (
             <div className="pfc-readonly-detail">{advisorArn}{advisorEuin ? ` · EUIN: ${advisorEuin}` : ''}</div>
           )}
