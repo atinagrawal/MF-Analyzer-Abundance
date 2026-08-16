@@ -551,13 +551,20 @@ function ProposalStudioTool() {
   async function saveProposal() {
     setSaveStatus('saving');
     setSaveError('');
+    // Only a successful, freshly-checked lookup is worth persisting -- an
+    // 'idle'/'loading'/'not_found'/'error' status means there's nothing
+    // verified to show later, so ProposalReadOnlyView falls back to plain
+    // ARN text for those (see Task 5).
+    const advisorArnVerified = arnLookup.status === 'ok'
+      ? { kydCompliant: arnLookup.data.kydCompliant, arnValidTill: arnLookup.data.arnValidTill, checkedAt: new Date().toISOString() }
+      : null;
     try {
       const res = await fetch('/api/proposal-studio/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientName, clientEmail, clientPhone, proposalType, sipFrequency, totalAmount,
-          advisorName, advisorPhone, advisorEmail, advisorArn, advisorEuin,
+          advisorName, advisorPhone, advisorEmail, advisorArn, advisorEuin, advisorArnVerified,
           selectedFunds: selectedFunds.map((f) => ({ amfiCode: f.amfiCode, schemeName: f.schemeName, amount: f.amount, source: f.source })),
         }),
       });

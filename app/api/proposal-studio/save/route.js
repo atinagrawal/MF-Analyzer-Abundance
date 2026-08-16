@@ -4,7 +4,8 @@
  * POST /api/proposal-studio/save
  * Body (JSON): { clientName, clientEmail, clientPhone, proposalType,
  *                sipFrequency, totalAmount, selectedFunds,
- *                advisorName, advisorPhone, advisorEmail, advisorArn, advisorEuin }
+ *                advisorName, advisorPhone, advisorEmail, advisorArn,
+ *                advisorEuin, advisorArnVerified }
  *
  * Saves the full proposal payload to Cloudflare R2, then logs it in the
  * proposals table so the owning user can list and reload it later.
@@ -27,7 +28,7 @@ export async function POST(req) {
     const {
       clientName, clientEmail, clientPhone,
       proposalType, sipFrequency, totalAmount, selectedFunds,
-      advisorName, advisorPhone, advisorEmail, advisorArn, advisorEuin,
+      advisorName, advisorPhone, advisorEmail, advisorArn, advisorEuin, advisorArnVerified,
     } = await req.json();
 
     if (!proposalType || !Array.isArray(selectedFunds) || selectedFunds.length === 0) {
@@ -50,6 +51,11 @@ export async function POST(req) {
       advisorEmail: advisorEmail || '',
       advisorArn: advisorArn || '',
       advisorEuin: advisorEuin || '',
+      // Snapshot of the last successful AMFI verification at save time --
+      // lets ProposalReadOnlyView show a trust badge without needing a
+      // live re-check (a shared/printed proposal is static content). null
+      // when the advisor never had a successful lookup for this ARN.
+      advisorArnVerified: advisorArnVerified || null,
       proposalType,
       sipFrequency: sipFrequency || 'monthly',
       totalAmount: totalAmount || 0,
