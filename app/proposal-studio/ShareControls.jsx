@@ -15,7 +15,7 @@
 
 import { useState } from 'react';
 
-export default function ShareControls({ proposalId, initialShareToken, clientEmail }) {
+export default function ShareControls({ proposalId, initialShareToken, clientEmail, arnBlocked = false, arnBlockedReason = null }) {
   const [shareToken, setShareToken] = useState(initialShareToken || null);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareError, setShareError] = useState('');
@@ -103,7 +103,7 @@ export default function ShareControls({ proposalId, initialShareToken, clientEma
   return (
     <div className="pfc-share-controls">
       {!shareToken && (
-        <button type="button" className="pfc-save-btn" disabled={shareBusy} onClick={handleShare}>
+        <button type="button" className="pfc-save-btn" disabled={shareBusy || arnBlocked} title={arnBlocked ? arnBlockedReason : undefined} onClick={handleShare}>
           {shareBusy ? 'Sharing…' : 'Share'}
         </button>
       )}
@@ -118,7 +118,7 @@ export default function ShareControls({ proposalId, initialShareToken, clientEma
       )}
       {shareError && <span className="pfc-error-hint">{shareError}</span>}
 
-      <button type="button" className="pfc-save-btn" onClick={() => setEmailOpen((o) => !o)}>
+      <button type="button" className="pfc-save-btn" disabled={arnBlocked} title={arnBlocked ? arnBlockedReason : undefined} onClick={() => setEmailOpen((o) => !o)}>
         {emailOpen ? 'Close' : 'Send Email'}
       </button>
 

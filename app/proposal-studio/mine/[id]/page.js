@@ -21,6 +21,7 @@ import '../../proposal-studio.css';
 import ProposalReadOnlyView from '../../ProposalReadOnlyView';
 import ShareControls from '../../ShareControls';
 import { formatProposalId } from '../../ProposalSections';
+import { isArnBlocked, arnBlockedReason } from '@/lib/amfiDistributor';
 
 export default function ProposalOwnerViewPage() {
   const { id } = useParams();
@@ -81,7 +82,13 @@ export default function ProposalOwnerViewPage() {
           <button type="button" className="pfc-save-btn" onClick={() => router.push(`/proposal-studio?load=${encodeURIComponent(id)}`)}>
             Edit this proposal
           </button>
-          <ShareControls proposalId={id} initialShareToken={data.shareToken} clientEmail={data.clientEmail} />
+          <ShareControls
+            proposalId={id}
+            initialShareToken={data.shareToken}
+            clientEmail={data.clientEmail}
+            arnBlocked={isArnBlocked(data.advisorArnVerified)}
+            arnBlockedReason={arnBlockedReason(data.advisorArnVerified)}
+          />
         </div>
 
         <ProposalReadOnlyView

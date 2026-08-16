@@ -675,7 +675,14 @@ function ProposalStudioTool() {
               )}
               {saveStatus === 'error' && <span className="pfc-error-hint">{saveError}</span>}
               {saveStatus === 'saved' && savedProposalId && (
-                <ShareControls key={savedProposalId} proposalId={savedProposalId} initialShareToken={loadedShareToken} clientEmail={clientEmail} />
+                <ShareControls
+                  key={savedProposalId}
+                  proposalId={savedProposalId}
+                  initialShareToken={loadedShareToken}
+                  clientEmail={clientEmail}
+                  arnBlocked={arnLookup.status === 'ok' && isArnBlocked(arnLookup.data)}
+                  arnBlockedReason={arnLookup.status === 'ok' ? arnBlockedReason(arnLookup.data) : null}
+                />
               )}
             </>
           }
