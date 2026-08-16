@@ -19,8 +19,8 @@ import { PORTFOLIO_FAQ } from './faqData';
 
 export const metadata = {
   title: 'My Portfolio — Track Your Mutual Funds & XIRR | Abundance Financial Services',
-  description: 'Your personal mutual fund portfolio dashboard. Track holdings across all AMCs with live AMFI NAVs, portfolio XIRR, FIFO capital gains, ELSS 3-year lock-in status, SIF holdings, and family CAS support. Free for clients of Abundance Financial Services (ARN-251838).',
-  keywords: 'mutual fund portfolio tracker India, live NAV portfolio, portfolio XIRR calculator, FIFO capital gains calculator, ELSS lock-in tracker, family CAS multi PAN, SIF holdings tracker, Abundance Financial Services, ARN-251838, CAMS KFintech portfolio',
+  description: 'Your personal mutual fund portfolio dashboard. Track holdings across all AMCs with live AMFI NAVs, portfolio XIRR, FIFO capital gains, a per-fund tax-efficient redemption planner, transaction-level rate history, ELSS 3-year lock-in status, SIF holdings, and family CAS support. Free for clients of Abundance Financial Services (ARN-251838).',
+  keywords: 'mutual fund portfolio tracker India, live NAV portfolio, portfolio XIRR calculator, FIFO capital gains calculator, redemption planner mutual fund, ELSS lock-in tracker, family CAS multi PAN, SIF holdings tracker, Abundance Financial Services, ARN-251838, CAMS KFintech portfolio',
   robots: {
     index:     true,    // allow indexing — logged-out users see the gate, not personal data
     follow:    true,
@@ -31,7 +31,7 @@ export const metadata = {
   },
   openGraph: {
     title: 'My Portfolio — Track Your Mutual Funds & XIRR | Abundance',
-    description: 'Free mutual fund portfolio tracker. Live AMFI NAVs, portfolio XIRR, FIFO gains, ELSS lock-in, SIF holdings, and family CAS with multi-PAN support. By Abundance Financial Services, ARN-251838.',
+    description: 'Free mutual fund portfolio tracker. Live AMFI NAVs, portfolio XIRR, FIFO gains, a per-fund redemption planner, ELSS lock-in, SIF holdings, and family CAS with multi-PAN support. By Abundance Financial Services, ARN-251838.',
     url: 'https://mfcalc.getabundance.in/portfolio',
     images: [{
       url:    'https://mfcalc.getabundance.in/api/og-portfolio',
@@ -46,7 +46,7 @@ export const metadata = {
   twitter: {
     card:        'summary_large_image',
     title:       'My Portfolio — Abundance MF Analyzer',
-    description: 'Track your mutual fund portfolio with live NAVs, FIFO gains, ELSS lock-in, SIF holdings and family CAS multi-PAN support.',
+    description: 'Track your mutual fund portfolio with live NAVs, FIFO gains, a redemption planner, ELSS lock-in, SIF holdings and family CAS multi-PAN support.',
     images:      ['https://mfcalc.getabundance.in/api/og-portfolio'],
   },
 };
@@ -58,7 +58,7 @@ export default function PortfolioLayout({ children }) {
     "name": "Abundance Portfolio Dashboard",
     "alternateName": "My Portfolio",
     "url": "https://mfcalc.getabundance.in/portfolio",
-    "description": "Personal mutual fund wealth dashboard — always-on view of holdings across all AMCs with live AMFI NAVs, portfolio XIRR, FIFO capital gains, ELSS 3-year lock-in status, combined multi-PAN family view, and SIF holdings.",
+    "description": "Personal mutual fund wealth dashboard — always-on view of holdings across all AMCs with live AMFI NAVs, portfolio XIRR, FIFO capital gains, a per-fund tax-efficient redemption planner, transaction-level rate history, ELSS 3-year lock-in status, combined multi-PAN family view, and SIF holdings.",
     "applicationCategory": "FinanceApplication",
     "applicationSubCategory": "Personal Wealth Dashboard",
     "operatingSystem": "Web Browser",
@@ -69,6 +69,8 @@ export default function PortfolioLayout({ children }) {
       "Portfolio XIRR (money-weighted return) calculation",
       "Combined multi-PAN family portfolio view with saved investor names",
       "FIFO capital gains calculation",
+      "Per-fund tax-efficient redemption planner (FIFO lots, STCG/LTCG, exemption, loss offset)",
+      "Per-fund transaction history with rate journey and NAV chart",
       "ELSS 3-year lock-in tracking",
       "SIF (Specialised Investment Fund) holdings with live NAVs",
       "Manually-added holdings for investments not yet in a CAS",

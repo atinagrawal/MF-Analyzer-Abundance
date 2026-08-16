@@ -42,4 +42,8 @@ export const PORTFOLIO_FAQ = [
     q: 'What is Portfolio XIRR, and why does it sometimes say "based on N of M holdings"?',
     a: "XIRR (Extended Internal Rate of Return) is your true money-weighted annual return, accounting for every purchase, SIP instalment, and switch on the exact date it happened — not just a simple gain percentage. It's only shown when at least one holding has a complete, verifiable transaction history from your CAS. If some of your holdings have a partial history (e.g. an older folio, or a transfer where the very first transaction predates your uploaded statement), the figure is still shown using the holdings that do have full history, with a note on how many were included, rather than hiding it entirely.",
   },
+  {
+    q: 'Can I plan a redemption or see my past transactions from My Portfolio?',
+    a: "Yes. Every CAS-derived holding card has a Redemption button that opens a FIFO lot-level planner — it shows exactly which purchase lots a redemption would consume, the STCG/LTCG split with Jan 31 2018 grandfathering, and estimated tax, the same planner CAS Tracker uses. Any holding with recorded transactions also has a Transactions button showing your full buy/sell history, a rate-journey comparison against today's NAV, and an optional chart overlaying the fund's full NAV history.",
+  },
 ];

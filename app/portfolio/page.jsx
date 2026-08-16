@@ -27,6 +27,8 @@ import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows,
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogoFromSchemeName, getSIFLogo } from '@/lib/providerLogos';
 import { FundDetailDrawer, SifDetailDrawer } from '@/components/HoldingDetailDrawer';
+import RedemptionPlanner from '@/components/RedemptionPlanner';
+import TransactionHistoryDrawer, { navHistoryCacheKey, earliestTxnDate } from '@/components/TransactionHistoryDrawer';
 import { PORTFOLIO_FAQ } from './faqData';
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
@@ -278,6 +280,9 @@ function PortfolioInner() {
   const [activeTab, setActiveTab]  = useState('overview'); // overview | holdings | uploads
   const [errMsg, setErrMsg]        = useState('');
   const [detailHolding, setDetailHolding] = useState(null); // holding object for the fund/SIF details drawer
+  const [planFund,      setPlanFund]      = useState(null); // holding object for the Redemption Planner
+  const [txnDrawerFund, setTxnDrawerFund] = useState(null); // holding object for the Transaction History drawer
+  const [navHistoryCache, setNavHistoryCache] = useState({}); // navHistoryCacheKey(fund) → { loading, points, error }
   const [refreshKey, setRefreshKey] = useState(0); // bump to re-run the main data fetch (e.g. after deleting a statement)
   const [deletingId, setDeletingId] = useState('');   // upload id in inline "confirm delete?" state
   const [deleteInFlight, setDeleteInFlight] = useState(false);
@@ -378,12 +383,21 @@ function PortfolioInner() {
 
           const seenKeys = new Set();
           const mergedFolios = [];
+          // Folio-level "Transmission of Folios" events (see api/parse.py's
+          // build_folio_transmission_map), keyed by base folio number (no
+          // "/ 0" registrar suffix) -- same source app/cas-tracker/page.js
+          // reads, merged across files with first (newest) file winning,
+          // matching the folio dedup priority below.
+          const folioTransmissionsMerged = {};
           let gName = '';
 
           loadResults.forEach(res => {
             if (res.status !== 'fulfilled' || !res.value) return;
             const fileData = res.value;
             if (!gName) gName = (fileData.investor_info?.name || '').trim();
+            Object.entries(fileData.folio_transmissions || {}).forEach(([k, v]) => {
+              if (!(k in folioTransmissionsMerged)) folioTransmissionsMerged[k] = v;
+            });
 
             (fileData.folios || []).forEach(folio => {
               const pan = (folio.PAN || '').toUpperCase().trim();
@@ -488,6 +502,9 @@ function PortfolioInner() {
                 };
               }
 
+              const baseFolioNo = (folio.folio || '').split('/')[0].trim();
+              const folioTransmission = folioTransmissionsMerged[baseFolioNo] || null;
+
               (folio.schemes || []).forEach(scheme => {
                 const units = parseFloat(scheme.close) || 0;
                 if (units < 0.001) return;
@@ -501,7 +518,7 @@ function PortfolioInner() {
                 // just units × avg NAV and doesn't drive ELSS lock-in or match
                 // what CAS Tracker itself shows) — same calculateFifoCost used
                 // there, so the two pages always agree.
-                const fifo = calculateFifoCost(scheme, liveNav, false);
+                const fifo = calculateFifoCost(scheme, liveNav, !!folioTransmission);
                 const invested = fifo.invested;
                 const isELSS = !sifMatch && (/ELSS|TAX.?SAVER/i.test(scheme.scheme) || (masterFacts.byIsin[scheme.isin || '']?.isLocked || false));
                 casCurrent  += value;
@@ -517,6 +534,18 @@ function PortfolioInner() {
                   category: sifMatch ? 'sif' : inferCategory(scheme.scheme),
                   isSIF:    !!sifMatch,
                   sifName:  sifMatch ? sifMatch.sif_name : null,
+                  // Redemption Planner + Transaction History drawer needs —
+                  // same fields app/cas-tracker/page.js's own holding objects
+                  // carry (see components/RedemptionPlanner.jsx and
+                  // components/TransactionHistoryDrawer.jsx).
+                  buyLots:      fifo.buyLots,
+                  transactions: scheme.transactions || [],
+                  folio:        folio.folio || null,
+                  amfiCode:     sifMatch ? sifMatch.scheme_id : (scheme.amfi || null),
+                  fund_type:    sifMatch ? 'SIF' : 'Mutual Fund',
+                  source:       'cas',
+                  isin:         scheme.isin || '',
+                  folioTransmission,
                   isELSS,
                   lockedValue: fifo.lockedValue,
                   xirr:     schemeXirr(scheme, value),
@@ -562,6 +591,18 @@ function PortfolioInner() {
                 sifName: h.fund_type === 'SIF' ? (sifNameByCode[h.amfi_code] || null) : null,
                 xirr: manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: val }),
                 xirrFlows: manualHoldingCashFlows({ purchaseDate: h.purchase_date, invested: pu * u }),
+                // Transaction History drawer needs — manual holdings have no
+                // real transaction log, but do have exactly one known
+                // purchase (date/NAV/units), which is the single-transaction
+                // shape the drawer already handles (see buildAllHoldings in
+                // app/cas-tracker/page.js for the same pattern).
+                folio: h.folio || null,
+                amfiCode: h.amfi_code || null,
+                fund_type: h.fund_type,
+                source: 'manual',
+                transactions: (pu > 0 && u > 0 && h.purchase_date)
+                  ? [{ date: h.purchase_date, type: 'PURCHASE', amount: pu * u, units: u, nav: pu }]
+                  : [],
               };
               holdings.push(mh);
               // Attribute to specific PAN if set and that PAN exists in the CAS
@@ -622,6 +663,13 @@ function PortfolioInner() {
               isManual: true,
               xirr:     manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: (ln ?? pu) * u }),
               xirrFlows: manualHoldingCashFlows({ purchaseDate: h.purchase_date, invested: pu * u }),
+              folio: h.folio || null,
+              amfiCode: h.amfi_code || null,
+              fund_type: h.fund_type,
+              source: 'manual',
+              transactions: (pu > 0 && u > 0 && h.purchase_date)
+                ? [{ date: h.purchase_date, type: 'PURCHASE', amount: pu * u, units: u, nav: pu }]
+                : [],
             });
           });
           const manualOnlyXirrInfo = bestEffortXirr(mhList, manualVal);
@@ -807,6 +855,48 @@ function PortfolioInner() {
       setDeleteErr(err.message);
     } finally {
       setDeleteInFlight(false);
+    }
+  }
+
+  // Lazily fetches a fund's full NAV history for the Transaction History
+  // drawer's optional chart overlay -- same logic as app/cas-tracker/
+  // page.js's own fetchNavHistory, kept in sync manually since it's a
+  // handful of lines wrapping two already-shared API routes rather than
+  // something worth its own shared module. Result is cached (keyed by
+  // navHistoryCacheKey) so re-opening the same fund's drawer never re-fetches.
+  async function fetchNavHistory(fund) {
+    const key = navHistoryCacheKey(fund);
+    if (!key || navHistoryCache[key]?.points || navHistoryCache[key]?.loading) return;
+    setNavHistoryCache(prev => ({ ...prev, [key]: { loading: true } }));
+    try {
+      const earliest = earliestTxnDate(fund.transactions);
+      const cutoffMs = earliest != null ? earliest - 7 * 24 * 3600 * 1000 : null;
+      let points;
+
+      if (fund.fund_type === 'SIF') {
+        const iso = (d) => d.toISOString().slice(0, 10);
+        const fromDate = new Date(cutoffMs ?? Date.now() - 365 * 24 * 3600 * 1000);
+        const res = await fetch(`/api/sif-history?sd_id=${encodeURIComponent(fund.amfiCode)}&from=${iso(fromDate)}&to=${iso(new Date())}`);
+        const json = await res.json();
+        points = (json.records || [])
+          .map(r => ({ t: new Date(r.date).getTime(), nav: parseFloat(r.nav) }))
+          .filter(p => Number.isFinite(p.nav) && !isNaN(p.t))
+          .sort((a, b) => a.t - b.t);
+      } else {
+        const res = await fetch(`/api/mf?code=${fund.amfiCode}`);
+        const json = await res.json();
+        points = (json.data || [])
+          .map(d => {
+            const [dd, mm, yyyy] = d.date.split('-').map(Number);
+            return { t: new Date(yyyy, mm - 1, dd).getTime(), nav: parseFloat(d.nav) };
+          })
+          .filter(p => Number.isFinite(p.nav) && (cutoffMs == null || p.t >= cutoffMs))
+          .sort((a, b) => a.t - b.t);
+      }
+
+      setNavHistoryCache(prev => ({ ...prev, [key]: { loading: false, points } }));
+    } catch {
+      setNavHistoryCache(prev => ({ ...prev, [key]: { loading: false, error: true } }));
     }
   }
 
@@ -1157,6 +1247,52 @@ function PortfolioInner() {
                         )}
                       </span>
                     </div>
+
+                    {/* Redemption planning needs real FIFO purchase-lot history, which
+                        only CAS-derived holdings have -- Transactions just needs at least
+                        one known purchase, which manually-added holdings also have (a
+                        single synthesized entry from their purchase date/NAV/units). Same
+                        gating app/cas-tracker/page.js's fund cards use. */}
+                    {(!h.isManual || h.transactions?.length > 0) && (
+                      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                        {!h.isManual && (
+                          <button
+                            onClick={() => setPlanFund(h)}
+                            style={{
+                              flex: 1, padding: '9px 0', borderRadius: 8,
+                              border: 'none',
+                              background: 'var(--g1)', cursor: 'pointer',
+                              fontSize: '.72rem', fontWeight: 800,
+                              color: '#fff', fontFamily: 'Raleway, sans-serif',
+                              letterSpacing: '-.2px', transition: 'background .15s',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--g2)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
+                            title="Plan a tax-efficient redemption for this fund"
+                          >
+                            📊 Redemption
+                          </button>
+                        )}
+                        {h.transactions?.length > 0 && (
+                          <button
+                            onClick={() => setTxnDrawerFund(h)}
+                            title="View transaction-by-transaction rate history"
+                            style={{
+                              flex: 1, padding: '9px 0', borderRadius: 8,
+                              border: '1.5px solid var(--border2)',
+                              background: 'var(--s2)', cursor: 'pointer',
+                              fontSize: '.72rem', fontWeight: 800,
+                              color: 'var(--g2)', fontFamily: 'Raleway, sans-serif',
+                              letterSpacing: '-.2px', transition: 'background .15s',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--s3)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'var(--s2)'}
+                          >
+                            📈 Transactions
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1226,6 +1362,16 @@ function PortfolioInner() {
         detailHolding.isSIF
           ? <SifDetailDrawer schemeId={detailHolding.code} onClose={() => setDetailHolding(null)} />
           : <FundDetailDrawer code={detailHolding.code} onClose={() => setDetailHolding(null)} />
+      )}
+
+      {planFund && <RedemptionPlanner fund={planFund} onClose={() => setPlanFund(null)} />}
+      {txnDrawerFund && (
+        <TransactionHistoryDrawer
+          fund={txnDrawerFund}
+          navHistory={navHistoryCache[navHistoryCacheKey(txnDrawerFund)]}
+          onFetchNavHistory={() => fetchNavHistory(txnDrawerFund)}
+          onClose={() => setTxnDrawerFund(null)}
+        />
       )}
 
       <Footer />
