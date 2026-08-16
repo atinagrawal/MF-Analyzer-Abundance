@@ -11,6 +11,7 @@ import { PROPOSAL_STUDIO_FAQ } from '@/lib/proposalStudioFaq';
 import { formatProposalId, useMCapIndex, CollapsibleSection, ProposalAnalysisBlock, prettifySchemeName } from './ProposalSections';
 import { useSearchParams } from 'next/navigation';
 import ShareControls from './ShareControls';
+import { extractArnDigits, isArnBlocked, arnBlockedReason } from '@/lib/amfiDistributor';
 
 export default function ProposalStudioClient() {
   const { data: session, status } = useSession();
@@ -196,7 +197,7 @@ function ClientDetailsCard({ clientName, setClientName, clientEmail, setClientEm
 // branding (the running header, and the cover's "Powered by" mark) isn't
 // touched by these fields, so the platform stays attributed regardless of
 // who fills them in.
-function AdvisorDetailsCard({ advisorName, setAdvisorName, advisorPhone, setAdvisorPhone, advisorEmail, setAdvisorEmail, advisorArn, setAdvisorArn, advisorEuin, setAdvisorEuin, onTouched }) {
+function AdvisorDetailsCard({ advisorName, setAdvisorName, advisorPhone, setAdvisorPhone, advisorEmail, setAdvisorEmail, advisorArn, setAdvisorArn, advisorEuin, setAdvisorEuin, onTouched, arnLookup, onArnBlur }) {
   const handleChange = (setter) => (e) => { onTouched(); setter(e.target.value); };
   return (
     <section className="pfc-client-details">
@@ -205,9 +206,21 @@ function AdvisorDetailsCard({ advisorName, setAdvisorName, advisorPhone, setAdvi
         <input className="pfc-client-input" placeholder="Your name" value={advisorName} onChange={handleChange(setAdvisorName)} />
         <input className="pfc-client-input" type="tel" placeholder="Your phone" value={advisorPhone} onChange={handleChange(setAdvisorPhone)} />
         <input className="pfc-client-input" type="email" placeholder="Your email" value={advisorEmail} onChange={handleChange(setAdvisorEmail)} />
-        <input className="pfc-client-input" placeholder="ARN number" value={advisorArn} onChange={handleChange(setAdvisorArn)} />
+        <input className="pfc-client-input" placeholder="ARN number" value={advisorArn} onChange={handleChange(setAdvisorArn)} onBlur={onArnBlur} />
         <input className="pfc-client-input" placeholder="EUIN" value={advisorEuin} onChange={handleChange(setAdvisorEuin)} />
       </div>
+      {arnLookup.status === 'loading' && <div className="pfc-hint">⏳ Verifying ARN…</div>}
+      {arnLookup.status === 'ok' && isArnBlocked(arnLookup.data) && (
+        <div style={{ fontSize: '.7rem', color: '#e65100', marginTop: 6, fontWeight: 700 }}>
+          ⚠ {arnBlockedReason(arnLookup.data)}
+        </div>
+      )}
+      {arnLookup.status === 'not_found' && (
+        <div className="pfc-hint">ARN not found in AMFI registry — check the number.</div>
+      )}
+      {arnLookup.status === 'error' && (
+        <div className="pfc-hint">Couldn't verify ARN right now.</div>
+      )}
     </section>
   );
 }
@@ -334,6 +347,43 @@ function ProposalStudioTool() {
   const [advisorArn, setAdvisorArn] = useState('ARN-251838');
   const [advisorEuin, setAdvisorEuin] = useState('E468841');
   const [advisorFieldsTouched, setAdvisorFieldsTouched] = useState(false);
+
+  // Live AMFI ARN verification -- see lib/amfiDistributor.js and
+  // docs/superpowers/specs/2026-08-16-amfi-distributor-proposal-studio-design.md.
+  const [arnLookup, setArnLookup] = useState({ status: 'idle', data: null }); // 'idle'|'loading'|'ok'|'not_found'|'error'
+
+  // Fires on ARN-field blur, and once on mount (see the mount effect below)
+  // so a saved proposal's already-populated ARN gets checked too, not just
+  // freshly-typed ones. Auto-fill only ever writes an EMPTY field -- never
+  // overwrites something the distributor already typed themselves.
+  async function checkArn(rawArn) {
+    const arn = extractArnDigits(rawArn);
+    if (!arn) {
+      setArnLookup({ status: 'idle', data: null });
+      return;
+    }
+    setArnLookup({ status: 'loading', data: null });
+    try {
+      const res = await fetch(`/api/distributor?arn=${arn}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setArnLookup({ status: 'error', data: null });
+        return;
+      }
+      if (!data.found) {
+        setArnLookup({ status: 'not_found', data: null });
+        return;
+      }
+      setArnLookup({ status: 'ok', data: data.distributor });
+      if (!advisorName)  setAdvisorName(data.distributor.name);
+      if (!advisorPhone) setAdvisorPhone(data.distributor.phone);
+      if (!advisorEmail) setAdvisorEmail(data.distributor.email);
+      if (!advisorEuin)  setAdvisorEuin(data.distributor.euin);
+    } catch {
+      setArnLookup({ status: 'error', data: null });
+    }
+  }
+
   const [savedProposalId, setSavedProposalId] = useState(null);
   const [loadedShareToken, setLoadedShareToken] = useState(null);
   const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
@@ -362,6 +412,14 @@ function ProposalStudioTool() {
     if (advisorFieldsTouched) return;
     if (session?.user?.name) setAdvisorName(session.user.name);
   }, [session, advisorFieldsTouched]);
+
+  // Verify the ARN once on mount too (not just on blur) -- covers the
+  // 'ARN-251838' default on a fresh session. loadSavedProposal() below
+  // separately re-checks whatever ARN a loaded proposal carries.
+  useEffect(() => {
+    checkArn(advisorArn);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Load the user's CAS-derived fund list once on mount, including each
   // fund's real current value (units x NAV, same computation app/portfolio/page.jsx
@@ -517,6 +575,7 @@ function ProposalStudioTool() {
       setAdvisorEmail(data.advisorEmail || 'atin@getabundance.in');
       setAdvisorArn(data.advisorArn || 'ARN-251838');
       setAdvisorEuin(data.advisorEuin || 'E468841');
+      checkArn(data.advisorArn || 'ARN-251838');
       setProposalType(data.proposalType || 'lumpsum');
       setSipFrequency(data.sipFrequency || 'monthly');
       setSelectedFunds((data.selectedFunds || []).map((f) => ({
@@ -547,6 +606,8 @@ function ProposalStudioTool() {
         advisorArn={advisorArn} setAdvisorArn={setAdvisorArn}
         advisorEuin={advisorEuin} setAdvisorEuin={setAdvisorEuin}
         onTouched={() => setAdvisorFieldsTouched(true)}
+        arnLookup={arnLookup}
+        onArnBlur={() => checkArn(advisorArn)}
       />
       <FundPicker
         selectedFunds={selectedFunds}
