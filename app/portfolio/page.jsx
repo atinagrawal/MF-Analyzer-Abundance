@@ -230,6 +230,44 @@ function Sparkline({ positive, style }) {
   );
 }
 
+// ── FAQ section — visible to all (logged out, empty, and the main
+// dashboard), crawlable, mirrors the FAQPage JSON-LD in layout.js. Shared
+// by all three render branches below so they can't drift apart. ──────────────
+function PortfolioFaqSection() {
+  return (
+    <section style={{ padding: '64px 0 0', borderTop: '1px solid var(--border)', marginTop: 64 }}>
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 20px' }}>
+        <div className="page-eyebrow" style={{ marginBottom: 10 }}>
+          <span className="eyebrow-text">Help & Support</span>
+        </div>
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-.4px', marginBottom: 28 }}>
+          Frequently Asked Questions
+        </h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {PORTFOLIO_FAQ.map(({ q, a }, i, arr) => (
+            <details key={i} style={{
+              borderTop: '1px solid var(--border)',
+              borderBottom: i === arr.length - 1 ? '1px solid var(--border)' : 'none',
+            }}>
+              <summary style={{
+                padding: '16px 4px', cursor: 'pointer', listStyle: 'none',
+                fontSize: '.82rem', fontWeight: 800, color: 'var(--text)',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                {q}
+                <span style={{ fontSize: '1rem', color: 'var(--muted)', flexShrink: 0, marginLeft: 12 }}>+</span>
+              </summary>
+              <div style={{ padding: '0 4px 16px', fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.7 }}>
+                {a}
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── Best-effort pooled XIRR ────────────────────────────────────────────────────
 // combinedXirr() (lib/xirr.js) is deliberately all-or-nothing: if even one
 // holding in the group lacks a trustworthy transaction history, the whole
@@ -726,37 +764,7 @@ function PortfolioInner() {
           </div>
         </div>
 
-        {/* ── FAQ — visible to all, crawlable, mirrors the FAQPage JSON-LD in layout.js ── */}
-        <section style={{ padding: '64px 0', maxWidth: 800, margin: '0 auto' }}>
-          <div style={{ padding: '0 20px' }}>
-            <div className="page-eyebrow" style={{ marginBottom: 10 }}>
-              <span className="eyebrow-text">Help & Support</span>
-            </div>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-.4px', marginBottom: 28 }}>
-              Frequently Asked Questions
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              {PORTFOLIO_FAQ.map(({ q, a }, i, arr) => (
-                <details key={i} style={{
-                  borderTop: '1px solid var(--border)',
-                  borderBottom: i === arr.length - 1 ? '1px solid var(--border)' : 'none',
-                }}>
-                  <summary style={{
-                    padding: '16px 4px', cursor: 'pointer', listStyle: 'none',
-                    fontSize: '.82rem', fontWeight: 800, color: 'var(--text)',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  }}>
-                    {q}
-                    <span style={{ fontSize: '1rem', color: 'var(--muted)', flexShrink: 0, marginLeft: 12 }}>+</span>
-                  </summary>
-                  <div style={{ padding: '0 4px 16px', fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.7 }}>
-                    {a}
-                  </div>
-                </details>
-              ))}
-            </div>
-          </div>
-        </section>
+        <PortfolioFaqSection />
 
         <Footer />
       </>
@@ -939,6 +947,9 @@ function PortfolioInner() {
             </div>
           </div>
         </div>
+
+        <PortfolioFaqSection />
+
         <Footer />
       </>
     );
@@ -1373,6 +1384,11 @@ function PortfolioInner() {
           onClose={() => setTxnDrawerFund(null)}
         />
       )}
+
+      {/* Shown here too (not just the logged-out gate and empty state above)
+          so signed-in users viewing their actual dashboard see the same
+          help content app/cas-tracker/page.js already shows unconditionally. */}
+      <PortfolioFaqSection />
 
       <Footer />
     </>
