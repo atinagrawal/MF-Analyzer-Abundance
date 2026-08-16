@@ -193,7 +193,14 @@ function calculateFifoCost(scheme, currentNav, isTransmittedFolio = false) {
         // informationally.
         isTransmission: isTransmissionTxn(txn.description) || isTransmittedFolio,
       });
-    } else if (/REDEMPTION|SWITCH.?OUT/.test(type)) {
+    } else if (/REDEMPTION|SWITCH.?OUT|REVERSAL/.test(type)) {
+      // REVERSAL voids an earlier purchase attempt (most commonly a SIP
+      // instalment that bounced -- "ER04: Insufficient Balance" -- and was
+      // retried same-day). Removing FIFO-style, same as a real sell, was
+      // verified against a real CAS to reconcile exactly: every scheme with
+      // an unhandled reversal was overstating FIFO invested by the full
+      // reversed amount (₹3.5K-₹44K on the funds checked), since the
+      // voided purchase's lot was never removed.
       let rem = Math.abs(txnUnits);
       while (rem > 0 && buyLots.length > 0) {
         if (buyLots[0].units <= rem) {
