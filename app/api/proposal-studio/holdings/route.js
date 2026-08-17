@@ -17,6 +17,7 @@
  */
 
 import { getHoldingsData } from '@/lib/holdingsLookup';
+import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rateLimit';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -26,6 +27,16 @@ export async function GET(request) {
   if (!amfiCode || !schemeName) {
     return Response.json({ error: 'amfiCode and schemeName are required' }, { status: 400 });
   }
+
+  // Public, unauthenticated route (see the file header comment) -- keyed
+  // by IP rather than a user id, since there's often no signed-in user at
+  // all (a share-link viewer). See
+  // docs/superpowers/plans/2026-08-17-per-user-rate-limiter.md's
+  // mid-planning scope correction for why this route differs from
+  // app/api/distributor/route.js's user-keyed check.
+  const ip = getClientIp(request);
+  const rl = await checkRateLimit(`ip:${ip}`, 'proposal-holdings-lookup');
+  if (rl.limited) return rateLimitResponse(rl);
 
   try {
     const data = await getHoldingsData(amfiCode, schemeName);
