@@ -29,8 +29,11 @@
  *     round trip -- same mfapi.in-then-AMFI resolution as the single-code
  *     path above, just fanned out server-side instead of once per code from
  *     the browser. Response shape is deliberately different from the
- *     single-code path ({ navs: { code: nav } } vs { meta, data: [...] } )
- *     since callers here only ever want the number, not scheme metadata.
+ *     single-code path ({ navs: { code: nav }, names: { code: name } } vs
+ *     { meta, data: [...] }) -- flat lookup maps rather than per-scheme
+ *     metadata blocks. `names` is best-effort (a code resolves a name only
+ *     if its upstream carried one) and is what lets /api/picks build its
+ *     whole response from ONE batch call.
  */
 
 import { r2Get } from '../../lib/r2';
@@ -261,6 +264,7 @@ export default async function handler(req, res) {
     }
 
     const navs = {};
+    const names = {};
     await Promise.allSettled(uniqueCodes.map(async (c) => {
       try {
         const r = await fetch(
@@ -271,6 +275,7 @@ export default async function handler(req, res) {
           const data = await r.json();
           if (data?.data?.length) {
             navs[c] = data.data[0].nav;
+            if (data.meta?.scheme_name) names[c] = data.meta.scheme_name;
             return;
           }
         }
@@ -279,11 +284,14 @@ export default async function handler(req, res) {
       try {
         const amfi = await getAmfiMap();
         const fund = amfi.get(String(c));
-        if (fund) navs[c] = fund.nav;
+        if (fund) {
+          navs[c] = fund.nav;
+          if (fund.name) names[c] = fund.name;
+        }
       } catch (_) { /* leave unresolved -- caller falls back to CAS-reported NAV */ }
     }));
 
-    return sendOk(res, { status: 'SUCCESS', navs }, 's-maxage=3600, stale-while-revalidate=7200');
+    return sendOk(res, { status: 'SUCCESS', navs, names }, 's-maxage=3600, stale-while-revalidate=7200');
   }
 
   // ── SEARCH ──
