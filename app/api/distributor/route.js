@@ -21,6 +21,7 @@
 import { auth } from '@/auth';
 import { r2Get, r2Put } from '@/lib/r2';
 import { extractArnDigits, fetchDistributorByArn } from '@/lib/amfiDistributor';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -49,6 +50,13 @@ export async function GET(req) {
   const session = await auth();
   if (!session?.user?.id) {
     return Response.json({ error: 'Unauthorised' }, { status: 401 });
+  }
+
+  // Skip for the app owner's own staff -- the abuse concern is outside
+  // users, not trusted admin/distributor accounts doing their own work.
+  if (session.user.role !== 'admin' && session.user.role !== 'distributor') {
+    const rl = await checkRateLimit(`user:${session.user.id}`, 'distributor-lookup');
+    if (rl.limited) return rateLimitResponse(rl);
   }
 
   const { searchParams } = new URL(req.url);
