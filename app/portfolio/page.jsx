@@ -529,9 +529,27 @@ function PortfolioInner() {
             const panMap = {}; // PAN → { name, current, invested, holdings }
             const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
+            // Some registrars only restate a folio's PAN on some of its
+            // blocks, not every one -- when the WHOLE statement otherwise
+            // has exactly one distinct valid PAN, a folio with a blank/
+            // malformed PAN of its own almost certainly belongs to that
+            // same single investor, not a second "Shared" one (confirmed
+            // against a real single-PAN CAS where ~10 of 29 folios came
+            // back with PAN: "" from the parser, splitting one investor
+            // into two panMap entries). Only applied when unambiguous
+            // (exactly one other valid PAN found across the whole file) --
+            // a genuinely multi-PAN CAS keeps the existing 'SHARED'
+            // fallback for any folio whose PAN truly can't be determined.
+            const distinctValidPans = new Set();
+            mergedFolios.forEach(folio => {
+              const p = (folio.PAN || '').toUpperCase().trim();
+              if (p.length === 10 && PAN_RE.test(p)) distinctValidPans.add(p);
+            });
+            const solePan = distinctValidPans.size === 1 ? [...distinctValidPans][0] : null;
+
             mergedFolios.forEach(folio => {
               const pan = (folio.PAN || '').toUpperCase().trim();
-              const validPan = pan.length === 10 && PAN_RE.test(pan) ? pan : 'SHARED';
+              const validPan = pan.length === 10 && PAN_RE.test(pan) ? pan : (solePan || 'SHARED');
 
               // Resolve investor name for this PAN
               if (!panMap[validPan]) {

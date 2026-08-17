@@ -1543,11 +1543,22 @@ function CasTrackerInner() {
 
     const panList = Object.keys(allPans);
     const isSinglePan = panList.length <= 1;
+    // Some registrars only restate a folio's PAN on some of its blocks,
+    // not every one -- when the WHOLE statement otherwise has exactly one
+    // distinct valid PAN, a folio with a blank/malformed PAN of its own
+    // almost certainly belongs to that same single investor, not a second
+    // "Unknown Investor" (confirmed against a real single-PAN CAS where
+    // ~10 of 29 folios came back with PAN: "" from the parser, splitting
+    // one investor into two). Only applied when unambiguous (exactly one
+    // OTHER valid PAN found) -- panList.length === 1, not the broader
+    // isSinglePan (which is also true when panList.length is 0, i.e. no
+    // valid PAN was found anywhere -- there'd be nothing to fall back to).
+    const solePan = panList.length === 1 ? panList[0] : null;
 
     (data.folios || []).forEach(folio => {
       let rawPan = (folio.PAN || '').toUpperCase().trim();
       if (!rawPan || rawPan.length !== 10 || !PAN_REGEX.test(rawPan)) {
-        rawPan = 'UNKNOWN';
+        rawPan = solePan || 'UNKNOWN';
       }
 
       // Investor name resolution
