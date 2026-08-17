@@ -41,7 +41,8 @@ const assert = require('assert');
     return next ?? { rows: [{ count: 1 }] };
   };
 
-  const { checkRateLimit, formatRetryLabel, rateLimitMessage, DEFAULT_TIERS } = await import('../lib/rateLimit.js');
+  const { checkRateLimit, checkRateLimitSafe, formatRetryLabel, rateLimitMessage, DEFAULT_TIERS } = await import('../lib/rateLimit.js');
+  const fakePoolQuery = dbModule.default.query;
 
   console.log('=== Running rateLimit Unit Tests ===\n');
 
@@ -127,6 +128,17 @@ const assert = require('assert');
     fakePoolState.responses = [{ rows: [{ count: 100 }] }, { rows: [{ count: 1500 }] }];
     const result = await checkRateLimit('user:test3', 'test-route');
     assert.deepStrictEqual(result, { limited: false });
+  });
+
+  // ── checkRateLimitSafe (fail-open wrapper) ────────────────────────────
+  await asyncTest('checkRateLimitSafe fails OPEN when the pool query rejects', async () => {
+    dbModule.default.query = async () => { throw new Error('connection terminated unexpectedly'); };
+    try {
+      const result = await checkRateLimitSafe('user:1', 'test-route');
+      assert.deepStrictEqual(result, { limited: false }, 'a rate-limiter failure must never fail the request');
+    } finally {
+      dbModule.default.query = fakePoolQuery;
+    }
   });
 
   test('DEFAULT_TIERS matches the documented burst + sustained shape', () => {

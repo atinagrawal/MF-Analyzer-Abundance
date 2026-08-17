@@ -34,7 +34,7 @@
  */
 
 import { r2Get } from '../../lib/r2';
-import { checkRateLimit, rateLimitMessage, getClientIpFromNodeReq } from '../../lib/rateLimit';
+import { checkRateLimitSafe, rateLimitMessage, getClientIpFromNodeReq } from '../../lib/rateLimit';
 
 export const config = { runtime: 'nodejs' };
 
@@ -342,7 +342,7 @@ export default async function handler(req, res) {
   // case, so this is IP-keyed like app/api/proposal-studio/holdings/route.js. ──
   if (code) {
     const ip = getClientIpFromNodeReq(req);
-    const rl = await checkRateLimit(`ip:${ip}`, 'mf-code-lookup');
+    const rl = await checkRateLimitSafe(`ip:${ip}`, 'mf-code-lookup');
     if (rl.limited) {
       res.setHeader('Retry-After', String(rl.retryAfterSeconds));
       return sendError(res, 429, rateLimitMessage(rl.retryAfterSeconds), 'RATE_LIMITED');

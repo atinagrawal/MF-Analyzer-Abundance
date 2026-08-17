@@ -21,7 +21,7 @@
 import { auth } from '@/auth';
 import { r2Get, r2Put } from '@/lib/r2';
 import { extractArnDigits, fetchDistributorByArn } from '@/lib/amfiDistributor';
-import { checkRateLimit, rateLimitResponse } from '@/lib/rateLimit';
+import { checkRateLimitSafe, rateLimitResponse } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -55,7 +55,7 @@ export async function GET(req) {
   // Skip for the app owner's own staff -- the abuse concern is outside
   // users, not trusted admin/distributor accounts doing their own work.
   if (session.user.role !== 'admin' && session.user.role !== 'distributor') {
-    const rl = await checkRateLimit(`user:${session.user.id}`, 'distributor-lookup');
+    const rl = await checkRateLimitSafe(`user:${session.user.id}`, 'distributor-lookup');
     if (rl.limited) return rateLimitResponse(rl);
   }
 

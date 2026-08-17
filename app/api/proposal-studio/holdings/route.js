@@ -17,7 +17,7 @@
  */
 
 import { getHoldingsData } from '@/lib/holdingsLookup';
-import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rateLimit';
+import { checkRateLimitSafe, rateLimitResponse, getClientIp } from '@/lib/rateLimit';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -35,7 +35,7 @@ export async function GET(request) {
   // mid-planning scope correction for why this route differs from
   // app/api/distributor/route.js's user-keyed check.
   const ip = getClientIp(request);
-  const rl = await checkRateLimit(`ip:${ip}`, 'proposal-holdings-lookup');
+  const rl = await checkRateLimitSafe(`ip:${ip}`, 'proposal-holdings-lookup');
   if (rl.limited) return rateLimitResponse(rl);
 
   try {
