@@ -524,6 +524,7 @@ export default function UsersTab({ session }) {
               </div>
               <div style={{ padding: '12px 16px' }}>
                 <RoleAndPlanSelect
+                  key={selectedUser.id}
                   user={selectedUser}
                   sessionUserId={session.user.id}
                   distributors={distributors}
@@ -686,6 +687,7 @@ export default function UsersTab({ session }) {
             </div>
             <div style={{ padding: '12px 16px' }}>
               <RoleAndPlanSelect
+                key={selectedUser.id}
                 user={selectedUser}
                 sessionUserId={session.user.id}
                 distributors={distributors}
