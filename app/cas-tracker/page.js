@@ -15,7 +15,7 @@ import { TAX, inferCategory, applyLossOffset } from '@/lib/taxCalc';
 import LossAdjustmentPanel from '@/components/LossAdjustmentPanel';
 import RedemptionPlanner from '@/components/RedemptionPlanner';
 import TransactionHistoryDrawer, { isTransmissionTxn, earliestTxnDate, navHistoryCacheKey } from '@/components/TransactionHistoryDrawer';
-import { resolveDistributors, extractArnDigits } from '@/lib/distributorResolution';
+import { resolveDistributors, extractArnDigits, formatDistributorName } from '@/lib/distributorResolution';
 
 // isin-scheme-master.json (~8.4MB, ~26k entries) used to be statically
 // imported here -- meaning it shipped to every visitor's BROWSER as part of
@@ -1968,7 +1968,7 @@ function CasTrackerInner() {
     if (newArns.length === 0) return;
     resolveDistributors(newArns).then(map => {
       setDistributorCache(prev => ({ ...prev, ...map }));
-    });
+    }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [portfolioDataByPan]);
 
@@ -2731,7 +2731,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                 // a distributor, we just don't know who yet/couldn't verify).
                 if (record === undefined) return;
                 const key = record ? arn : `UNKNOWN_${arn}`;
-                const label = record ? record.name : `ARN-${arn}`;
+                const label = record ? `ARN-${arn} (${formatDistributorName(record.name)})` : `ARN-${arn}`;
                 buckets[key] = buckets[key] || { count: 0, label };
                 buckets[key].count++;
               });
@@ -2742,9 +2742,8 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
               // with nothing informative to add is noise, not information.
               if (entries.length === 0 || (entries.length === 1 && entries[0] === buckets.DIRECT)) return null;
 
-              const totalResolvableCount = casHoldings.length;
               const summary = entries
-                .map(e => `${e.count} of ${totalResolvableCount} holding${totalResolvableCount === 1 ? '' : 's'} via ${e.label}`)
+                .map(e => `${e.count} CAS holding${e.count === 1 ? '' : 's'} via ${e.label}`)
                 .join(' · ');
 
               return (
@@ -2850,8 +2849,8 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                                 fontSize: '.52rem', fontWeight: 800, padding: '2px 7px', borderRadius: 4,
                                 background: 'var(--g-xlight)', color: 'var(--g2)', border: '1px solid var(--g-light)',
                                 fontFamily: "'JetBrains Mono', monospace", letterSpacing: '.5px',
-                              }} title={`${resolvedDistributor.name}\nARN-${resolvedDistributor.arn}\n📞 ${resolvedDistributor.phone || 'N/A'}\n✉ ${resolvedDistributor.email || 'N/A'}`}>
-                                🧑‍💼 {resolvedDistributor.name.split(' ')[0]}
+                              }} title={`${formatDistributorName(resolvedDistributor.name)}\nARN-${resolvedDistributor.arn}\n📞 ${resolvedDistributor.phone || 'N/A'}\n✉ ${resolvedDistributor.email || 'N/A'}`}>
+                                🧑‍💼 {formatDistributorName(resolvedDistributor.name).split(' ')[0]}
                               </span>
                             )}
                             {isFamilyView && fund.__ownerName && (

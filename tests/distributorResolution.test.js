@@ -11,7 +11,7 @@
 const assert = require('assert');
 
 (async () => {
-  const { resolveDistributors } = await import('../lib/distributorResolution.js');
+  const { resolveDistributors, formatDistributorName } = await import('../lib/distributorResolution.js');
 
   console.log('=== Running distributorResolution Unit Tests ===\n');
 
@@ -128,6 +128,16 @@ const assert = require('assert');
         assert.deepStrictEqual(map, {});
       }
     );
+  });
+
+  await test('formatDistributorName title-cases an ALL-CAPS AMFI name', async () => {
+    assert.strictEqual(formatDistributorName('ATIN KUMAR AGRAWAL'), 'Atin Kumar Agrawal');
+  });
+
+  await test('formatDistributorName falls back to a placeholder for a missing/blank name', async () => {
+    assert.strictEqual(formatDistributorName(''), 'Registered Distributor');
+    assert.strictEqual(formatDistributorName('   '), 'Registered Distributor');
+    assert.strictEqual(formatDistributorName(undefined), 'Registered Distributor');
   });
 
   console.log(`\n${passed} passed, ${failed} failed`);
