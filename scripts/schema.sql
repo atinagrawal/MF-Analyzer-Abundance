@@ -496,6 +496,25 @@ CREATE TABLE IF NOT EXISTS manual_holdings (
 CREATE INDEX IF NOT EXISTS manual_holdings_user_idx ON manual_holdings(user_id);
 CREATE INDEX IF NOT EXISTS manual_holdings_pan_idx  ON manual_holdings(pan) WHERE pan IS NOT NULL;
 
+-- ── Rate limiting ────────────────────────────────────────────────────────────
+-- Two-tier (burst + sustained) per-subject-per-route counter, checked by
+-- lib/rateLimit.js. subject_key is 'user:<id>' for a route that already
+-- requires a signed-in session, or 'ip:<address>' for a route that's
+-- deliberately public (see docs/superpowers/specs/2026-08-17-per-user-rate-limiter-design.md
+-- and that spec's mid-planning scope correction in
+-- docs/superpowers/plans/2026-08-17-per-user-rate-limiter.md). window_secs
+-- distinguishes the two tiers (600 = 10-minute burst, 86400 = 1-day
+-- sustained) so both share one table. Old rows are swept out daily by
+-- scripts/send_lifecycle_emails.mjs.
+CREATE TABLE IF NOT EXISTS rate_limit_counters (
+  subject_key  TEXT        NOT NULL,
+  route_key    TEXT        NOT NULL,
+  window_secs  INT         NOT NULL,
+  window_start TIMESTAMPTZ NOT NULL,
+  count        INT         NOT NULL DEFAULT 1,
+  PRIMARY KEY (subject_key, route_key, window_secs, window_start)
+);
+
 -- =============================================================================
 -- Role values: 'client' | 'distributor' | 'admin'
 -- Promote a user manually:
