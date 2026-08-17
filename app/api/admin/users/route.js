@@ -30,6 +30,7 @@ export async function GET() {
         u.image,
         u.role,
         u.plan,
+        u.plan_expires_at,
         u.distributor_id,
         d.name AS distributor_name,
         u.created_at,
@@ -62,8 +63,9 @@ export async function GET() {
 
 /**
  * PATCH /api/admin/users
- * Body: { userId, role }
- * Updates a user's role.
+ * Body: { userId, role?, plan?, trialDays?, distributorId? }
+ * Updates a user's role, plan (trialDays required and must be an integer
+ * 1-30 when plan === 'trial'), and/or assigned distributor.
  */
 export async function PATCH(req) {
   try {
@@ -71,9 +73,9 @@ export async function PATCH(req) {
     if (!session?.user?.id)            return Response.json({ error: 'Unauthorised' }, { status: 401 });
     if (session.user.role !== 'admin') return Response.json({ error: 'Forbidden' },     { status: 403 });
 
-    const { userId, role, plan, distributorId } = await req.json();
+    const { userId, role, plan, trialDays, distributorId } = await req.json();
     const VALID_ROLES = ['client', 'distributor', 'admin'];
-    const VALID_PLANS = ['free', 'pro', 'pro_lifetime', 'lifetime'];
+    const VALID_PLANS = ['free', 'pro', 'pro_lifetime', 'lifetime', 'trial'];
 
     if (!userId) {
       return Response.json({ error: 'userId is required' }, { status: 400 });
@@ -90,11 +92,30 @@ export async function PATCH(req) {
       await pool.query('UPDATE users SET role = $1 WHERE id = $2', [role, userId]);
     }
 
+    let planExpiresAt;
     if (plan !== undefined) {
       if (plan !== null && !VALID_PLANS.includes(plan)) {
         return Response.json({ error: 'Invalid plan' }, { status: 400 });
       }
-      await pool.query('UPDATE users SET plan = $1 WHERE id = $2', [plan, userId]);
+      if (plan === 'trial') {
+        const days = Number(trialDays);
+        if (!Number.isInteger(days) || days < 1 || days > 30) {
+          return Response.json({ error: 'trialDays must be an integer between 1 and 30' }, { status: 400 });
+        }
+        const { rows } = await pool.query(
+          `UPDATE users SET plan = 'trial', plan_expires_at = NOW() + ($1 || ' days')::interval WHERE id = $2 RETURNING plan_expires_at`,
+          [days, userId]
+        );
+        planExpiresAt = rows[0].plan_expires_at;
+      } else {
+        // Free/Pro/Pro Lifetime granted here are always permanent -- clear
+        // any leftover plan_expires_at (e.g. from a prior trial) so it can't
+        // be misread later as an already-expired grant. See
+        // docs/superpowers/specs/2026-08-17-pro-trial-mechanism-design.md
+        // ("Background") for the exact bug this prevents.
+        await pool.query('UPDATE users SET plan = $1, plan_expires_at = NULL WHERE id = $2', [plan, userId]);
+        planExpiresAt = null;
+      }
     }
 
     if (distributorId !== undefined) {
@@ -102,7 +123,10 @@ export async function PATCH(req) {
       await pool.query('UPDATE users SET distributor_id = $1 WHERE id = $2', [targetDistributor, userId]);
     }
 
-    return Response.json({ ok: true, userId, role, plan, distributorId });
+    return Response.json({
+      ok: true, userId, role, plan, distributorId,
+      planExpiresAt: plan !== undefined ? planExpiresAt : undefined,
+    });
 
   } catch (err) {
     console.error('[admin/users PATCH]', err.name, err.message);

@@ -178,7 +178,15 @@ CREATE INDEX IF NOT EXISTS idx_proposals_share_token ON proposals(share_token) W
 -- Added by the Lifetime-plan and distributor-scoping features, after the
 -- base `users` table above was first written. plan/plan_expires_at are the
 -- source auth.js's session callback normalizes into session.user.plan
--- ('free' | 'pro'). distributor_id/created_by back lib/permissions.js's
+-- ('free' | 'pro'). Raw `plan` values: 'free' | 'pro' | 'pro_lifetime' |
+-- 'trial' (a time-boxed Pro grant -- see app/api/admin/users/route.js's
+-- PATCH handler and
+-- docs/superpowers/specs/2026-08-17-pro-trial-mechanism-design.md). A
+-- trial row is deliberately left as plan='trial' forever after it
+-- expires -- doubles as a "this client has used a trial" marker for the
+-- admin panel, since the session callback's own expiry check already
+-- handles downgrading actual access without needing the stored value to
+-- change. distributor_id/created_by back lib/permissions.js's
 -- canManageUser() (a distributor may manage a client only if one of these
 -- points at that distributor).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS plan               TEXT NOT NULL DEFAULT 'free';
