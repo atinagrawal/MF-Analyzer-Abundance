@@ -2710,6 +2710,54 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
               );
             })()}
 
+            {/* ── "Who sold this" distributor rollup ── */}
+            {(() => {
+              const casHoldings = (currentInfo.holdings || []);
+              if (casHoldings.length === 0) return null;
+
+              const buckets = {}; // key: resolved ARN or 'DIRECT' → { count, label }
+              casHoldings.forEach(h => {
+                const arn = extractArnDigits(h.advisor);
+                if (!arn) {
+                  buckets.DIRECT = buckets.DIRECT || { count: 0, label: 'Direct' };
+                  buckets.DIRECT.count++;
+                  return;
+                }
+                const record = distributorCache[arn];
+                // A well-formed ARN whose lookup hasn't resolved yet, or
+                // whose lookup genuinely failed, is excluded entirely --
+                // indistinguishable from "still loading", and bucketing it
+                // as Direct would be actively wrong (this holding DOES have
+                // a distributor, we just don't know who yet/couldn't verify).
+                if (record === undefined) return;
+                const key = record ? arn : `UNKNOWN_${arn}`;
+                const label = record ? record.name : `ARN-${arn}`;
+                buckets[key] = buckets[key] || { count: 0, label };
+                buckets[key].count++;
+              });
+
+              const entries = Object.values(buckets).sort((a, b) => b.count - a.count);
+              // Nothing to roll up (every holding is Direct, or every
+              // non-Direct holding is still unresolved/failed) -- a rollup
+              // with nothing informative to add is noise, not information.
+              if (entries.length === 0 || (entries.length === 1 && entries[0] === buckets.DIRECT)) return null;
+
+              const totalResolvableCount = casHoldings.length;
+              const summary = entries
+                .map(e => `${e.count} of ${totalResolvableCount} holding${totalResolvableCount === 1 ? '' : 's'} via ${e.label}`)
+                .join(' · ');
+
+              return (
+                <div style={{
+                  marginBottom: 18, padding: '10px 16px', borderRadius: 10,
+                  background: 'var(--s2)', border: '1.5px solid var(--border)',
+                  fontSize: '.7rem', color: 'var(--text2)', lineHeight: 1.6,
+                }}>
+                  {summary}
+                </div>
+              );
+            })()}
+
             {/* ── Filter toggle (only when SIF holdings exist) ── */}
             {(() => {
               const hasSIF = manualHoldings.some(h => h.fund_type === 'SIF');
