@@ -328,12 +328,14 @@ function UserAvatar({ session, onNavClose }) {
   const image     = user?.image || null;
   const role      = user?.role  || 'client';
   const plan      = user?.plan  || 'free';
-  const planTier  = user?.planTier || 'free'; // 'free' | 'annual' | 'lifetime'
+  const planTier  = user?.planTier || 'free'; // 'free' | 'trial' | 'annual' | 'lifetime'
   const initials  = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
-  // On-site renewal reminder — annual Pro only, within 30 days of expiry.
-  // Lifetime members never expire, so this never applies to them.
-  const daysToExpiry = (planTier === 'annual' && user?.planExpiresAt)
+  // On-site expiry reminder — annual Pro or an active trial, within 30 days
+  // of expiry (a trial is normally only a few days long, so this fires
+  // almost immediately for one, which is the point). Lifetime members never
+  // expire, so this never applies to them.
+  const daysToExpiry = ((planTier === 'annual' || planTier === 'trial') && user?.planExpiresAt)
     ? Math.ceil((new Date(user.planExpiresAt) - new Date()) / 864e5)
     : null;
   const showRenewalReminder = daysToExpiry != null && daysToExpiry <= 30 && daysToExpiry >= 0;
@@ -409,17 +411,17 @@ function UserAvatar({ session, onNavClose }) {
                 letterSpacing: '.5px', textTransform: 'uppercase',
                 padding: '2px 7px', borderRadius: 4,
                 fontFamily: "'JetBrains Mono', monospace",
-                background: planTier === 'lifetime' ? '#fff8e1' : plan === 'pro' ? '#e8f5e9' : 'var(--s2)',
-                color:      planTier === 'lifetime' ? '#96690a' : plan === 'pro' ? '#1b5e20' : 'var(--muted)',
+                background: planTier === 'lifetime' ? '#fff8e1' : planTier === 'trial' ? '#e3f2fd' : plan === 'pro' ? '#e8f5e9' : 'var(--s2)',
+                color:      planTier === 'lifetime' ? '#96690a' : planTier === 'trial' ? '#1565c0' : plan === 'pro' ? '#1b5e20' : 'var(--muted)',
                 border: '1px solid var(--border)',
               }}>
-                {planTier === 'lifetime' ? '★ Lifetime' : plan === 'pro' ? '★ Pro' : 'Free'}
+                {planTier === 'lifetime' ? '★ Lifetime' : planTier === 'trial' ? '⏱ Trial' : plan === 'pro' ? '★ Pro' : 'Free'}
               </div>
             </div>
             {showRenewalReminder && (
               <a href="/pricing" onClick={() => { setOpen(false); onNavClose?.(); }}
                 style={{ display: 'block', marginTop: 6, fontSize: '.62rem', fontWeight: 700, color: '#e65100', textDecoration: 'none' }}>
-                ⚠ Pro expires in {daysToExpiry} day{daysToExpiry === 1 ? '' : 's'} — Renew →
+                ⚠ {planTier === 'trial' ? 'Trial' : 'Pro'} expires {daysToExpiry <= 0 ? 'today' : `in ${daysToExpiry} day${daysToExpiry === 1 ? '' : 's'}`} — {planTier === 'trial' ? 'Upgrade' : 'Renew'} →
               </a>
             )}
           </div>
