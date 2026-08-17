@@ -209,7 +209,11 @@ export default function FundDetailClient({ code }) {
   useEffect(() => {
     setLoading(true);
     fetch(`/api/fund-detail/${code}`)
-      .then((r) => {
+      .then(async (r) => {
+        if (r.status === 429) {
+          const body = await r.json().catch(() => ({}));
+          throw new Error(body.error || "You're doing that too fast — please wait a bit and try again.");
+        }
         if (!r.ok) throw new Error('Fund not found');
         return r.json();
       })
