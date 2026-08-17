@@ -330,7 +330,15 @@ function PortfolioInner() {
   const [panPortfolios, setPanPortfolios] = useState({}); // PAN → {name, current, invested, holdings}
   const [activePan, setActivePan]         = useState('all'); // 'all' | specific PAN
   const [totals, setTotals]               = useState({ current: 0, invested: 0, manual: 0 });
-  const [topHoldings, setTopHoldings]     = useState([]);
+  // Full combined holdings (CAS + manual), sorted by value desc -- the
+  // 'all' fallback for displayHoldings below, and the source for the tab
+  // count label. NOT capped: an earlier version capped this at 6 (meant
+  // only for the Overview tab's small preview list, which actually reads
+  // displayHoldings.slice(0, 4) instead and never used this array), which
+  // silently hid every holding past the 6th highest-value one from the
+  // "All members" Holdings tab, and made the tab's own count label wrong
+  // for every single-member view too (see the 2026-08-18 bug report).
+  const [allHoldings, setAllHoldings]     = useState([]);
   const [investorName, setInvestorName]   = useState('');
   const [navDate, setNavDate]             = useState(null);
 
@@ -672,7 +680,7 @@ function PortfolioInner() {
               xirr: overallXirrInfo.xirr, xirrPartial: overallXirrInfo.partial,
               xirrIncluded: overallXirrInfo.included, xirrTotal: overallXirrInfo.total,
             });
-            setTopHoldings(holdings.sort((a, b) => b.value - a.value).slice(0, 6));
+            setAllHoldings(holdings.sort((a, b) => b.value - a.value));
             setPhase('ready');
           } else {
             setPhase(manual.length > 0 ? 'ready' : 'empty');
@@ -716,7 +724,7 @@ function PortfolioInner() {
             xirr: manualOnlyXirrInfo.xirr, xirrPartial: manualOnlyXirrInfo.partial,
             xirrIncluded: manualOnlyXirrInfo.included, xirrTotal: manualOnlyXirrInfo.total,
           });
-          setTopHoldings(mhList.sort((a, b) => b.value - a.value).slice(0, 6));
+          setAllHoldings(mhList.sort((a, b) => b.value - a.value));
           setInvestorName((isViewingOther ? viewUname : session.user.name) || 'Investor');
           setPhase(manual.length > 0 ? 'ready' : 'empty');
         }
@@ -826,7 +834,7 @@ function PortfolioInner() {
   // Active display: if activePan is 'all' or not in panPortfolios, show combined
   const displayHoldings = (activePan !== 'all' && panPortfolios[activePan])
     ? panPortfolios[activePan].holdings
-    : topHoldings;
+    : allHoldings;
   const displayTotals = (activePan !== 'all' && panPortfolios[activePan])
     ? {
         current: panPortfolios[activePan].current, invested: panPortfolios[activePan].invested, manual: 0,
@@ -1072,7 +1080,7 @@ function PortfolioInner() {
         <div className="pf-tabs">
           {[
             { key: 'overview',  label: 'Overview'  },
-            { key: 'holdings',  label: `Holdings (${topHoldings.length})` },
+            { key: 'holdings',  label: `Holdings (${displayHoldings.length})` },
             { key: 'uploads',   label: `Statements (${portfolios.length})` },
           ].map(t => (
             <button key={t.key}
