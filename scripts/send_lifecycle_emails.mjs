@@ -87,6 +87,22 @@ function buildDay14WinbackEmail({ name }) {
   };
 }
 
+function buildTrialEndedEmail({ name }) {
+  const first = (name || '').trim().split(' ')[0] || 'there';
+  return {
+    subject: 'Your trial has ended',
+    html: wrap(`
+      <h1 style="margin:0 0 12px;font-size:20px;font-weight:800;color:#1e293b;letter-spacing:-.4px;">Hi ${esc(first)},</h1>
+      <p style="margin:0 0 18px;font-size:14px;color:${MUTED};line-height:1.6;">Your Pro trial has ended. If the extra tools — Proposal Studio, full screener access, and everything else Pro unlocks — were useful, you can pick up right where you left off.</p>
+      <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding-top:8px;">
+        <a href="https://mfcalc.getabundance.in/pricing" style="display:inline-block;padding:14px 32px;background:${BRAND};color:#fff;font-size:15px;font-weight:700;border-radius:10px;text-decoration:none;letter-spacing:-.2px;">See Pro plans →</a>
+      </td></tr></table>
+      <p style="margin:24px 0 0;font-size:13px;color:${MUTED};line-height:1.6;border-top:1px solid #f1f5f9;padding-top:16px;">Questions about which plan fits? Just reply to this email — it comes straight to me.</p>
+    `),
+    text: `Hi ${first},\n\nYour Pro trial has ended. See plans at https://mfcalc.getabundance.in/pricing\n\nQuestions? Just reply to this email.\n\nAbundance Financial Services · ARN-251838`,
+  };
+}
+
 async function sendLifecycleEmail(pool, resendKey, userId, email, emailType, { subject, html, text }) {
   const res = await fetch('https://api.resend.com/emails', {
     method:  'POST',
@@ -158,7 +174,31 @@ async function main() {
     }
   }
 
-  console.log(`[lifecycle] done — nudge: ${nudgeSent} sent, ${nudgeFailed} failed · winback: ${winbackSent} sent, ${winbackFailed} failed`);
+  // ── Trial ended: plan='trial' whose plan_expires_at has passed, one-shot ──
+  const trialEndedCandidates = await pool.query(`
+    SELECT u.id, u.name, u.email
+    FROM users u
+    WHERE u.role = 'client'
+      AND u.plan = 'trial'
+      AND u.plan_expires_at IS NOT NULL
+      AND u.plan_expires_at <= NOW()
+      AND NOT EXISTS (SELECT 1 FROM lifecycle_emails_sent l WHERE l.user_id = u.id AND l.email_type = 'trial_ended')
+      AND u.email IS NOT NULL
+  `);
+  console.log(`[lifecycle] trial_ended candidates: ${trialEndedCandidates.rows.length}`);
+
+  let trialEndedSent = 0, trialEndedFailed = 0;
+  for (const u of trialEndedCandidates.rows) {
+    try {
+      await sendLifecycleEmail(pool, resendKey, u.id, u.email, 'trial_ended', buildTrialEndedEmail({ name: u.name }));
+      trialEndedSent++;
+    } catch (e) {
+      console.error(`[lifecycle] trial_ended failed for ${u.id}:`, e.message);
+      trialEndedFailed++;
+    }
+  }
+
+  console.log(`[lifecycle] done — nudge: ${nudgeSent} sent, ${nudgeFailed} failed · winback: ${winbackSent} sent, ${winbackFailed} failed · trial_ended: ${trialEndedSent} sent, ${trialEndedFailed} failed`);
   await pool.end();
 }
 

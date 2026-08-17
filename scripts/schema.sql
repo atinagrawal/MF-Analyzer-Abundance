@@ -221,7 +221,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at      TIMESTAMPTZ;
 CREATE TABLE IF NOT EXISTS lifecycle_emails_sent (
   id         TEXT        NOT NULL DEFAULT gen_random_uuid()::text PRIMARY KEY,
   user_id    TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  email_type TEXT        NOT NULL,  -- 'welcome' | 'day3_nudge' | 'day14_winback'
+  email_type TEXT        NOT NULL,  -- 'welcome' | 'day3_nudge' | 'day14_winback' | 'trial_ended'
   sent_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(user_id, email_type)
 );
