@@ -199,6 +199,11 @@ async function main() {
   }
 
   console.log(`[lifecycle] done — nudge: ${nudgeSent} sent, ${nudgeFailed} failed · winback: ${winbackSent} sent, ${winbackFailed} failed · trial_ended: ${trialEndedSent} sent, ${trialEndedFailed} failed`);
+  const rateLimitCleanup = await pool.query(
+    `DELETE FROM rate_limit_counters WHERE window_start < NOW() - INTERVAL '2 days'`
+  );
+  console.log(`[lifecycle] rate_limit_counters cleanup: ${rateLimitCleanup.rowCount} rows deleted`);
+
   await pool.end();
 }
 
