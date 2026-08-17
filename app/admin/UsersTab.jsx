@@ -147,11 +147,11 @@ function RoleAndPlanSelect({ user, sessionUserId, distributors = [], roleChangin
         <span className="admin-role-row-label">Plan</span>
         <select
           className="admin-role-select"
-          value={startingTrial ? 'trial' : (user.plan || 'free')}
+          value={startingTrial ? '__grant_trial__' : (user.plan || 'free')}
           disabled={planChanging === user.id}
           onChange={e => {
             const next = e.target.value;
-            if (next === 'trial') { setStartingTrial(true); return; }
+            if (next === '__grant_trial__') { setStartingTrial(true); return; }
             setStartingTrial(false);
             onPlanChange(user.id, next);
           }}
@@ -159,7 +159,7 @@ function RoleAndPlanSelect({ user, sessionUserId, distributors = [], roleChangin
           <option value="free">Free Plan</option>
           <option value="pro">Pro Plan</option>
           <option value="pro_lifetime">Pro Lifetime</option>
-          <option value="trial">Start Trial…</option>
+          <option value="__grant_trial__">Start Trial…</option>
         </select>
       </div>
 
