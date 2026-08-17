@@ -10,6 +10,8 @@
  *     Response: { mf_name, scheme_name, date_range, records: [{ date, nav }] }
  */
 
+import { checkRateLimitSafe, rateLimitResponse, getClientIp } from '@/lib/rateLimit';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +29,15 @@ export async function GET(req) {
     if (!from || !to) {
       return Response.json({ error: 'from and to dates required' }, { status: 400 });
     }
+
+    // Every distinct from/to window is a live AMFI call -- the Cache-Control
+    // header below is CDN guidance only, so a varying date range defeats it
+    // entirely. Public route with no reliable session, so IP-keyed like
+    // app/api/proposal-studio/holdings/route.js.
+    const ip = getClientIp(req);
+    const rl = await checkRateLimitSafe(`ip:${ip}`, 'sif-history-lookup');
+    if (rl.limited) return rateLimitResponse(rl);
+
     try {
       const url = `${AMFI_BASE}/sif-nav-history?query_type=historical_period&from_date=${from}&to_date=${to}&sd_id=${sdId}`;
       const res = await fetch(url, {

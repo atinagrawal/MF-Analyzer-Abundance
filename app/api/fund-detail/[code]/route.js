@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { getUserPlan } from '@/lib/plan';
 import pool from '@/lib/db';
 import { getHoldingsData } from '@/lib/holdingsLookup';
+import { checkRateLimitSafe, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,19 @@ export async function GET(req, { params }) {
     }
 
     const fund = fundRows[0];
+
+    // Only the Pro branch below does expensive work (getHoldingsData plus the
+    // mf_stress_test query), and it's only reachable by a caller whose own
+    // session resolves to Pro -- which is exactly the abuse case here: a
+    // paying user scripting requests against their own account. The non-Pro
+    // path returns immediately and is cheap, so it isn't charged a counter
+    // round-trip. Staff accounts are exempt, matching
+    // app/api/distributor/route.js.
+    if (isPro && session?.user?.id && session.user.role !== 'admin' && session.user.role !== 'distributor') {
+      const rl = await checkRateLimitSafe(`user:${session.user.id}`, 'fund-detail-holdings');
+      if (rl.limited) return rateLimitResponse(rl);
+    }
+
     const num = (x) => (x == null ? null : Number(x));
 
     const publicFields = {
