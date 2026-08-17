@@ -24,8 +24,39 @@ function RoleBadge({ role }) {
   );
 }
 
-function PlanBadge({ plan }) {
+function PlanBadge({ plan, planExpiresAt }) {
   if (!plan || plan === 'free') return null;
+
+  if (plan === 'trial') {
+    const expires = planExpiresAt ? new Date(planExpiresAt) : null;
+    const isActive = expires && expires > new Date();
+    if (isActive) {
+      const daysLeft = Math.max(1, Math.ceil((expires - new Date()) / 86400000));
+      return (
+        <span style={{
+          fontSize: '.52rem', fontWeight: 800, letterSpacing: '.5px',
+          textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4,
+          fontFamily: "'JetBrains Mono', monospace",
+          background: '#e3f2fd', color: '#1565c0', border: '1px solid #bbdefb',
+          marginLeft: 4,
+        }}>
+          TRIAL · {daysLeft}D LEFT
+        </span>
+      );
+    }
+    return (
+      <span style={{
+        fontSize: '.52rem', fontWeight: 800, letterSpacing: '.5px',
+        textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4,
+        fontFamily: "'JetBrains Mono', monospace",
+        background: 'var(--s2)', color: 'var(--muted)', border: '1px solid var(--border)',
+        marginLeft: 4,
+      }}>
+        TRIAL USED
+      </span>
+    );
+  }
+
   const isLifetime = plan === 'pro_lifetime' || plan === 'lifetime';
   return (
     <span style={{
@@ -78,6 +109,9 @@ function ActivityDot({ lastActiveAt }) {
  *  the PATCH endpoint 403s a distributor regardless — this just avoids showing controls
  *  that wouldn't work). */
 function RoleAndPlanSelect({ user, sessionUserId, distributors = [], roleChanging, planChanging, distributorChanging, onRoleChange, onPlanChange, onDistributorChange, isAdmin = true }) {
+  const [startingTrial, setStartingTrial] = useState(false);
+  const [trialDays, setTrialDays] = useState(3);
+
   if (!isAdmin) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
@@ -87,7 +121,7 @@ function RoleAndPlanSelect({ user, sessionUserId, distributors = [], roleChangin
         </div>
         <div className="admin-role-row">
           <span className="admin-role-row-label">Plan</span>
-          {user.plan && user.plan !== 'free' ? <PlanBadge plan={user.plan} /> : <span style={{ fontSize: '.68rem', color: 'var(--muted)' }}>Free</span>}
+          {user.plan && user.plan !== 'free' ? <PlanBadge plan={user.plan} planExpiresAt={user.plan_expires_at} /> : <span style={{ fontSize: '.68rem', color: 'var(--muted)' }}>Free</span>}
         </div>
       </div>
     );
@@ -113,15 +147,60 @@ function RoleAndPlanSelect({ user, sessionUserId, distributors = [], roleChangin
         <span className="admin-role-row-label">Plan</span>
         <select
           className="admin-role-select"
-          value={user.plan || 'free'}
+          value={startingTrial ? 'trial' : (user.plan || 'free')}
           disabled={planChanging === user.id}
-          onChange={e => onPlanChange(user.id, e.target.value)}
+          onChange={e => {
+            const next = e.target.value;
+            if (next === 'trial') { setStartingTrial(true); return; }
+            setStartingTrial(false);
+            onPlanChange(user.id, next);
+          }}
         >
           <option value="free">Free Plan</option>
           <option value="pro">Pro Plan</option>
           <option value="pro_lifetime">Pro Lifetime</option>
+          <option value="trial">Start Trial…</option>
         </select>
       </div>
+
+      {startingTrial && (
+        <div className="admin-role-row">
+          <span className="admin-role-row-label">Trial length</span>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <select
+              className="admin-role-select"
+              value={trialDays}
+              onChange={e => setTrialDays(Number(e.target.value))}
+            >
+              <option value={1}>1 day</option>
+              <option value={3}>3 days</option>
+              <option value={7}>7 days</option>
+            </select>
+            <button
+              type="button"
+              disabled={planChanging === user.id}
+              onClick={() => { onPlanChange(user.id, 'trial', trialDays); setStartingTrial(false); }}
+              style={{
+                fontSize: '.62rem', fontWeight: 800, padding: '6px 12px', borderRadius: 6,
+                border: 'none', background: 'var(--g1)', color: '#fff',
+                cursor: planChanging === user.id ? 'wait' : 'pointer', whiteSpace: 'nowrap',
+              }}
+            >
+              {planChanging === user.id ? '…' : 'Grant'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setStartingTrial(false)}
+              style={{
+                fontSize: '.62rem', fontWeight: 700, padding: '6px 10px', borderRadius: 6,
+                border: '1px solid var(--border)', background: 'none', color: 'var(--muted)', cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="admin-role-row">
         <span className="admin-role-row-label">Assigned MFD</span>
@@ -329,18 +408,19 @@ export default function UsersTab({ session }) {
     finally { setRoleChanging(''); }
   }
 
-  async function changePlan(userId, newPlan) {
+  async function changePlan(userId, newPlan, trialDays) {
     setPlanChanging(userId);
     try {
+      const body = trialDays !== undefined ? { userId, plan: newPlan, trialDays } : { userId, plan: newPlan };
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, plan: newPlan }),
+        body: JSON.stringify(body),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, plan: newPlan } : u));
-      setSelectedUser(prev => prev && prev.id === userId ? { ...prev, plan: newPlan } : prev);
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, plan: newPlan, plan_expires_at: d.planExpiresAt ?? null } : u));
+      setSelectedUser(prev => prev && prev.id === userId ? { ...prev, plan: newPlan, plan_expires_at: d.planExpiresAt ?? null } : prev);
     } catch (e) { alert(e.message); }
     finally { setPlanChanging(''); }
   }
@@ -547,7 +627,7 @@ export default function UsersTab({ session }) {
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <RoleBadge role={u.role} />
-                      <PlanBadge plan={u.plan} />
+                      <PlanBadge plan={u.plan} planExpiresAt={u.plan_expires_at} />
                     </td>
                     <td style={{ fontFamily: "'JetBrains Mono', monospace", textAlign: 'right' }}>
                       {u.portfolio_count || 0}
