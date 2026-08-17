@@ -34,6 +34,7 @@
  */
 
 import { r2Get } from '../../lib/r2';
+import { checkRateLimit, rateLimitMessage, getClientIpFromNodeReq } from '../../lib/rateLimit';
 
 export const config = { runtime: 'nodejs' };
 
@@ -331,6 +332,21 @@ export default async function handler(req, res) {
     } catch (_) { /* fall through */ }
 
     return sendError(res, 502, 'Search unavailable — static list, live AMFI, and mfapi.in all failed or found nothing', 'UPSTREAM_DOWN');
+  }
+
+  // ── Rate limit: any ?code= lookup (latest-only or full history) is the
+  // per-scheme-code cache-miss risk this route's design spec identified.
+  // ?q= search and ?codes= batch are explicitly out of scope -- see
+  // docs/superpowers/plans/2026-08-17-per-user-rate-limiter.md's File
+  // Structure section. No session exists on this route in the common
+  // case, so this is IP-keyed like app/api/proposal-studio/holdings/route.js. ──
+  if (code) {
+    const ip = getClientIpFromNodeReq(req);
+    const rl = await checkRateLimit(`ip:${ip}`, 'mf-code-lookup');
+    if (rl.limited) {
+      res.setHeader('Retry-After', String(rl.retryAfterSeconds));
+      return sendError(res, 429, rateLimitMessage(rl.retryAfterSeconds), 'RATE_LIMITED');
+    }
   }
 
   // ── LATEST NAV only ──
