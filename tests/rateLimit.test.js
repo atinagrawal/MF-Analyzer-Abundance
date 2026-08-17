@@ -123,7 +123,7 @@ const assert = require('assert');
     assert.strictEqual(fakePoolState.queries.length, 1, 'should not query the second tier once the first is already over');
   });
 
-  test('checkRateLimit is not limited at exactly the boundary (count === limit)', async () => {
+  await asyncTest('checkRateLimit is not limited at exactly the boundary (count === limit)', async () => {
     fakePoolState.queries = [];
     fakePoolState.responses = [{ rows: [{ count: 100 }] }, { rows: [{ count: 1500 }] }];
     const result = await checkRateLimit('user:test3', 'test-route');
