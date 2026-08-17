@@ -167,11 +167,18 @@ async function fetchJSON(url, tries = 4) {
   for (let i = 0; i < tries; i++) {
     try {
       const r = await fetch(url);
+      if (r.status === 429) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error(body.error || "You're doing that too fast — please wait a bit and try again.");
+      }
       const txt = await r.text();
       const s = txt.trim();
       if (s.startsWith("{") || s.startsWith("[")) return JSON.parse(s);
       lastErr = new Error("non-JSON response");
-    } catch (e) { lastErr = e; }
+    } catch (e) {
+      if (e.message?.includes('too fast')) throw e; // don't retry a rate limit -- retrying only makes it worse
+      lastErr = e;
+    }
     await new Promise((res) => setTimeout(res, 350 * (i + 1)));
   }
   throw lastErr || new Error("network error");
