@@ -1,15 +1,9 @@
 // tests/rateLimit.test.js
 //
-// Unit tests for lib/rateLimit.js. checkRateLimit is tested against a
-// mocked pool.query (via a hand-rolled fake db.js module isn't practical
-// here since lib/rateLimit.js imports lib/db.js's default export directly
-// -- instead these tests exercise the pure formatting functions in full,
-// and checkRateLimit's logic is exercised indirectly through a minimal
-// in-memory fake pool passed nowhere -- see the note on checkRateLimit's
-// own test below for how this is handled without a mocking framework.
-// lib/rateLimit.js uses ES module import/export syntax, and this
-// project's package.json has no "type": "module", so plain require()
-// cannot load it -- use dynamic import(), same as tests/amfiDistributor.test.js.
+// Unit tests for lib/rateLimit.js. lib/rateLimit.js uses ES module
+// import/export syntax, and this project's package.json has no
+// "type": "module", so plain require() cannot load it -- use dynamic
+// import(), same as tests/amfiDistributor.test.js.
 // Run with: node tests/rateLimit.test.js
 //
 // Mocking note (environment-specific -- see task-1-report.md for the full
@@ -86,12 +80,18 @@ const assert = require('assert');
     assert.strictEqual(formatRetryLabel(3599), '60 minutes');
   });
 
-  test('formatRetryLabel: at or over an hour switches to hours', () => {
-    assert.strictEqual(formatRetryLabel(3601), '1 hour');
+  test('formatRetryLabel: exactly an hour is 1 hour', () => {
+    assert.strictEqual(formatRetryLabel(3600), '1 hour');
+  });
+
+  // Rounds UP (Math.ceil): flooring understated the wait by up to an hour
+  // ("1 hour" for a 7199-second wait).
+  test('formatRetryLabel: just over an hour rounds up to 2 hours', () => {
+    assert.strictEqual(formatRetryLabel(3601), '2 hours');
   });
 
   test('formatRetryLabel: several hours pluralizes correctly', () => {
-    assert.strictEqual(formatRetryLabel(7261), '2 hours');
+    assert.strictEqual(formatRetryLabel(7261), '3 hours');
   });
 
   test('rateLimitMessage includes the retry label and a support contact', () => {
@@ -120,6 +120,7 @@ const assert = require('assert');
     ]);
     assert.strictEqual(result.limited, true);
     assert.strictEqual(typeof result.retryAfterSeconds, 'number');
+    assert.ok(result.retryAfterSeconds >= 1, 'retryAfterSeconds is clamped to at least 1 second');
     assert.strictEqual(fakePoolState.queries.length, 1, 'should not query the second tier once the first is already over');
   });
 

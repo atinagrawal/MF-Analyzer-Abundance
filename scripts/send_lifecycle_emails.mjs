@@ -199,10 +199,17 @@ async function main() {
   }
 
   console.log(`[lifecycle] done — nudge: ${nudgeSent} sent, ${nudgeFailed} failed · winback: ${winbackSent} sent, ${winbackFailed} failed · trial_ended: ${trialEndedSent} sent, ${trialEndedFailed} failed`);
-  const rateLimitCleanup = await pool.query(
-    `DELETE FROM rate_limit_counters WHERE window_start < NOW() - INTERVAL '2 days'`
-  );
-  console.log(`[lifecycle] rate_limit_counters cleanup: ${rateLimitCleanup.rowCount} rows deleted`);
+  // Non-fatal: this housekeeping runs after every email has already been
+  // sent, so a failure here must not exit(1) and make a successful run look
+  // like a failed one to whatever watches this cron's exit code.
+  try {
+    const rateLimitCleanup = await pool.query(
+      `DELETE FROM rate_limit_counters WHERE window_start < NOW() - INTERVAL '2 days'`
+    );
+    console.log(`[lifecycle] rate_limit_counters cleanup: ${rateLimitCleanup.rowCount} rows deleted`);
+  } catch (e) {
+    console.error('[lifecycle] rate_limit_counters cleanup failed (non-fatal):', e.message);
+  }
 
   await pool.end();
 }
