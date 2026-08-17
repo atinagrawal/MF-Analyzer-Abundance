@@ -15,6 +15,7 @@ import { TAX, inferCategory, applyLossOffset } from '@/lib/taxCalc';
 import LossAdjustmentPanel from '@/components/LossAdjustmentPanel';
 import RedemptionPlanner from '@/components/RedemptionPlanner';
 import TransactionHistoryDrawer, { isTransmissionTxn, earliestTxnDate, navHistoryCacheKey } from '@/components/TransactionHistoryDrawer';
+import { resolveDistributors, extractArnDigits } from '@/lib/distributorResolution';
 
 // isin-scheme-master.json (~8.4MB, ~26k entries) used to be statically
 // imported here -- meaning it shipped to every visitor's BROWSER as part of
@@ -1421,6 +1422,7 @@ function CasTrackerInner() {
   const [txnDrawerFund,  setTxnDrawerFund]  = useState(null);  // holding object for the Transaction History drawer
   const [navHistoryCache, setNavHistoryCache] = useState({});  // navHistoryCacheKey(fund) → { loading, points, error } -- only populated on demand (see fetchNavHistory)
   const [detailFund,     setDetailFund]     = useState(null);  // holding object for the fund/SIF details drawer (same one screener uses)
+  const [distributorCache, setDistributorCache] = useState({}); // ARN (bare digits) → DistributorRecord|null -- see lib/distributorResolution.js
 
   // Auto-load via ?load=blobKey (admin CAS view) or ?userId= (manual-only client)
   useEffect(() => {
@@ -1951,6 +1953,24 @@ function CasTrackerInner() {
       setNavHistoryCache(prev => ({ ...prev, [key]: { loading: false, error: true } }));
     }
   }
+
+  // Resolves every CAS-derived holding's raw `advisor` string to a real
+  // distributor profile, once per portfolioDataByPan change (i.e. whenever
+  // new CAS data actually loads) rather than per-render or per-hover.
+  // Already-resolved ARNs are skipped on subsequent firings (e.g. loading a
+  // second family member's PAN after the first) so re-loading doesn't
+  // re-fetch ARNs this page already knows about.
+  useEffect(() => {
+    const allAdvisorStrings = Object.values(portfolioDataByPan)
+      .flatMap(info => (info.holdings || []).map(h => h.advisor));
+    const newArns = [...new Set(allAdvisorStrings.map(extractArnDigits).filter(Boolean))]
+      .filter(arn => !(arn in distributorCache));
+    if (newArns.length === 0) return;
+    resolveDistributors(newArns).then(map => {
+      setDistributorCache(prev => ({ ...prev, ...map }));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portfolioDataByPan]);
 
   // xlsx is only ever needed here, on an explicit user click -- dynamic
   // import keeps SheetJS's full parser (large; already a dependency for
@@ -2728,6 +2748,8 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                     const fProfit  = fGain >= 0;
                     const avgNavDisplay = fund.avgPurchaseNav > 0 ? `₹${fmtDec(fund.avgPurchaseNav, 2)}` : '—';
                     const isManual = fund.source === 'manual';
+                    const advisorArn = !isManual ? extractArnDigits(fund.advisor) : null;
+                    const resolvedDistributor = advisorArn ? distributorCache[advisorArn] : null;
 
                     return (
                       <div key={fund.id || idx} className="fund-card">
@@ -2775,6 +2797,15 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 
                           {/* Type + source badges */}
                           <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
+                            {resolvedDistributor && (
+                              <span style={{
+                                fontSize: '.52rem', fontWeight: 800, padding: '2px 7px', borderRadius: 4,
+                                background: 'var(--g-xlight)', color: 'var(--g2)', border: '1px solid var(--g-light)',
+                                fontFamily: "'JetBrains Mono', monospace", letterSpacing: '.5px',
+                              }} title={`${resolvedDistributor.name}\nARN-${resolvedDistributor.arn}\n📞 ${resolvedDistributor.phone || 'N/A'}\n✉ ${resolvedDistributor.email || 'N/A'}`}>
+                                🧑‍💼 {resolvedDistributor.name.split(' ')[0]}
+                              </span>
+                            )}
                             {isFamilyView && fund.__ownerName && (
                               <span style={{
                                 fontSize: '.52rem', fontWeight: 800, padding: '2px 7px', borderRadius: 4,
@@ -2820,10 +2851,12 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                                   <span className="label">Nominee</span><br />
                                   <span className="value">{fund.nominee}</span>
                                 </div>
-                                <div className="folio-full">
-                                  <span className="label">Advisor</span><br />
-                                  <span className="value">{fund.advisor}</span>
-                                </div>
+                                {!resolvedDistributor && (
+                                  <div className="folio-full">
+                                    <span className="label">Advisor</span><br />
+                                    <span className="value">{fund.advisor}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}
