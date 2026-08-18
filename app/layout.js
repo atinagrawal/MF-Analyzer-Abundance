@@ -5,6 +5,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import AuthProvider from '@/components/AuthProvider';
 import ProfileCompletionGate from '@/components/ProfileCompletionGate';
 import PostHogProvider from '@/components/PostHogProvider';
+import ClosingBell from '@/components/ClosingBell';
 
 /**
  * app/layout.js — Root layout for the entire application
@@ -99,6 +100,7 @@ export default function RootLayout({ children }) {
           </PostHogProvider>
         </AuthProvider>
         <SpeedInsights />
+        <ClosingBell />
 
         {/* Razorpay checkout — used on pricing + market-breadth's upgrade gate.
             afterInteractive (not lazyOnload) so it's ready by the time a user
