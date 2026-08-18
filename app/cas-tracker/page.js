@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
@@ -16,6 +16,7 @@ import LossAdjustmentPanel from '@/components/LossAdjustmentPanel';
 import RedemptionPlanner from '@/components/RedemptionPlanner';
 import TransactionHistoryDrawer, { isTransmissionTxn, earliestTxnDate, navHistoryCacheKey } from '@/components/TransactionHistoryDrawer';
 import { resolveDistributors, extractArnDigits, formatDistributorName } from '@/lib/distributorResolution';
+import CasMemberMerge from '@/components/CasMemberMerge';
 
 // isin-scheme-master.json (~8.4MB, ~26k entries) used to be statically
 // imported here -- meaning it shipped to every visitor's BROWSER as part of
@@ -1286,6 +1287,16 @@ function CasTrackerInner() {
   const [activePan, setActivePan] = useState('');
   const [familyPans, setFamilyPans] = useState([]);  // 2+ PANs checked together = combined family view
   const [tabSearch, setTabSearch] = useState('');    // filters the tab list for large families -- doesn't affect familyPans selection
+
+  // CAS member merge -- "Manage members" panel state
+  const [mergeOpen, setMergeOpen]             = useState(false);
+  const [mergeFromPan, setMergeFromPan]       = useState('');
+  const [activeOverrides, setActiveOverrides] = useState([]); // populated inside processCasData -- see externalResolutions below
+  // Whichever load path produced the CURRENTLY VIEWED statement (a saved
+  // blob load vs. a just-parsed fresh upload) -- so onMerged can re-run
+  // that exact same load after a merge/undo without asking the user to
+  // re-pick a file. Set right before each processCasData call below.
+  const lastLoadRef = useRef(null);
   const [fromCache, setFromCache] = useState(false);
   const [editingPan, setEditingPan] = useState('');   // PAN currently being renamed, or ''
   const [editingName, setEditingName] = useState('');
@@ -1509,7 +1520,7 @@ function CasTrackerInner() {
     return () => { cancelled = true; };
   }, [isSignedIn, isAdmin, viewedUserId]);
 
-  async function processCasData(data, cached, targetUserIdOverride) {
+  async function processCasData(data, cached, targetUserIdOverride, blobKeyForExclusion) {
     // The admin ?load= auto-open effect below calls this (via
     // loadSavedPortfolio) from inside a setTimeout scheduled in the SAME
     // render that also calls setViewedUserId -- that timeout's callback
@@ -1555,10 +1566,37 @@ function CasTrackerInner() {
     // valid PAN was found anywhere -- there'd be nothing to fall back to).
     const solePan = panList.length === 1 ? panList[0] : null;
 
+    // Folios the existing tiers (own PAN, sole-PAN-in-statement) can't
+    // resolve -- check manual overrides + the owner's other saved
+    // statements before falling back to 'UNKNOWN'. See
+    // docs/superpowers/specs/2026-08-18-cas-member-merge-design.md.
+    const stillAmbiguousFolios = [];
+    (data.folios || []).forEach(folio => {
+      const pan = (folio.PAN || '').toUpperCase().trim();
+      if (pan.length === 10 && PAN_REGEX.test(pan)) return; // own PAN, fine
+      const baseFolioNo = (folio.folio || '').split('/')[0].trim();
+      if (baseFolioNo) stillAmbiguousFolios.push(baseFolioNo);
+    });
+
+    let externalResolutions = {};
+    if (stillAmbiguousFolios.length) {
+      try {
+        const targetQS = effectiveTargetUserId ? `&targetUserId=${encodeURIComponent(effectiveTargetUserId)}` : '';
+        const res = await fetch(
+          `/api/cas/resolve-folios?folios=${encodeURIComponent(stillAmbiguousFolios.join(','))}&excludeBlobKey=${encodeURIComponent(blobKeyForExclusion || '')}${targetQS}`
+        );
+        if (res.ok) {
+          const body = await res.json();
+          externalResolutions = body.resolutions || {};
+        }
+      } catch { /* non-fatal -- these folios simply stay UNKNOWN for now */ }
+    }
+
     (data.folios || []).forEach(folio => {
       let rawPan = (folio.PAN || '').toUpperCase().trim();
       if (!rawPan || rawPan.length !== 10 || !PAN_REGEX.test(rawPan)) {
-        rawPan = solePan || 'UNKNOWN';
+        const baseFolioNo = (folio.folio || '').split('/')[0].trim();
+        rawPan = externalResolutions[baseFolioNo]?.pan || solePan || 'UNKNOWN';
       }
 
       // Investor name resolution
@@ -1590,7 +1628,8 @@ function CasTrackerInner() {
           current: 0,
           invested: 0,
           holdings: [],
-          investorName: investorName
+          investorName: investorName,
+          folioNos: [],
         };
       }
 
@@ -1599,6 +1638,9 @@ function CasTrackerInner() {
       // so folio_transmissions keys never have that suffix even when
       // folio.folio does.
       const baseFolioNo = (folio.folio || '').split('/')[0].trim();
+      if (baseFolioNo && !portfolioData[rawPan].folioNos.includes(baseFolioNo)) {
+        portfolioData[rawPan].folioNos.push(baseFolioNo);
+      }
       const folioTransmission = folioTransmissions[baseFolioNo] || null;
 
       (folio.schemes || []).forEach(scheme => {
@@ -1755,6 +1797,20 @@ function CasTrackerInner() {
       }
     } catch { /* non-fatal — fall back to parser-derived names */ }
 
+    // Manual-override subset of externalResolutions, for the "Manage
+    // members" panel's Undo list -- cross-statement history matches
+    // (source: 'history') aren't user-made decisions, so they're excluded
+    // here (nothing to undo).
+    setActiveOverrides(
+      Object.entries(externalResolutions)
+        .filter(([, r]) => r.source === 'manual')
+        .map(([folioNo, r]) => ({
+          folioNo, pan: r.pan,
+          targetName: portfolioData[r.pan]?.investorName || r.pan,
+          updatedBy: '', updatedAt: '',
+        }))
+    );
+
     // Which tab opens first: the PAN previously marked as default (set by
     // the user/admin on an earlier visit, see markPanAsDefault below) --
     // the first PAN casparser happens to list in a family CAS is not
@@ -1885,7 +1941,11 @@ function CasTrackerInner() {
         await saveToBlobIfSignedIn(data, pdfFile.name, panCount);
       }
 
-      await processCasData(data, cached);
+      // Tracked so a later merge/undo (see mergeOpen's onMerged below) can
+      // re-run this exact load without asking the user to re-pick the file.
+      // No blob key yet here -- see processCasData's blobKeyForExclusion arg.
+      lastLoadRef.current = { type: 'fresh', data, cached };
+      await processCasData(data, cached, undefined, '');
     } catch (err) {
       setErrorText(err.message);
       setUploadState('error');
@@ -2122,7 +2182,8 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
       const res = await fetch(`/api/cas/load?key=${encodeURIComponent(blobKey)}`);
       if (!res.ok) throw new Error('Could not load saved portfolio.');
       const data = await res.json();
-      await processCasData(data, false, targetUserIdOverride);
+      lastLoadRef.current = { type: 'saved', blobKey, targetUserIdOverride };
+      await processCasData(data, false, targetUserIdOverride, blobKey);
     } catch (err) {
       setErrorText(err.message);
       setUploadState('error');
@@ -2567,6 +2628,13 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                   )}
                 >
                   <span>👨‍👩‍👧‍👦 All Family</span>
+                </button>
+                <button
+                  className="pan-tab-rename-btn"
+                  title="Manage members (merge or undo)"
+                  onClick={() => { setMergeFromPan(''); setMergeOpen(true); }}
+                >
+                  ⇄ Manage
                 </button>
                 {familyPans.length > 0 && (
                   <button
@@ -3114,6 +3182,30 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
           ? <SifDetailDrawer schemeId={detailFund.amfiCode} onClose={() => setDetailFund(null)} />
           : <FundDetailDrawer code={detailFund.amfiCode} onClose={() => setDetailFund(null)} />
       )}
+
+      <CasMemberMerge
+        open={mergeOpen}
+        onClose={() => setMergeOpen(false)}
+        members={panKeys.filter(pan => pan !== '__manual__').map(pan => ({
+          pan, name: portfolioDataByPan[pan].investorName, folioNos: portfolioDataByPan[pan].folioNos || [],
+        }))}
+        overrides={activeOverrides}
+        targetUserId={(isAdmin && viewedUserId) ? viewedUserId : undefined}
+        initialFromPan={mergeFromPan}
+        onMerged={() => {
+          setMergeOpen(false);
+          // Re-run whichever load produced the CURRENT view (saved blob vs.
+          // fresh upload) so the merge/undo is reflected immediately -- see
+          // lastLoadRef above.
+          const last = lastLoadRef.current;
+          if (!last) return;
+          if (last.type === 'saved') {
+            loadSavedPortfolio(last.blobKey, last.targetUserIdOverride);
+          } else {
+            processCasData(last.data, last.cached, undefined, '');
+          }
+        }}
+      />
 
       {/* ── FAQ — visible to all, crawlable ─────────────────────────────── */}
       <section style={{ padding: '64px 0 0', borderTop: '1px solid var(--border)', marginTop: 64 }}>
