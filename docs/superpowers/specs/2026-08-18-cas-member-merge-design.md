@@ -120,15 +120,36 @@ via their own saved uploads, checked server-side against
   For each requested folio number: check `folio_pan_overrides` first: if
   present, return `{ pan, source: 'manual' }`. Otherwise, scan the
   owner's other saved `cas_portfolios` blobs (the 20 most recent,
-  excluding `excludeBlobKey`, the statement currently being viewed, so a
-  folio never resolves against itself) for that folio number with a valid
-  PAN; if found,
-  return `{ pan, source: 'history' }`. A folio with no match in either
-  source is simply omitted from the response (still unresolved — the
-  caller falls through to the existing sole-PAN heuristic, then
-  Shared/Unknown). If the same folio number resolves to *conflicting*
-  PANs across different past statements (a rare AMC folio-number reuse),
-  treat it as unresolved rather than guessing — omit it.
+  matching `/api/cas/list`'s own cap, and excluding `excludeBlobKey` when
+  the caller has one specific "current" statement to exclude — see the
+  `excludeBlobKey` note below) for that folio number with a valid PAN; if
+  found, return `{ pan, source: 'history' }`. A folio with no match in
+  either source is simply omitted from the response (still unresolved —
+  the caller falls through to the existing sole-PAN heuristic, then
+  Shared/Unknown).
+  **Conflicting PANs, and the scan's early exit:** the scan stops reading
+  further statements once every folio it's looking for has at least one
+  sighting, rather than always reading all 20 — a real cost saving on a
+  hot path (this endpoint is called on most page loads). One consequence:
+  a folio's FIRST sighting (in newest-first order) wins as soon as the
+  scan can stop, so a genuinely conflicting PAN for that same folio
+  sitting in an older, never-reached statement is not guaranteed to be
+  caught — this is a narrower guarantee than "always detect any conflict
+  among the 20 most recent statements." Whether a conflict is actually
+  caught in a given case depends on how many other folios are still
+  unresolved at that point (the scan can't stop until all of them have a
+  sighting, so a conflicting second sighting for an already-resolved
+  folio can still turn up while the scan keeps going for others). Never
+  guessed either way: when a conflict IS detected, that folio is treated
+  as unresolved, not resolved to either PAN.
+  **`excludeBlobKey`:** `app/cas-tracker/page.js` always passes the blob
+  key of the ONE statement it's currently displaying, so that statement
+  never resolves a folio against itself. `app/portfolio/page.jsx` has no
+  such single "current" statement — it merges every saved statement into
+  one combined view — so it deliberately passes an empty string (no
+  exclusion) instead of naming any one of its own statements, which
+  would have arbitrarily (and incorrectly) hidden that one statement's
+  own history contribution from every other statement's lookup.
 - **`POST /api/cas/merge-member`** — body `{ folioNos: [...], targetPan,
   targetUserId? }`. Validates `targetPan` via `authorizedPans`; upserts
   each `(user_id, folio_no)` into `folio_pan_overrides` with
@@ -165,10 +186,12 @@ render a "VIEWING: [member chips]" row.
 - Merging into a `targetPan` the owner hasn't actually seen (spoofed or
   stale request): `403`, identical to `pan-name`'s existing check.
 - `resolve-folios` finds the same folio number with conflicting PANs
-  across two different past statements: leave unresolved rather than
-  guess (see API section above) — surfaces as Shared/Unknown, same as no
-  match, so the human can resolve it manually instead of the system
-  silently picking one.
+  across two different past statements (when the scan's early exit
+  hasn't already stopped it from reaching the conflicting one — see the
+  API section's "Conflicting PANs, and the scan's early exit" note):
+  leave unresolved rather than guess — surfaces as Shared/Unknown, same
+  as no match, so the human can resolve it manually instead of the
+  system silently picking one.
 - Undoing an override that was never manually set (the folio was already
   correctly resolved via history or the sole-PAN heuristic): no-op, not
   an error — the `DELETE` simply finds no row to remove.
