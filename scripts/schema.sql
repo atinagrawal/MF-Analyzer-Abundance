@@ -144,6 +144,28 @@ CREATE TABLE IF NOT EXISTS pan_investor_names (
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Manual "this folio actually belongs to this PAN" corrections, for a CAS
+-- statement where the parser didn't restate a folio's own PAN and it fell
+-- into a generic "Shared"/"Unknown Investor" bucket instead of the real
+-- person's group (see docs/superpowers/specs/2026-08-18-cas-member-merge-design.md).
+-- Scoped by user_id (the CAS owner), NOT global like pan_investor_names --
+-- a folio number is only a stable identity within one investor's own
+-- world, so scoping by owner avoids any risk of one account's override
+-- ever applying to a different account's statement. Written ONLY by an
+-- explicit human merge action (app/api/cas/merge-member/route.js) --
+-- never by any automatic process. The "this folio's PAN can be inferred
+-- from the owner's other saved statements" case needs no storage at all;
+-- it's answered live by GET /api/cas/resolve-folios re-reading those
+-- statements from R2 directly.
+CREATE TABLE IF NOT EXISTS folio_pan_overrides (
+  user_id     TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  folio_no    TEXT        NOT NULL,
+  pan         TEXT        NOT NULL,
+  updated_by  TEXT        NOT NULL REFERENCES users(id),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, folio_no)
+);
+
 -- Saved Proposal Studio proposals — same shape as cas_portfolios: this row
 -- is just the searchable/listable metadata, the full proposal payload
 -- (selected funds, amounts, client details) lives in Vercel Blob at
