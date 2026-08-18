@@ -561,7 +561,6 @@ function PortfolioInner() {
             mergedFolios.forEach(folio => {
               const pan = (folio.PAN || '').toUpperCase().trim();
               if (pan.length === 10 && PAN_RE.test(pan)) return; // own PAN, fine
-              if (solePan) return; // already resolved by the sole-PAN heuristic
               const baseFolioNo = (folio.folio || '').split('/')[0].trim();
               if (baseFolioNo) stillAmbiguousFolios.push(baseFolioNo);
             });
@@ -592,7 +591,7 @@ function PortfolioInner() {
               const baseFolioNo = (folio.folio || '').split('/')[0].trim();
               const validPan = pan.length === 10 && PAN_RE.test(pan)
                 ? pan
-                : (solePan || externalResolutions[baseFolioNo]?.pan || 'SHARED');
+                : (externalResolutions[baseFolioNo]?.pan || solePan || 'SHARED');
 
               // Resolve investor name for this PAN
               if (!panMap[validPan]) {
