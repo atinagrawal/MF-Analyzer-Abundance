@@ -553,31 +553,43 @@ function PortfolioInner() {
             });
             const solePan = distinctValidPans.size === 1 ? [...distinctValidPans][0] : null;
 
-            // Folios the existing tiers (own PAN, sole-PAN-in-statement)
-            // can't resolve -- check manual overrides + the owner's other
-            // saved statements before falling back to Shared. See
-            // docs/superpowers/specs/2026-08-18-cas-member-merge-design.md.
+            // Two lists for resolve-folios (see that route's header comment):
+            //  - allFolioNos: every folio here, since a MANUAL merge outranks
+            //    even a folio's own valid PAN (that's the whole point of being
+            //    able to merge away a well-formed-but-wrong OCR'd PAN).
+            //  - stillAmbiguousFolios: only folios the existing tiers (own PAN,
+            //    sole-PAN-in-statement) can't resolve -- the only ones worth
+            //    paying for a cross-statement history scan on.
+            // See docs/superpowers/specs/2026-08-18-cas-member-merge-design.md.
+            const allFolioNos = [];
             const stillAmbiguousFolios = [];
             mergedFolios.forEach(folio => {
+              const baseFolioNo = (folio.folio || '').split('/')[0].trim();
+              if (!baseFolioNo) return;
+              allFolioNos.push(baseFolioNo);
               const pan = (folio.PAN || '').toUpperCase().trim();
               if (pan.length === 10 && PAN_RE.test(pan)) return; // own PAN, fine
-              const baseFolioNo = (folio.folio || '').split('/')[0].trim();
-              if (baseFolioNo) stillAmbiguousFolios.push(baseFolioNo);
+              stillAmbiguousFolios.push(baseFolioNo);
             });
+            // The same folio can appear across several of the merged statements.
+            const uniqueFolioNos = [...new Set(allFolioNos)];
+            const uniqueAmbiguousFolioNos = [...new Set(stillAmbiguousFolios)];
 
             let externalResolutions = {};
-            if (stillAmbiguousFolios.length) {
+            if (uniqueFolioNos.length) {
               try {
                 const targetQS2 = isViewingOther ? `&targetUserId=${encodeURIComponent(viewUserId)}` : '';
-                // Any one of this statement's own blob keys works as excludeBlobKey
-                // here -- resolve-folios only uses it to skip THIS upload when
-                // scanning the owner's other saved statements, and every
-                // ambiguous folio in stillAmbiguousFolios came from files
-                // already loaded into mergedFolios, so excluding any single one
-                // of them is enough to avoid a statement resolving against itself.
-                const anyBlobKey = ports[0]?.blob_key || '';
+                // No excludeBlobKey on this page. /portfolio merges folios from
+                // ALL of the owner's saved statements, so there is no single
+                // "statement being viewed" to exclude; the question here is
+                // "what PAN has this folio ever resolved to anywhere in this
+                // account's history", and excluding any one statement (the
+                // newest, as this used to) just blinds the lookup to the
+                // statement most likely to carry the corrected PAN.
                 const res = await fetch(
-                  `/api/cas/resolve-folios?folios=${encodeURIComponent(stillAmbiguousFolios.join(','))}&excludeBlobKey=${encodeURIComponent(anyBlobKey)}${targetQS2}`
+                  `/api/cas/resolve-folios?folios=${encodeURIComponent(uniqueFolioNos.join(','))}`
+                  + `&ambiguousFolios=${encodeURIComponent(uniqueAmbiguousFolioNos.join(','))}`
+                  + `&excludeBlobKey=` + targetQS2
                 );
                 if (res.ok) {
                   const body = await res.json();
@@ -589,9 +601,22 @@ function PortfolioInner() {
             mergedFolios.forEach(folio => {
               const pan = (folio.PAN || '').toUpperCase().trim();
               const baseFolioNo = (folio.folio || '').split('/')[0].trim();
-              const validPan = pan.length === 10 && PAN_RE.test(pan)
-                ? pan
-                : (externalResolutions[baseFolioNo]?.pan || solePan || 'SHARED');
+              // Resolution order, highest first:
+              //   1. a MANUAL merge on file (a human's explicit decision --
+              //      outranks the folio's own PAN, which is exactly the case
+              //      where that PAN is well-formed but wrong),
+              //   2. the folio's own valid PAN,
+              //   3. cross-statement history / the sole-PAN-in-statement fix,
+              //   4. 'SHARED'.
+              // A 'history' resolution is NOT a human decision, so it stays
+              // below the folio's own PAN.
+              const resolved = externalResolutions[baseFolioNo];
+              const hasOwnValidPan = pan.length === 10 && PAN_RE.test(pan);
+              const validPan = resolved?.source === 'manual'
+                ? resolved.pan
+                : hasOwnValidPan
+                  ? pan
+                  : (resolved?.pan || solePan || 'SHARED');
 
               // Resolve investor name for this PAN
               if (!panMap[validPan]) {
@@ -608,7 +633,7 @@ function PortfolioInner() {
                   folioNos: [],
                 };
               }
-              if (!panMap[validPan].folioNos.includes(baseFolioNo)) panMap[validPan].folioNos.push(baseFolioNo);
+              if (baseFolioNo && !panMap[validPan].folioNos.includes(baseFolioNo)) panMap[validPan].folioNos.push(baseFolioNo);
 
               const folioTransmission = folioTransmissionsMerged[baseFolioNo] || null;
 

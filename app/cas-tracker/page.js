@@ -1566,24 +1566,37 @@ function CasTrackerInner() {
     // valid PAN was found anywhere -- there'd be nothing to fall back to).
     const solePan = panList.length === 1 ? panList[0] : null;
 
-    // Folios the existing tiers (own PAN, sole-PAN-in-statement) can't
-    // resolve -- check manual overrides + the owner's other saved
-    // statements before falling back to 'UNKNOWN'. See
-    // docs/superpowers/specs/2026-08-18-cas-member-merge-design.md.
+    // Two lists for resolve-folios (see that route's header comment):
+    //  - allFolioNos: every folio in this statement, since a MANUAL merge
+    //    outranks even a folio's own valid PAN (that's what lets a user merge
+    //    away a well-formed-but-wrong OCR'd PAN).
+    //  - stillAmbiguousFolios: only folios the existing tiers (own PAN,
+    //    sole-PAN-in-statement) can't resolve -- the only ones worth paying
+    //    for a cross-statement history scan on.
+    // See docs/superpowers/specs/2026-08-18-cas-member-merge-design.md.
+    const allFolioNos = [];
     const stillAmbiguousFolios = [];
     (data.folios || []).forEach(folio => {
+      const baseFolioNo = (folio.folio || '').split('/')[0].trim();
+      if (!baseFolioNo) return;
+      allFolioNos.push(baseFolioNo);
       const pan = (folio.PAN || '').toUpperCase().trim();
       if (pan.length === 10 && PAN_REGEX.test(pan)) return; // own PAN, fine
-      const baseFolioNo = (folio.folio || '').split('/')[0].trim();
-      if (baseFolioNo) stillAmbiguousFolios.push(baseFolioNo);
+      stillAmbiguousFolios.push(baseFolioNo);
     });
+    // One folio can span several blocks in the same statement (which is
+    // exactly how a folio ends up with its PAN restated on only some of them).
+    const uniqueFolioNos = [...new Set(allFolioNos)];
+    const uniqueAmbiguousFolioNos = [...new Set(stillAmbiguousFolios)];
 
     let externalResolutions = {};
-    if (stillAmbiguousFolios.length) {
+    if (uniqueFolioNos.length) {
       try {
         const targetQS = effectiveTargetUserId ? `&targetUserId=${encodeURIComponent(effectiveTargetUserId)}` : '';
         const res = await fetch(
-          `/api/cas/resolve-folios?folios=${encodeURIComponent(stillAmbiguousFolios.join(','))}&excludeBlobKey=${encodeURIComponent(blobKeyForExclusion || '')}${targetQS}`
+          `/api/cas/resolve-folios?folios=${encodeURIComponent(uniqueFolioNos.join(','))}`
+          + `&ambiguousFolios=${encodeURIComponent(uniqueAmbiguousFolioNos.join(','))}`
+          + `&excludeBlobKey=${encodeURIComponent(blobKeyForExclusion || '')}${targetQS}`
         );
         if (res.ok) {
           const body = await res.json();
@@ -1593,11 +1606,27 @@ function CasTrackerInner() {
     }
 
     (data.folios || []).forEach(folio => {
-      let rawPan = (folio.PAN || '').toUpperCase().trim();
-      if (!rawPan || rawPan.length !== 10 || !PAN_REGEX.test(rawPan)) {
-        const baseFolioNo = (folio.folio || '').split('/')[0].trim();
-        rawPan = externalResolutions[baseFolioNo]?.pan || solePan || 'UNKNOWN';
-      }
+      // Base folio number (strip any "/ 0" suffix BSE-routed folios carry)
+      // -- api/parse.py's regex on "Folio No: XXXXX" stops at whitespace,
+      // so folio_transmissions keys never have that suffix even when
+      // folio.folio does.
+      const baseFolioNo = (folio.folio || '').split('/')[0].trim();
+      const ownPan = (folio.PAN || '').toUpperCase().trim();
+      // Resolution order, highest first:
+      //   1. a MANUAL merge on file (a human's explicit decision -- outranks
+      //      the folio's own PAN, which is exactly the case where that PAN is
+      //      well-formed but wrong),
+      //   2. the folio's own valid PAN,
+      //   3. cross-statement history / the sole-PAN-in-statement fix,
+      //   4. 'UNKNOWN'.
+      // A 'history' resolution is NOT a human decision, so it stays below the
+      // folio's own PAN.
+      const resolved = externalResolutions[baseFolioNo];
+      const hasOwnValidPan = ownPan.length === 10 && PAN_REGEX.test(ownPan);
+      let rawPan;
+      if (resolved?.source === 'manual')  rawPan = resolved.pan;
+      else if (hasOwnValidPan)            rawPan = ownPan;
+      else                                rawPan = resolved?.pan || solePan || 'UNKNOWN';
 
       // Investor name resolution
       let investorName = panInvestorMap[rawPan] || '';
@@ -1633,11 +1662,6 @@ function CasTrackerInner() {
         };
       }
 
-      // Base folio number (strip any "/ 0" suffix BSE-routed folios carry)
-      // -- api/parse.py's regex on "Folio No: XXXXX" stops at whitespace,
-      // so folio_transmissions keys never have that suffix even when
-      // folio.folio does.
-      const baseFolioNo = (folio.folio || '').split('/')[0].trim();
       if (baseFolioNo && !portfolioData[rawPan].folioNos.includes(baseFolioNo)) {
         portfolioData[rawPan].folioNos.push(baseFolioNo);
       }
@@ -1836,8 +1860,12 @@ function CasTrackerInner() {
     setUploadState('success');
   }
 
+  // Returns the blob key this statement was saved under, or '' if it wasn't
+  // saved at all (anonymous upload, or the save failed) -- the caller passes
+  // it to processCasData as blobKeyForExclusion so a freshly-saved statement
+  // can't resolve its own folios against itself in the history scan.
   async function saveToBlobIfSignedIn(data, fileName, panCount) {
-    if (!isSignedIn) return;
+    if (!isSignedIn) return '';
     setSaveStatus('saving');
     // Admin viewing an existing client (via Users tab → ?userId=) must save
     // under THAT client's account, not the admin's own — otherwise the CAS
@@ -1866,6 +1894,7 @@ function CasTrackerInner() {
         }
         setSaveStatus('saved');
         setPendingSaveRetry(null);
+        return saved.blobKey || '';
       } else {
         setSaveStatus('error');
         setPendingSaveRetry({ data, fileName, panCount });
@@ -1874,6 +1903,7 @@ function CasTrackerInner() {
       setSaveStatus('error');
       setPendingSaveRetry({ data, fileName, panCount });
     }
+    return '';
   }
 
   // Lets the "Retry save" banner re-attempt without asking the user to
@@ -1895,6 +1925,7 @@ function CasTrackerInner() {
     try {
       let data = null;
       let cached = false;
+      let savedBlobKey = '';
 
       const cachedData = readCache(pdfFile);
       if (cachedData) {
@@ -1938,14 +1969,18 @@ function CasTrackerInner() {
           const pan = (f.PAN || '').toUpperCase().trim();
           return pan && pan.length === 10 ? acc.add(pan) : acc;
         }, new Set()).size;
-        await saveToBlobIfSignedIn(data, pdfFile.name, panCount);
+        savedBlobKey = await saveToBlobIfSignedIn(data, pdfFile.name, panCount);
       }
 
       // Tracked so a later merge/undo (see mergeOpen's onMerged below) can
       // re-run this exact load without asking the user to re-pick the file.
-      // No blob key yet here -- see processCasData's blobKeyForExclusion arg.
-      lastLoadRef.current = { type: 'fresh', data, cached };
-      await processCasData(data, cached, undefined, '');
+      // The save above already wrote this statement's row to cas_portfolios,
+      // so resolve-folios would otherwise scan it as one of the owner's
+      // "other" statements and let its folios resolve against themselves --
+      // giving a different answer now than on the next reload, when the
+      // exclusion IS set. Pass the real key (or '' when nothing was saved).
+      lastLoadRef.current = { type: 'fresh', data, cached, blobKey: savedBlobKey };
+      await processCasData(data, cached, undefined, savedBlobKey);
     } catch (err) {
       setErrorText(err.message);
       setUploadState('error');
@@ -3202,7 +3237,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
           if (last.type === 'saved') {
             loadSavedPortfolio(last.blobKey, last.targetUserIdOverride);
           } else {
-            processCasData(last.data, last.cached, undefined, '');
+            processCasData(last.data, last.cached, undefined, last.blobKey || '');
           }
         }}
       />
