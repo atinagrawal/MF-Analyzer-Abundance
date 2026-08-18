@@ -3,3 +3,4 @@ python-multipart
 casparser
 uvicorn
 pdfminer.six
+psycopg2-binary

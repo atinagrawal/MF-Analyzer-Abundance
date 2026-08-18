@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 import casparser
@@ -6,9 +6,57 @@ import tempfile
 import os
 import traceback
 import re
+import psycopg2
 from pdfminer.high_level import extract_text
 
 app = FastAPI()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Session check
+#
+# This endpoint used to have NO auth check at all -- the React page hides its
+# upload form from signed-out visitors, but that's a client-side nicety only;
+# anyone who knew this URL could POST a PDF directly and get a full parse for
+# free, bypassing the sign-in step the page's own SEO copy (see this app's
+# HowTo structured data) already documents as step 2 of the flow.
+#
+# This app's session strategy is 'database' (auth.js: session: { strategy:
+# 'database' }), not JWT -- there's no self-contained token to verify offline,
+# so the only correct check is the same one @/auth's auth() helper does
+# server-side in the Node app: look up the session cookie's token in the
+# sessions table and confirm it hasn't expired. Cookie names match
+# middleware.js's own Auth.js v5 lookup exactly (dev vs. prod/HTTPS variants).
+# ─────────────────────────────────────────────────────────────────────────────
+def get_session_user_id(request: Request):
+    token = (
+        request.cookies.get('__Secure-authjs.session-token')
+        or request.cookies.get('authjs.session-token')
+    )
+    if not token:
+        return None
+
+    postgres_url = os.environ.get('POSTGRES_URL')
+    if not postgres_url:
+        print("⚠️  POSTGRES_URL not set — cannot validate session")
+        return None
+
+    conn = None
+    try:
+        conn = psycopg2.connect(postgres_url)
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT "userId" FROM sessions WHERE "sessionToken" = %s AND expires > NOW()',
+                (token,),
+            )
+            row = cur.fetchone()
+            return row[0] if row else None
+    except Exception as e:
+        print(f"⚠️  Session validation failed: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -130,9 +178,13 @@ def build_folio_transmission_map(raw_text: str) -> dict:
 
 @app.post("/api/parse")
 async def parse_cas_statement(
+    request: Request,
     password: str = Form(...),
     file: UploadFile = File(...)
 ):
+    if not get_session_user_id(request):
+        raise HTTPException(status_code=401, detail="Sign in required to parse a CAS statement.")
+
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
 

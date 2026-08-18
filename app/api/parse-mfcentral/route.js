@@ -18,6 +18,7 @@
  */
 
 import * as XLSX from 'xlsx';
+import { auth } from '@/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -121,6 +122,16 @@ async function matchAmfiCode(schemeName) {
 // ── Main parse ───────────────────────────────────────────────────────────
 
 export async function POST(request) {
+  // The React page hides its upload form from signed-out visitors, but that's
+  // a client-side nicety only -- this route had no server-side check, so
+  // anyone who knew the URL could POST a file directly and get a full parse
+  // for free. Matches the same check just added to api/parse.py (the CAMS/
+  // KFintech PDF path) for the same reason.
+  const session = await auth();
+  if (!session?.user?.id) {
+    return Response.json({ error: 'Sign in required to parse a CAS statement.' }, { status: 401 });
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get('file');
