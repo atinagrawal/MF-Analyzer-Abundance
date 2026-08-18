@@ -46,8 +46,12 @@ function playBellChime() {
   strike(now);
   strike(now + 0.55);
 
-  // Let the tail ring out, then release the context.
-  setTimeout(() => ctx.close().catch(() => {}), 2200);
+  // Let the tail ring out, then release the context. Guarded because
+  // close() may be absent or non-Promise-returning on the legacy
+  // webkitAudioContext fallback above.
+  setTimeout(() => {
+    try { ctx.close()?.catch?.(() => {}); } catch { /* already best-effort cleanup */ }
+  }, 2200);
 }
 
 export default function ClosingBell() {
@@ -58,10 +62,10 @@ export default function ClosingBell() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch('/api/market-holidays')
+    fetch('/api/market-holidays', { signal: AbortSignal.timeout(10_000) })
       .then(r => (r.ok ? r.json() : { holidays: [] }))
       .then(d => { if (!cancelled) holidaysRef.current = d.holidays || []; })
-      .catch(() => { if (!cancelled) holidaysRef.current = []; }) // fail loose -- see spec's Data source section
+      .catch(() => { if (!cancelled) holidaysRef.current = []; }) // fail loose -- see spec's Data source section; also covers the 10s client-side timeout aborting a hung request
       .finally(() => { if (!cancelled) holidaysLoadedRef.current = true; });
 
     function tick() {
@@ -69,10 +73,11 @@ export default function ClosingBell() {
       if (!holidaysLoadedRef.current) return; // don't guess before the holiday list has loaded at least once
 
       const istNow = computeIstNow();
-      const lastRungDateStr = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+      let lastRungDateStr = null;
+      try { lastRungDateStr = window.localStorage.getItem(LOCAL_STORAGE_KEY); } catch { /* storage blocked -- treat as never rung */ }
 
       if (shouldRingNow({ istNow, holidayDates: holidaysRef.current, lastRungDateStr })) {
-        window.localStorage.setItem(LOCAL_STORAGE_KEY, istNow.dateStr);
+        try { window.localStorage.setItem(LOCAL_STORAGE_KEY, istNow.dateStr); } catch { /* storage blocked -- may ring again later this session, acceptable */ }
         try { playBellChime(); } catch { /* sound is best-effort -- toast still shows */ }
         setToastVisible(true);
         setTimeout(() => setToastVisible(false), TOAST_DURATION_MS);
