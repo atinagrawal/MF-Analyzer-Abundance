@@ -26,7 +26,14 @@ export default function CasMemberMerge({
   const targetCandidates = members.filter(m => m.pan !== fromPan && !SYNTHETIC_PANS.has(m.pan));
 
   async function doMerge() {
-    if (!fromMember || !toPan) return;
+    // Never fail silently: fromMember can be missing even when fromPan is set
+    // (e.g. a stale initialFromPan for a member that no longer exists after a
+    // re-load), and a merge that reports nothing while doing nothing is the
+    // worst possible outcome here.
+    if (!fromMember || !toPan) {
+      setError('Pick both a member to merge and a target to merge it into.');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
