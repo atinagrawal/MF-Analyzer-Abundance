@@ -82,11 +82,20 @@ Applied per folio, identically in both `app/portfolio/page.jsx` and
 `app/cas-tracker/page.js`, when grouping a statement's folios into
 members:
 
-1. The folio's own valid PAN in the current statement (existing).
-2. A manual override on file for this folio (`folio_pan_overrides`).
+1. A manual override on file for this folio (`folio_pan_overrides`) —
+   checked **regardless of whether the folio has a valid PAN of its
+   own**. This has to outrank the folio's own PAN, or the Goal's second
+   case (a well-formed but *wrong* PAN) is unreachable: such a folio
+   would never be looked up, so a merge on it could be saved and would
+   still never take visible effect.
+2. The folio's own valid PAN in the current statement (existing) — used
+   only when no manual override exists.
 3. The same folio number found with a valid PAN in one of the owner's
    *other* saved CAS statements (live lookup against R2, nothing stored
-   — see `GET /api/cas/resolve-folios` below).
+   — see `GET /api/cas/resolve-folios` below). Only attempted for folios
+   that lack a valid PAN of their own, since it ranks below that anyway.
+   A history match is an inference, not a human decision, so unlike a
+   manual override it never overrides the folio's own PAN.
 4. The "only one valid PAN in this whole statement" auto-fix already
    shipped (commit `fbf78c0`).
 5. Fall back to `'SHARED'`/`'UNKNOWN'`, same as today — the user can now
@@ -102,12 +111,18 @@ distributor's target); any PAN referenced must appear in
 via their own saved uploads, checked server-side against
 `cas_portfolios.pans`, never trusted from the client.
 
-- **`GET /api/cas/resolve-folios?folios=A,B,C&excludeBlobKey=...&targetUserId=`**
+- **`GET /api/cas/resolve-folios?folios=A,B,C&ambiguousFolios=B,C&excludeBlobKey=...&targetUserId=`**
+  Two folio lists, matching the resolution order above: `folios` is every
+  folio in the statement (overrides are checked for all of them, since an
+  override outranks even a valid own PAN — one indexed query, so this is
+  cheap), while `ambiguousFolios` is the subset with no valid PAN of its
+  own and is the only set the R2 history scan reads blobs for.
   For each requested folio number: check `folio_pan_overrides` first: if
   present, return `{ pan, source: 'manual' }`. Otherwise, scan the
-  owner's other saved `cas_portfolios` blobs (excluding `excludeBlobKey`,
-  the statement currently being viewed, so a folio never resolves
-  against itself) for that folio number with a valid PAN; if found,
+  owner's other saved `cas_portfolios` blobs (the 20 most recent,
+  excluding `excludeBlobKey`, the statement currently being viewed, so a
+  folio never resolves against itself) for that folio number with a valid
+  PAN; if found,
   return `{ pan, source: 'history' }`. A folio with no match in either
   source is simply omitted from the response (still unresolved — the
   caller falls through to the existing sole-PAN heuristic, then
