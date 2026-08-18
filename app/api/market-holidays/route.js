@@ -77,20 +77,20 @@ export async function GET(req) {
   if (!bust) {
     const cached = await blobGet();
     if (cached?.cached_at && (Date.now() - new Date(cached.cached_at).getTime()) < TTL_MS) {
-      return Response.json({ holidays: cached.holidays }, { headers: { 'X-Cache': 'HIT', 'Cache-Control': 'no-store' } });
+      return Response.json({ holidays: cached.holidays }, { headers: { 'X-Cache': 'HIT', 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' } });
     }
   }
 
   try {
     const data = await fetchHolidays();
     blobPut(data);
-    return Response.json({ holidays: data.holidays }, { headers: { 'X-Cache': 'MISS', 'Cache-Control': 'no-store' } });
+    return Response.json({ holidays: data.holidays }, { headers: { 'X-Cache': 'MISS', 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' } });
   } catch (err) {
     console.error('[market-holidays]', err.name, err.message);
     const stale = await blobGet();
     if (stale) {
-      return Response.json({ holidays: stale.holidays }, { headers: { 'X-Cache': 'STALE', 'Cache-Control': 'no-store' } });
+      return Response.json({ holidays: stale.holidays }, { headers: { 'X-Cache': 'STALE', 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' } });
     }
-    return Response.json({ holidays: [] }, { headers: { 'X-Cache': 'MISS-EMPTY', 'Cache-Control': 'no-store' } });
+    return Response.json({ holidays: [] }, { headers: { 'X-Cache': 'MISS-EMPTY', 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' } });
   }
 }
