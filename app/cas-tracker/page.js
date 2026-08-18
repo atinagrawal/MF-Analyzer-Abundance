@@ -1590,7 +1590,10 @@ function CasTrackerInner() {
     const uniqueAmbiguousFolioNos = [...new Set(stillAmbiguousFolios)];
 
     let externalResolutions = {};
-    if (uniqueFolioNos.length) {
+    // Signed-out visitors always get 401 from this endpoint (it requires a
+    // session) -- skip the call entirely rather than firing a guaranteed
+    // failure on every anonymous upload with nothing ambiguous to resolve.
+    if (isSignedIn && uniqueFolioNos.length) {
       try {
         const targetQS = effectiveTargetUserId ? `&targetUserId=${encodeURIComponent(effectiveTargetUserId)}` : '';
         const res = await fetch(
@@ -1908,8 +1911,19 @@ function CasTrackerInner() {
 
   // Lets the "Retry save" banner re-attempt without asking the user to
   // re-upload/re-decrypt the file -- everything needed is already in memory.
-  function retrySave() {
-    if (pendingSaveRetry) saveToBlobIfSignedIn(pendingSaveRetry.data, pendingSaveRetry.fileName, pendingSaveRetry.panCount);
+  // Awaited (not fire-and-forget) so a successful retry can update
+  // lastLoadRef's blobKey -- without this, a merge performed right after a
+  // successful retry would still re-run processCasData with the stale ''
+  // exclusion the original failed save left behind, letting this statement
+  // briefly resolve its own folios against itself (same class of bug as the
+  // fresh-upload path above, on this narrower retry path).
+  async function retrySave() {
+    if (!pendingSaveRetry) return;
+    const { data, fileName, panCount } = pendingSaveRetry;
+    const blobKey = await saveToBlobIfSignedIn(data, fileName, panCount);
+    if (blobKey && lastLoadRef.current) {
+      lastLoadRef.current = { ...lastLoadRef.current, blobKey };
+    }
   }
 
   async function handleSubmit(e) {
