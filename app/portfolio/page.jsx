@@ -29,6 +29,7 @@ import { getMFLogoFromSchemeName, getSIFLogo } from '@/lib/providerLogos';
 import { FundDetailDrawer, SifDetailDrawer } from '@/components/HoldingDetailDrawer';
 import RedemptionPlanner from '@/components/RedemptionPlanner';
 import TransactionHistoryDrawer, { navHistoryCacheKey, earliestTxnDate } from '@/components/TransactionHistoryDrawer';
+import CasMemberMerge from '@/components/CasMemberMerge';
 import { PORTFOLIO_FAQ } from './faqData';
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
@@ -342,6 +343,11 @@ function PortfolioInner() {
   const [investorName, setInvestorName]   = useState('');
   const [navDate, setNavDate]             = useState(null);
 
+  // CAS member merge — "Manage members" panel state
+  const [mergeOpen, setMergeOpen]             = useState(false);
+  const [mergeFromPan, setMergeFromPan]       = useState('');
+  const [activeOverrides, setActiveOverrides] = useState([]); // populated after loadAll — see Step 4
+
   // No redirect — unauthenticated users see the gate UI below (better SEO + UX)
 
   // Main data fetch
@@ -547,9 +553,46 @@ function PortfolioInner() {
             });
             const solePan = distinctValidPans.size === 1 ? [...distinctValidPans][0] : null;
 
+            // Folios the existing tiers (own PAN, sole-PAN-in-statement)
+            // can't resolve -- check manual overrides + the owner's other
+            // saved statements before falling back to Shared. See
+            // docs/superpowers/specs/2026-08-18-cas-member-merge-design.md.
+            const stillAmbiguousFolios = [];
             mergedFolios.forEach(folio => {
               const pan = (folio.PAN || '').toUpperCase().trim();
-              const validPan = pan.length === 10 && PAN_RE.test(pan) ? pan : (solePan || 'SHARED');
+              if (pan.length === 10 && PAN_RE.test(pan)) return; // own PAN, fine
+              if (solePan) return; // already resolved by the sole-PAN heuristic
+              const baseFolioNo = (folio.folio || '').split('/')[0].trim();
+              if (baseFolioNo) stillAmbiguousFolios.push(baseFolioNo);
+            });
+
+            let externalResolutions = {};
+            if (stillAmbiguousFolios.length) {
+              try {
+                const targetQS2 = isViewingOther ? `&targetUserId=${encodeURIComponent(viewUserId)}` : '';
+                // Any one of this statement's own blob keys works as excludeBlobKey
+                // here -- resolve-folios only uses it to skip THIS upload when
+                // scanning the owner's other saved statements, and every
+                // ambiguous folio in stillAmbiguousFolios came from files
+                // already loaded into mergedFolios, so excluding any single one
+                // of them is enough to avoid a statement resolving against itself.
+                const anyBlobKey = ports[0]?.blob_key || '';
+                const res = await fetch(
+                  `/api/cas/resolve-folios?folios=${encodeURIComponent(stillAmbiguousFolios.join(','))}&excludeBlobKey=${encodeURIComponent(anyBlobKey)}${targetQS2}`
+                );
+                if (res.ok) {
+                  const body = await res.json();
+                  externalResolutions = body.resolutions || {};
+                }
+              } catch { /* non-fatal -- these folios simply stay Shared for now */ }
+            }
+
+            mergedFolios.forEach(folio => {
+              const pan = (folio.PAN || '').toUpperCase().trim();
+              const baseFolioNo = (folio.folio || '').split('/')[0].trim();
+              const validPan = pan.length === 10 && PAN_RE.test(pan)
+                ? pan
+                : (solePan || externalResolutions[baseFolioNo]?.pan || 'SHARED');
 
               // Resolve investor name for this PAN
               if (!panMap[validPan]) {
@@ -563,10 +606,11 @@ function PortfolioInner() {
                   current:  0,
                   invested: 0,
                   holdings: [],
+                  folioNos: [],
                 };
               }
+              if (!panMap[validPan].folioNos.includes(baseFolioNo)) panMap[validPan].folioNos.push(baseFolioNo);
 
-              const baseFolioNo = (folio.folio || '').split('/')[0].trim();
               const folioTransmission = folioTransmissionsMerged[baseFolioNo] || null;
 
               (folio.schemes || []).forEach(scheme => {
@@ -693,6 +737,15 @@ function PortfolioInner() {
             const overallXirrInfo = bestEffortXirr(holdings, casCurrent + manualVal);
 
             setPanPortfolios(panMap);
+            setActiveOverrides(
+              Object.entries(externalResolutions)
+                .filter(([, r]) => r.source === 'manual')
+                .map(([folioNo, r]) => ({
+                  folioNo, pan: r.pan,
+                  targetName: panMap[r.pan]?.name || r.pan,
+                  updatedBy: '', updatedAt: '',
+                }))
+            );
             setTotals({
               current: casCurrent + manualVal, invested: casInvested, manual: manualVal,
               xirr: overallXirrInfo.xirr, xirrPartial: overallXirrInfo.partial,
@@ -1052,6 +1105,12 @@ function PortfolioInner() {
                     </button>
                   ))}
                 </div>
+                <button
+                  className="pf-text-btn"
+                  onClick={() => { setMergeFromPan(''); setMergeOpen(true); }}
+                >
+                  Manage members
+                </button>
               </div>
             )}
           </div>
@@ -1410,6 +1469,16 @@ function PortfolioInner() {
           onClose={() => setTxnDrawerFund(null)}
         />
       )}
+
+      <CasMemberMerge
+        open={mergeOpen}
+        onClose={() => setMergeOpen(false)}
+        members={panKeys.map(pan => ({ pan, name: panPortfolios[pan].name, folioNos: panPortfolios[pan].folioNos || [] }))}
+        overrides={activeOverrides}
+        targetUserId={isViewingOther ? viewUserId : undefined}
+        initialFromPan={mergeFromPan}
+        onMerged={() => { setMergeOpen(false); setRefreshKey(k => k + 1); }}
+      />
 
       {/* Shown here too (not just the logged-out gate and empty state above)
           so signed-in users viewing their actual dashboard see the same
