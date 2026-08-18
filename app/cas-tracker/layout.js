@@ -39,7 +39,7 @@ export default function CasTrackerLayout({ children }) {
       "description": "AMFI Registered Mutual Fund Distributor — ARN-251838, Haldwani, Uttarakhand"
     },
     "screenshot": "https://mfcalc.getabundance.in/og-cas.png",
-    "dateModified": "2026-08-15"
+    "dateModified": "2026-08-18"
   };
 
   const breadcrumbSchema = {

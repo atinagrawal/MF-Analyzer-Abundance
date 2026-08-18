@@ -854,8 +854,14 @@ function PortfolioInner() {
                 <a href={`/login?from=/portfolio`} className="pf-gate-btn-primary">
                   Sign in to Abundance →
                 </a>
+                {/* CAS Tracker's own tool now also requires signing in (see
+                    api/parse.py / app/api/parse-mfcentral's server-side
+                    checks) -- this used to promise anonymous access, which
+                    stopped being true. Its PAGE is still worth linking to
+                    (public FAQ/feature overview), just not as a "skip
+                    sign-in" shortcut. */}
                 <a href="/cas-tracker" className="pf-gate-btn-secondary">
-                  Try without signing in
+                  See how CAS Tracker works →
                 </a>
               </div>
               <div className="pf-gate-features">

@@ -14,7 +14,12 @@ import { NextResponse } from 'next/server';
 // Add/remove paths here to change what requires login.
 // No other code needs to change.
 const PROTECTED_PATHS = [
-  '/admin',   // cas-tracker is intentionally public for SEO — auth gate is in-page
+  '/admin',   // cas-tracker's PAGE stays public/crawlable for SEO -- its
+              // upload form is hidden from signed-out visitors in-page, AND
+              // (unlike this list's simple cookie-presence redirect, which
+              // isn't meaningful for an API fetch call) its actual parse
+              // endpoints (api/parse.py, app/api/parse-mfcentral) enforce a
+              // real server-side session check of their own.
 ];
 
 // ── Bot UA list (for OG injection) ────────────────────────────────────────

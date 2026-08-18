@@ -1959,11 +1959,15 @@ function CasTrackerInner() {
 
         if (!parseRes.ok) {
           const errBody = await parseRes.json().catch(() => ({}));
+          // errBody.error is this app's own Node routes' shape; errBody.detail
+          // is FastAPI's (api/parse.py) default HTTPException shape -- reading
+          // only .error silently dropped every real message from the Python
+          // parser (a wrong PDF password, or now also "sign in required") in
+          // favour of a hardcoded guess that assumed 401 always meant one
+          // specific thing, which stopped being true once a 401 could also
+          // mean "not signed in."
           throw new Error(
-            errBody.error ||
-            (parseRes.status === 401
-              ? 'Incorrect password. Try your PAN in ALL CAPS.'
-              : 'Failed to decrypt or parse the statement.')
+            errBody.error || errBody.detail || 'Failed to decrypt or parse the statement.'
           );
         }
 
