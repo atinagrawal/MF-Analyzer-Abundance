@@ -1,7 +1,7 @@
 import { auth } from '@/auth';
 import { getUserPlan } from '@/lib/plan';
 import pool from '@/lib/db';
-import { getHoldingsData } from '@/lib/holdingsLookup';
+import { getHoldingsData, getAumInfo } from '@/lib/holdingsLookup';
 import { checkRateLimitSafe, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
@@ -52,6 +52,13 @@ export async function GET(req, { params }) {
 
     const num = (x) => (x == null ? null : Number(x));
 
+    // Cheap regardless of plan (two already-warm R2-cached JSON reads, no
+    // external vendor call) -- unlike getHoldingsData() below, which is
+    // Pro-gated for cost reasons. AUM is basic fund-size info, not a
+    // performance insight, so every visitor gets it, same tier as
+    // category/AMC/NAV/inception date.
+    const aumInfo = await getAumInfo(String(fund.code));
+
     const publicFields = {
       code: String(fund.code),
       name: fund.name,
@@ -65,6 +72,8 @@ export async function GET(req, { params }) {
       age_years: num(fund.age_years),
       flag: fund.flag || null,
       asof: fund.asof || null,
+      aumCr: aumInfo.aumCr,
+      aumAsOf: aumInfo.aumAsOf,
     };
 
     if (!isPro) {

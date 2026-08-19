@@ -415,6 +415,11 @@ export default function FundDetailClient({ code }) {
   const launchDate = f.inception_date
     ? new Date(f.inception_date + 'T00:00:00Z').toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
     : null;
+  // Same AMFI-sourced field (and same formatting) Proposal Studio's Scheme
+  // Details table already shows -- see app/proposal-studio/ProposalSections.jsx.
+  const aumFormatted = f.aumCr != null
+    ? `₹${Number(f.aumCr).toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr`
+    : null;
 
   const faqItems = [
     {
@@ -486,6 +491,15 @@ export default function FundDetailClient({ code }) {
                 <div className="fd-stat-label">Current NAV</div>
                 <div className="fd-stat-val">{navFormatted}</div>
                 {f.asof && <div className="fd-stat-sub">as of {f.asof}</div>}
+              </div>
+            )}
+            {aumFormatted && (
+              <div className="fd-stat-item">
+                <div className="fd-stat-label">AUM</div>
+                <div className="fd-stat-val" style={{ fontFamily: 'Raleway, sans-serif', fontSize: '.88rem' }}>
+                  {aumFormatted}
+                </div>
+                {f.aumAsOf && <div className="fd-stat-sub">as of {f.aumAsOf}</div>}
               </div>
             )}
             {launchDate && (
