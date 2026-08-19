@@ -12,7 +12,7 @@
 import { auth } from '@/auth';
 import { getUserPlan } from '@/lib/plan';
 import pool from '@/lib/db';
-import { getHoldingsData, truncateHoldingsForFreeTier } from '@/lib/holdingsLookup';
+import { getHoldingsData, truncateHoldingsForFreeTier, getAumInfo } from '@/lib/holdingsLookup';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +39,15 @@ export async function GET(req, { params }) {
 
     const r = rows[0];
     const num = (x) => (x === null || x === undefined || x === '' ? null : Number(x));
+
+    // Cheap regardless of plan (two already-warm R2-cached JSON reads, no
+    // external vendor call) -- unlike getHoldingsData() below, which is a
+    // real external lookup that can independently fail or return null.
+    // Fetched here (not read off holdings) so AUM stays available even
+    // when the holdings lookup itself comes up empty. Matches
+    // app/api/fund-detail/[code]/route.js's identical pattern.
+    const aumInfo = await getAumInfo(r.scheme_id);
+
     const scheme = {
       scheme_id: r.scheme_id,
       nav_name: r.nav_name,
@@ -62,6 +71,8 @@ export async function GET(req, { params }) {
       ret_inception: num(r.ret_inception),
       ret_inception_annualized: r.ret_inception_annualized,
       asof: r.asof,
+      aumCr: aumInfo.aumCr,
+      aumAsOf: aumInfo.aumAsOf,
     };
 
     const session = await auth();

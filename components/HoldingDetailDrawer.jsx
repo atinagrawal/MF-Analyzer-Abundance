@@ -216,6 +216,7 @@ export function FundDetailDrawer({ code, onClose }) {
 
             <div className="scr-drawer-meta">
               <span>Latest NAV ₹{f.nav}</span>
+              {f.aumCr != null && <span>AUM ₹{Number(f.aumCr).toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr</span>}
               {f.inception_date && <span>Since {new Date(f.inception_date + 'T00:00:00Z').toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span>}
               <span>Age ~{f.age_years ?? '—'} yrs</span>
               <span>as of {f.asof}</span>
@@ -364,6 +365,9 @@ export function SifDetailDrawer({ schemeId, onClose }) {
               <div className="scr-dk"><span>Latest NAV</span><b>₹{s.nav.toFixed(4)}</b></div>
               <div className="scr-dk"><span>NAV Date</span><b style={{ fontSize: '13px' }}>{s.nav_date}</b></div>
               <div className="scr-dk"><span>Data points</span><b>{pts ? pts.length : '—'}</b></div>
+              {s.aumCr != null && (
+                <div className="scr-dk"><span>AUM</span><b style={{ fontSize: '13px' }}>₹{Number(s.aumCr).toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr</b></div>
+              )}
             </div>
 
             <HoldingsSection holdingsData={state.holdings} loading={state.loading} schemeName={s.nav_name} />
