@@ -8,7 +8,7 @@ import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
 import { MFCompareBar, MFCompareModal } from './MFCompare';
 import CompareGrowthChart from './CompareGrowthChart';
 import HoldingsSection from './HoldingsSection';
-import { FundDetailPanel } from '@/components/HoldingDetailDrawer';
+import { FundDetailPanel, SifDetailPanel } from '@/components/HoldingDetailDrawer';
 import { useRouter } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import { startCheckout } from '@/lib/checkoutClient';
@@ -914,18 +914,26 @@ function SifDetail({ s, onClose }) {
   const [histLoading, setHistLoading] = useState(true);
   const [holdingsData, setHoldingsData] = useState(null);
   const [holdingsLoading, setHoldingsLoading] = useState(true);
+  const [aumInfo, setAumInfo] = useState({ aumCr: null, aumAsOf: null });
 
   // Via /api/sif-detail/[id] (not the public /api/proposal-studio/holdings
   // route directly) so non-Pro visitors only get a top-10 preview -- that
   // route already gates+truncates its `holdings` field server-side by the
-  // viewer's own plan, same as the dedicated /sif/[id] page.
+  // viewer's own plan, same as the dedicated /sif/[id] page. The same response
+  // also carries scheme.aumCr/aumAsOf, which Screener's own bulk listing
+  // (/api/sif-screener) never includes -- capture it here so the drawer's
+  // KPI grid can show it.
   useEffect(() => {
     let alive = true;
     setHoldingsLoading(true);
     setHoldingsData(null);
     fetch(`/api/sif-detail/${encodeURIComponent(s.scheme_id)}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (alive) setHoldingsData(d?.holdings ?? null); })
+      .then((d) => {
+        if (!alive) return;
+        setHoldingsData(d?.holdings ?? null);
+        setAumInfo({ aumCr: d?.scheme?.aumCr ?? null, aumAsOf: d?.scheme?.aumAsOf ?? null });
+      })
       .catch(() => {})
       .finally(() => { if (alive) setHoldingsLoading(false); });
     return () => { alive = false; };
@@ -948,48 +956,10 @@ function SifDetail({ s, onClose }) {
     return () => { alive = false; window.removeEventListener('keydown', onKey); };
   }, [s, onClose]);
 
-  const fam = s.category?.startsWith('Equity') ? 'Equity' : 'Hybrid';
   return (
     <div className="scr-drawer-wrap" onMouseDown={onClose}>
       <div className="scr-drawer" onMouseDown={(e) => e.stopPropagation()} role="dialog">
-        <div className="scr-drawer-h">
-          <div>
-            <div className="scr-drawer-name">{s.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim()}</div>
-            <div className="scr-drawer-tags">
-              <span className="scr-tag">{s.sif_name}</span>
-              <span className={`scr-sif-badge scr-sif-badge-${fam.toLowerCase()}`} style={{fontSize:'10px',padding:'3px 8px'}}>{SIF_STRATEGY_LABELS[s.category] || sifStratShort(s.category)}</span>
-              <span className="scr-tag alt">{s.scheme_id}</span>
-            </div>
-          </div>
-          <button className="scr-x" onClick={onClose} aria-label="Close">×</button>
-        </div>
-
-        <div className="scr-sif-notice">ⓘ SIFs are a new asset class (launched 2024–25) with limited NAV history — longer-horizon metrics (3Y+) will populate as funds mature. See the table for the return periods already available.</div>
-
-        {histLoading ? (
-          <div className="scr-spark-load">Loading NAV history…</div>
-        ) : (!pts || pts.length < 2) ? (
-          <div className="scr-spark-load">No NAV history available yet</div>
-        ) : (
-          <CompareGrowthChart
-            series={[{ name: s.nav_name, color: pts[pts.length - 1].v >= pts[0].v ? '#2e7d32' : '#b71c1c', data: pts }]}
-            showLegend={false}
-          />
-        )}
-
-        <div className="scr-drawer-kpis">
-          <div className="scr-dk"><span>Latest NAV</span><b>₹{s.nav.toFixed(4)}</b></div>
-          <div className="scr-dk"><span>NAV Date</span><b style={{fontSize:'13px'}}>{s.nav_date}</b></div>
-          <div className="scr-dk"><span>Data points</span><b>{pts ? pts.length : '—'}</b></div>
-        </div>
-
-        <HoldingsSection holdingsData={holdingsData} loading={holdingsLoading} schemeName={s.nav_name} />
-
-        <div className="scr-drawer-cta">
-          <a className="scr-btn primary" href={`/sif/${s.scheme_id}`} target="_blank" rel="noreferrer">View Full SIF Page →</a>
-          <a className="scr-btn" href={backtestSifLink(s)}>⚗ Backtest this SIF</a>
-          <a className="scr-btn" href="/sifs">📋 Full SIF screener</a>
-        </div>
+        <SifDetailPanel s={{ ...s, ...aumInfo }} holdings={holdingsData} holdingsLoading={holdingsLoading} pts={pts} histLoading={histLoading} onClose={onClose} />
       </div>
     </div>
   );
