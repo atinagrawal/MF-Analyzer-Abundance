@@ -858,6 +858,7 @@ function Detail({ f, stress, onClose }) {
   const [schemeFacts, setSchemeFacts] = useState(null);
   const [holdingsData, setHoldingsData] = useState(null);
   const [holdingsLoading, setHoldingsLoading] = useState(true);
+  const [aumInfo, setAumInfo] = useState({ aumCr: null, aumAsOf: null });
 
   useEffect(() => {
     let alive = true;
@@ -868,14 +869,20 @@ function Detail({ f, stress, onClose }) {
   // Via /api/fund-detail/[code] (not the public /api/proposal-studio/holdings
   // route directly) so non-Pro visitors never receive full holdings -- that
   // route already gates its `holdings` field server-side by the viewer's
-  // own plan, same as the dedicated /fund/[code] page.
+  // own plan, same as the dedicated /fund/[code] page. The same response also
+  // carries fund.aumCr/aumAsOf (ungated), which Screener's own bulk listing
+  // never includes -- capture it here so the drawer's meta line can show it.
   useEffect(() => {
     let alive = true;
     setHoldingsLoading(true);
     setHoldingsData(null);
     fetch(`/api/fund-detail/${encodeURIComponent(f.code)}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (alive) setHoldingsData(d?.holdings ?? null); })
+      .then((d) => {
+        if (!alive) return;
+        setHoldingsData(d?.holdings ?? null);
+        setAumInfo({ aumCr: d?.fund?.aumCr ?? null, aumAsOf: d?.fund?.aumAsOf ?? null });
+      })
       .catch(() => {})
       .finally(() => { if (alive) setHoldingsLoading(false); });
     return () => { alive = false; };
@@ -896,7 +903,7 @@ function Detail({ f, stress, onClose }) {
   return (
     <div className="scr-drawer-wrap" onMouseDown={onClose}>
       <div className="scr-drawer" onMouseDown={(e) => e.stopPropagation()} role="dialog">
-        <FundDetailPanel f={f} stress={stress} holdings={holdingsData} holdingsLoading={holdingsLoading} nav={nav} schemeFacts={schemeFacts} onClose={onClose} />
+        <FundDetailPanel f={{ ...f, ...aumInfo }} stress={stress} holdings={holdingsData} holdingsLoading={holdingsLoading} nav={nav} schemeFacts={schemeFacts} onClose={onClose} />
       </div>
     </div>
   );
