@@ -143,12 +143,18 @@ function SifCard({ scheme, watched, onToggleWatch, onViewHistory }) {
         {stratShort}
       </div>
 
-      {/* Footer: NAV + meta */}
+      {/* Footer: NAV + AUM + meta */}
       <div className="sif-card-foot">
         <div className="sif-nav-block">
           <span className="sif-nav-label">NAV</span>
           <span className="sif-nav-val">₹{scheme.nav.toFixed(4)}</span>
         </div>
+        {scheme.aumCr != null && (
+          <div className="sif-nav-block">
+            <span className="sif-nav-label">AUM</span>
+            <span className="sif-nav-val">₹{Number(scheme.aumCr).toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr</span>
+          </div>
+        )}
         <div className="sif-meta-pills">
           <span className="sif-pill sif-type-pill">{scheme.type}</span>
           <span className="sif-pill sif-id-pill">{scheme.scheme_id}</span>
@@ -161,6 +167,15 @@ function SifCard({ scheme, watched, onToggleWatch, onViewHistory }) {
       >
         📈 View History
       </button>
+      <a
+        className="sif-hist-trigger"
+        href={`/sif/${scheme.scheme_id}`}
+        target="_blank"
+        rel="noreferrer"
+        style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: '6px' }}
+      >
+        📄 View Full SIF Page →
+      </a>
     </div>
   );
 }
@@ -196,6 +211,7 @@ function SifRow({ scheme, watched, onToggleWatch, idx, onViewHistory }) {
         <span className="sif-pill sif-type-pill">{scheme.type}</span>
       </td>
       <td className="sif-td sif-td-nav mono">₹{scheme.nav.toFixed(4)}</td>
+      <td className="sif-td sif-td-nav mono">{scheme.aumCr != null ? `₹${Number(scheme.aumCr).toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr` : '—'}</td>
       <td className="sif-td sif-td-date mono">{fmtDate(scheme.nav_date)}</td>
       <td className="sif-td sif-td-action" style={{ whiteSpace: 'nowrap' }}>
         <button
@@ -212,6 +228,16 @@ function SifRow({ scheme, watched, onToggleWatch, idx, onViewHistory }) {
         >
           📈
         </button>
+        <a
+          className="sif-hist-trigger-sm"
+          href={`/sif/${scheme.scheme_id}`}
+          target="_blank"
+          rel="noreferrer"
+          title="View full SIF page"
+          style={{ display: 'inline-flex', textDecoration: 'none' }}
+        >
+          📄
+        </a>
       </td>
     </tr>
   );
@@ -395,6 +421,14 @@ function NavHistoryModal({ scheme, onClose }) {
             <div className="sif-hist-eyebrow">NAV History</div>
             <div className="sif-hist-title">{scheme.nav_name}</div>
             <div className="sif-hist-sub">{scheme.sif_name} · {scheme.scheme_id}</div>
+            <a
+              href={`/sif/${scheme.scheme_id}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{ display: 'inline-block', marginTop: '6px', fontSize: '.75rem', color: 'rgba(255,255,255,.7)', textDecoration: 'underline' }}
+            >
+              View full SIF page →
+            </a>
           </div>
           <button className="sif-hist-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
@@ -478,6 +512,7 @@ function NavHistoryModal({ scheme, onClose }) {
                   {[
                     ['Period Return', (isProfit ? '+' : '') + stats.ret.toFixed(2) + '%', isProfit ? '#69f0ae' : '#ef5350'],
                     ['Current NAV',   '₹' + stats.current.toFixed(4), 'rgba(255,255,255,.9)'],
+                    ...(scheme.aumCr != null ? [['AUM', '₹' + Number(scheme.aumCr).toLocaleString('en-IN', { maximumFractionDigits: 0 }) + ' Cr', 'rgba(255,255,255,.9)']] : []),
                     ['Period High',   '₹' + stats.high.toFixed(4),    '#a5d6a7'],
                     ['Period Low',    '₹' + stats.low.toFixed(4),     '#ef9a9a'],
                     ['Data Points',   stats.points + ' days',          'rgba(255,255,255,.5)'],
@@ -863,6 +898,7 @@ export default function SifScreener({ initialData }) {
                   <th className="sif-th">Strategy</th>
                   <th className="sif-th">Type</th>
                   <th className="sif-th">NAV</th>
+                  <th className="sif-th">AUM</th>
                   <th className="sif-th">As of</th>
                   <th className="sif-th"></th>
                 </tr>
