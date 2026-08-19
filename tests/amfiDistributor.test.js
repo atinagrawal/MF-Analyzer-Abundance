@@ -83,6 +83,18 @@ const assert = require('assert');
     assert.strictEqual(extractArnDigits('ARN-12345678'), null);
   });
 
+  test('strips a leading zero -- AMFI stores ARNs without padding (ARN-0155 -> "155", confirmed live)', () => {
+    assert.strictEqual(extractArnDigits('ARN-0155'), '155');
+  });
+
+  test('strips multiple leading zeros from a bare digit string (within the 4-7 digit window)', () => {
+    assert.strictEqual(extractArnDigits('0025184'), '25184');
+  });
+
+  test('leaves an already-unpadded ARN unchanged', () => {
+    assert.strictEqual(extractArnDigits('ARN-251838'), '251838');
+  });
+
   // ── isArnBlocked / arnBlockedReason ──────────────────────────────────
   test('isArnBlocked is false for null (no verification data)', () => {
     assert.strictEqual(isArnBlocked(null), false);
