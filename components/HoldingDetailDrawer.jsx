@@ -297,6 +297,55 @@ export function FundDetailDrawer({ code, onClose }) {
   );
 }
 
+// Pure rendering counterpart to FundDetailPanel above, for SIFs. See that
+// function's header comment for why this split exists.
+export function SifDetailPanel({ s, holdings, holdingsLoading = false, pts, histLoading, onClose }) {
+  const fam = s.category?.startsWith('Equity') ? 'Equity' : 'Hybrid';
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <div className="scr-drawer-h">
+        <div>
+          <div className="scr-drawer-name">{s.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim()}</div>
+          <div className="scr-drawer-tags">
+            <span className="scr-tag">{s.sif_name}</span>
+            <span className={`scr-sif-badge scr-sif-badge-${fam.toLowerCase()}`} style={{ fontSize: '10px', padding: '3px 8px' }}>{SIF_STRATEGY_LABELS[s.category] || sifStratShort(s.category)}</span>
+            <span className="scr-tag alt">{s.scheme_id}</span>
+          </div>
+        </div>
+        <button className="scr-x" onClick={onClose} aria-label="Close">×</button>
+      </div>
+
+      <div className="scr-sif-notice">ⓘ SIFs are a new asset class (launched 2024–25) with limited NAV history — longer-horizon metrics (3Y+) will populate as funds mature. See the table for the return periods already available.</div>
+
+      {histLoading ? (
+        <div className="scr-spark-load">Loading NAV history…</div>
+      ) : (!pts || pts.length < 2) ? (
+        <div className="scr-spark-load">No NAV history available yet</div>
+      ) : (
+        <CompareGrowthChart series={[{ name: s.nav_name, color: pts[pts.length - 1].v >= pts[0].v ? '#2e7d32' : '#b71c1c', data: pts }]} showLegend={false} />
+      )}
+
+      <div className="scr-drawer-kpis">
+        <div className="scr-dk"><span>Latest NAV</span><b>₹{s.nav.toFixed(4)}</b></div>
+        <div className="scr-dk"><span>NAV Date</span><b style={{ fontSize: '13px' }}>{s.nav_date}</b></div>
+        <div className="scr-dk"><span>Data points</span><b>{pts ? pts.length : '—'}</b></div>
+        {s.aumCr != null && (
+          <div className="scr-dk"><span>AUM</span><b style={{ fontSize: '13px' }}>₹{Number(s.aumCr).toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr</b></div>
+        )}
+      </div>
+
+      <HoldingsSection holdingsData={holdings} loading={holdingsLoading} schemeName={s.nav_name} />
+
+      <div className="scr-drawer-cta">
+        <a className="scr-btn primary" href={`/sif/${s.scheme_id}`} target="_blank" rel="noreferrer">View Full SIF Page →</a>
+        <a className="scr-btn" href={backtestSifLink(s)}>⚗ Backtest this SIF</a>
+        <a className="scr-btn" href="/sifs">📋 Full SIF screener</a>
+      </div>
+    </>
+  );
+}
+
 // ---------- SIF detail drawer ----------
 export function SifDetailDrawer({ schemeId, onClose }) {
   const [state, setState] = useState({ loading: true, error: false, scheme: null, holdings: null });
@@ -336,17 +385,18 @@ export function SifDetailDrawer({ schemeId, onClose }) {
   }, [schemeId, onClose]);
 
   const s = state.scheme;
-  const fam = s?.category?.startsWith('Equity') ? 'Equity' : 'Hybrid';
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <div className="scr-drawer-wrap" onMouseDown={onClose}>
+    <div className="scr-drawer-wrap" onMouseDown={onClose}>
       <div className="scr-drawer" onMouseDown={(e) => e.stopPropagation()} role="dialog">
         {state.loading ? (
-          <div className="scr-spark-load">Loading SIF details…</div>
+          <>
+            <style dangerouslySetInnerHTML={{ __html: CSS }} />
+            <div className="scr-spark-load">Loading SIF details…</div>
+          </>
         ) : state.error || !s ? (
           <>
+            <style dangerouslySetInnerHTML={{ __html: CSS }} />
             <div className="scr-drawer-h">
               <div className="scr-drawer-name">SIF details unavailable</div>
               <button className="scr-x" onClick={onClose} aria-label="Close">×</button>
@@ -354,50 +404,10 @@ export function SifDetailDrawer({ schemeId, onClose }) {
             <div className="scr-warn">We couldn't load details for this SIF right now.</div>
           </>
         ) : (
-          <>
-            <div className="scr-drawer-h">
-              <div>
-                <div className="scr-drawer-name">{s.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim()}</div>
-                <div className="scr-drawer-tags">
-                  <span className="scr-tag">{s.sif_name}</span>
-                  <span className={`scr-sif-badge scr-sif-badge-${fam.toLowerCase()}`} style={{ fontSize: '10px', padding: '3px 8px' }}>{SIF_STRATEGY_LABELS[s.category] || sifStratShort(s.category)}</span>
-                  <span className="scr-tag alt">{s.scheme_id}</span>
-                </div>
-              </div>
-              <button className="scr-x" onClick={onClose} aria-label="Close">×</button>
-            </div>
-
-            <div className="scr-sif-notice">ⓘ SIFs are a new asset class (launched 2024–25) with limited NAV history — longer-horizon metrics (3Y+) will populate as funds mature. See the table for the return periods already available.</div>
-
-            {histLoading ? (
-              <div className="scr-spark-load">Loading NAV history…</div>
-            ) : (!pts || pts.length < 2) ? (
-              <div className="scr-spark-load">No NAV history available yet</div>
-            ) : (
-              <CompareGrowthChart series={[{ name: s.nav_name, color: pts[pts.length - 1].v >= pts[0].v ? '#2e7d32' : '#b71c1c', data: pts }]} showLegend={false} />
-            )}
-
-            <div className="scr-drawer-kpis">
-              <div className="scr-dk"><span>Latest NAV</span><b>₹{s.nav.toFixed(4)}</b></div>
-              <div className="scr-dk"><span>NAV Date</span><b style={{ fontSize: '13px' }}>{s.nav_date}</b></div>
-              <div className="scr-dk"><span>Data points</span><b>{pts ? pts.length : '—'}</b></div>
-              {s.aumCr != null && (
-                <div className="scr-dk"><span>AUM</span><b style={{ fontSize: '13px' }}>₹{Number(s.aumCr).toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr</b></div>
-              )}
-            </div>
-
-            <HoldingsSection holdingsData={state.holdings} loading={state.loading} schemeName={s.nav_name} />
-
-            <div className="scr-drawer-cta">
-              <a className="scr-btn primary" href={`/sif/${s.scheme_id}`} target="_blank" rel="noreferrer">View Full SIF Page →</a>
-              <a className="scr-btn" href={backtestSifLink(s)}>⚗ Backtest this SIF</a>
-              <a className="scr-btn" href="/sifs">📋 Full SIF screener</a>
-            </div>
-          </>
+          <SifDetailPanel s={s} holdings={state.holdings} pts={pts} histLoading={histLoading} onClose={onClose} />
         )}
       </div>
     </div>
-    </>
   );
 }
 
