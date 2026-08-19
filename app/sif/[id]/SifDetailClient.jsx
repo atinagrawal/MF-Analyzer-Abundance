@@ -236,6 +236,7 @@ export default function SifDetailClient({ id }) {
         <div className="sif-kpi-grid">
           {[
             { lbl: 'Latest NAV',       val: sif.nav != null ? `₹${Number(sif.nav).toFixed(4)}` : '—', sub: `As of ${sif.nav_date || sif.asof}` },
+            { lbl: 'AUM',              val: sif.aumCr != null ? `₹${Number(sif.aumCr).toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr` : '—', sub: sif.aumAsOf ? `As of ${sif.aumAsOf}` : 'Fund size' },
             { lbl: '1M Return',        val: pct(sif.ret_1m),        sub: 'Absolute',      color: sif.ret_1m  },
             { lbl: '3M Return',        val: pct(sif.ret_3m),        sub: 'Absolute',      color: sif.ret_3m  },
             { lbl: '6M Return',        val: pct(sif.ret_6m),        sub: 'Absolute',      color: sif.ret_6m  },
