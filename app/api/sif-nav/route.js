@@ -15,6 +15,7 @@
  */
 
 import { r2Get, r2Put } from '@/lib/r2';
+import { getSifAumMap } from '@/lib/holdingsLookup';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -55,6 +56,14 @@ async function fetchFromAMFI() {
       }
     }
   }
+
+  const sifAumMap = await getSifAumMap();
+  for (const scheme of schemes) {
+    const aumRecord = sifAumMap[scheme.scheme_id] || null;
+    scheme.aumCr = aumRecord?.aumCr ?? null;
+    scheme.aumAsOf = aumRecord?.asOf ?? null;
+  }
+
   return schemes;
 }
 
