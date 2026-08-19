@@ -87,7 +87,7 @@ function getSchemeMasterFacts() {
 // two callers inlined its own copy of this exact JSX; this is the single
 // shared version. See docs/superpowers/specs/
 // 2026-08-19-aum-surfaces-and-drawer-consolidation-design.md.
-export function FundDetailPanel({ f, stress, holdings, nav, schemeFacts, onClose }) {
+export function FundDetailPanel({ f, stress, holdings, holdingsLoading = false, nav, schemeFacts, onClose }) {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
@@ -166,7 +166,7 @@ export function FundDetailPanel({ f, stress, holdings, nav, schemeFacts, onClose
         </div>
       )}
 
-      <HoldingsSection holdingsData={holdings} loading={false} schemeName={f.name} />
+      <HoldingsSection holdingsData={holdings} loading={holdingsLoading} schemeName={f.name} />
 
       <div className="scr-drawer-meta">
         <span>Latest NAV ₹{f.nav}</span>
