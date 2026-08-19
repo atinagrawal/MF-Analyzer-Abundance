@@ -79,6 +79,158 @@ function getSchemeMasterFacts() {
   return schemeMasterFactsPromise;
 }
 
+// Pure rendering -- takes fully-resolved data as props, no fetching of its
+// own. Used by FundDetailDrawer below (which fetches by code, for CAS
+// Tracker/Portfolio) AND by app/screener/ScreenerClient.jsx's Detail
+// (which already has f/stress from its own bulk row data, and only
+// fetches holdings/nav/schemeFacts itself) -- previously each of those
+// two callers inlined its own copy of this exact JSX; this is the single
+// shared version. See docs/superpowers/specs/
+// 2026-08-19-aum-surfaces-and-drawer-consolidation-design.md.
+export function FundDetailPanel({ f, stress, holdings, nav, schemeFacts, onClose }) {
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <div className="scr-drawer-h">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+          <ProviderAvatar name={f.amc} logoPath={getMFLogo(f.amc)} size={36} radius={8} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="scr-drawer-name">{f.name}</div>
+            <div className="scr-drawer-tags"><span className="scr-tag">{f.amc}</span><span className="scr-tag alt">{shortCat(f.category)}</span><span className="scr-tag alt">{f.structure}</span></div>
+          </div>
+        </div>
+        <button className="scr-x" onClick={onClose} aria-label="Close">×</button>
+      </div>
+      {f.flag === 'check' && <div className="scr-warn">⚠ One or more returns look unusual for this fund — we're reviewing the source NAV. Treat with caution.</div>}
+      {stress && stress.days_50pct > 20 && (
+        <div className="scr-warn" style={{ backgroundColor: 'rgba(211, 47, 47, 0.08)', border: '1px solid rgba(211, 47, 47, 0.2)', color: '#d32f2f' }}>
+          ⚠️ <b>Liquidity Alert:</b> This fund takes <b>{stress.days_50pct} days</b> to liquidate 50% of its portfolio under stress. High redemption volume could significantly impact portfolio values.
+        </div>
+      )}
+
+      {!nav ? (
+        <div className="scr-spark-load">Loading NAV history…</div>
+      ) : nav.length < 2 ? null : (
+        <CompareGrowthChart series={[{ name: f.name, color: nav[nav.length - 1].v >= nav[0].v ? '#2e7d32' : '#b71c1c', data: nav }]} showLegend={false} />
+      )}
+
+      <div className="scr-drawer-kpis">
+        {[['1Y', f.ret_1y, '%'], ['3Y', f.ret_3y, '%'], ['5Y', f.ret_5y, '%'], ['Since inception', f.ret_inception, '%'], ['Volatility', f.vol, '%'], ['Max drawdown', f.max_dd, '%'], ['Return / risk', f.ret_per_risk, '']].map(([l, v, u]) => (
+          <div className="scr-dk" key={l}><span>{l}</span><b className={u === '%' && l.includes('draw') ? 'scr-neg' : cls(typeof v === 'number' ? v : null)}>{v == null ? '—' : (u === '%' ? (v > 0 && !l.includes('draw') && !l.includes('Vol') ? '+' : '') + v.toFixed(1) + '%' : v.toFixed(2))}</b></div>
+        ))}
+      </div>
+
+      {stress && (
+        <div className="scr-stress-section">
+          <div className="scr-stress-title">💧 Liquidity &amp; Stress Test Analysis</div>
+          <div className="scr-stress-month">Data as of {formatMonth(stress.month)}</div>
+          <div className="scr-stress-liquidity-grid">
+            <div className="scr-stress-liq-card">
+              <div className="scr-liq-label">Days to Liquidate 50%</div>
+              <div className="scr-liq-val">{stress.days_50pct} days</div>
+              <div className="scr-liq-meter"><div className="scr-liq-meter-fill" style={{ width: `${Math.min(100, (stress.days_50pct / 30) * 100)}%`, backgroundColor: getLiquidityColor(stress.days_50pct) }}></div></div>
+            </div>
+            <div className="scr-stress-liq-card">
+              <div className="scr-liq-label">Days to Liquidate 25%</div>
+              <div className="scr-liq-val">{stress.days_25pct} days</div>
+              <div className="scr-liq-meter"><div className="scr-liq-meter-fill" style={{ width: `${Math.min(100, (stress.days_25pct / 15) * 100)}%`, backgroundColor: getLiquidityColor(stress.days_25pct * 2) }}></div></div>
+            </div>
+          </div>
+          {stress.days_50pct >= 15 && stress.days_50pct <= 20 && (
+            <div className="scr-warn-liquidity">⚠️ <b>Moderate Liquidity Risk:</b> Takes {stress.days_50pct} days to liquidate half of the portfolio under stress conditions.</div>
+          )}
+          <div className="scr-stress-kpis" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '12px' }}>
+            <div className="scr-dk"><span>Top 10 Investors</span><b>{stress.top10_investors_pct ? `${stress.top10_investors_pct}%` : '—'}</b></div>
+            <div className="scr-dk"><span>Turnover Ratio</span><b>{stress.turnover_ratio ? `${stress.turnover_ratio}%` : '—'}</b></div>
+            <div className="scr-dk"><span>Portfolio Beta</span><b>{stress.beta ? stress.beta.toFixed(2) : '—'}</b></div>
+          </div>
+          <div className="scr-allocation-card">
+            <div className="scr-alloc-title">Asset Allocation Breakdown</div>
+            <div className="scr-alloc-bars">
+              <div className="scr-alloc-item"><div className="scr-alloc-lbl">Large Cap ({stress.large_cap_pct}%)</div><div className="scr-alloc-bar-bg"><div className="scr-alloc-bar-fill large-cap" style={{ width: `${stress.large_cap_pct}%` }}></div></div></div>
+              <div className="scr-alloc-item"><div className="scr-alloc-lbl">Mid Cap ({stress.mid_cap_pct}%)</div><div className="scr-alloc-bar-bg"><div className="scr-alloc-bar-fill mid-cap" style={{ width: `${stress.mid_cap_pct}%` }}></div></div></div>
+              <div className="scr-alloc-item"><div className="scr-alloc-lbl">Small Cap ({stress.small_cap_pct}%)</div><div className="scr-alloc-bar-bg"><div className="scr-alloc-bar-fill small-cap" style={{ width: `${stress.small_cap_pct}%` }}></div></div></div>
+              <div className="scr-alloc-item"><div className="scr-alloc-lbl">Cash ({stress.cash_pct}%)</div><div className="scr-alloc-bar-bg"><div className="scr-alloc-bar-fill cash" style={{ width: `${stress.cash_pct}%` }}></div></div></div>
+            </div>
+          </div>
+          <div className="scr-valuation-card">
+            <div className="scr-alloc-title">PE Valuation vs Benchmark</div>
+            <div className="scr-pe-grid">
+              <div className="scr-pe-item"><div className="scr-pe-label">Portfolio PE</div><div className="scr-pe-val">{stress.pe_portfolio ? stress.pe_portfolio.toFixed(1) : '—'}</div></div>
+              <div className="scr-pe-item"><div className="scr-pe-label">Benchmark PE</div><div className="scr-pe-val">{stress.pe_benchmark ? stress.pe_benchmark.toFixed(1) : '—'}</div></div>
+            </div>
+            {stress.pe_benchmark_1ya && (
+              <div className="scr-pe-history">Benchmark PE: 1Y ago <b>{stress.pe_benchmark_1ya.toFixed(1)}</b> {stress.pe_benchmark_2ya && <>| 2Y ago <b>{stress.pe_benchmark_2ya.toFixed(1)}</b></>}</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <HoldingsSection holdingsData={holdings} loading={false} schemeName={f.name} />
+
+      <div className="scr-drawer-meta">
+        <span>Latest NAV ₹{f.nav}</span>
+        {f.aumCr != null && <span>AUM ₹{Number(f.aumCr).toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr</span>}
+        {f.inception_date && <span>Since {new Date(f.inception_date + 'T00:00:00Z').toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span>}
+        <span>Age ~{f.age_years ?? '—'} yrs</span>
+        <span>as of {f.asof}</span>
+      </div>
+
+      {(() => {
+        if (!schemeFacts) return null;
+        const masterRec = (f.isin && schemeFacts.byIsin?.[f.isin]) ||
+          (f.code && schemeFacts.byAmfiCode?.[f.code]) || (() => {
+            const norm = normalizeSchemeName(f.name);
+            return norm ? schemeFacts.byNormName?.[norm] : null;
+          })();
+        if (!masterRec) return null;
+        return (
+          <div style={{ margin: '14px 0', padding: '14px 16px', background: 'var(--s2)', borderRadius: '12px', border: '1.5px solid var(--border)' }}>
+            <div style={{ fontSize: '.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--muted)', marginBottom: '10px', fontFamily: "'JetBrains Mono', monospace" }}>📋 Key Operational Facts (BSE StAR)</div>
+            {(masterRec.purchaseAllowed === false || masterRec.redemptionAllowed === false) && (
+              <div style={{ fontSize: '.68rem', fontWeight: 700, color: '#d32f2f', background: 'rgba(211,47,47,0.08)', border: '1px solid rgba(211,47,47,0.2)', borderRadius: '6px', padding: '6px 10px', marginBottom: '10px' }}>
+                ⚠️ {masterRec.purchaseAllowed === false && masterRec.redemptionAllowed === false ? 'Currently not accepting fresh purchases or redemptions via BSE' : masterRec.purchaseAllowed === false ? 'Currently not accepting fresh purchases via BSE' : 'Currently not accepting redemptions via BSE'}
+              </div>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '10px' }}>
+              <div><div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🕒 Daily NAV Cutoff</div><div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)' }}>{masterRec.redeemCutoff || masterRec.purchaseCutoff || masterRec.cutoff || '—'}</div></div>
+              <div><div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🏦 Settlement Cycle</div><div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)' }}>{masterRec.settlement ? `${masterRec.settlement} Business Days` : '—'}</div></div>
+              <div><div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>💰 Min Lumpsum</div><div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)' }}>{masterRec.minPurchase != null ? `₹${masterRec.minPurchase.toLocaleString('en-IN')}` : '—'}</div></div>
+              <div><div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🏢 RTA Servicer</div><div style={{ fontSize: '.78rem', fontWeight: 700, color: masterRec.rta === 'CAMS' ? '#1565c0' : masterRec.rta === 'KFINTECH' ? '#6a1b9a' : 'var(--text)' }}>{masterRec.rta || '—'}</div></div>
+            </div>
+            {masterRec.exitLoadText && (
+              <div style={{ marginBottom: '10px' }}>
+                <div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🚪 Exit Load {masterRec.exitLoadConfidence === 'low' && '(needs review)'}</div>
+                {masterRec.exitLoadConfidence === 'high' && Array.isArray(masterRec.exitLoadTiers) ? (
+                  <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)' }}>
+                    {masterRec.exitLoadTiers.length === 0 ? '0% (No Load)' : masterRec.exitLoadTiers.map(t => `${(t.rate * 100).toFixed(2).replace(/\.00$/, '')}% (<${Math.round(t.days / 30.44)}mo)`).join(' / ')}
+                    {masterRec.exitLoadFreePercent ? ` · ${masterRec.exitLoadFreePercent}% free` : ''}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '.72rem', fontWeight: 600, color: 'var(--muted)', fontStyle: 'italic' }}>{masterRec.exitLoadText}</div>
+                )}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {masterRec.swp === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>SWP Eligible</span>}
+              {masterRec.sip === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>SIP Available</span>}
+              {masterRec.switchAllowed === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>Switch Available</span>}
+              {masterRec.divReinvest === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>IDCW Reinvestment</span>}
+              <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>Demat &amp; SOA</span>
+            </div>
+          </div>
+        );
+      })()}
+
+      <div className="scr-drawer-cta">
+        <a className="scr-btn primary" href={`/fund/${f.code}`} target="_blank" rel="noreferrer">📄 Full Fund Report →</a>
+        <a className="scr-btn" href={backtestLink(f)}>⚗ Backtest this fund</a>
+        <a className="scr-btn" href="/rolling">📉 Rolling returns</a>
+      </div>
+    </>
+  );
+}
+
 // ---------- Mutual Fund detail drawer ----------
 export function FundDetailDrawer({ code, onClose }) {
   const [state, setState] = useState({ loading: true, error: false, fund: null, stress: null, holdings: null });
@@ -121,14 +273,16 @@ export function FundDetailDrawer({ code, onClose }) {
   const stress = state.stress;
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <div className="scr-drawer-wrap" onMouseDown={onClose}>
+    <div className="scr-drawer-wrap" onMouseDown={onClose}>
       <div className="scr-drawer" onMouseDown={(e) => e.stopPropagation()} role="dialog">
         {state.loading ? (
-          <div className="scr-spark-load">Loading fund details…</div>
+          <>
+            <style dangerouslySetInnerHTML={{ __html: CSS }} />
+            <div className="scr-spark-load">Loading fund details…</div>
+          </>
         ) : state.error || !f ? (
           <>
+            <style dangerouslySetInnerHTML={{ __html: CSS }} />
             <div className="scr-drawer-h">
               <div className="scr-drawer-name">Fund details unavailable</div>
               <button className="scr-x" onClick={onClose} aria-label="Close">×</button>
@@ -136,148 +290,10 @@ export function FundDetailDrawer({ code, onClose }) {
             <div className="scr-warn">We couldn't load details for this fund right now.</div>
           </>
         ) : (
-          <>
-            <div className="scr-drawer-h">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                <ProviderAvatar name={f.amc} logoPath={getMFLogo(f.amc)} size={36} radius={8} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="scr-drawer-name">{f.name}</div>
-                  <div className="scr-drawer-tags"><span className="scr-tag">{f.amc}</span><span className="scr-tag alt">{shortCat(f.category)}</span><span className="scr-tag alt">{f.structure}</span></div>
-                </div>
-              </div>
-              <button className="scr-x" onClick={onClose} aria-label="Close">×</button>
-            </div>
-            {f.flag === 'check' && <div className="scr-warn">⚠ One or more returns look unusual for this fund — we're reviewing the source NAV. Treat with caution.</div>}
-            {stress && stress.days_50pct > 20 && (
-              <div className="scr-warn" style={{ backgroundColor: 'rgba(211, 47, 47, 0.08)', border: '1px solid rgba(211, 47, 47, 0.2)', color: '#d32f2f' }}>
-                ⚠️ <b>Liquidity Alert:</b> This fund takes <b>{stress.days_50pct} days</b> to liquidate 50% of its portfolio under stress. High redemption volume could significantly impact portfolio values.
-              </div>
-            )}
-
-            {!nav ? (
-              <div className="scr-spark-load">Loading NAV history…</div>
-            ) : nav.length < 2 ? null : (
-              <CompareGrowthChart series={[{ name: f.name, color: nav[nav.length - 1].v >= nav[0].v ? '#2e7d32' : '#b71c1c', data: nav }]} showLegend={false} />
-            )}
-
-            <div className="scr-drawer-kpis">
-              {[['1Y', f.ret_1y, '%'], ['3Y', f.ret_3y, '%'], ['5Y', f.ret_5y, '%'], ['Since inception', f.ret_inception, '%'], ['Volatility', f.vol, '%'], ['Max drawdown', f.max_dd, '%'], ['Return / risk', f.ret_per_risk, '']].map(([l, v, u]) => (
-                <div className="scr-dk" key={l}><span>{l}</span><b className={u === '%' && l.includes('draw') ? 'scr-neg' : cls(typeof v === 'number' ? v : null)}>{v == null ? '—' : (u === '%' ? (v > 0 && !l.includes('draw') && !l.includes('Vol') ? '+' : '') + v.toFixed(1) + '%' : v.toFixed(2))}</b></div>
-              ))}
-            </div>
-
-            {stress && (
-              <div className="scr-stress-section">
-                <div className="scr-stress-title">💧 Liquidity &amp; Stress Test Analysis</div>
-                <div className="scr-stress-month">Data as of {formatMonth(stress.month)}</div>
-                <div className="scr-stress-liquidity-grid">
-                  <div className="scr-stress-liq-card">
-                    <div className="scr-liq-label">Days to Liquidate 50%</div>
-                    <div className="scr-liq-val">{stress.days_50pct} days</div>
-                    <div className="scr-liq-meter"><div className="scr-liq-meter-fill" style={{ width: `${Math.min(100, (stress.days_50pct / 30) * 100)}%`, backgroundColor: getLiquidityColor(stress.days_50pct) }}></div></div>
-                  </div>
-                  <div className="scr-stress-liq-card">
-                    <div className="scr-liq-label">Days to Liquidate 25%</div>
-                    <div className="scr-liq-val">{stress.days_25pct} days</div>
-                    <div className="scr-liq-meter"><div className="scr-liq-meter-fill" style={{ width: `${Math.min(100, (stress.days_25pct / 15) * 100)}%`, backgroundColor: getLiquidityColor(stress.days_25pct * 2) }}></div></div>
-                  </div>
-                </div>
-                {stress.days_50pct >= 15 && stress.days_50pct <= 20 && (
-                  <div className="scr-warn-liquidity">⚠️ <b>Moderate Liquidity Risk:</b> Takes {stress.days_50pct} days to liquidate half of the portfolio under stress conditions.</div>
-                )}
-                <div className="scr-stress-kpis" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '12px' }}>
-                  <div className="scr-dk"><span>Top 10 Investors</span><b>{stress.top10_investors_pct ? `${stress.top10_investors_pct}%` : '—'}</b></div>
-                  <div className="scr-dk"><span>Turnover Ratio</span><b>{stress.turnover_ratio ? `${stress.turnover_ratio}%` : '—'}</b></div>
-                  <div className="scr-dk"><span>Portfolio Beta</span><b>{stress.beta ? stress.beta.toFixed(2) : '—'}</b></div>
-                </div>
-                <div className="scr-allocation-card">
-                  <div className="scr-alloc-title">Asset Allocation Breakdown</div>
-                  <div className="scr-alloc-bars">
-                    <div className="scr-alloc-item"><div className="scr-alloc-lbl">Large Cap ({stress.large_cap_pct}%)</div><div className="scr-alloc-bar-bg"><div className="scr-alloc-bar-fill large-cap" style={{ width: `${stress.large_cap_pct}%` }}></div></div></div>
-                    <div className="scr-alloc-item"><div className="scr-alloc-lbl">Mid Cap ({stress.mid_cap_pct}%)</div><div className="scr-alloc-bar-bg"><div className="scr-alloc-bar-fill mid-cap" style={{ width: `${stress.mid_cap_pct}%` }}></div></div></div>
-                    <div className="scr-alloc-item"><div className="scr-alloc-lbl">Small Cap ({stress.small_cap_pct}%)</div><div className="scr-alloc-bar-bg"><div className="scr-alloc-bar-fill small-cap" style={{ width: `${stress.small_cap_pct}%` }}></div></div></div>
-                    <div className="scr-alloc-item"><div className="scr-alloc-lbl">Cash ({stress.cash_pct}%)</div><div className="scr-alloc-bar-bg"><div className="scr-alloc-bar-fill cash" style={{ width: `${stress.cash_pct}%` }}></div></div></div>
-                  </div>
-                </div>
-                <div className="scr-valuation-card">
-                  <div className="scr-alloc-title">PE Valuation vs Benchmark</div>
-                  <div className="scr-pe-grid">
-                    <div className="scr-pe-item"><div className="scr-pe-label">Portfolio PE</div><div className="scr-pe-val">{stress.pe_portfolio ? stress.pe_portfolio.toFixed(1) : '—'}</div></div>
-                    <div className="scr-pe-item"><div className="scr-pe-label">Benchmark PE</div><div className="scr-pe-val">{stress.pe_benchmark ? stress.pe_benchmark.toFixed(1) : '—'}</div></div>
-                  </div>
-                  {stress.pe_benchmark_1ya && (
-                    <div className="scr-pe-history">Benchmark PE: 1Y ago <b>{stress.pe_benchmark_1ya.toFixed(1)}</b> {stress.pe_benchmark_2ya && <>| 2Y ago <b>{stress.pe_benchmark_2ya.toFixed(1)}</b></>}</div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <HoldingsSection holdingsData={state.holdings} loading={state.loading} schemeName={f.name} />
-
-            <div className="scr-drawer-meta">
-              <span>Latest NAV ₹{f.nav}</span>
-              {f.aumCr != null && <span>AUM ₹{Number(f.aumCr).toLocaleString('en-IN', { maximumFractionDigits: 0 })} Cr</span>}
-              {f.inception_date && <span>Since {new Date(f.inception_date + 'T00:00:00Z').toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span>}
-              <span>Age ~{f.age_years ?? '—'} yrs</span>
-              <span>as of {f.asof}</span>
-            </div>
-
-            {(() => {
-              if (!schemeFacts) return null;
-              const masterRec = (f.isin && schemeFacts.byIsin?.[f.isin]) ||
-                (f.code && schemeFacts.byAmfiCode?.[f.code]) || (() => {
-                  const norm = normalizeSchemeName(f.name);
-                  return norm ? schemeFacts.byNormName?.[norm] : null;
-                })();
-              if (!masterRec) return null;
-              return (
-                <div style={{ margin: '14px 0', padding: '14px 16px', background: 'var(--s2)', borderRadius: '12px', border: '1.5px solid var(--border)' }}>
-                  <div style={{ fontSize: '.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--muted)', marginBottom: '10px', fontFamily: "'JetBrains Mono', monospace" }}>📋 Key Operational Facts (BSE StAR)</div>
-                  {(masterRec.purchaseAllowed === false || masterRec.redemptionAllowed === false) && (
-                    <div style={{ fontSize: '.68rem', fontWeight: 700, color: '#d32f2f', background: 'rgba(211,47,47,0.08)', border: '1px solid rgba(211,47,47,0.2)', borderRadius: '6px', padding: '6px 10px', marginBottom: '10px' }}>
-                      ⚠️ {masterRec.purchaseAllowed === false && masterRec.redemptionAllowed === false ? 'Currently not accepting fresh purchases or redemptions via BSE' : masterRec.purchaseAllowed === false ? 'Currently not accepting fresh purchases via BSE' : 'Currently not accepting redemptions via BSE'}
-                    </div>
-                  )}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '10px' }}>
-                    <div><div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🕒 Daily NAV Cutoff</div><div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)' }}>{masterRec.redeemCutoff || masterRec.purchaseCutoff || masterRec.cutoff || '—'}</div></div>
-                    <div><div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🏦 Settlement Cycle</div><div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)' }}>{masterRec.settlement ? `${masterRec.settlement} Business Days` : '—'}</div></div>
-                    <div><div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>💰 Min Lumpsum</div><div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)' }}>{masterRec.minPurchase != null ? `₹${masterRec.minPurchase.toLocaleString('en-IN')}` : '—'}</div></div>
-                    <div><div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🏢 RTA Servicer</div><div style={{ fontSize: '.78rem', fontWeight: 700, color: masterRec.rta === 'CAMS' ? '#1565c0' : masterRec.rta === 'KFINTECH' ? '#6a1b9a' : 'var(--text)' }}>{masterRec.rta || '—'}</div></div>
-                  </div>
-                  {masterRec.exitLoadText && (
-                    <div style={{ marginBottom: '10px' }}>
-                      <div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🚪 Exit Load {masterRec.exitLoadConfidence === 'low' && '(needs review)'}</div>
-                      {masterRec.exitLoadConfidence === 'high' && Array.isArray(masterRec.exitLoadTiers) ? (
-                        <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)' }}>
-                          {masterRec.exitLoadTiers.length === 0 ? '0% (No Load)' : masterRec.exitLoadTiers.map(t => `${(t.rate * 100).toFixed(2).replace(/\.00$/, '')}% (<${Math.round(t.days / 30.44)}mo)`).join(' / ')}
-                          {masterRec.exitLoadFreePercent ? ` · ${masterRec.exitLoadFreePercent}% free` : ''}
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '.72rem', fontWeight: 600, color: 'var(--muted)', fontStyle: 'italic' }}>{masterRec.exitLoadText}</div>
-                      )}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {masterRec.swp === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>SWP Eligible</span>}
-                    {masterRec.sip === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>SIP Available</span>}
-                    {masterRec.switchAllowed === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>Switch Available</span>}
-                    {masterRec.divReinvest === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>IDCW Reinvestment</span>}
-                    <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--s3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>Demat &amp; SOA</span>
-                  </div>
-                </div>
-              );
-            })()}
-
-            <div className="scr-drawer-cta">
-              <a className="scr-btn primary" href={`/fund/${f.code}`} target="_blank" rel="noreferrer">📄 Full Fund Report →</a>
-              <a className="scr-btn" href={backtestLink(f)}>⚗ Backtest this fund</a>
-              <a className="scr-btn" href="/rolling">📉 Rolling returns</a>
-            </div>
-          </>
+          <FundDetailPanel f={f} stress={stress} holdings={state.holdings} nav={nav} schemeFacts={schemeFacts} onClose={onClose} />
         )}
       </div>
     </div>
-    </>
   );
 }
 
