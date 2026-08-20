@@ -77,15 +77,17 @@ function parseUniverse(txt) {
     }
     // AMFI added dedicated Plan/Option columns (confirmed Aug 2026), pushing
     // NAV from index 4 -> 6 and Date from index 5 -> 7. Old 6-field rows no
-    // longer occur, so require the full 8-field layout.
+    // longer occur, so require the full 8-field layout. AMFI *also* dropped
+    // the "- Regular Plan-Growth" suffix that used to be embedded in the
+    // scheme name (confirmed live later the same day) -- Plan/Option are now
+    // the only reliable signal, so filter on those columns directly instead
+    // of pattern-matching the name (which no longer carries this info at all).
     const p = line.split(";"); if (p.length < 8) continue;
     const name = p[3].replace(/\s+/g, " ").trim();
-    if (!/growth/i.test(name)) continue;
-    if (/direct/i.test(name)) continue;
-
-    const isDivYield = /dividend yield/i.test(cat);
-    if (/(idcw|payout|re-?invest|bonus|segregated)\b/i.test(name)) continue;
-    if (!isDivYield && /\bdividend\b/i.test(name)) continue;
+    const plan = (p[4] || "").trim();
+    const option = (p[5] || "").trim();
+    if (!/regular/i.test(plan)) continue;
+    if (!/growth/i.test(option)) continue;
 
     const nav = +p[6]; if (!isFinite(nav) || nav <= 0) continue;
     out.set(p[0], { code: p[0], name, amc, cat, structure, nav, navDate: pd(p[7]), isin: p[1].trim() });
