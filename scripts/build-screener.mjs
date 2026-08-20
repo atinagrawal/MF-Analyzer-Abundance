@@ -335,6 +335,18 @@ async function main() {
   }
   rows.sort((a, b) => (b.ret_3y ?? -999) - (a.ret_3y ?? -999));
 
+  // Safety guard: a transient AMFI NAVAll.txt hiccup can make parseUniverse()
+  // return an empty/near-empty set. Without this check the script would still
+  // exit 0 after DELETE-ing and committing nothing, silently wiping yesterday's
+  // good data. The real universe is 2,500+ funds -- 500 is a floor well below
+  // any legitimate day's count but well above a failed-fetch count of ~0.
+  const MIN_EXPECTED_ROWS = 500;
+  if (rows.length < MIN_EXPECTED_ROWS) {
+    console.error(`[screener] ABORTING: only built ${rows.length} rows (expected >= ${MIN_EXPECTED_ROWS}). Leaving existing mf_screener/screener.json untouched -- likely a transient AMFI fetch failure, not a real universe shrink.`);
+    if (c) await c.end();
+    process.exit(1);
+  }
+
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify({ asof: fmt(now), count: rows.length, funds: rows }));
   console.log(`[screener] wrote ${rows.length} funds -> ${OUT}`);

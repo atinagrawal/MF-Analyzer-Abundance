@@ -228,6 +228,17 @@ async function main() {
     return;
   }
 
+  // Safety guard: a transient upstream fetch hiccup can make `results` come
+  // back empty/near-empty. Without this check the script would still exit 0
+  // after DELETE-ing and committing nothing, silently wiping yesterday's good
+  // data. The real universe is ~50-60 SIF schemes -- 15 is a floor well below
+  // any legitimate day's count but well above a failed-fetch count of ~0.
+  const MIN_EXPECTED_ROWS = 15;
+  if (rows.length < MIN_EXPECTED_ROWS) {
+    console.error(`[sif-screener] ABORTING: only built ${rows.length} rows (expected >= ${MIN_EXPECTED_ROWS}). Leaving existing sif_screener untouched -- likely a transient fetch failure, not a real universe shrink.`);
+    process.exit(1);
+  }
+
   const c = new pg.Client({ connectionString: process.env.POSTGRES_URL, ssl: { rejectUnauthorized: false } });
   await c.connect();
 
