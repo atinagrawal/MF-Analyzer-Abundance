@@ -58,6 +58,8 @@ const fmtDate = d =>
     : '—';
 
 const SORT_OPTIONS = [
+  { value: 'aum_desc', label: 'AUM: High → Low' },
+  { value: 'aum_asc',  label: 'AUM: Low → High' },
   { value: 'nav_desc', label: 'NAV: High → Low' },
   { value: 'nav_asc',  label: 'NAV: Low → High' },
   { value: 'name_asc', label: 'Name: A → Z' },
@@ -607,7 +609,7 @@ export default function SifScreener({ initialData }) {
   const [filterFam,  setFilterFam]  = useState('all');
   const [filterSif,  setFilterSif]  = useState('all'); // SIF company (sif_name)
   const [filterCat,  setFilterCat]  = useState('all'); // Full strategy category
-  const [sortBy,     setSortBy]     = useState('nav_desc');
+  const [sortBy,     setSortBy]     = useState('aum_desc');
   const [view,       setView]       = useState('grid'); // 'grid' | 'list'
   const [watchlist,  setWatchlist]  = useState(new Set());
   const [showWatchOnly, setShowWatchOnly] = useState(false);
@@ -699,6 +701,13 @@ export default function SifScreener({ initialData }) {
     if (filterCat  !== 'all')  list = list.filter(s => s.category === filterCat);
 
     return [...list].sort((a, b) => {
+      if (sortBy === 'aum_desc' || sortBy === 'aum_asc') {
+        // Schemes with no AUM data sort to the bottom regardless of direction.
+        if (a.aumCr == null && b.aumCr == null) return 0;
+        if (a.aumCr == null) return 1;
+        if (b.aumCr == null) return -1;
+        return sortBy === 'aum_desc' ? b.aumCr - a.aumCr : a.aumCr - b.aumCr;
+      }
       if (sortBy === 'nav_desc')  return b.nav - a.nav;
       if (sortBy === 'nav_asc')   return a.nav - b.nav;
       if (sortBy === 'name_asc')  return a.nav_name.localeCompare(b.nav_name);
