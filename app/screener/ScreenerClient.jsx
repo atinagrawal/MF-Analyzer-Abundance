@@ -6,14 +6,11 @@ import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
 import { MFCompareBar, MFCompareModal } from './MFCompare';
-import CompareGrowthChart from './CompareGrowthChart';
-import HoldingsSection from './HoldingsSection';
 import { FundDetailPanel, SifDetailPanel } from '@/components/HoldingDetailDrawer';
 import { useRouter } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import { startCheckout } from '@/lib/checkoutClient';
 import { shortCat, FAQ_ITEMS, GLOSSARY_ITEMS, CURATED_CATEGORIES, categoryToSlug, matchCategory, normalizeCategory } from './screenerContent';
-import { normalizeSchemeName } from '@/lib/normalizeSchemeName';
 
 // Slim, server-fetched projection of data/isin-scheme-master.json (see
 // app/api/scheme-master-facts/route.js) — fetched once and cached across
@@ -91,27 +88,6 @@ function pickDefaultSifReturnCols(schemes, count = 3) {
   return picked.sort((a, b) => SIF_COL_PERIODS_ASC.indexOf(a) - SIF_COL_PERIODS_ASC.indexOf(b));
 }
 
-function backtestSifLink(s) {
-  try {
-    const state = { v: 1, h: [{ k: 'sif', i: s.scheme_id, n: s.nav_name, c: sifStratShort(s.category), m: 'sip', mo: 10000, l: 100000, sm: 'default', cs: '' }], sd: 1, smo: 'lookback', lb: '3', sdt: '', su: 0, st: 0, bo: 0, b: null };
-    const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(state)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    return `/backtest?p=${b64}`;
-  } catch (e) { return '/backtest'; }
-}
-
-/* ---------- stress test helpers ---------- */
-function formatMonth(dateStr) {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-}
-function getLiquidityColor(days) {
-  if (days <= 5) return '#2e7d32'; // Green
-  if (days <= 10) return '#4caf50'; // Light Green
-  if (days <= 15) return '#ff9800'; // Orange
-  return '#d32f2f'; // Red
-}
-
 /* ---------- helpers ---------- */
 const pctTxt = (v) => (v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%');
 const numTxt = (v, d = 1) => (v == null ? '—' : v.toFixed(d));
@@ -123,15 +99,6 @@ function assetClass(cat = '') {
   if (/index|etf|fof|fund of fund/i.test(cat)) return 'Index / FoF';
   if (/debt|income|liquid|gilt|bond|overnight|duration|money market|psu|credit|floater/i.test(cat)) return 'Debt';
   return 'Other';
-}
-
-// mirror of the Backtester ?p= encoder so a fund opens pre-loaded there
-function backtestLink(f) {
-  try {
-    const state = { v: 1, h: [{ k: 'mf', i: f.code, n: f.name, c: f.category, m: 'sip', mo: 10000, l: 100000, sm: 'default', cs: '' }], sd: 1, smo: 'lookback', lb: '10', sdt: '', su: 0, st: 1, bo: 0, b: null };
-    const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(state)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    return `/backtest?p=${b64}`;
-  } catch (e) { return '/backtest'; }
 }
 
 // All metric columns. kind controls formatting: ret/abs = % return, risk = vol%,
@@ -899,7 +866,6 @@ function Detail({ f, stress, onClose }) {
     return () => { alive = false; window.removeEventListener('keydown', onKey); };
   }, [f, onClose]);
 
-  const M = [['1Y', f.ret_1y, '%'], ['3Y', f.ret_3y, '%'], ['5Y', f.ret_5y, '%'], ['Since inception', f.ret_inception, '%'], ['Volatility', f.vol, '%'], ['Max drawdown', f.max_dd, '%'], ['Return / risk', f.ret_per_risk, '']];
   return (
     <div className="scr-drawer-wrap" onMouseDown={onClose}>
       <div className="scr-drawer" onMouseDown={(e) => e.stopPropagation()} role="dialog">
@@ -972,12 +938,6 @@ const CSS = `
 .scr-chip-sif{border-color:#5e35b133;color:#7c4dff!important}
 .scr-chip-sif:hover{border-color:#7c4dff!important}
 .scr-chip-sif.on{background:linear-gradient(135deg,#5e35b1,#7c4dff)!important;color:#fff!important;border-color:#5e35b1!important}
-/* SIF strategy badges */
-.scr-sif-badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font:700 11px JetBrains Mono,monospace;white-space:nowrap}
-.scr-sif-badge-equity{background:rgba(27,94,32,.12);color:var(--g1)}
-.scr-sif-badge-hybrid{background:rgba(94,53,177,.10);color:#5e35b1}
-/* SIF notice */
-.scr-sif-notice{background:rgba(94,53,177,.08);border:1px solid rgba(94,53,177,.2);border-radius:8px;padding:9px 12px;font-size:12px;color:#7c4dff;margin-bottom:14px}
 .scr-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
 .scr-search{flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font:500 14px Raleway,sans-serif;background:var(--surface);color:var(--text)}
 .scr-search:focus{outline:none;border-color:var(--g3);box-shadow:0 0 0 3px var(--g-xlight)}
@@ -1079,36 +1039,20 @@ const CSS = `
 .scr-faq-group-h{font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
 h2 + .scr-faq-group-h{margin-top:0}
 
-/* drawer */
+/* drawer wrap/panel -- still used by Detail/SifDetail as the overlay+slide-in
+   shell around FundDetailPanel/SifDetailPanel; scrfade/scrup are also
+   reused by .scr-pro-modal-wrap/.scr-pro-modal below */
 .scr-drawer-wrap{position:fixed;inset:0;background:#0d260d55;backdrop-filter:blur(3px);z-index:10000;display:flex;justify-content:flex-end;animation:scrfade .2s ease}
 .scr-drawer{background:var(--surface);width:460px;max-width:100%;height:100%;overflow-y:auto;box-shadow:var(--shadow-lg);padding:22px;animation:scrslide .28s cubic-bezier(.2,.7,.3,1)}
 @keyframes scrfade{from{opacity:0}to{opacity:1}}
 @keyframes scrslide{from{transform:translateX(40px);opacity:.4}to{transform:none;opacity:1}}
 @keyframes scrup{from{transform:translateY(60px);opacity:.5}to{transform:none;opacity:1}}
-.scr-drawer-h{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:14px}
-.scr-drawer-name{font-size:16px;font-weight:800;color:var(--text);line-height:1.3}
-.scr-drawer-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
-.scr-tag{font:700 10px JetBrains Mono,monospace;background:var(--g-xlight);color:var(--g1);padding:3px 8px;border-radius:5px}
-.scr-tag.alt{background:var(--s3,#eef5ee);color:var(--text2)}
-.scr-x{width:34px;height:34px;border:1px solid var(--border);background:var(--surface);border-radius:9px;font-size:20px;color:var(--muted);cursor:pointer;flex:none}
-.scr-warn{background:var(--warn-bg,#fff3e0);border:1px solid #ffcc80;color:#8a4300;padding:9px 12px;border-radius:8px;font-size:12px;margin-bottom:14px}
-.scr-spark-load{font:500 11px JetBrains Mono,monospace;color:var(--muted);margin-top:5px;padding:34px 0;text-align:center}
-.scr-drawer-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-.scr-dk{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:9px 10px;display:flex;flex-direction:column;gap:3px}
-.scr-dk span{font:600 9.5px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase}
-.scr-dk b{font:800 16px JetBrains Mono,monospace;color:var(--text)}
-.scr-drawer-meta{display:flex;flex-wrap:wrap;gap:12px;font:600 11px JetBrains Mono,monospace;color:var(--muted);border-top:1px solid var(--border);padding-top:12px;margin-bottom:16px}
-.scr-drawer-cta{display:flex;gap:10px;flex-wrap:wrap}
-.scr-btn{flex:1;text-align:center;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:800 13px Raleway,sans-serif;text-decoration:none;white-space:nowrap}
-.scr-btn.primary{background:var(--g1);color:#fff;border-color:var(--g1)}
-.scr-btn:hover{transform:translateY(-1px)}
 @media(max-width:560px){
   .scr-drawer-wrap{justify-content:center;align-items:flex-end}
   .scr-drawer{width:100%;height:auto;max-height:90vh;border-radius:18px 18px 0 0;animation:scrup .3s cubic-bezier(.2,.7,.3,1)}
-  .scr-drawer-kpis{grid-template-columns:repeat(2,1fr)}
   .scr-select{max-width:100%;flex:1}
 }
-@media (prefers-reduced-motion: reduce){ .scr-drawer,.scr-drawer-wrap{animation:none} .scr-btn:hover{transform:none} }
+@media (prefers-reduced-motion: reduce){ .scr-drawer,.scr-drawer-wrap{animation:none} }
 
 /* Table liquidity badge styles */
 .scr-table-liq-badge {
@@ -1273,172 +1217,6 @@ h2 + .scr-faq-group-h{margin-top:0}
 .scr-explainer b{color:var(--g1)}
 .scr-faq-group-h{font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
 h2 + .scr-faq-group-h{margin-top:0}
-
-/* drawer */
-.scr-drawer-wrap{position:fixed;inset:0;background:#0d260d55;backdrop-filter:blur(3px);z-index:10000;display:flex;justify-content:flex-end;animation:scrfade .2s ease}
-.scr-drawer{background:var(--surface);width:460px;max-width:100%;height:100%;overflow-y:auto;box-shadow:var(--shadow-lg);padding:22px;animation:scrslide .28s cubic-bezier(.2,.7,.3,1)}
-@keyframes scrfade{from{opacity:0}to{opacity:1}}
-@keyframes scrslide{from{transform:translateX(40px);opacity:.4}to{transform:none;opacity:1}}
-@keyframes scrup{from{transform:translateY(60px);opacity:.5}to{transform:none;opacity:1}}
-.scr-drawer-h{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:14px}
-.scr-drawer-name{font-size:16px;font-weight:800;color:var(--text);line-height:1.3}
-.scr-drawer-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
-.scr-tag{font:700 10px JetBrains Mono,monospace;background:var(--g-xlight);color:var(--g1);padding:3px 8px;border-radius:5px}
-.scr-tag.alt{background:var(--s3,#eef5ee);color:var(--text2)}
-.scr-x{width:34px;height:34px;border:1px solid var(--border);background:var(--surface);border-radius:9px;font-size:20px;color:var(--muted);cursor:pointer;flex:none}
-.scr-warn{background:var(--warn-bg,#fff3e0);border:1px solid #ffcc80;color:#8a4300;padding:9px 12px;border-radius:8px;font-size:12px;margin-bottom:14px}
-.scr-spark-load{font:500 11px JetBrains Mono,monospace;color:var(--muted);margin-top:5px;padding:34px 0;text-align:center}
-.scr-drawer-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-.scr-dk{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:9px 10px;display:flex;flex-direction:column;gap:3px}
-.scr-dk span{font:600 9.5px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase}
-.scr-dk b{font:800 16px JetBrains Mono,monospace;color:var(--text)}
-.scr-drawer-meta{display:flex;flex-wrap:wrap;gap:12px;font:600 11px JetBrains Mono,monospace;color:var(--muted);border-top:1px solid var(--border);padding-top:12px;margin-bottom:16px}
-.scr-drawer-cta{display:flex;gap:10px;flex-wrap:wrap}
-.scr-btn{flex:1;text-align:center;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:800 13px Raleway,sans-serif;text-decoration:none;white-space:nowrap}
-.scr-btn.primary{background:var(--g1);color:#fff;border-color:var(--g1)}
-.scr-btn:hover{transform:translateY(-1px)}
-@media(max-width:560px){
-  .scr-drawer-wrap{justify-content:center;align-items:flex-end}
-  .scr-drawer{width:100%;height:auto;max-height:90vh;border-radius:18px 18px 0 0;animation:scrup .3s cubic-bezier(.2,.7,.3,1)}
-  .scr-drawer-kpis{grid-template-columns:repeat(2,1fr)}
-  .scr-select{max-width:100%;flex:1}
-}
-@media (prefers-reduced-motion: reduce){ .scr-drawer,.scr-drawer-wrap{animation:none} .scr-btn:hover{transform:none} }
-
-/* Table liquidity badge styles */
-.scr-table-liq-badge {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 4px;
-  padding: 1px 5px;
-  font: 700 9px JetBrains Mono, monospace;
-  margin-left: 6px;
-  vertical-align: middle;
-}
-.scr-table-liq-green {
-  background: rgba(46, 125, 50, 0.08);
-  color: #2e7d32;
-  border: 1px solid rgba(46, 125, 50, 0.15);
-}
-.scr-table-liq-amber {
-  background: rgba(230, 81, 0, 0.08);
-  color: #e65100;
-  border: 1px solid rgba(230, 81, 0, 0.15);
-}
-.scr-table-liq-red {
-  background: rgba(211, 47, 47, 0.08);
-  color: #d32f2f;
-  border: 1px solid rgba(211, 47, 47, 0.15);
-}
-
-/* Stress test section in drawer */
-.scr-stress-section {
-  border-top: 1px solid var(--border);
-  padding-top: 16px;
-  margin-top: 16px;
-}
-.scr-stress-title {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--text);
-  margin-bottom: 4px;
-}
-.scr-stress-month {
-  font: 500 11px JetBrains Mono, monospace;
-  color: var(--muted);
-  margin-bottom: 12px;
-}
-.scr-stress-liquidity-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.scr-stress-liq-card {
-  background: var(--s2);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.scr-liq-label {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-.scr-liq-val {
-  font: 800 18px JetBrains Mono, monospace;
-  color: var(--text);
-}
-.scr-liq-meter {
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 2px;
-}
-.scr-liq-meter-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-.scr-warn-liquidity {
-  background: rgba(230, 81, 0, 0.08);
-  border: 1px solid rgba(230, 81, 0, 0.15);
-  color: #e65100;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 11px;
-  margin-bottom: 12px;
-  line-height: 1.4;
-}
-.scr-allocation-card, .scr-valuation-card {
-  background: var(--s2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-.scr-alloc-title {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 10px;
-  letter-spacing: 0.03em;
-}
-.scr-alloc-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.scr-alloc-item {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.scr-alloc-lbl {
-  font: 600 10.5px JetBrains Mono, monospace;
-  color: var(--text2);
-}
-.scr-alloc-bar-bg {
-  height: 6px;
-  background: var(--border);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.scr-alloc-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-}
-.scr-alloc-bar-fill.large-cap { background: #1b5e20; }
-.scr-alloc-bar-fill.mid-cap { background: #2e7d32; }
-.scr-alloc-bar-fill.small-cap { background: #e65100; }
-.scr-alloc-bar-fill.cash { background: #0288d1; }
 
 .scr-pe-grid {
   display: grid;
@@ -1746,10 +1524,9 @@ h2 + .scr-faq-group-h{margin-top:0}
   .scr-name,.scr-name-h{max-width:140px}
   .scr-drawer-wrap{justify-content:center;align-items:flex-end}
   .scr-drawer{width:100%;height:auto;max-height:90vh;border-radius:18px 18px 0 0;animation:scrup .3s cubic-bezier(.2,.7,.3,1)}
-  .scr-drawer-kpis{grid-template-columns:repeat(2,1fr)}
   .scr-select{max-width:100%;flex:1}
   .scr-hold-stock{max-width:120px}
   .scr-hold-table th,.scr-hold-table td{padding:6px 6px}
 }
-@media (prefers-reduced-motion: reduce){ .scr-drawer,.scr-drawer-wrap{animation:none} .scr-btn:hover{transform:none} }
+@media (prefers-reduced-motion: reduce){ .scr-drawer,.scr-drawer-wrap{animation:none} }
 `;
