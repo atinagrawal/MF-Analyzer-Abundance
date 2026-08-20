@@ -61,10 +61,34 @@ async function fetchText(url, tries = 3) {
   throw new Error("fetch failed: " + url);
 }
 
+// AMFI has repeatedly reordered/renamed its report columns without notice
+// (twice in one day, Aug 2026) -- look columns up BY NAME in each report's
+// own header row instead of hardcoding positions, so a pure reorder needs
+// no code change. Each label is matched exact-then-substring (case
+// insensitive): substring survives AMFI renaming a label while keeping its
+// meaning (e.g. "NAV Name" -> "Scheme Name" -- both contain "name", so
+// requesting "Name" matches either). Throws loudly if a required column is
+// genuinely missing -- silently guessing a wrong index is worse than
+// failing the run, since that's how today's outage happened twice.
+function headerIndex(headerLine, required) {
+  const cols = headerLine.split(";").map((c) => c.trim());
+  const idx = {};
+  for (const name of required) {
+    let i = cols.findIndex((c) => c.toLowerCase() === name.toLowerCase());
+    if (i < 0) i = cols.findIndex((c) => c.toLowerCase().includes(name.toLowerCase()));
+    if (i < 0) throw new Error(`AMFI format change: column "${name}" not found in header: ${headerLine}`);
+    idx[name] = i;
+  }
+  return idx;
+}
+
 /* ---- 1. latest universe (Regular + Growth) ---- */
 function parseUniverse(txt) {
+  const lines = txt.split("\n");
+  const H = headerIndex(lines[0].replace(/\r$/, ""), ["Scheme Code", "Name", "Plan", "Option", "ISIN", "Net Asset Value", "Date"]);
+  const maxIdx = Math.max(...Object.values(H));
   const out = new Map(); let cat = null, structure = null, amc = null;
-  for (const raw of txt.split("\n")) {
+  for (const raw of lines) {
     const line = raw.replace(/\r$/, "").trim();
     if (!line || line.startsWith("Scheme Code;")) continue;
     if (!line.includes(";")) {
@@ -75,22 +99,19 @@ function parseUniverse(txt) {
       } else { amc = line.trim(); }
       continue;
     }
-    // AMFI added dedicated Plan/Option columns (confirmed Aug 2026), pushing
-    // NAV from index 4 -> 6 and Date from index 5 -> 7. Old 6-field rows no
-    // longer occur, so require the full 8-field layout. AMFI *also* dropped
-    // the "- Regular Plan-Growth" suffix that used to be embedded in the
-    // scheme name (confirmed live later the same day) -- Plan/Option are now
-    // the only reliable signal, so filter on those columns directly instead
-    // of pattern-matching the name (which no longer carries this info at all).
-    const p = line.split(";"); if (p.length < 8) continue;
-    const name = p[3].replace(/\s+/g, " ").trim();
-    const plan = (p[4] || "").trim();
-    const option = (p[5] || "").trim();
+    const p = line.split(";"); if (p.length <= maxIdx) continue;
+    // AMFI dropped the "- Regular Plan-Growth" suffix that used to be
+    // embedded in the scheme name (confirmed live Aug 2026) -- Plan/Option
+    // are the only reliable signal now, not the name text.
+    const name = (p[H.Name] || "").replace(/\s+/g, " ").trim();
+    const plan = (p[H.Plan] || "").trim();
+    const option = (p[H.Option] || "").trim();
     if (!/regular/i.test(plan)) continue;
     if (!/growth/i.test(option)) continue;
 
-    const nav = +p[6]; if (!isFinite(nav) || nav <= 0) continue;
-    out.set(p[0], { code: p[0], name, amc, cat, structure, nav, navDate: pd(p[7]), isin: p[1].trim() });
+    const nav = +p[H["Net Asset Value"]]; if (!isFinite(nav) || nav <= 0) continue;
+    const code = p[H["Scheme Code"]];
+    out.set(code, { code, name, amc, cat, structure, nav, navDate: pd(p[H.Date]), isin: (p[H.ISIN] || "").trim() });
   }
   return out;
 }
@@ -99,14 +120,16 @@ function parseUniverse(txt) {
 async function navAsOf(anchorMs) {
   const to = anchorMs, from = anchorMs - 8 * 864e5;
   const txt = await fetchText(`https://portal.amfiindia.com/DownloadNAVHistoryReport_Po.aspx?frmdt=${fmt(from)}&todt=${fmt(to)}`);
+  const lines = txt.split("\n");
+  // This endpoint's column order differs from NAVAll.txt's (confirmed live
+  // Aug 2026) -- resolved by name independently, same as parseUniverse.
+  const H = headerIndex(lines[0].replace(/\r$/, ""), ["Scheme Code", "Net Asset Value", "Date"]);
+  const maxIdx = Math.max(...Object.values(H));
   const map = {};
-  for (const raw of txt.split("\n")) {
+  for (const raw of lines) {
     const line = raw.replace(/\r$/, ""); if (!line.includes(";")) continue;
-    const p = line.split(";"); if (p.length < 8) continue;
-    // Layout: Code;Name;Plan;Option;ISIN Payout/Growth;ISIN Reinvest;NAV;Date
-    // (confirmed live Aug 2026 -- different column order than NAVAll.txt's
-    // Code;ISIN1;ISIN2;Name;Plan;Option;NAV;Date, so don't assume they match)
-    const code = p[0], nav = +p[6], d = pd(p[7]);
+    const p = line.split(";"); if (p.length <= maxIdx) continue;
+    const code = p[H["Scheme Code"]], nav = +p[H["Net Asset Value"]], d = pd(p[H.Date]);
     if (!isFinite(nav) || nav <= 0 || !d || d > anchorMs) continue;
     if (!map[code] || d > map[code].d) map[code] = { nav, d };
   }
@@ -351,6 +374,19 @@ async function main() {
   const MIN_EXPECTED_ROWS = 500;
   if (rows.length < MIN_EXPECTED_ROWS) {
     console.error(`[screener] ABORTING: only built ${rows.length} rows (expected >= ${MIN_EXPECTED_ROWS}). Leaving existing mf_screener/screener.json untouched -- likely a transient AMFI fetch failure, not a real universe shrink.`);
+    if (c) await c.end();
+    process.exit(1);
+  }
+
+  // Second guard, different failure shape: the universe can parse fine while
+  // navAsOf() silently returns nothing (e.g. AMFI reordered THIS endpoint's
+  // columns too) -- that ships a full row count with every return/risk
+  // field null, which the row-count guard above can't see. Most funds are
+  // >1yr old, so a healthy run has the strong majority with a real 1Y return.
+  const MIN_RET_1Y_COVERAGE = 0.5;
+  const withRet1y = rows.filter((r) => r.ret_1y != null).length;
+  if (withRet1y / rows.length < MIN_RET_1Y_COVERAGE) {
+    console.error(`[screener] ABORTING: only ${withRet1y}/${rows.length} funds have a 1Y return (expected >= ${Math.round(MIN_RET_1Y_COVERAGE * 100)}%). navAsOf() likely broke silently -- leaving existing data untouched.`);
     if (c) await c.end();
     process.exit(1);
   }
