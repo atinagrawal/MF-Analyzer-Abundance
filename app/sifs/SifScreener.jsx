@@ -39,6 +39,12 @@ const STRATEGY_SHORT = cat => STRATEGY_LABELS[cat] || cat?.split(' - ')[1] || ca
 // name-based, same as AMFI's own scheme-naming convention.
 const isIdcwPlan = navName => /idcw|income distribution/i.test(navName || '');
 
+// Mirrors scripts/build-sif-screener.mjs's excludeIdcw() -- schemes
+// matching this are NOT in the sif_screener table, so /sif/[id] 404s
+// for them. Gates the "View Full SIF Page" link, distinct from the
+// growth-only display filter above.
+const isInSifScreener = navName => !/(idcw|payout|re-?invest|bonus|segregated)\b/i.test(navName || '');
+
 // ── Colour per strategy family ────────────────────────────────────────────────
 const FAMILY_STYLE = {
   Equity: { bg: 'rgba(27,94,32,.12)',  fg: 'var(--g1)' },
@@ -167,15 +173,17 @@ function SifCard({ scheme, watched, onToggleWatch, onViewHistory }) {
       >
         📈 View History
       </button>
-      <a
-        className="sif-hist-trigger"
-        href={`/sif/${scheme.scheme_id}`}
-        target="_blank"
-        rel="noreferrer"
-        style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: '6px' }}
-      >
-        📄 View Full SIF Page →
-      </a>
+      {isInSifScreener(scheme.nav_name) && (
+        <a
+          className="sif-hist-trigger"
+          href={`/sif/${scheme.scheme_id}`}
+          target="_blank"
+          rel="noreferrer"
+          style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: '6px' }}
+        >
+          📄 View Full SIF Page →
+        </a>
+      )}
     </div>
   );
 }
@@ -228,16 +236,18 @@ function SifRow({ scheme, watched, onToggleWatch, idx, onViewHistory }) {
         >
           📈
         </button>
-        <a
-          className="sif-hist-trigger-sm"
-          href={`/sif/${scheme.scheme_id}`}
-          target="_blank"
-          rel="noreferrer"
-          title="View full SIF page"
-          style={{ display: 'inline-flex', textDecoration: 'none' }}
-        >
-          📄
-        </a>
+        {isInSifScreener(scheme.nav_name) && (
+          <a
+            className="sif-hist-trigger-sm"
+            href={`/sif/${scheme.scheme_id}`}
+            target="_blank"
+            rel="noreferrer"
+            title="View full SIF page"
+            style={{ display: 'inline-flex', textDecoration: 'none' }}
+          >
+            📄
+          </a>
+        )}
       </td>
     </tr>
   );
@@ -421,14 +431,16 @@ function NavHistoryModal({ scheme, onClose }) {
             <div className="sif-hist-eyebrow">NAV History</div>
             <div className="sif-hist-title">{scheme.nav_name}</div>
             <div className="sif-hist-sub">{scheme.sif_name} · {scheme.scheme_id}</div>
-            <a
-              href={`/sif/${scheme.scheme_id}`}
-              target="_blank"
-              rel="noreferrer"
-              style={{ display: 'inline-block', marginTop: '6px', fontSize: '.75rem', color: 'rgba(255,255,255,.7)', textDecoration: 'underline' }}
-            >
-              View full SIF page →
-            </a>
+            {isInSifScreener(scheme.nav_name) && (
+              <a
+                href={`/sif/${scheme.scheme_id}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: 'inline-block', marginTop: '6px', fontSize: '.75rem', color: 'rgba(255,255,255,.7)', textDecoration: 'underline' }}
+              >
+                View full SIF page →
+              </a>
+            )}
           </div>
           <button className="sif-hist-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
