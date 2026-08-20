@@ -28,11 +28,11 @@ function test(name, fn) {
 
 test('parseAmfiHistoricalReport extracts valid rows and skips header/section/garbage lines', () => {
   const text = [
-    'Scheme Code;Scheme Name;ISIN Div Payout/ISIN Growth;ISIN Div Reinvestment;Net Asset Value;Repurchase Price;Sale Price;Date',
+    'Scheme Code;NAV Name;Plan;Option;ISIN Div Payout/ISIN Growth;ISIN Div Reinvestment;Net Asset Value;Date',
     '',
     'Open Ended Schemes ( Money Market )',
-    '129220;L&T Emerging Businesses Fund - Direct Plan - Growth;INF917K01QA1;;51.226;;;01-Nov-2022',
-    '129223;L&T Emerging Businesses Fund - Regular Plan - Growth;INF917K01QC7;;47.446;;;01-Nov-2022',
+    '129220;L&T Emerging Businesses Fund - Direct Plan - Growth;Direct Plan;GROWTH;INF917K01QA1;;51.226;01-Nov-2022',
+    '129223;L&T Emerging Businesses Fund - Regular Plan - Growth;Regular Plan;GROWTH;INF917K01QC7;;47.446;01-Nov-2022',
     'garbage;not;a;real;row',
   ].join('\n');
   const records = parseAmfiHistoricalReport(text);
@@ -46,10 +46,10 @@ test('parseAmfiHistoricalReport extracts valid rows and skips header/section/gar
 
 test('parseAmfiHistoricalReport skips rows with a non-positive or non-numeric NAV', () => {
   const text = [
-    '129220;Some Fund - Growth;ISIN1;;0;;;01-Nov-2022',
-    '129221;Some Fund - Growth;ISIN2;;-5;;;01-Nov-2022',
-    '129222;Some Fund - Growth;ISIN3;;N/A;;;01-Nov-2022',
-    '129223;Some Fund - Growth;ISIN4;;10.5;;;01-Nov-2022',
+    '129220;Some Fund - Growth;Regular Plan;GROWTH;ISIN1;;0;01-Nov-2022',
+    '129221;Some Fund - Growth;Regular Plan;GROWTH;ISIN2;;-5;01-Nov-2022',
+    '129222;Some Fund - Growth;Regular Plan;GROWTH;ISIN3;;N/A;01-Nov-2022',
+    '129223;Some Fund - Growth;Regular Plan;GROWTH;ISIN4;;10.5;01-Nov-2022',
   ].join('\n');
   const records = parseAmfiHistoricalReport(text);
   assert.strictEqual(records.length, 1);

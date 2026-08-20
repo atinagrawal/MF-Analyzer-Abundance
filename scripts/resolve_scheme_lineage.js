@@ -192,10 +192,12 @@ function parseAmfiHistoricalReport(text) {
     if (parts.length < 8) continue;
     const code = parts[0].trim();
     if (!/^\d+$/.test(code)) continue;
+    // Layout: Code;Name;Plan;Option;ISIN Payout/Growth;ISIN Reinvest;NAV;Date
+    // (confirmed live Aug 2026 -- AMFI reshuffled this endpoint's columns)
     const name = parts[1].trim();
-    const isinGrowth = parts[2].trim();
-    const isinDiv = parts[3].trim();
-    const nav = parseFloat(parts[4].trim());
+    const isinGrowth = parts[4].trim();
+    const isinDiv = parts[5].trim();
+    const nav = parseFloat(parts[6].trim());
     const date = parts[7].trim();
     if (!isFinite(nav) || nav <= 0) continue;
     records.push({ code, name, isinGrowth: isinGrowth || null, isinDiv: isinDiv || null, nav, date });
