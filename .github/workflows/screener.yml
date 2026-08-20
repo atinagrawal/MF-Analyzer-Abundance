@@ -44,6 +44,16 @@ jobs:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: node scripts/fetch-stress-test.mjs
 
+      # Without this, /api/screener and /api/sif-nav's build-time ISR
+      # snapshot can keep serving stale/pre-outage data for up to 6h after
+      # a successful run, even though Postgres is already correct — see
+      # app/api/revalidate/route.js. Only reached if every step above
+      # succeeded (a guard abort above skips this, on purpose).
+      - name: Revalidate live site cache
+        run: |
+          curl -sf -X POST "https://mfcalc.getabundance.in/api/revalidate" \
+            -H "x-revalidate-secret: ${{ secrets.REVALIDATE_SECRET }}"
+
       # Optional artifact for debugging / a static fallback
       - name: Upload JSON artifact
         if: always()
