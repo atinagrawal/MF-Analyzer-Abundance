@@ -75,7 +75,10 @@ function parseUniverse(txt) {
       } else { amc = line.trim(); }
       continue;
     }
-    const p = line.split(";"); if (p.length < 6) continue;
+    // AMFI added dedicated Plan/Option columns (confirmed Aug 2026), pushing
+    // NAV from index 4 -> 6 and Date from index 5 -> 7. Old 6-field rows no
+    // longer occur, so require the full 8-field layout.
+    const p = line.split(";"); if (p.length < 8) continue;
     const name = p[3].replace(/\s+/g, " ").trim();
     if (!/growth/i.test(name)) continue;
     if (/direct/i.test(name)) continue;
@@ -84,8 +87,8 @@ function parseUniverse(txt) {
     if (/(idcw|payout|re-?invest|bonus|segregated)\b/i.test(name)) continue;
     if (!isDivYield && /\bdividend\b/i.test(name)) continue;
 
-    const nav = +p[4]; if (!isFinite(nav) || nav <= 0) continue;
-    out.set(p[0], { code: p[0], name, amc, cat, structure, nav, navDate: pd(p[5]), isin: p[1].trim() });
+    const nav = +p[6]; if (!isFinite(nav) || nav <= 0) continue;
+    out.set(p[0], { code: p[0], name, amc, cat, structure, nav, navDate: pd(p[7]), isin: p[1].trim() });
   }
   return out;
 }

@@ -77,15 +77,17 @@ function parseNavAll(text) {
   const map = new Map();
   for (const line of text.split('\n')) {
     const parts = line.trim().split(';');
-    if (parts.length < 6) continue;
+    // AMFI added dedicated Plan/Option columns (confirmed Aug 2026), pushing
+    // NAV from index 4 -> 6 and Date from index 5 -> 7.
+    if (parts.length < 8) continue;
     const code = parts[0].trim();
     if (!/^\d{5,6}$/.test(code)) continue;
     map.set(code, {
       isin:          parts[1].trim(),
       isinReinvest:  parts[2].trim() === '-' ? null : parts[2].trim(),
       name:          parts[3].trim(),
-      nav:           parts[4].trim(),
-      date:          parts[5].trim(),
+      nav:           parts[6].trim(),
+      date:          parts[7].trim(),
     });
   }
   return map;
