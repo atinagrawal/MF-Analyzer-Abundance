@@ -86,6 +86,8 @@ function parseNavAll(text) {
       isin:          parts[1].trim(),
       isinReinvest:  parts[2].trim() === '-' ? null : parts[2].trim(),
       name:          parts[3].trim(),
+      plan:          (parts[4] || '').trim(),
+      option:        (parts[5] || '').trim(),
       nav:           parts[6].trim(),
       date:          parts[7].trim(),
     });
@@ -119,7 +121,7 @@ function searchAmfi(amfi, query) {
     const name = fund.name.toLowerCase();
     // All words must appear in the fund name
     if (words.every(w => name.includes(w))) {
-      results.push({ schemeCode: parseInt(code, 10), schemeName: fund.name });
+      results.push({ schemeCode: parseInt(code, 10), schemeName: fund.name, plan: fund.plan, option: fund.option });
     }
     if (results.length >= 30) break;
   }
@@ -131,6 +133,10 @@ function searchAmfi(amfi, query) {
  * refreshed daily). Same matching rule as searchAmfi (every word must
  * appear in the name) so results are identical in shape/quality; this is
  * just a faster route to the same data for the common case.
+ *
+ * `schemes[code]` is either the current { name, plan, option } shape or,
+ * briefly during rollout (an R2 copy written before this format existed),
+ * a plain name string -- handle both so a stale cached copy doesn't 500.
  */
 function searchStaticList(schemes, query) {
   const q = query.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -138,9 +144,16 @@ function searchStaticList(schemes, query) {
   const results = [];
 
   for (const code in schemes) {
-    const name = schemes[code].toLowerCase();
-    if (words.every(w => name.includes(w))) {
-      results.push({ schemeCode: parseInt(code, 10), schemeName: schemes[code] });
+    const entry = schemes[code];
+    const isLegacy = typeof entry === 'string';
+    const name = isLegacy ? entry : entry.name;
+    if (words.every(w => name.toLowerCase().includes(w))) {
+      results.push({
+        schemeCode: parseInt(code, 10),
+        schemeName: name,
+        plan: isLegacy ? undefined : entry.plan,
+        option: isLegacy ? undefined : entry.option,
+      });
     }
     if (results.length >= 30) break;
   }

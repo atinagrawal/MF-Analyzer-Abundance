@@ -718,9 +718,17 @@ function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProp
       setSearching(true);
       try {
         const data = await fetch(`/api/mf?q=${encodeURIComponent(query.trim())}`).then((r) => r.json());
-        let filtered = (Array.isArray(data) ? data : []).filter((s) => !/\bdirect\b/i.test(s.schemeName));
+        // AMFI's scheme name no longer embeds Plan/Option as text (e.g.
+        // "- Regular Plan-Growth") -- filter on the dedicated fields /api/mf
+        // now returns when present, falling back to the old name regex only
+        // for results that predate that (a stale cached scheme-list entry).
+        const isDirect = (s) => s.plan != null ? /direct/i.test(s.plan) : /\bdirect\b/i.test(s.schemeName);
+        const isIdcw = (s) => s.option != null
+          ? /\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(s.option)
+          : /\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(s.schemeName);
+        let filtered = (Array.isArray(data) ? data : []).filter((s) => !isDirect(s));
         if (!showIdcw) {
-          filtered = filtered.filter((s) => !/\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(s.schemeName));
+          filtered = filtered.filter((s) => !isIdcw(s));
         }
         setResults(filtered.slice(0, 40));
       } catch {

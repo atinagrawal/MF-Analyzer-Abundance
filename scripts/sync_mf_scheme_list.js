@@ -51,12 +51,15 @@ async function run() {
   let written = 0;
   for (const line of text.split('\n')) {
     const parts = line.trim().split(';');
+    // AMFI added dedicated Plan/Option columns (confirmed Aug 2026) --
+    // pages/api/mf.js's search filters (hide Direct/IDCW variants) need
+    // these directly now that the scheme name no longer embeds them as text.
     if (parts.length < 6) continue;
     const code = parts[0].trim();
     if (!/^\d{5,6}$/.test(code)) continue;
     const name = parts[3].trim();
     if (!name) continue;
-    schemes[code] = name;
+    schemes[code] = { name, plan: (parts[4] || '').trim(), option: (parts[5] || '').trim() };
     written++;
   }
 
