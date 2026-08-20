@@ -191,6 +191,13 @@ async function run() {
       const rawLaunchDate = detailsRes.data?.data?.[0]?.Launch_Date;
       const launchDate = rawLaunchDate ? rawLaunchDate.split('T')[0] : null;
 
+      // Collect every plan-variant under this ONE scheme_id first, so their
+      // AUM can be summed into a single fund-level total below. "AUM"
+      // everywhere this data is shown (fund detail page, drawers, Proposal
+      // Studio, screener) means the fund's total size -- the conventional,
+      // fact-sheet meaning -- not one Direct/Regular x Growth/IDCW variant's
+      // slice (confirmed a real bug in production, Aug 2026).
+      const schemeVariants = [];
       for (const navRow of navRows) {
         const isin = navRow.ISIN_Div_Payout_ISIN_Growth;
         if (!isin || !isin.startsWith('INF')) continue;
@@ -203,12 +210,25 @@ async function run() {
           continue; // ISIN not in NAVAll.txt's currently-active set -- can't key by AMFI code
         }
 
-        result[amfiCode] = {
+        schemeVariants.push({
           amfiCode,
           isin,
           schemeName: navRow.Scheme_NAV_Name,
-          aumCr: Math.round((aumRow.Average_AUM_For_The_Quarter / 100) * 100) / 100,
           asOf: aumRow.As_At_The_End_Of || null,
+          aumLakhs: aumRow.Average_AUM_For_The_Quarter,
+        });
+      }
+
+      const totalAumCr = schemeVariants.length
+        ? Math.round((schemeVariants.reduce((sum, v) => sum + v.aumLakhs, 0) / 100) * 100) / 100
+        : null;
+      for (const v of schemeVariants) {
+        result[v.amfiCode] = {
+          amfiCode: v.amfiCode,
+          isin: v.isin,
+          schemeName: v.schemeName,
+          aumCr: totalAumCr,
+          asOf: v.asOf,
           launchDate,
         };
         variantsWritten++;

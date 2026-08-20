@@ -93,15 +93,22 @@ async function run() {
   let written = 0;
 
   for (const group of groups) {
+    // Each group is one SIF (group.sif_id/sifname), not a shared category --
+    // group.totalAUM.AverageAum is AMFI's own pre-aggregated sum across every
+    // plan-variant (Direct/Regular x Growth/IDCW) under it (verified live,
+    // Aug 2026: matches summing the variants by hand). "AUM" everywhere this
+    // data is shown means the fund's total size, not one variant's slice --
+    // use the group total for every variant instead of each scheme's own
+    // AverageAumForTheMonth.
+    const totalAumCr = group.totalAUM?.AverageAum != null
+      ? Math.round((group.totalAUM.AverageAum / 100) * 100) / 100
+      : null;
     for (const scheme of (group.schemes || [])) {
-      if (!scheme.AMFI_Code || scheme.AverageAumForTheMonth == null) continue;
-      // Same Lakhs-to-Crores convention as scripts/sync_amfi_aum.js's
-      // Average_AUM_For_The_Quarter -- AMFI's "Average AUM" figures are
-      // consistently reported in Lakhs across their APIs.
+      if (!scheme.AMFI_Code || totalAumCr == null) continue;
       result[scheme.AMFI_Code] = {
         amfiCode: scheme.AMFI_Code,
         schemeName: scheme.SchemeNAVName,
-        aumCr: Math.round((scheme.AverageAumForTheMonth / 100) * 100) / 100,
+        aumCr: totalAumCr,
         asOf,
         // The underlying holdings vendor has never classified SIFs into its
         // own category taxonomy (confirmed live, 2026-08: null for real
