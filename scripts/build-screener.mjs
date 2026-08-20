@@ -101,7 +101,10 @@ async function navAsOf(anchorMs) {
   for (const raw of txt.split("\n")) {
     const line = raw.replace(/\r$/, ""); if (!line.includes(";")) continue;
     const p = line.split(";"); if (p.length < 8) continue;
-    const code = p[0], nav = +p[4], d = pd(p[7]);
+    // Layout: Code;Name;Plan;Option;ISIN Payout/Growth;ISIN Reinvest;NAV;Date
+    // (confirmed live Aug 2026 -- different column order than NAVAll.txt's
+    // Code;ISIN1;ISIN2;Name;Plan;Option;NAV;Date, so don't assume they match)
+    const code = p[0], nav = +p[6], d = pd(p[7]);
     if (!isFinite(nav) || nav <= 0 || !d || d > anchorMs) continue;
     if (!map[code] || d > map[code].d) map[code] = { nav, d };
   }
