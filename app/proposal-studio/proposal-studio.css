@@ -122,7 +122,7 @@
 .pfc-proposal-id { font: 600 12px JetBrains Mono, monospace; color: var(--g1); background: var(--surface2, #edf6ed); border-radius: 6px; padding: 6px 10px; }
 
 .pfc-saved-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
-.pfc-saved-item { border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; overflow: hidden; }
+.pfc-saved-item { border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; overflow: hidden; flex-shrink: 0; }
 .pfc-saved-main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border: none; background: transparent; cursor: pointer; text-align: left; transition: background 0.15s; }
 .pfc-saved-main:hover { background: var(--surface2, #edf6ed); }
 .pfc-saved-id { font: 700 11px JetBrains Mono, monospace; color: var(--g2); letter-spacing: 0.02em; }
