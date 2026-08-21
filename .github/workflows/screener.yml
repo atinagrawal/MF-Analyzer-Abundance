@@ -44,6 +44,11 @@ jobs:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: node scripts/fetch-stress-test.mjs
 
+      - name: Append daily NAV history
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: node scripts/append-nav-history.mjs
+
       # Without this, /api/screener and /api/sif-nav's build-time ISR
       # snapshot can keep serving stale/pre-outage data for up to 6h after
       # a successful run, even though Postgres is already correct — see

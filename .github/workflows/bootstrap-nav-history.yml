@@ -1,0 +1,46 @@
+name: Bootstrap MF NAV History Database
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force re-fetch all funds (even if already populated in DB)'
+        required: false
+        default: 'false'
+        type: boolean
+      limit:
+        description: 'Limit number of funds to process (leave empty for all ~1600 funds)'
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: bootstrap-nav-history
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install deps
+        run: npm install pg@8
+
+      - name: Run bootstrap script
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+          FORCE: ${{ inputs.force && '1' || '0' }}
+          LIMIT: ${{ inputs.limit }}
+        run: node scripts/bootstrap-nav-history.mjs
+
+      - name: Run verification report
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: node scripts/verify-nav-history.mjs

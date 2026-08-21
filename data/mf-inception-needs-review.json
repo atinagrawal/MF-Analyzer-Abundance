@@ -1,8 +1,1598 @@
 [
   {
-    "code": "103633",
-    "name": "ICICI Prudential Money Market Fund Option - Growth",
+    "code": "117446",
+    "name": "Axis Banking & PSU Debt Fund",
+    "oldest_amfi_date": "2012-06-12",
+    "oldest_amfi_nav": 1001.2395
+  },
+  {
+    "code": "140283",
+    "name": "Edelweiss Banking and PSU Debt Fund",
+    "oldest_amfi_date": "2016-11-28",
+    "oldest_amfi_nav": 13.3017
+  },
+  {
+    "code": "123690",
+    "name": "Kotak Banking and PSU Debt Fund",
+    "oldest_amfi_date": "2013-08-14",
+    "oldest_amfi_nav": 26.3885
+  },
+  {
+    "code": "125498",
+    "name": "SBI BANKING & PSU FUND",
+    "oldest_amfi_date": "2013-11-18",
+    "oldest_amfi_nav": 1355.5666
+  },
+  {
+    "code": "150235",
+    "name": "BARODA BNP PARIBAS CORPORATE BOND FUND",
+    "oldest_amfi_date": "2022-03-14",
+    "oldest_amfi_nav": 22.2674
+  },
+  {
+    "code": "138318",
+    "name": "PGIM India Corporate Bond Fund",
+    "oldest_amfi_date": "2016-03-08",
+    "oldest_amfi_nav": 23.8782
+  },
+  {
+    "code": "151322",
+    "name": "TRUSTMF CORPORATE BOND FUND",
+    "oldest_amfi_date": "2023-01-23",
+    "oldest_amfi_nav": 1000.8529
+  },
+  {
+    "code": "117716",
+    "name": "Kotak Credit Risk Fund",
+    "oldest_amfi_date": "2012-07-09",
+    "oldest_amfi_nav": 11.7067
+  },
+  {
+    "code": "112938",
+    "name": "Nippon India Credit Risk Fund (Existing Number of Segregated Portfolios - 1)",
+    "oldest_amfi_date": "2010-05-21",
+    "oldest_amfi_nav": 12.7631
+  },
+  {
+    "code": "112939",
+    "name": "Nippon India Credit Risk Fund (Existing Number of Segregated Portfolios - 1)",
+    "oldest_amfi_date": "2010-05-21",
+    "oldest_amfi_nav": 12.8416
+  },
+  {
+    "code": "150173",
+    "name": "Baroda BNP Paribas Dynamic Bond Fund",
+    "oldest_amfi_date": "2022-03-14",
+    "oldest_amfi_nav": 36.8469
+  },
+  {
+    "code": "105669",
+    "name": "DSP Strategic Bond Fund",
+    "oldest_amfi_date": "2007-05-10",
+    "oldest_amfi_nav": 1001.4115
+  },
+  {
+    "code": "116485",
+    "name": "PGIM India Dynamic Bond Fund",
+    "oldest_amfi_date": "2012-01-16",
+    "oldest_amfi_nav": 1001.2981
+  },
+  {
+    "code": "141061",
+    "name": "Quantum Dynamic Term Fund",
+    "oldest_amfi_date": "2017-04-01",
+    "oldest_amfi_nav": 12.2633
+  },
+  {
+    "code": "122644",
+    "name": "Aditya Birla Sun Life Floating Rate Fund",
+    "oldest_amfi_date": "2013-05-29",
+    "oldest_amfi_nav": 141.8268
+  },
+  {
+    "code": "149048",
+    "name": "Axis Floater Fund",
+    "oldest_amfi_date": "2021-08-02",
+    "oldest_amfi_nav": 1000.7947
+  },
+  {
+    "code": "106841",
+    "name": "HDFC Floating Rate Debt Fund",
+    "oldest_amfi_date": "2007-10-23",
+    "oldest_amfi_nav": 13.1821
+  },
+  {
+    "code": "147266",
+    "name": "KOTAK FLOATING RATE FUND",
+    "oldest_amfi_date": "2019-05-16",
+    "oldest_amfi_nav": 1000.7745
+  },
+  {
+    "code": "153211",
+    "name": "Bajaj Finserv Gilt Fund",
+    "oldest_amfi_date": "2025-01-16",
+    "oldest_amfi_nav": 1000.5242
+  },
+  {
+    "code": "140297",
+    "name": "Edelweiss Government Securities Fund",
+    "oldest_amfi_date": "2016-11-28",
+    "oldest_amfi_nav": 13.6426
+  },
+  {
+    "code": "101084",
+    "name": "HDFC Gilt Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 10.0873
+  },
+  {
+    "code": "138470",
+    "name": "PGIM India Gilt Fund",
+    "oldest_amfi_date": "2016-03-08",
+    "oldest_amfi_nav": 16.0965
+  },
+  {
+    "code": "108753",
+    "name": "Bandhan Gilt Fund with 10 year constant duration Fund",
+    "oldest_amfi_date": "2008-06-02",
+    "oldest_amfi_nav": 13.3217
+  },
+  {
+    "code": "125259",
+    "name": "360 ONE Liquid Fund",
+    "oldest_amfi_date": "2013-11-13",
+    "oldest_amfi_nav": 1000.231
+  },
+  {
+    "code": "112210",
+    "name": "Axis Liquid Fund",
+    "oldest_amfi_date": "2009-10-11",
+    "oldest_amfi_nav": 1000.2772
+  },
+  {
+    "code": "151837",
+    "name": "Bajaj Finserv Liquid Fund",
+    "oldest_amfi_date": "2023-07-05",
+    "oldest_amfi_nav": 1000.1699
+  },
+  {
+    "code": "109254",
+    "name": "BANK OF INDIA LIQUID FUND",
+    "oldest_amfi_date": "2008-07-18",
+    "oldest_amfi_nav": 1000.7918
+  },
+  {
+    "code": "154010",
+    "name": "Capitalmind Liquid Fund",
+    "oldest_amfi_date": "2025-12-01",
+    "oldest_amfi_nav": 1001.9357
+  },
+  {
+    "code": "140182",
+    "name": "Edelweiss Liquid Fund",
+    "oldest_amfi_date": "2016-11-27",
+    "oldest_amfi_nav": 20.365
+  },
+  {
+    "code": "147153",
+    "name": "ITI Liquid Fund",
+    "oldest_amfi_date": "2019-04-24",
+    "oldest_amfi_nav": 1000.0842
+  },
+  {
+    "code": "139537",
+    "name": "Mahindra Manulife Liquid Fund",
+    "oldest_amfi_date": "2016-07-04",
+    "oldest_amfi_nav": 1000.1594
+  },
+  {
+    "code": "138288",
+    "name": "PGIM India Liquid Fund",
+    "oldest_amfi_date": "2016-03-08",
+    "oldest_amfi_nav": 195.2425
+  },
+  {
+    "code": "143260",
+    "name": "Parag Parikh Liquid Fund",
+    "oldest_amfi_date": "2018-05-14",
+    "oldest_amfi_nav": 1000.7781
+  },
+  {
+    "code": "141066",
+    "name": "Quantum Liquid Fund",
+    "oldest_amfi_date": "2017-04-01",
+    "oldest_amfi_nav": 22.5187
+  },
+  {
+    "code": "153036",
+    "name": "Shriram Liquid Fund",
+    "oldest_amfi_date": "2024-11-20",
+    "oldest_amfi_nav": 1002.0751
+  },
+  {
+    "code": "149661",
+    "name": "Sundaram Liquid Fund (Formerly Known as Principal Cash Management Fund)",
+    "oldest_amfi_date": "2022-01-01",
+    "oldest_amfi_nav": 1850.1549
+  },
+  {
+    "code": "153888",
+    "name": "The Wealth Company Liquid Fund",
+    "oldest_amfi_date": "2025-10-16",
+    "oldest_amfi_nav": 1001.0378
+  },
+  {
+    "code": "148833",
+    "name": "TRUSTMF Liquid Fund",
+    "oldest_amfi_date": "2021-04-25",
+    "oldest_amfi_nav": 1000.2996
+  },
+  {
+    "code": "153571",
+    "name": "UNIFI LIQUID FUND",
+    "oldest_amfi_date": "2025-06-12",
+    "oldest_amfi_nav": 1000.7347
+  },
+  {
+    "code": "145968",
+    "name": "WhiteOak Capital Liquid Fund",
+    "oldest_amfi_date": "2019-01-17",
+    "oldest_amfi_nav": 1000.3609
+  },
+  {
+    "code": "151178",
+    "name": "Axis Long Duration Fund",
+    "oldest_amfi_date": "2022-12-30",
+    "oldest_amfi_nav": 1001.9628
+  },
+  {
+    "code": "112214",
+    "name": "Axis Treasury Advantage Fund",
+    "oldest_amfi_date": "2009-10-12",
+    "oldest_amfi_nav": 1000.5032
+  },
+  {
+    "code": "154203",
+    "name": "Bajaj Finserv Low Duration Fund",
+    "oldest_amfi_date": "2026-02-23",
+    "oldest_amfi_nav": 1000.9814
+  },
+  {
+    "code": "108632",
+    "name": "BANDHAN LOW DURATION FUND",
+    "oldest_amfi_date": "2008-05-31",
+    "oldest_amfi_nav": 11.5218
+  },
+  {
+    "code": "150165",
+    "name": "BARODA BNP PARIBAS LOW DURATION FUND",
+    "oldest_amfi_date": "2022-03-14",
+    "oldest_amfi_nav": 32.8072
+  },
+  {
+    "code": "153419",
+    "name": "Edelweiss Low Duration Fund",
+    "oldest_amfi_date": "2025-03-21",
+    "oldest_amfi_nav": 1000.7308
+  },
+  {
+    "code": "143607",
+    "name": "JM Low Duration Fund",
+    "oldest_amfi_date": "2018-05-25",
+    "oldest_amfi_nav": 24.884
+  },
+  {
+    "code": "133805",
+    "name": "Kotak Low Duration Fund",
+    "oldest_amfi_date": "2015-02-02",
+    "oldest_amfi_nav": 1651.4582
+  },
+  {
+    "code": "140620",
+    "name": "Mahindra Manulife Low Duration Fund",
+    "oldest_amfi_date": "2017-02-16",
+    "oldest_amfi_nav": 1000.7959
+  },
+  {
+    "code": "111748",
+    "name": "Nippon India Low Duration Fund",
+    "oldest_amfi_date": "2009-02-11",
+    "oldest_amfi_nav": 1175.5881
+  },
+  {
+    "code": "111753",
+    "name": "Nippon India Low Duration Fund",
+    "oldest_amfi_date": "2009-02-11",
+    "oldest_amfi_nav": 1182.2416
+  },
+  {
+    "code": "149519",
+    "name": "Sundaram Low Duration Fund (Formerly Known as Principal Low Duration Fund)",
+    "oldest_amfi_date": "2022-01-03",
+    "oldest_amfi_nav": 2802.9575
+  },
+  {
+    "code": "108728",
+    "name": "Bandhan Medium Duration Fund",
+    "oldest_amfi_date": "2008-06-02",
+    "oldest_amfi_nav": 12.9816
+  },
+  {
+    "code": "101989",
+    "name": "HDFC Medium Term Debt Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 12.6745
+  },
+  {
+    "code": "108765",
+    "name": "Bandhan Medium to Long Duration Fund",
+    "oldest_amfi_date": "2008-06-02",
+    "oldest_amfi_nav": 18.9901
+  },
+  {
+    "code": "108768",
+    "name": "Bandhan Medium to Long Duration Fund",
+    "oldest_amfi_date": "2008-06-02",
+    "oldest_amfi_nav": 16.4378
+  },
+  {
+    "code": "147568",
+    "name": "Axis Money Market Fund",
+    "oldest_amfi_date": "2019-08-07",
+    "oldest_amfi_nav": 1001.7478
+  },
+  {
+    "code": "108756",
+    "name": "Bandhan Money Market Fund",
+    "oldest_amfi_date": "2008-05-31",
+    "oldest_amfi_nav": 13.276
+  },
+  {
+    "code": "147382",
+    "name": "Baroda BNP Paribas Money Market Fund",
+    "oldest_amfi_date": "2019-06-20",
+    "oldest_amfi_nav": 1000.323
+  },
+  {
+    "code": "140229",
+    "name": "Edelweiss Money Market Fund",
+    "oldest_amfi_date": "2016-11-28",
+    "oldest_amfi_nav": 17.4661
+  },
+  {
+    "code": "150393",
+    "name": "LIC MF Money Market Fund",
+    "oldest_amfi_date": "2022-08-03",
+    "oldest_amfi_nav": 1000.4807
+  },
+  {
+    "code": "148159",
+    "name": "PGIM India Money Market Fund",
+    "oldest_amfi_date": "2020-03-09",
+    "oldest_amfi_nav": 1000.5445
+  },
+  {
+    "code": "154143",
+    "name": "Shriram Money Market Fund",
+    "oldest_amfi_date": "2026-01-28",
+    "oldest_amfi_nav": 1001.1241
+  },
+  {
+    "code": "150511",
+    "name": "TRUSTMF Money Market Fund",
+    "oldest_amfi_date": "2022-08-18",
+    "oldest_amfi_nav": 1001.1278
+  },
+  {
+    "code": "149116",
+    "name": "Union Money Market Fund",
+    "oldest_amfi_date": "2021-08-27",
+    "oldest_amfi_nav": 1000.1934
+  },
+  {
+    "code": "153700",
+    "name": "360 ONE Overnight Fund",
+    "oldest_amfi_date": "2025-07-13",
+    "oldest_amfi_nav": 1000.623
+  },
+  {
+    "code": "146678",
+    "name": "Axis Overnight Fund",
+    "oldest_amfi_date": "2019-03-17",
+    "oldest_amfi_nav": 1000.5033
+  },
+  {
+    "code": "151851",
+    "name": "Bajaj Finserv Overnight Fund",
+    "oldest_amfi_date": "2023-07-05",
+    "oldest_amfi_nav": 1000.1835
+  },
+  {
+    "code": "146187",
+    "name": "BANDHAN Overnight Fund",
+    "oldest_amfi_date": "2019-01-20",
+    "oldest_amfi_nav": 1000.5187
+  },
+  {
+    "code": "147936",
+    "name": "BANK OF INDIA OVERNIGHT FUND",
+    "oldest_amfi_date": "2020-01-28",
+    "oldest_amfi_nav": 1000.1251
+  },
+  {
+    "code": "147193",
+    "name": "Baroda BNP Paribas Overnight Fund",
+    "oldest_amfi_date": "2019-04-25",
+    "oldest_amfi_nav": 1000.1695
+  },
+  {
+    "code": "147534",
+    "name": "Canara Robeco Overnight Fund",
+    "oldest_amfi_date": "2019-07-24",
+    "oldest_amfi_nav": 1000.1953
+  },
+  {
+    "code": "146061",
+    "name": "DSP Overnight Fund",
+    "oldest_amfi_date": "2019-01-09",
+    "oldest_amfi_nav": 1000.1753
+  },
+  {
+    "code": "147569",
+    "name": "Edelweiss Overnight Fund",
+    "oldest_amfi_date": "2019-07-24",
+    "oldest_amfi_nav": 1000.1516
+  },
+  {
+    "code": "147213",
+    "name": "Franklin India Overnight Fund",
+    "oldest_amfi_date": "2019-05-08",
+    "oldest_amfi_nav": 1000
+  },
+  {
+    "code": "145535",
+    "name": "ICICI Prudential Overnight Fund",
+    "oldest_amfi_date": "2018-11-15",
+    "oldest_amfi_nav": 100.0156
+  },
+  {
+    "code": "147714",
+    "name": "ITI Overnight Fund",
+    "oldest_amfi_date": "2019-10-28",
+    "oldest_amfi_nav": 1000.7754
+  },
+  {
+    "code": "146142",
+    "name": "Kotak Overnight Fund",
+    "oldest_amfi_date": "2019-01-16",
+    "oldest_amfi_nav": 1000.3443
+  },
+  {
+    "code": "147519",
+    "name": "LIC MF Overnight Fund",
+    "oldest_amfi_date": "2019-07-19",
+    "oldest_amfi_nav": 1000.6983
+  },
+  {
+    "code": "147565",
+    "name": "Mahindra Manulife Overnight Fund",
+    "oldest_amfi_date": "2019-07-24",
+    "oldest_amfi_nav": 1000.2858
+  },
+  {
+    "code": "145811",
+    "name": "Nippon India Overnight Fund",
+    "oldest_amfi_date": "2018-12-19",
+    "oldest_amfi_nav": 100.0342
+  },
+  {
+    "code": "150632",
+    "name": "Samco Overnight Fund",
+    "oldest_amfi_date": "2022-10-13",
+    "oldest_amfi_nav": 1001.1452
+  },
+  {
+    "code": "154399",
+    "name": "Shriram Overnight Fund",
+    "oldest_amfi_date": "2026-05-30",
+    "oldest_amfi_nav": 1250.2982
+  },
+  {
+    "code": "146959",
+    "name": "Sundaram Overnight Fund",
+    "oldest_amfi_date": "2019-03-24",
+    "oldest_amfi_nav": 1000.7765
+  },
+  {
+    "code": "146977",
+    "name": "Tata Overnight Fund",
+    "oldest_amfi_date": "2019-03-28",
+    "oldest_amfi_nav": 1000.4962
+  },
+  {
+    "code": "149795",
+    "name": "TRUSTMF Overnight Fund",
+    "oldest_amfi_date": "2022-01-19",
+    "oldest_amfi_nav": 1000.1869
+  },
+  {
+    "code": "146997",
+    "name": "Union Overnight Fund",
+    "oldest_amfi_date": "2019-03-27",
+    "oldest_amfi_nav": 1000.16
+  },
+  {
+    "code": "149585",
+    "name": "Sundaram Short Duration Fund (Formerly Known as Principal Short Term Debt Fund)",
+    "oldest_amfi_date": "2022-01-03",
+    "oldest_amfi_nav": 35.575
+  },
+  {
+    "code": "149073",
+    "name": "TRUSTMF Short Duration Fund",
+    "oldest_amfi_date": "2021-08-09",
+    "oldest_amfi_nav": 1000.3098
+  },
+  {
+    "code": "106384",
+    "name": "UTI Short Duration Fund",
+    "oldest_amfi_date": "2007-08-28",
+    "oldest_amfi_nav": 12.646
+  },
+  {
+    "code": "109269",
+    "name": "BANK OF INDIA ULTRA SHORT DURATION FUND",
+    "oldest_amfi_date": "2008-07-18",
+    "oldest_amfi_nav": 1000.7784
+  },
+  {
+    "code": "143464",
+    "name": "Baroda BNP Paribas Ultra Short Duration Fund",
+    "oldest_amfi_date": "2018-06-04",
+    "oldest_amfi_nav": 1000.9062
+  },
+  {
+    "code": "109371",
+    "name": "Canara Robeco Ultra Short Term Fund",
+    "oldest_amfi_date": "2008-07-14",
+    "oldest_amfi_nav": 12.4164
+  },
+  {
+    "code": "104138",
+    "name": "DSP Ultra Short Fund",
+    "oldest_amfi_date": "2006-08-03",
+    "oldest_amfi_nav": 1000.5322
+  },
+  {
+    "code": "147770",
+    "name": "LIC MF Ultra Short Duration Fund",
+    "oldest_amfi_date": "2019-11-28",
+    "oldest_amfi_nav": 1000.9304
+  },
+  {
+    "code": "147734",
+    "name": "Mahindra Manulife Ultra Short Duration Fund",
+    "oldest_amfi_date": "2019-10-18",
+    "oldest_amfi_nav": 1000.3476
+  },
+  {
+    "code": "143493",
+    "name": "Nippon India Ultra Short Duration Fund",
+    "oldest_amfi_date": "2018-05-21",
+    "oldest_amfi_nav": 2714.8681
+  },
+  {
+    "code": "138343",
+    "name": "PGIM India Ultra Short Duration Fund",
+    "oldest_amfi_date": "2016-03-08",
+    "oldest_amfi_nav": 18.117
+  },
+  {
+    "code": "149535",
+    "name": "Sundaram Ultra Short Duration Fund (Formerly Known as Principal Ultra Short Term Fund)",
+    "oldest_amfi_date": "2022-01-03",
+    "oldest_amfi_nav": 2221.4098
+  },
+  {
+    "code": "147307",
+    "name": "WhiteOak Capital Ultra Short Duration Fund",
+    "oldest_amfi_date": "2019-06-10",
+    "oldest_amfi_nav": 1000.7196
+  },
+  {
+    "code": "152810",
+    "name": "Baroda BNP Paribas Dividend Yield Fund",
+    "oldest_amfi_date": "2024-09-16",
+    "oldest_amfi_nav": 10.0776
+  },
+  {
+    "code": "152019",
+    "name": "LIC MF Dividend Yield Fund",
+    "oldest_amfi_date": "2023-07-31",
+    "oldest_amfi_nav": 19.64
+  },
+  {
+    "code": "149697",
+    "name": "Sundaram Dividend Yield Fund (Formerly Known as Principal Dividend Yield Fund)",
+    "oldest_amfi_date": "2022-01-03",
+    "oldest_amfi_nav": 87.3069
+  },
+  {
+    "code": "150156",
+    "name": "Baroda BNP Paribas ELSS Tax Saver Fund",
+    "oldest_amfi_date": "2022-03-14",
+    "oldest_amfi_nav": 56.6717
+  },
+  {
+    "code": "100175",
+    "name": "Quant ELSS Tax Saver Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 40.104
+  },
+  {
+    "code": "141070",
+    "name": "Quantum ELSS Tax Saver Fund",
+    "oldest_amfi_date": "2017-04-01",
+    "oldest_amfi_nav": 48
+  },
+  {
+    "code": "149569",
+    "name": "Sundaram ELSS Tax Saver Fund",
+    "oldest_amfi_date": "2022-01-03",
+    "oldest_amfi_nav": 331.2882
+  },
+  {
+    "code": "108594",
+    "name": "BANDHAN Flexi Cap Fund",
+    "oldest_amfi_date": "2008-06-02",
+    "oldest_amfi_nav": 20.6245
+  },
+  {
+    "code": "100313",
+    "name": "LIC MF Flexi Cap Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 20.3309
+  },
+  {
+    "code": "108592",
+    "name": "Bandhan Focused Fund",
+    "oldest_amfi_date": "2008-06-02",
+    "oldest_amfi_nav": 15.0297
+  },
+  {
+    "code": "150263",
+    "name": "Baroda BNP Paribas Focused Fund",
+    "oldest_amfi_date": "2022-03-14",
+    "oldest_amfi_nav": 13.9968
+  },
+  {
+    "code": "152009",
+    "name": "LIC MF Focused Fund",
+    "oldest_amfi_date": "2023-07-31",
+    "oldest_amfi_nav": 16.91
+  },
+  {
+    "code": "149532",
+    "name": "Sundaram Focused Fund (Formerly Known as Principal Focused Multicap Fund)",
+    "oldest_amfi_date": "2022-01-03",
+    "oldest_amfi_nav": 111.9061
+  },
+  {
+    "code": "108596",
+    "name": "Bandhan Large & Mid Cap Fund",
+    "oldest_amfi_date": "2008-06-02",
+    "oldest_amfi_nav": 18.8578
+  },
+  {
+    "code": "140172",
+    "name": "Edelweiss Large & Mid Cap Fund",
+    "oldest_amfi_date": "2016-11-28",
+    "oldest_amfi_nav": 22.399
+  },
+  {
+    "code": "130496",
+    "name": "HDFC Large and Mid Cap Fund",
+    "oldest_amfi_date": "2014-06-30",
+    "oldest_amfi_nav": 81.758
+  },
+  {
+    "code": "101824",
+    "name": "Tata Large & Mid Cap Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 54.9664
+  },
+  {
+    "code": "108799",
+    "name": "BANDHAN LARGE CAP FUND",
+    "oldest_amfi_date": "2008-06-04",
+    "oldest_amfi_nav": 13.3027
+  },
+  {
+    "code": "150185",
+    "name": "BARODA BNP PARIBAS LARGE CAP FUND",
+    "oldest_amfi_date": "2022-03-14",
+    "oldest_amfi_nav": 134.1814
+  },
+  {
+    "code": "102000",
+    "name": "HDFC Large Cap Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 98.486
+  },
+  {
+    "code": "100219",
+    "name": "JM Large Cap Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 33.69
+  },
+  {
+    "code": "114458",
+    "name": "Kotak Large Cap Fund",
+    "oldest_amfi_date": "2011-01-03",
+    "oldest_amfi_nav": 109.857
+  },
+  {
+    "code": "106871",
+    "name": "LIC MF Large Cap Fund",
+    "oldest_amfi_date": "2007-10-31",
+    "oldest_amfi_nav": 13.294
+  },
+  {
+    "code": "138308",
+    "name": "PGIM India Large Cap Fund",
+    "oldest_amfi_date": "2016-03-08",
+    "oldest_amfi_nav": 116.83
+  },
+  {
+    "code": "101209",
+    "name": "Taurus Large Cap Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 36.24
+  },
+  {
+    "code": "150209",
+    "name": "Baroda BNP Paribas Mid Cap Fund",
+    "oldest_amfi_date": "2022-03-14",
+    "oldest_amfi_nav": 56.0094
+  },
+  {
+    "code": "140225",
+    "name": "Edelweiss Mid Cap Fund",
+    "oldest_amfi_date": "2016-11-28",
+    "oldest_amfi_nav": 20.27
+  },
+  {
+    "code": "152001",
+    "name": "LIC MF Mid Cap Fund",
+    "oldest_amfi_date": "2023-07-31",
+    "oldest_amfi_nav": 19.29
+  },
+  {
+    "code": "101065",
+    "name": "Quant Mid Cap Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 25.5884
+  },
+  {
+    "code": "100631",
+    "name": "Quant Multi Cap Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 53.2687
+  },
+  {
+    "code": "149667",
+    "name": "Sundaram Multi Cap Fund (Formerly Known as Principal Multi Cap Growth Fund)",
+    "oldest_amfi_date": "2022-01-03",
+    "oldest_amfi_nav": 245.0133
+  },
+  {
+    "code": "150268",
+    "name": "Baroda BNP Paribas India Consumption Fund",
+    "oldest_amfi_date": "2022-03-14",
+    "oldest_amfi_nav": 18.23
+  },
+  {
+    "code": "133796",
+    "name": "Kotak Infrastructure and Economic Reform Fund",
+    "oldest_amfi_date": "2015-02-02",
+    "oldest_amfi_nav": 15.575
+  },
+  {
+    "code": "152025",
+    "name": "LIC MF Healthcare Fund",
+    "oldest_amfi_date": "2023-07-31",
+    "oldest_amfi_nav": 19.02
+  },
+  {
+    "code": "152587",
+    "name": "Samco Special Opportunities Fund",
+    "oldest_amfi_date": "2024-06-13",
+    "oldest_amfi_nav": 10.36
+  },
+  {
+    "code": "129213",
+    "name": "Sundaram Infrastructure Advantage Fund (Erstwhile Sundaram Capex Opportunities)",
+    "oldest_amfi_date": "2014-04-07",
+    "oldest_amfi_nav": 16.9085
+  },
+  {
+    "code": "130502",
+    "name": "HDFC Small Cap Fund",
+    "oldest_amfi_date": "2014-06-30",
+    "oldest_amfi_nav": 21.121
+  },
+  {
+    "code": "152003",
+    "name": "LIC MF Small Cap Fund",
+    "oldest_amfi_date": "2023-07-31",
+    "oldest_amfi_nav": 21.01
+  },
+  {
+    "code": "100177",
+    "name": "Quant Small Cap Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 18.2899
+  },
+  {
+    "code": "100794",
+    "name": "Sundaram Small Cap Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 15.3384
+  },
+  {
+    "code": "152016",
+    "name": "LIC MF Value Fund",
+    "oldest_amfi_date": "2023-07-31",
+    "oldest_amfi_nav": 17.78
+  },
+  {
+    "code": "141068",
+    "name": "Quantum Value Fund",
+    "oldest_amfi_date": "2017-04-01",
+    "oldest_amfi_nav": 48.47
+  },
+  {
+    "code": "101853",
+    "name": "Sundaram Value Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 25.7071
+  },
+  {
+    "code": "151076",
+    "name": "HSBC ELSS Tax saver Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 81.3287
+  },
+  {
+    "code": "154519",
+    "name": "AlphaGrep Flexi Cap Fund",
+    "oldest_amfi_date": "2026-08-13",
+    "oldest_amfi_nav": 10.11
+  },
+  {
+    "code": "151034",
+    "name": "HSBC Midcap Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 210.9607
+  },
+  {
+    "code": "151037",
+    "name": "HSBC Infrastructure Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 25.4186
+  },
+  {
+    "code": "151144",
+    "name": "HSBC Business Cycles Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 24.6963
+  },
+  {
+    "code": "115284",
+    "name": "Invesco India Nifty 50 Exchange Traded Fund",
+    "oldest_amfi_date": "2011-06-16",
+    "oldest_amfi_nav": 539.4361
+  },
+  {
+    "code": "112368",
+    "name": "Invesco India Gold Exchange Traded Fund",
+    "oldest_amfi_date": "2010-03-19",
+    "oldest_amfi_nav": 1685.844
+  },
+  {
+    "code": "154567",
+    "name": "ALPHAGREP LIQUID OMNI FOF",
+    "oldest_amfi_date": "2026-08-10",
+    "oldest_amfi_nav": 1000.8145
+  },
+  {
+    "code": "153695",
+    "name": "Invesco India Income Plus Arbitrage Active Fund of Fund",
+    "oldest_amfi_date": "2025-07-22",
+    "oldest_amfi_nav": 1000.9207
+  },
+  {
+    "code": "150258",
+    "name": "BARODA BNP PARIBAS AGGRESSIVE HYBRID FUND",
+    "oldest_amfi_date": "2022-03-14",
+    "oldest_amfi_nav": 17.7903
+  },
+  {
+    "code": "106166",
+    "name": "Canara Robeco Equity Hybrid Fund",
+    "oldest_amfi_date": "2007-07-23",
+    "oldest_amfi_nav": 41.76
+  },
+  {
+    "code": "133036",
+    "name": "Kotak Aggressive Hybrid Fund",
+    "oldest_amfi_date": "2014-11-05",
+    "oldest_amfi_nav": 17.701
+  },
+  {
+    "code": "112936",
+    "name": "Nippon India Aggressive Hybrid Fund (Existing Number of Segregated Portfolios - 2)",
+    "oldest_amfi_date": "2010-05-21",
+    "oldest_amfi_nav": 20.1374
+  },
+  {
+    "code": "138382",
+    "name": "PGIM India Aggressive Hybrid Equity Fund",
+    "oldest_amfi_date": "2016-03-08",
+    "oldest_amfi_nav": 52.04
+  },
+  {
+    "code": "101070",
+    "name": "Quant Aggressive Hybrid Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 43.3265
+  },
+  {
+    "code": "149599",
+    "name": "Sundaram Aggressive Hybrid Fund (Formerly Known as Principal Hybrid Equity Fund)",
+    "oldest_amfi_date": "2022-01-03",
+    "oldest_amfi_nav": 113.3719
+  },
+  {
+    "code": "108845",
+    "name": "BANDHAN Arbitrage Fund",
+    "oldest_amfi_date": "2008-06-02",
+    "oldest_amfi_nav": 11.3051
+  },
+  {
+    "code": "150250",
+    "name": "BARODA BNP PARIBAS ARBITRAGE FUND",
+    "oldest_amfi_date": "2022-03-14",
+    "oldest_amfi_nav": 13.1035
+  },
+  {
+    "code": "105968",
+    "name": "Kotak Arbitrage Fund",
+    "oldest_amfi_date": "2007-06-18",
+    "oldest_amfi_nav": 11.4064
+  },
+  {
+    "code": "149552",
+    "name": "Sundaram Arbitrage Fund(Formerly Known as Prinicpal Arbitrage Fund)",
+    "oldest_amfi_date": "2022-01-03",
+    "oldest_amfi_nav": 11.7921
+  },
+  {
+    "code": "150203",
+    "name": "BARODA BNP PARIBAS CONSERVATIVE HYBRID FUND",
+    "oldest_amfi_date": "2022-03-14",
+    "oldest_amfi_nav": 34.6137
+  },
+  {
+    "code": "114859",
+    "name": "Kotak Debt Hybrid Fund",
+    "oldest_amfi_date": "2011-03-01",
+    "oldest_amfi_nav": 15.4134
+  },
+  {
+    "code": "101869",
+    "name": "LIC MF Conservative Hybrid Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 23.1814
+  },
+  {
+    "code": "131666",
+    "name": "Aditya Birla Sun Life Balanced Advantage Fund",
+    "oldest_amfi_date": "2014-10-13",
+    "oldest_amfi_nav": 35.22
+  },
+  {
+    "code": "149715",
+    "name": "Sundaram Balanced Advantage Fund (Formerly Known as Principal Balanced Advantage Fund)",
+    "oldest_amfi_date": "2022-01-03",
+    "oldest_amfi_nav": 25.3853
+  },
+  {
+    "code": "100646",
+    "name": "UTI - Unit Linked Insurance Plan",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 15.2571
+  },
+  {
+    "code": "140351",
+    "name": "Edelweiss Equity Savings Fund",
+    "oldest_amfi_date": "2016-11-28",
+    "oldest_amfi_nav": 11.3055
+  },
+  {
+    "code": "151950",
+    "name": "LIC MF Equity Savings Fund",
+    "oldest_amfi_date": "2023-07-31",
+    "oldest_amfi_nav": 22.6835
+  },
+  {
+    "code": "138372",
+    "name": "PGIM India Equity Savings Fund",
+    "oldest_amfi_date": "2016-03-08",
+    "oldest_amfi_nav": 25.2128
+  },
+  {
+    "code": "149674",
+    "name": "Sundaram Equity Savings Fund (Formerly Known as Principal Equity Savings Fund)",
+    "oldest_amfi_date": "2022-01-03",
+    "oldest_amfi_nav": 50.4007
+  },
+  {
+    "code": "101144",
+    "name": "ICICI Prudential Multi-Asset Fund",
     "oldest_amfi_date": "2006-04-02",
-    "oldest_amfi_nav": 10.0477
+    "oldest_amfi_nav": 54.6909
+  },
+  {
+    "code": "101072",
+    "name": "Quant Multi Asset Allocation Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 14.2868
+  },
+  {
+    "code": "151120",
+    "name": "HSBC Aggressive Hybrid Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 37.2132
+  },
+  {
+    "code": "154393",
+    "name": "WhiteOak Capital Aggressive Hybrid Fund",
+    "oldest_amfi_date": "2026-07-01",
+    "oldest_amfi_nav": 10.081
+  },
+  {
+    "code": "151134",
+    "name": "HSBC Arbitrage Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 15.8756
+  },
+  {
+    "code": "151127",
+    "name": "HSBC Balanced Advantage Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 31.6441
+  },
+  {
+    "code": "102535",
+    "name": "UTI Conservative Hybrid Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 13.2735
+  },
+  {
+    "code": "151058",
+    "name": "HSBC Equity Savings Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 23.537
+  },
+  {
+    "code": "151104",
+    "name": "HSBC Banking and PSU Debt Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 20.2417
+  },
+  {
+    "code": "118232",
+    "name": "Invesco India Banking and PSU Fund",
+    "oldest_amfi_date": "2012-12-31",
+    "oldest_amfi_nav": 1002.1083
+  },
+  {
+    "code": "150992",
+    "name": "HSBC Corporate Bond Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 60.4531
+  },
+  {
+    "code": "133782",
+    "name": "Kotak Corporate Bond Fund",
+    "oldest_amfi_date": "2015-02-02",
+    "oldest_amfi_nav": 1793.0642
+  },
+  {
+    "code": "151043",
+    "name": "HSBC Credit Risk Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 24.0778
+  },
+  {
+    "code": "130721",
+    "name": "Invesco India Credit Risk Fund",
+    "oldest_amfi_date": "2014-09-08",
+    "oldest_amfi_nav": 1001.3955
+  },
+  {
+    "code": "145590",
+    "name": "Groww Dynamic Term Fund",
+    "oldest_amfi_date": "2018-12-06",
+    "oldest_amfi_nav": 1000.5358
+  },
+  {
+    "code": "151084",
+    "name": "HSBC Dynamic Bond Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 24.4405
+  },
+  {
+    "code": "145287",
+    "name": "UTI - Floater Fund",
+    "oldest_amfi_date": "2018-10-31",
+    "oldest_amfi_nav": 1000.7841
+  },
+  {
+    "code": "151013",
+    "name": "HSBC Gilt Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 55.7703
+  },
+  {
+    "code": "154047",
+    "name": "Abakkus Liquid Fund",
+    "oldest_amfi_date": "2025-12-15",
+    "oldest_amfi_nav": 100.0698
+  },
+  {
+    "code": "115991",
+    "name": "Groww Liquid Fund",
+    "oldest_amfi_date": "2011-10-27",
+    "oldest_amfi_nav": 1000.7483
+  },
+  {
+    "code": "118907",
+    "name": "HSBC Liquid Fund",
+    "oldest_amfi_date": "2012-12-30",
+    "oldest_amfi_nav": 1798.4486
+  },
+  {
+    "code": "118902",
+    "name": "HSBC Liquid Fund",
+    "oldest_amfi_date": "2012-12-30",
+    "oldest_amfi_nav": 1145.2041
+  },
+  {
+    "code": "111646",
+    "name": "Mirae Asset Liquid Fund",
+    "oldest_amfi_date": "2009-01-13",
+    "oldest_amfi_nav": 1000.6789
+  },
+  {
+    "code": "102009",
+    "name": "UTI - Liquid Fund",
+    "oldest_amfi_date": "2006-04-01",
+    "oldest_amfi_nav": 1146.4656
+  },
+  {
+    "code": "102012",
+    "name": "UTI - Liquid Fund",
+    "oldest_amfi_date": "2006-04-01",
+    "oldest_amfi_nav": 1149.8629
+  },
+  {
+    "code": "151149",
+    "name": "HSBC Medium Duration Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 16.7741
+  },
+  {
+    "code": "149012",
+    "name": "Invesco India Medium Duration Fund",
+    "oldest_amfi_date": "2021-07-19",
+    "oldest_amfi_nav": 1000.3846
+  },
+  {
+    "code": "151893",
+    "name": "Bajaj Finserv Money Market Fund",
+    "oldest_amfi_date": "2023-07-26",
+    "oldest_amfi_nav": 1001.024
+  },
+  {
+    "code": "151048",
+    "name": "HSBC Money Market Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 21.9694
+  },
+  {
+    "code": "149115",
+    "name": "Mirae Asset Money Market Fund",
+    "oldest_amfi_date": "2021-08-12",
+    "oldest_amfi_nav": 1000.2149
+  },
+  {
+    "code": "154415",
+    "name": "Choice Overnight Fund",
+    "oldest_amfi_date": "2026-07-06",
+    "oldest_amfi_nav": 100.0471
+  },
+  {
+    "code": "147454",
+    "name": "Groww Overnight Fund",
+    "oldest_amfi_date": "2019-07-09",
+    "oldest_amfi_nav": 1000.9031
+  },
+  {
+    "code": "152153",
+    "name": "Helios Overnight Fund",
+    "oldest_amfi_date": "2023-10-25",
+    "oldest_amfi_nav": 1000.6848
+  },
+  {
+    "code": "147290",
+    "name": "HSBC Overnight Fund",
+    "oldest_amfi_date": "2019-05-22",
+    "oldest_amfi_nav": 1000.1562
+  },
+  {
+    "code": "147878",
+    "name": "Invesco India Overnight Fund",
+    "oldest_amfi_date": "2020-01-09",
+    "oldest_amfi_nav": 1000.2611
+  },
+  {
+    "code": "147739",
+    "name": "Mirae Asset Overnight Fund",
+    "oldest_amfi_date": "2019-10-16",
+    "oldest_amfi_nav": 1000.1316
+  },
+  {
+    "code": "150368",
+    "name": "NJ Overnight Fund",
+    "oldest_amfi_date": "2022-08-02",
+    "oldest_amfi_nav": 1000.6012
+  },
+  {
+    "code": "123708",
+    "name": "Groww Short Term Fund",
+    "oldest_amfi_date": "2013-09-16",
+    "oldest_amfi_nav": 1002.3509
+  },
+  {
+    "code": "148906",
+    "name": "ITI Ultra Short Term Fund",
+    "oldest_amfi_date": "2021-05-06",
+    "oldest_amfi_nav": 1000.2502
+  },
+  {
+    "code": "148530",
+    "name": "Mirae Asset Ultra Short Duration Fund",
+    "oldest_amfi_date": "2020-10-08",
+    "oldest_amfi_nav": 1000.2173
+  },
+  {
+    "code": "112083",
+    "name": "UTI Ultra Short Duration Fund",
+    "oldest_amfi_date": "2009-07-15",
+    "oldest_amfi_nav": 1000.1506
+  },
+  {
+    "code": "151114",
+    "name": "HSBC Low Duration Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 23.5378
+  },
+  {
+    "code": "107705",
+    "name": "Mirae Asset Low Duration Fund",
+    "oldest_amfi_date": "2008-03-06",
+    "oldest_amfi_nav": 1000.6561
+  },
+  {
+    "code": "102540",
+    "name": "UTI Low Duration Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 18.0194
+  },
+  {
+    "code": "102544",
+    "name": "UTI Low Duration Fund",
+    "oldest_amfi_date": "2007-04-24",
+    "oldest_amfi_nav": 1000.2673
+  },
+  {
+    "code": "151590",
+    "name": "Invesco India Nifty G-sec Jul 2027 Index Fund",
+    "oldest_amfi_date": "2023-03-21",
+    "oldest_amfi_nav": 999.3891
+  },
+  {
+    "code": "151594",
+    "name": "Invesco India Nifty G-sec Sep 2032 Index Fund",
+    "oldest_amfi_date": "2023-03-29",
+    "oldest_amfi_nav": 1000.4268
+  },
+  {
+    "code": "154387",
+    "name": "Groww Nifty Smallcap 250 Momentum Quality 100 Index Fund",
+    "oldest_amfi_date": "2026-06-19",
+    "oldest_amfi_nav": 10.0987
+  },
+  {
+    "code": "151158",
+    "name": "HSBC NIFTY 50 Index Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 21.0243
+  },
+  {
+    "code": "151162",
+    "name": "HSBC NIFTY NEXT 50 Index Fund",
+    "oldest_amfi_date": "2022-11-28",
+    "oldest_amfi_nav": 18.4967
+  },
+  {
+    "code": "132174",
+    "name": "Aditya Birla Sun Life Aggressive Hybrid Omni FOF",
+    "oldest_amfi_date": "2014-10-13",
+    "oldest_amfi_nav": 14.0077
+  },
+  {
+    "code": "132178",
+    "name": "Aditya Birla Sun Life Conservative Hybrid Active FOF",
+    "oldest_amfi_date": "2014-10-13",
+    "oldest_amfi_nav": 13.3764
+  },
+  {
+    "code": "132180",
+    "name": "Aditya Birla Sun Life Dynamic Asset Allocation Omni FOF",
+    "oldest_amfi_date": "2014-10-13",
+    "oldest_amfi_nav": 14.8359
+  },
+  {
+    "code": "131896",
+    "name": "Aditya Birla Sun Life Income Plus Arbitrage Active FOF",
+    "oldest_amfi_date": "2014-10-13",
+    "oldest_amfi_nav": 17.6164
+  },
+  {
+    "code": "131864",
+    "name": "Aditya Birla Sun Life Multi Asset Omni FoF",
+    "oldest_amfi_date": "2014-10-13",
+    "oldest_amfi_nav": 18.9907
+  },
+  {
+    "code": "108545",
+    "name": "Bandhan Income Plus Arbitrage Active FOF",
+    "oldest_amfi_date": "2008-06-02",
+    "oldest_amfi_nav": 12.5953
+  },
+  {
+    "code": "154135",
+    "name": "Bandhan Silver ETF FOF",
+    "oldest_amfi_date": "2026-01-28",
+    "oldest_amfi_nav": 11.1708
+  },
+  {
+    "code": "101656",
+    "name": "Franklin India Dynamic Asset Allocation Active Fund of Funds",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 21.6921
+  },
+  {
+    "code": "130533",
+    "name": "HDFC Income Plus Arbitrage Active FOF",
+    "oldest_amfi_date": "2014-06-30",
+    "oldest_amfi_nav": 12.248
+  },
+  {
+    "code": "102135",
+    "name": "ICICI Prudential Aggressive Hybrid Active FOF",
+    "oldest_amfi_date": "2006-04-02",
+    "oldest_amfi_nav": 22.2702
+  },
+  {
+    "code": "102141",
+    "name": "ICICI Prudential Diversified Debt Strategy Active FOF",
+    "oldest_amfi_date": "2006-04-02",
+    "oldest_amfi_nav": 11.1675
+  },
+  {
+    "code": "102137",
+    "name": "ICICI Prudential Dynamic Asset Allocation Active FOF",
+    "oldest_amfi_date": "2006-04-02",
+    "oldest_amfi_nav": 15.6373
+  },
+  {
+    "code": "102139",
+    "name": "ICICI Prudential Income plus Arbitrage Omni FOF",
+    "oldest_amfi_date": "2006-04-02",
+    "oldest_amfi_nav": 12.5363
+  },
+  {
+    "code": "102574",
+    "name": "Kotak Multi Asset Omni FOF",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 23.43
+  },
+  {
+    "code": "151973",
+    "name": "LIC MF Gold ETF Fund of Fund",
+    "oldest_amfi_date": "2023-07-31",
+    "oldest_amfi_nav": 15.9354
+  },
+  {
+    "code": "141063",
+    "name": "Quantum Diversified Equity All Cap Active FOF",
+    "oldest_amfi_date": "2017-04-01",
+    "oldest_amfi_nav": 30.123
+  },
+  {
+    "code": "141064",
+    "name": "Quantum Gold ETF FOF",
+    "oldest_amfi_date": "2017-04-01",
+    "oldest_amfi_nav": 12.1713
+  },
+  {
+    "code": "141072",
+    "name": "Quantum Multi Asset Active FOF",
+    "oldest_amfi_date": "2017-04-01",
+    "oldest_amfi_nav": 16.0488
+  },
+  {
+    "code": "132138",
+    "name": "Aditya Birla Sun Life Global Emerging Opportunities Fund",
+    "oldest_amfi_date": "2014-10-13",
+    "oldest_amfi_nav": 12.6067
+  },
+  {
+    "code": "132005",
+    "name": "Aditya Birla Sun Life Global Excellence Equity Fund Of Fund",
+    "oldest_amfi_date": "2014-10-13",
+    "oldest_amfi_nav": 15.86
+  },
+  {
+    "code": "106597",
+    "name": "DSP World Gold Mining Overseas Equity Omni FoF",
+    "oldest_amfi_date": "2007-09-18",
+    "oldest_amfi_nav": 11.4971
+  },
+  {
+    "code": "140255",
+    "name": "Edelweiss ASEAN Equity Off-shore Fund",
+    "oldest_amfi_date": "2016-11-28",
+    "oldest_amfi_nav": 16.117
+  },
+  {
+    "code": "140242",
+    "name": "Edelweiss Greater China Equity Off-shore Fund",
+    "oldest_amfi_date": "2016-11-28",
+    "oldest_amfi_nav": 20.216
+  },
+  {
+    "code": "140273",
+    "name": "Edelweiss US Value Equity Offshore Fund",
+    "oldest_amfi_date": "2016-11-28",
+    "oldest_amfi_nav": 13.7119
+  },
+  {
+    "code": "138453",
+    "name": "PGIM India Emerging Markets Equity Fund of Fund",
+    "oldest_amfi_date": "2016-03-08",
+    "oldest_amfi_nav": 11.53
+  },
+  {
+    "code": "138523",
+    "name": "PGIM India Global Equity Opportunities Fund of Fund",
+    "oldest_amfi_date": "2016-03-08",
+    "oldest_amfi_nav": 13.5
+  },
+  {
+    "code": "153930",
+    "name": "Bandhan Gold ETF",
+    "oldest_amfi_date": "2025-12-12",
+    "oldest_amfi_nav": 131.7586
+  },
+  {
+    "code": "152231",
+    "name": "Baroda BNP Paribas Gold ETF",
+    "oldest_amfi_date": "2023-12-19",
+    "oldest_amfi_nav": 61.7962
+  },
+  {
+    "code": "154092",
+    "name": "The Wealth Company Gold ETF",
+    "oldest_amfi_date": "2026-01-02",
+    "oldest_amfi_nav": 134.7347
+  },
+  {
+    "code": "154459",
+    "name": "Axis Nifty50 Equal Weight Index Fund",
+    "oldest_amfi_date": "2026-07-28",
+    "oldest_amfi_nav": 10.0949
+  },
+  {
+    "code": "101281",
+    "name": "HDFC BSE Sensex Index Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 107.2761
+  },
+  {
+    "code": "101199",
+    "name": "LIC MF BSE Sensex Index Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 24.1626
+  },
+  {
+    "code": "151935",
+    "name": "LIC MF Nifty Next 50 Index Fund",
+    "oldest_amfi_date": "2023-07-31",
+    "oldest_amfi_nav": 33.7859
+  },
+  {
+    "code": "149481",
+    "name": "Sundaram Nifty 100 Equal Weight Fund (Formerly Known as Principal Nifty 100 Equal Weight Fund)",
+    "oldest_amfi_date": "2022-01-03",
+    "oldest_amfi_nav": 110.3182
+  },
+  {
+    "code": "139840",
+    "name": "BANDHAN BSE Sensex ETF",
+    "oldest_amfi_date": "2016-10-17",
+    "oldest_amfi_nav": 274.8243
+  },
+  {
+    "code": "139839",
+    "name": "BANDHAN Nifty 50 ETF",
+    "oldest_amfi_date": "2016-10-17",
+    "oldest_amfi_nav": 85.0934
+  },
+  {
+    "code": "153929",
+    "name": "Bandhan Silver ETF",
+    "oldest_amfi_date": "2025-12-12",
+    "oldest_amfi_nav": 193.4545
+  },
+  {
+    "code": "152683",
+    "name": "Baroda BNP Paribas Nifty Bank ETF",
+    "oldest_amfi_date": "2024-06-24",
+    "oldest_amfi_nav": 51.5624
+  },
+  {
+    "code": "153378",
+    "name": "ICICI Prudential BSE Liquid Rate ETF - Growth",
+    "oldest_amfi_date": "2025-03-13",
+    "oldest_amfi_nav": 1000.4946
+  },
+  {
+    "code": "101127",
+    "name": "ICICI Prudential Children's Fund",
+    "oldest_amfi_date": "2006-04-02",
+    "oldest_amfi_nav": 37.41
+  },
+  {
+    "code": "100678",
+    "name": "UTI Children's Hybrid Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 13.8811
+  },
+  {
+    "code": "100682",
+    "name": "UTI Retirement Fund",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 19.9686
+  },
+  {
+    "code": "101834",
+    "name": "UTI - Master Equity Plan Unit Scheme",
+    "oldest_amfi_date": "2006-04-03",
+    "oldest_amfi_nav": 37.61
   }
 ]
