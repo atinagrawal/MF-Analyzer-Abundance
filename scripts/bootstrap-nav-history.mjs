@@ -129,11 +129,6 @@ async function main() {
     );
   `);
 
-  await client.query(`
-    CREATE INDEX IF NOT EXISTS idx_mf_nav_history_code_date
-      ON mf_nav_history (code, nav_date DESC);
-  `);
-
   console.log('[bootstrap] Verified mf_nav_history table schema and index.');
 
   // 2. Fetch active funds list

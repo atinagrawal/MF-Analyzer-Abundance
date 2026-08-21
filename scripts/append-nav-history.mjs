@@ -126,8 +126,6 @@ async function main() {
       nav      NUMERIC(14, 4) NOT NULL,
       PRIMARY KEY (code, nav_date)
     );
-    CREATE INDEX IF NOT EXISTS idx_mf_nav_history_code_date
-      ON mf_nav_history (code, nav_date DESC);
   `);
 
   // 2. Active funds in screener
