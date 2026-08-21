@@ -36,8 +36,9 @@
  *     whole response from ONE batch call.
  */
 
-import { r2Get } from '../../lib/r2';
-import { checkRateLimitSafe, rateLimitMessage, getClientIpFromNodeReq } from '../../lib/rateLimit';
+import pool from '../../lib/db.js';
+import { r2Get } from '../../lib/r2.js';
+import { checkRateLimitSafe, rateLimitMessage, getClientIpFromNodeReq } from '../../lib/rateLimit.js';
 
 export const config = { runtime: 'nodejs' };
 
@@ -280,31 +281,51 @@ export default async function handler(req, res) {
 
     const navs = {};
     const names = {};
-    await Promise.allSettled(uniqueCodes.map(async (c) => {
-      try {
-        const r = await fetch(
-          `https://api.mfapi.in/mf/${c}/latest`,
-          { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(4000) }
-        );
-        if (r.ok) {
-          const data = await r.json();
-          if (data?.data?.length) {
-            navs[c] = data.data[0].nav;
-            if (data.meta?.scheme_name) names[c] = data.meta.scheme_name;
-            return;
-          }
-        }
-      } catch (_) { /* fall through to AMFI */ }
 
+    // 1. Resolve known screener funds from local DB first (fast single SQL query)
+    const numericCodes = uniqueCodes.map(Number).filter((n) => !isNaN(n));
+    if (numericCodes.length > 0) {
       try {
-        const amfi = await getAmfiMap();
-        const fund = amfi.get(String(c));
-        if (fund) {
-          navs[c] = fund.nav;
-          if (fund.name) names[c] = fund.name;
+        const dbRes = await pool.query(
+          'SELECT code, name, nav::text FROM mf_screener WHERE code = ANY($1::int[])',
+          [numericCodes]
+        );
+        for (const row of dbRes.rows) {
+          const c = String(row.code);
+          if (row.nav) navs[c] = row.nav;
+          if (row.name) names[c] = row.name;
         }
-      } catch (_) { /* leave unresolved -- caller falls back to CAS-reported NAV */ }
-    }));
+      } catch (_) { /* fall through to upstream */ }
+    }
+
+    const unresolvedCodes = uniqueCodes.filter((c) => !navs[c]);
+    if (unresolvedCodes.length > 0) {
+      await Promise.allSettled(unresolvedCodes.map(async (c) => {
+        try {
+          const r = await fetch(
+            `https://api.mfapi.in/mf/${c}/latest`,
+            { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(4000) }
+          );
+          if (r.ok) {
+            const data = await r.json();
+            if (data?.data?.length) {
+              navs[c] = data.data[0].nav;
+              if (data.meta?.scheme_name) names[c] = data.meta.scheme_name;
+              return;
+            }
+          }
+        } catch (_) { /* fall through to AMFI */ }
+
+        try {
+          const amfi = await getAmfiMap();
+          const fund = amfi.get(String(c));
+          if (fund) {
+            navs[c] = fund.nav;
+            if (fund.name) names[c] = fund.name;
+          }
+        } catch (_) { /* leave unresolved -- caller falls back to CAS-reported NAV */ }
+      }));
+    }
 
     return sendOk(res, { status: 'SUCCESS', navs, names }, 's-maxage=3600, stale-while-revalidate=7200');
   }
@@ -374,6 +395,31 @@ export default async function handler(req, res) {
 
   // ── LATEST NAV only ──
   if (code && latest) {
+    // 1. Check self-hosted database first
+    try {
+      const dbRes = await pool.query(
+        "SELECT name, amc, category, structure, isin, nav::text, to_char(nav_date, 'DD-MM-YYYY') as date FROM mf_screener WHERE code = $1",
+        [Number(code)]
+      );
+      if (dbRes.rows.length > 0 && dbRes.rows[0].nav) {
+        const fund = dbRes.rows[0];
+        const data = {
+          meta: {
+            scheme_code: Number(code),
+            scheme_name: fund.name,
+            fund_house: fund.amc || '',
+            scheme_category: fund.category || '',
+            scheme_type: fund.structure || 'Open Ended Schemes',
+            isin_growth: fund.isin || null,
+          },
+          data: [{ date: fund.date, nav: fund.nav }],
+          status: 'SUCCESS',
+        };
+        return sendOk(res, data, 's-maxage=3600, stale-while-revalidate=7200');
+      }
+    } catch (_) { /* fall through */ }
+
+    // 2. Upstream mfapi.in
     try {
       const r = await fetch(
         `https://api.mfapi.in/mf/${code}/latest`,
@@ -385,7 +431,7 @@ export default async function handler(req, res) {
       }
     } catch (_) { /* fall through */ }
 
-    // AMFI fallback: look up by scheme code in NAVAll.txt
+    // 3. AMFI fallback: look up by scheme code in NAVAll.txt
     try {
       const amfi = await getAmfiMap();
       const fund = amfi.get(String(code));
@@ -399,11 +445,38 @@ export default async function handler(req, res) {
 
   // ── FULL NAV HISTORY ──
   if (code) {
-    // Try mfapi first (the authoritative source). Retry once and use a generous
-    // timeout: history is not latency-critical, and failing over too eagerly is
-    // dangerous — the ISIN-based fallback below can return a DIFFERENT scheme's
-    // data when an ISIN survived an AMC transfer (e.g. JPMorgan→Edelweiss, where
-    // ISIN INF843K01013 still resolves to the frozen 2007–2016 JPMorgan series).
+    // 1. Self-hosted database (mf_nav_history) — instant, authoritative, and always up-to-date
+    try {
+      const [metaRes, histRes] = await Promise.all([
+        pool.query(
+          'SELECT name, amc, category, structure, isin FROM mf_screener WHERE code = $1',
+          [Number(code)]
+        ),
+        pool.query(
+          "SELECT to_char(nav_date, 'DD-MM-YYYY') as date, nav::text FROM mf_nav_history WHERE code = $1 ORDER BY nav_date DESC",
+          [String(code)]
+        ),
+      ]);
+
+      if (histRes.rows.length > 0) {
+        const fund = metaRes.rows[0];
+        const data = {
+          meta: {
+            scheme_code: Number(code),
+            scheme_name: fund?.name || 'Mutual Fund Scheme',
+            fund_house: fund?.amc || '',
+            scheme_category: fund?.category || '',
+            scheme_type: fund?.structure || 'Open Ended Schemes',
+            isin_growth: fund?.isin || null,
+          },
+          data: histRes.rows.map((r) => ({ date: r.date, nav: r.nav })),
+          status: 'SUCCESS',
+        };
+        return sendOk(res, data, 's-maxage=14400, stale-while-revalidate=86400');
+      }
+    } catch (_) { /* fall through to upstream */ }
+
+    // 2. mfapi.in fallback (for schemes not in mf_screener universe)
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const r = await fetch(
@@ -419,7 +492,7 @@ export default async function handler(req, res) {
       } catch (_) { /* retry, then fall through to fallback */ }
     }
 
-    // captnemo fallback (ISIN-based). Guarded against stale/cross-mapped lineage.
+    // 3. captnemo fallback (ISIN-based). Guarded against stale/cross-mapped lineage.
     try {
       const amfi = await getAmfiMap();
       const fund = amfi.get(String(code));
@@ -454,7 +527,7 @@ export default async function handler(req, res) {
     } catch (e) {
       return sendError(
         res, 502,
-        `NAV history unavailable — mfapi.in is slow/unreachable and the fallback was unsafe: ${e.message}`,
+        `NAV history unavailable — self-hosted DB, mfapi.in, and captnemo fallback failed: ${e.message}`,
         'UPSTREAM_DOWN'
       );
     }
