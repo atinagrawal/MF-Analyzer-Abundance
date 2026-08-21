@@ -18,8 +18,8 @@ if (!POSTGRES_URL) {
 
 const SAMPLE_CODES = [
   { code: '100033', name: 'HDFC Top 100 Fund' },
-  { code: '119028', name: 'Axis Bluechip Fund' },
-  { code: '120503', name: 'Mirae Asset Large Cap Fund' },
+  { code: '112277', name: 'Axis Large Cap Fund' },
+  { code: '107578', name: 'Mirae Asset Large Cap Fund' },
   { code: '102528', name: 'ICICI Prudential MidCap Fund' },
   { code: '101072', name: 'Quant Multi Asset Allocation Fund' },
 ];
