@@ -257,7 +257,7 @@ export default function ManualHoldingsTab() {
           await Promise.allSettled(
             mfCodes.slice(0, 10).map(async code => {
               try {
-                const r3 = await fetch(`https://api.mfapi.in/mf/${code}/latest`);
+                const r3 = await fetch(`/api/mf?code=${code}&latest=1`);
                 if (r3.ok) {
                   const md = await r3.json();
                   const nav = parseFloat(md?.data?.[0]?.nav);
@@ -355,7 +355,7 @@ export default function ManualHoldingsTab() {
       // If new MF code was added, fetch its NAV
       if (payload.fund_type !== 'SIF' && payload.amfi_code && !navMap[payload.amfi_code]) {
         try {
-          const r2 = await fetch(`https://api.mfapi.in/mf/${payload.amfi_code}/latest`);
+          const r2 = await fetch(`/api/mf?code=${payload.amfi_code}&latest=1`);
           if (r2.ok) {
             const md = await r2.json();
             const nav = parseFloat(md?.data?.[0]?.nav);

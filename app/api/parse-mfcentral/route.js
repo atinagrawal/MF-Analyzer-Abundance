@@ -19,6 +19,7 @@
 
 import * as XLSX from 'xlsx';
 import { auth } from '@/auth';
+import pool from '@/lib/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -99,6 +100,26 @@ async function matchAmfiCode(schemeName) {
   const allWords = normalizeWords(schemeName);
   const searchWords = allWords.filter(w => w.length > 2 && !SEARCH_STOPWORDS.has(w)).slice(0, 6);
   if (!searchWords.length) return null;
+
+  // 1. Search local Postgres database first (fast & reliable)
+  try {
+    const conditions = searchWords.map((_, i) => `name ILIKE $${i + 1}`).join(' AND ');
+    const values = searchWords.map(w => `%${w}%`);
+    const dbRes = await pool.query(
+      `SELECT code, name FROM mf_screener WHERE ${conditions} LIMIT 30`,
+      values
+    );
+    if (dbRes.rows.length > 0) {
+      let best = null, bestScore = 0;
+      for (const cand of dbRes.rows) {
+        const score = scoreMatch(allWords, normalizeWords(cand.name));
+        if (score > bestScore) { bestScore = score; best = cand; }
+      }
+      if (bestScore >= 0.5 && best) return best.code;
+    }
+  } catch (_) { /* fall through */ }
+
+  // 2. Upstream fallback for direct plans or schemes not in screener
   try {
     const r = await fetch(`https://api.mfapi.in/mf/search?q=${encodeURIComponent(searchWords.join(' '))}`, {
       headers: { Accept: 'application/json' },

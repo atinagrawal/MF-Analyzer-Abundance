@@ -45,7 +45,7 @@ export default function RedemptionPlanner({ fund, onClose }) {
     });
     if (!hasPreGran) return;
     setGran18Nav({ nav: null, fetching: true });
-    fetch(`https://api.mfapi.in/mf/${fund.amfiCode}`)
+    fetch(`/api/mf?code=${fund.amfiCode}`)
       .then(r => r.json())
       .then(d => {
         const rows = d.data || [];
