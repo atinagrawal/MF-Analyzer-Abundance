@@ -94,10 +94,11 @@ const numTxt = (v, d = 1) => (v == null ? '—' : v.toFixed(d));
 const cls = (v) => (v == null ? 'scr-muted' : v >= 0 ? 'scr-pos' : 'scr-neg');
 
 function assetClass(cat = '') {
-  if (/equity/i.test(cat)) return 'Equity';
-  if (/hybrid|arbitrage|balanced|multi asset/i.test(cat)) return 'Hybrid';
+  if (/hybrid|arbitrage|balanced|multi asset|equity savings/i.test(cat)) return 'Hybrid';
+  if (/^equity|equity scheme/i.test(cat)) return 'Equity';
   if (/index|etf|fof|fund of fund/i.test(cat)) return 'Index / FoF';
   if (/debt|income|liquid|gilt|bond|overnight|duration|money market|psu|credit|floater/i.test(cat)) return 'Debt';
+  if (/equity/i.test(cat)) return 'Equity';
   return 'Other';
 }
 
