@@ -59,7 +59,15 @@ async function run() {
     if (!/^\d{5,6}$/.test(code)) continue;
     const name = parts[3].trim();
     if (!name) continue;
-    schemes[code] = { name, plan: (parts[4] || '').trim(), option: (parts[5] || '').trim() };
+    if (parts.length >= 8) {
+      schemes[code] = { name, plan: (parts[4] || '').trim(), option: (parts[5] || '').trim() };
+    } else {
+      schemes[code] = {
+        name,
+        plan: /\bdirect\b/i.test(name) ? 'Direct Plan' : /\binstitutional\b/i.test(name) ? 'Institutional' : 'Regular Plan',
+        option: /\bgrowth\b/i.test(name) ? 'Growth' : /\bidcw|dividend\b/i.test(name) ? 'IDCW' : '',
+      };
+    }
     written++;
   }
 

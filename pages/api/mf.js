@@ -112,6 +112,25 @@ async function getAmfiMap() {
   return _amfiCache;
 }
 
+function formatSchemeDisplayName(name, option) {
+  if (!name) return 'Mutual Fund Scheme';
+  if (!option) return name;
+  const opt = option.trim();
+  if (!opt) return name;
+  if (name.toLowerCase().includes(opt.toLowerCase())) return name;
+
+  let label = opt;
+  if (/^growth(\s+option)?$/i.test(opt)) label = 'Growth';
+  else if (/^idcw(\s+option)?$/i.test(opt) || /^dividend(\s+option)?$/i.test(opt)) label = 'IDCW';
+  else if (/daily.*reinvest/i.test(opt) || /reinvest.*daily/i.test(opt)) label = 'Daily IDCW Reinvest';
+  else if (/weekly.*reinvest/i.test(opt) || /reinvest.*weekly/i.test(opt)) label = 'Weekly IDCW Reinvest';
+  else if (/monthly.*reinvest/i.test(opt) || /reinvest.*monthly/i.test(opt)) label = 'Monthly IDCW Reinvest';
+  else if (/monthly.*(idcw|payout)/i.test(opt) || /(idcw|payout).*monthly/i.test(opt)) label = 'Monthly IDCW';
+  else if (/bonus/i.test(opt)) label = 'Bonus';
+
+  return `${name} (${label})`;
+}
+
 /** Simple fuzzy fund name search against AMFI map (Regular plans only: Growth and IDCW) */
 function searchAmfi(amfi, query) {
   const q = query.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -119,14 +138,20 @@ function searchAmfi(amfi, query) {
   const results = [];
 
   for (const [code, fund] of amfi) {
-    const isDirect = fund.plan ? /direct/i.test(fund.plan) : /\bdirect\b/i.test(fund.name);
-    const isInst = fund.plan ? /institutional/i.test(fund.plan) : /\binstitutional\b/i.test(fund.name);
+    const isDirect = (fund.plan && /direct/i.test(fund.plan)) || /\bdirect\b/i.test(fund.name);
+    const isInst = (fund.plan && /institutional/i.test(fund.plan)) || /\binstitutional\b/i.test(fund.name);
     if (isDirect || isInst) continue;
 
     const name = fund.name.toLowerCase();
     // All words must appear in the fund name
     if (words.every(w => name.includes(w))) {
-      results.push({ schemeCode: parseInt(code, 10), schemeName: fund.name, plan: fund.plan, option: fund.option });
+      results.push({
+        schemeCode: parseInt(code, 10),
+        schemeName: formatSchemeDisplayName(fund.name, fund.option),
+        rawName: fund.name,
+        plan: fund.plan,
+        option: fund.option,
+      });
     }
     if (results.length >= 50) break;
   }
@@ -160,14 +185,15 @@ function searchStaticList(schemes, query) {
     const plan = isLegacy ? undefined : entry.plan;
     const option = isLegacy ? undefined : entry.option;
 
-    const isDirect = plan ? /direct/i.test(plan) : /\bdirect\b/i.test(name);
-    const isInst = plan ? /institutional/i.test(plan) : /\binstitutional\b/i.test(name);
+    const isDirect = (plan && /direct/i.test(plan)) || /\bdirect\b/i.test(name);
+    const isInst = (plan && /institutional/i.test(plan)) || /\binstitutional\b/i.test(name);
     if (isDirect || isInst) continue;
 
     if (words.every(w => name.toLowerCase().includes(w))) {
       results.push({
         schemeCode: parseInt(code, 10),
-        schemeName: name,
+        schemeName: formatSchemeDisplayName(name, option),
+        rawName: name,
         plan,
         option,
       });
@@ -225,7 +251,7 @@ function buildLatestFromAmfi(code, fund) {
       scheme_type: '',
       scheme_category: '',
       scheme_code: parseInt(code, 10),
-      scheme_name: fund.name,
+      scheme_name: formatSchemeDisplayName(fund.name, fund.option),
       isin_growth: fund.isin || null,
       isin_div_reinvestment: fund.isinReinvest || null,
     },
@@ -536,8 +562,8 @@ export default async function handler(req, res) {
       if (!capData.historical_nav?.length) throw new Error('captnemo returned empty history');
 
       const data = buildHistoryFromCaptnemo(code, capData);
-      // Use AMFI's CURRENT name — captnemo may carry the pre-transfer scheme name.
-      data.meta.scheme_name = fund.name;
+      // Use AMFI's CURRENT name with option — captnemo may carry the pre-transfer scheme name.
+      data.meta.scheme_name = formatSchemeDisplayName(fund.name, fund.option);
 
       // Freshness guard: AMFI knows the fund's true latest NAV date. If the
       // fallback series ends far earlier, the ISIN is pointing at a predecessor
