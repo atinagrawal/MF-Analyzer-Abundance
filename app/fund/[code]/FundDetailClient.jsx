@@ -490,7 +490,7 @@ export default function FundDetailClient({ code }) {
               <div className="fd-stat-item">
                 <div className="fd-stat-label">Current NAV</div>
                 <div className="fd-stat-val">{navFormatted}</div>
-                {f.asof && <div className="fd-stat-sub">as of {f.asof}</div>}
+                {(f.nav_date || f.asof) && <div className="fd-stat-sub">as of {f.nav_date || f.asof}</div>}
               </div>
             )}
             {aumFormatted && (
