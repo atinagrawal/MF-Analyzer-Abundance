@@ -1273,6 +1273,12 @@
   "103390": { "inception_date": "2005-08-18", "inception_nav": 10 },
   "103633": { "inception_date": "2006-03-09", "inception_nav": 10 },
   "103819": { "inception_date": "2000-05-16", "inception_nav": 10 },
+  "151058": { "inception_date": "2011-10-25", "inception_nav": 10 },
+  "151060": { "inception_date": "2013-01-02", "inception_nav": 10 },
+  "151034": { "inception_date": "2010-02-16", "inception_nav": 10 },
+  "151036": { "inception_date": "2013-01-02", "inception_nav": 10 },
+  "151133": { "inception_date": "2014-05-15", "inception_nav": 10 },
+  "151130": { "inception_date": "2014-05-15", "inception_nav": 10 },
   "_comment": "Manual inception date overrides for funds where the oldest mfapi.in NAV record is significantly above 10 (pre-AMFI-records funds). After the first screener build, check data/mf-inception-needs-review.json for the list of funds that need entries here. Key = AMFI scheme code (integer as string).",
   "_format": {
     "inception_date": "YYYY-MM-DD",

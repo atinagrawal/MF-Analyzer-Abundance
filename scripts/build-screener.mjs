@@ -44,10 +44,14 @@ const OVERRIDES_PATH = path.join(__dirname, '..', 'data', 'mf-inception-override
 let OVERRIDES = {};
 try {
   const raw = JSON.parse(fs.readFileSync(OVERRIDES_PATH, 'utf8'));
-  // Support both flat {code:{...}} and nested {overrides:{code:{...}}} formats.
-  // Filter to numeric scheme codes only so metadata keys (_comment, _format) are ignored.
   const src = (raw.overrides && Object.keys(raw.overrides).length > 0) ? raw.overrides : raw;
   for (const [k, v] of Object.entries(src)) { if (/^\d+$/.test(k)) OVERRIDES[k] = v; }
+} catch (_) {}
+
+const LINEAGE_PATH = path.join(__dirname, '..', 'data', 'scheme-lineage.json');
+let LINEAGE = {};
+try {
+  LINEAGE = JSON.parse(fs.readFileSync(LINEAGE_PATH, 'utf8'));
 } catch (_) {}
 
 async function fetchText(url, tries = 3) {
@@ -326,12 +330,51 @@ async function main() {
   }
   process.stdout.write("\n");
 
+  // ---- 3b. lineage database history fallback ----
+  const dbHistoryMap = {};
+  if (c) {
+    const lineageCodes = Object.keys(LINEAGE);
+    if (lineageCodes.length > 0) {
+      try {
+        const histRes = await c.query(
+          'SELECT code, nav_date, nav FROM mf_nav_history WHERE code = ANY($1) ORDER BY nav_date ASC',
+          [lineageCodes]
+        );
+        for (const r of histRes.rows) {
+          (dbHistoryMap[r.code] ||= []).push({
+            t: new Date(r.nav_date).getTime(),
+            nav: parseFloat(r.nav)
+          });
+        }
+        console.log(`[screener] loaded lineage history for ${Object.keys(dbHistoryMap).length} merged funds`);
+      } catch (err) {
+        console.warn(`[screener] could not preload lineage nav history: ${err.message}`);
+      }
+    }
+  }
+
+  function getDbNavAtOrBefore(series, targetT) {
+    if (!series || !series.length) return null;
+    for (let i = series.length - 1; i >= 0; i--) {
+      if (series[i].t <= targetT) {
+        if (targetT - series[i].t <= 14 * D) {
+          return series[i].nav;
+        }
+        return null;
+      }
+    }
+    return null;
+  }
+
   // ---- 4. build rows ----
   const rows = [];
   for (const f of uni.values()) {
     const ret = {};
     for (const a of ANCHORS) {
-      const then = aMap[a.key][f.code]?.nav;
+      let then = aMap[a.key][f.code]?.nav;
+      if (!then && dbHistoryMap[f.code]) {
+        then = getDbNavAtOrBefore(dbHistoryMap[f.code], a.t);
+      }
       ret[a.key] = then ? (a.yrs ? Math.pow(f.nav / then, 1 / a.yrs) - 1 : f.nav / then - 1) : null;
     }
     const { vol, maxdd } = riskFrom((monthly[f.code] || []).sort((a, b) => a.t - b.t));
