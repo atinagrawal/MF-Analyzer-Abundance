@@ -36,9 +36,20 @@
  *     whole response from ONE batch call.
  */
 
+import fs from 'fs';
+import path from 'path';
 import pool from '../../lib/db.js';
 import { r2Get } from '../../lib/r2.js';
 import { checkRateLimitSafe, rateLimitMessage, getClientIpFromNodeReq } from '../../lib/rateLimit.js';
+import { stitchSeries } from '../../lib/schemeLineage.js';
+
+let LINEAGE = {};
+try {
+  const lineagePath = path.join(process.cwd(), 'data', 'scheme-lineage.json');
+  if (fs.existsSync(lineagePath)) {
+    LINEAGE = JSON.parse(fs.readFileSync(lineagePath, 'utf8'));
+  }
+} catch (_) {}
 
 export const config = { runtime: 'nodejs' };
 
@@ -511,7 +522,22 @@ export default async function handler(req, res) {
       ]);
 
       if (histRes.rows.length > 0) {
-        const fund = metaRes.rows[0];
+        let fund = metaRes.rows[0];
+        if (!fund?.name) {
+          try {
+            const amfi = await getAmfiMap();
+            const amfiFund = amfi?.get(String(code));
+            if (amfiFund) {
+              fund = {
+                name: formatSchemeDisplayName(amfiFund.name, amfiFund.option),
+                amc: '',
+                category: '',
+                structure: 'Open Ended Schemes',
+                isin: amfiFund.isin || null,
+              };
+            }
+          } catch (_) {}
+        }
         const data = {
           meta: {
             scheme_code: Number(code),
@@ -538,6 +564,40 @@ export default async function handler(req, res) {
         if (r.ok) {
           const data = await r.json();
           if (data && Array.isArray(data.data) && data.data.length) {
+            // If this scheme has a predecessor defined in LINEAGE, dynamically stitch as fallback
+            if (LINEAGE[code]) {
+              try {
+                const predCode = LINEAGE[code].pred;
+                const predRes = await fetch(`https://api.mfapi.in/mf/${predCode}`, {
+                  headers: { Accept: 'application/json' },
+                  signal: AbortSignal.timeout(10000),
+                });
+                if (predRes.ok) {
+                  const predData = await predRes.json();
+                  if (predData?.data?.length) {
+                    const norm = (arr) => arr.map(d => {
+                      const [dd, mm, yy] = d.date.split('-').map(Number);
+                      return { t: Date.UTC(yy, mm - 1, dd), nav: parseFloat(d.nav), date: d.date };
+                    }).filter(p => !isNaN(p.nav) && p.nav > 0).sort((a, b) => a.t - b.t);
+
+                    const curNorm = norm(data.data);
+                    const predNorm = norm(predData.data);
+                    const st = stitchSeries(curNorm, predNorm);
+                    if (st && st.series.length > curNorm.length) {
+                      const stitchedData = st.series
+                        .slice()
+                        .sort((a, b) => b.t - a.t)
+                        .map(p => ({
+                          date: p.date || `${String(new Date(p.t).getUTCDate()).padStart(2, '0')}-${String(new Date(p.t).getUTCMonth() + 1).padStart(2, '0')}-${new Date(p.t).getUTCFullYear()}`,
+                          nav: String(p.nav),
+                        }));
+                      data.data = stitchedData;
+                    }
+                  }
+                }
+              } catch (_) {}
+            }
+
             return sendOk(res, data, 's-maxage=14400, stale-while-revalidate=86400');
           }
         }
