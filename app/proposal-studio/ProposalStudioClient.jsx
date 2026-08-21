@@ -818,17 +818,25 @@ function FundPicker({ selectedFunds, casFunds, casLoading, proposalType, setProp
           )}
           {searchKind === 'mf' && searching && <div className="pfc-hint">Searching…</div>}
           {searchKind === 'mf' && !searching && query.trim().length >= 3 && results.length === 0 && <div className="pfc-hint">No funds matched. Try a simpler keyword.</div>}
-          {searchKind === 'mf' && results.map((s) => (
-            <button
-              key={s.schemeCode}
-              className="pfc-picker-item"
-              disabled={selectedCodes.has(s.schemeCode)}
-              onClick={() => onAddManual(s.schemeCode, s.schemeName)}
-            >
-              {s.schemeName}
-              <span className="pfc-add">{selectedCodes.has(s.schemeCode) ? 'Added' : 'Add'}</span>
-            </button>
-          ))}
+          {searchKind === 'mf' && results.map((s) => {
+            const isIdcwScheme = s.option != null ? /\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(s.option) : /\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(s.schemeName);
+            const optLabel = isIdcwScheme ? "IDCW" : "Growth";
+            const displayName = `${s.schemeName} (${optLabel})`;
+            return (
+              <button
+                key={s.schemeCode}
+                className="pfc-picker-item"
+                disabled={selectedCodes.has(s.schemeCode)}
+                onClick={() => onAddManual(s.schemeCode, displayName)}
+              >
+                <span>
+                  {s.schemeName}
+                  <span className={`di-opt ${isIdcwScheme ? 'di-idcw' : 'di-growth'}`} style={{ marginLeft: 6 }}>{optLabel}</span>
+                </span>
+                <span className="pfc-add">{selectedCodes.has(s.schemeCode) ? 'Added' : 'Add'}</span>
+              </button>
+            );
+          })}
           {searchKind === 'sif' && sifLoading && <div className="pfc-hint">Loading SIFs…</div>}
           {searchKind === 'sif' && !sifLoading && sifFiltered.length === 0 && <div className="pfc-hint">No SIFs matched.</div>}
           {searchKind === 'sif' && sifFiltered.map((s) => (

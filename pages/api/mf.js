@@ -112,32 +112,41 @@ async function getAmfiMap() {
   return _amfiCache;
 }
 
-/** Simple fuzzy fund name search against AMFI map */
+/** Simple fuzzy fund name search against AMFI map (Regular plans only: Growth and IDCW) */
 function searchAmfi(amfi, query) {
   const q = query.toLowerCase().replace(/\s+/g, ' ').trim();
   const words = q.split(' ').filter(Boolean);
   const results = [];
 
   for (const [code, fund] of amfi) {
+    const isDirect = fund.plan ? /direct/i.test(fund.plan) : /\bdirect\b/i.test(fund.name);
+    const isInst = fund.plan ? /institutional/i.test(fund.plan) : /\binstitutional\b/i.test(fund.name);
+    if (isDirect || isInst) continue;
+
     const name = fund.name.toLowerCase();
     // All words must appear in the fund name
     if (words.every(w => name.includes(w))) {
       results.push({ schemeCode: parseInt(code, 10), schemeName: fund.name, plan: fund.plan, option: fund.option });
     }
-    if (results.length >= 30) break;
+    if (results.length >= 50) break;
   }
-  return results;
+
+  // Rank Growth first, IDCW next
+  results.sort((a, b) => {
+    const aGrowth = /growth/i.test(a.option || a.schemeName);
+    const bGrowth = /growth/i.test(b.option || b.schemeName);
+    if (aGrowth && !bGrowth) return -1;
+    if (!aGrowth && bGrowth) return 1;
+    return 0;
+  });
+
+  return results.slice(0, 30);
 }
 
 /**
  * Search the R2-stored scheme list (scripts/sync_mf_scheme_list.js,
  * refreshed daily). Same matching rule as searchAmfi (every word must
- * appear in the name) so results are identical in shape/quality; this is
- * just a faster route to the same data for the common case.
- *
- * `schemes[code]` is either the current { name, plan, option } shape or,
- * briefly during rollout (an R2 copy written before this format existed),
- * a plain name string -- handle both so a stale cached copy doesn't 500.
+ * appear in the name, Regular plans only: Growth + IDCW).
  */
 function searchStaticList(schemes, query) {
   const q = query.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -148,17 +157,34 @@ function searchStaticList(schemes, query) {
     const entry = schemes[code];
     const isLegacy = typeof entry === 'string';
     const name = isLegacy ? entry : entry.name;
+    const plan = isLegacy ? undefined : entry.plan;
+    const option = isLegacy ? undefined : entry.option;
+
+    const isDirect = plan ? /direct/i.test(plan) : /\bdirect\b/i.test(name);
+    const isInst = plan ? /institutional/i.test(plan) : /\binstitutional\b/i.test(name);
+    if (isDirect || isInst) continue;
+
     if (words.every(w => name.toLowerCase().includes(w))) {
       results.push({
         schemeCode: parseInt(code, 10),
         schemeName: name,
-        plan: isLegacy ? undefined : entry.plan,
-        option: isLegacy ? undefined : entry.option,
+        plan,
+        option,
       });
     }
-    if (results.length >= 30) break;
+    if (results.length >= 50) break;
   }
-  return results;
+
+  // Rank Growth first, IDCW next
+  results.sort((a, b) => {
+    const aGrowth = /growth/i.test(a.option || a.schemeName);
+    const bGrowth = /growth/i.test(b.option || b.schemeName);
+    if (aGrowth && !bGrowth) return -1;
+    if (!aGrowth && bGrowth) return 1;
+    return 0;
+  });
+
+  return results.slice(0, 30);
 }
 
 /** Convert DD-Mon-YYYY (AMFI) to DD-MM-YYYY (mfapi format) */

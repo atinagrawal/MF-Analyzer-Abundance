@@ -901,7 +901,10 @@ function Picker({ sifList, onPick, onClose, mode }) {
   const [loading, setLoading] = useState(false);
   const timer = useRef(null), inputRef = useRef(null);
   useEffect(() => { inputRef.current?.focus(); }, []);
-  const score = (n) => (/growth/i.test(n) ? 3 : 0) - (/(idcw|dividend|bonus|payout|reinvest|segregated)/i.test(n) ? 4 : 0);
+  const isDirect = (s) => s.plan != null && s.plan !== "" ? /direct/i.test(s.plan) : /\bdirect\b/i.test(s.schemeName);
+  const isInst = (s) => s.plan != null && s.plan !== "" ? /institutional/i.test(s.plan) : /\binstitutional\b/i.test(s.schemeName);
+  const isIdcw = (s) => s.option != null ? /\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(s.option) : /\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(s.schemeName);
+  const score = (s) => (!isIdcw(s) ? 3 : 0);
   useEffect(() => {
     if (tab !== "mf") return;
     if (timer.current) clearTimeout(timer.current);
@@ -910,8 +913,8 @@ function Picker({ sifList, onPick, onClose, mode }) {
       setLoading(true);
       try {
         const d = await fetch(`/api/mf?q=${encodeURIComponent(q.trim())}`).then((r) => r.json());
-        const regular = (Array.isArray(d) ? d : []).filter((s) => !/\bdirect\b/i.test(s.schemeName));
-        setRes(regular.sort((a, b) => score(b.schemeName) - score(a.schemeName)).slice(0, 40));
+        const regular = (Array.isArray(d) ? d : []).filter((s) => !isDirect(s) && !isInst(s));
+        setRes(regular.sort((a, b) => score(b) - score(a)).slice(0, 40));
       } catch { setRes([]); }
       setLoading(false);
     }, 280);
@@ -928,8 +931,21 @@ function Picker({ sifList, onPick, onClose, mode }) {
         </div>
         <div className="bt-search"><input ref={inputRef} placeholder={tab === "mf" ? "Search e.g. 'parag parikh flexi', 'nifty 50 index'…" : "Filter SIFs by name or strategy…"} value={q} onChange={(e) => setQ(e.target.value)} />{loading && <span className="bt-spin dark" />}</div>
         <div className="bt-list">
-          {tab === "mf" && q.trim().length < 3 && <div className="bt-hint">Type at least 3 letters. Direct plans are hidden — Regular (Growth) shown.</div>}
-          {tab === "mf" && res.map((s) => (<button className="bt-item" key={s.schemeCode} onClick={() => onPick({ kind: "mf", id: s.schemeCode, name: s.schemeName.replace(/\s*-\s*/g, " - ").trim() })}><span className="bt-item-n">{s.schemeName}</span><span className="bt-add">Add</span></button>))}
+          {tab === "mf" && q.trim().length < 3 && <div className="bt-hint">Type at least 3 letters. Regular plans (Growth &amp; IDCW) shown.</div>}
+          {tab === "mf" && res.map((s) => {
+            const isIdcwScheme = isIdcw(s);
+            const optLabel = isIdcwScheme ? "IDCW" : "Growth";
+            const displayName = `${s.schemeName.replace(/\s*-\s*/g, " - ").trim()} (${optLabel})`;
+            return (
+              <button className="bt-item" key={s.schemeCode} onClick={() => onPick({ kind: "mf", id: s.schemeCode, name: displayName })}>
+                <span className="bt-item-n">
+                  {s.schemeName}
+                  <span className={`di-opt ${isIdcwScheme ? "di-idcw" : "di-growth"}`} style={{ marginLeft: 6 }}>{optLabel}</span>
+                </span>
+                <span className="bt-add">Add</span>
+              </button>
+            );
+          })}
           {tab === "mf" && !loading && q.trim().length >= 3 && res.length === 0 && <div className="bt-hint">No Regular-plan schemes matched. Try a simpler keyword.</div>}
           {tab === "sif" && sifFiltered.map((s) => (<button className="bt-item" key={s.scheme_id} onClick={() => onPick({ kind: "sif", id: s.scheme_id, name: s.nav_name, cat: shortCat(s.category) })}><span className="bt-item-n">{s.nav_name}<span className="bt-item-sub">{shortCat(s.category)} · NAV ₹{s.nav}</span></span><span className="bt-add">Add</span></button>))}
           {tab === "sif" && sifFiltered.length === 0 && <div className="bt-hint">No SIFs matched.</div>}

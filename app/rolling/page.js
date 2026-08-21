@@ -124,9 +124,11 @@ function computeAlpha(rrA, rrB) {
 }
 
 function filterFunds(data) {
-  const growthOnly = data.filter(f => !/\b(idcw|dividend|weekly|daily|monthly\s+reinvestment|bonus|institutional)\b/i.test(f.schemeName));
-  const regular = growthOnly.filter(f => !/\bdirect\b/i.test(f.schemeName));
-  return regular.length ? regular : growthOnly;
+  const isDirect = (f) => f.plan != null && f.plan !== '' ? /direct/i.test(f.plan) : /\bdirect\b/i.test(f.schemeName);
+  const isInst = (f) => f.plan != null && f.plan !== '' ? /institutional/i.test(f.plan) : /\binstitutional\b/i.test(f.schemeName);
+  const isIdcw = (f) => f.option != null ? /\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(f.option) : /\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(f.schemeName);
+  const regular = (Array.isArray(data) ? data : []).filter(f => !isDirect(f) && !isInst(f));
+  return regular.sort((a, b) => (!isIdcw(a) ? 0 : 1) - (!isIdcw(b) ? 0 : 1));
 }
 
 function fmtDateShort(d) {
@@ -511,12 +513,19 @@ export default function RollingPage() {
                   {searchA && <button className="fund-clear show" onClick={()=>{setSearchA('');setDdA([]);setDdAOpen(false);}}>✕</button>}
                   {ddAOpen && ddA.length > 0 && (
                     <div className="fund-dropdown open">
-                      {ddA.map((f,i) => (
-                        <div key={f.schemeCode} className={`dd-item${i===ddAIdx?' active':''}`}
-                          onMouseDown={() => selectFund('A',f.schemeCode,f.schemeName)}>
-                          {f.schemeName}
-                        </div>
-                      ))}
+                      {ddA.map((f,i) => {
+                        const isIdcw = f.option != null ? /\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(f.option) : /\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(f.schemeName);
+                        const optLabel = isIdcw ? "IDCW" : "Growth";
+                        const fullName = `${f.schemeName} (${optLabel})`;
+                        return (
+                          <div key={f.schemeCode} className={`dd-item${i===ddAIdx?' active':''}`}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}
+                            onMouseDown={() => selectFund('A',f.schemeCode,fullName)}>
+                            <span>{f.schemeName}</span>
+                            <span className={`di-opt ${isIdcw ? 'di-idcw' : 'di-growth'}`}>{optLabel}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -595,12 +604,19 @@ export default function RollingPage() {
                       {searchB && <button className="fund-clear show" onClick={()=>{setSearchB('');setDdB([]);setDdBOpen(false);}}>✕</button>}
                       {ddBOpen && ddB.length > 0 && (
                         <div className="fund-dropdown open">
-                          {ddB.map((f,i) => (
-                            <div key={f.schemeCode} className={`dd-item${i===ddBIdx?' active':''}`}
-                              onMouseDown={() => selectFund('B',f.schemeCode,f.schemeName)}>
-                              {f.schemeName}
-                            </div>
-                          ))}
+                          {ddB.map((f,i) => {
+                            const isIdcw = f.option != null ? /\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(f.option) : /\b(idcw|dividend|bonus|payout|reinvest)\b/i.test(f.schemeName);
+                            const optLabel = isIdcw ? "IDCW" : "Growth";
+                            const fullName = `${f.schemeName} (${optLabel})`;
+                            return (
+                              <div key={f.schemeCode} className={`dd-item${i===ddBIdx?' active':''}`}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}
+                                onMouseDown={() => selectFund('B',f.schemeCode,fullName)}>
+                                <span>{f.schemeName}</span>
+                                <span className={`di-opt ${isIdcw ? 'di-idcw' : 'di-growth'}`}>{optLabel}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

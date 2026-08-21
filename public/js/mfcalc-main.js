@@ -394,15 +394,39 @@ function deadAMCQueried(q){
   return DEAD_AMCS.some(a=>ql.includes(a));
 }
 
+function isDirectFund(f){
+  if(f.plan!=null&&f.plan!=='') return /direct/i.test(f.plan);
+  return /\bdirect\b/i.test(f.schemeName);
+}
+function isInstitutionalFund(f){
+  if(f.plan!=null&&f.plan!=='') return /institutional/i.test(f.plan);
+  return /\binstitutional\b/i.test(f.schemeName);
+}
+function getOptionBadge(f){
+  const opt = (f.option || '').trim();
+  const name = (f.schemeName || '').trim();
+  if (/growth/i.test(opt) || (/growth/i.test(name) && !/idcw|dividend/i.test(name))) {
+    return { text: 'Growth', cls: 'di-growth' };
+  }
+  if (/idcw|dividend|bonus|payout|reinvest/i.test(opt) || /idcw|dividend|bonus|payout|reinvest/i.test(name)) {
+    if (/reinvest/i.test(opt) || /reinvest/i.test(name)) return { text: 'IDCW Reinvest', cls: 'di-idcw' };
+    return { text: 'IDCW', cls: 'di-idcw' };
+  }
+  if (opt) return { text: opt, cls: 'di-opt-other' };
+  return null;
+}
+
 function fundRank(f){
-  const n=f.schemeName.toLowerCase();
-  return /(^|\W)(plan|option)(\W|$)/.test(n)?0:1;
+  const b = getOptionBadge(f);
+  if (b && b.text === 'Growth') return 0;
+  if (b && b.text.startsWith('IDCW')) return 1;
+  return 2;
 }
 function renderSearchResults(q,data,dd,sifData){
     sifData=sifData||[];
     if(!data.length&&!sifData.length){dd.innerHTML='<div class="dropdown-loading">No results found</div>';return;}
     const hideDeadAMC=!deadAMCQueried(q);
-    const filtered=data.filter(f=>!/direct/i.test(f.schemeName)&&!/institutional/i.test(f.schemeName)&&(!hideDeadAMC||!isDeadAMC(f.schemeName)));
+    const filtered=data.filter(f=>!isDirectFund(f)&&!isInstitutionalFund(f)&&(!hideDeadAMC||!isDeadAMC(f.schemeName)));
     const ranked=filtered.slice().sort((a,b)=>fundRank(a)-fundRank(b));
     const mfResults=ranked.slice(0,25);
     const sifResults=sifData.slice(0,10);
@@ -413,10 +437,15 @@ function renderSearchResults(q,data,dd,sifData){
       if(i<0) return name;
       return name.slice(0,i)+'<mark style="background:rgba(67,160,71,.18);color:var(--g1);border-radius:2px;padding:0 1px">'+name.slice(i,i+q.length)+'</mark>'+name.slice(i+q.length);
     }
-    const mfHTML=mfResults.map(f=>`<div class="dropdown-item" onclick="addFund(${f.schemeCode},'mf')">
+    const mfHTML=mfResults.map(f=>{
+      const badge = getOptionBadge(f);
+      const badgeHtml = badge ? `<span class="di-opt ${badge.cls}">${badge.text}</span>` : '';
+      return `<div class="dropdown-item" onclick="addFund(${f.schemeCode},'mf')">
         <span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${highlight(f.schemeName)}</span>
+        ${badgeHtml}
         <span class="di-code">${f.schemeCode}</span>
-      </div>`).join("");
+      </div>`;
+    }).join("");
     const sifHTML=sifResults.map(s=>`<div class="dropdown-item" onclick="addFund(${safeAttr(s.scheme_id)},'sif')">
         <span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${highlight(escHtml(s.nav_name))}</span>
         <span class="di-code" style="background:#e0f2f1;color:#00695c">SIF</span>
@@ -2389,7 +2418,7 @@ async function btDoSearch(q){
     if((!data || !data.length) && !sifs.length){ dd.innerHTML='<div class="dropdown-loading">No results found</div>'; return; }
     // Same filter + rank as Fund Comparison renderSearchResults
     const hideDeadAMC = !deadAMCQueried(q);
-    const filtered = (data||[]).filter(f=>!/direct/i.test(f.schemeName)&&(!hideDeadAMC||!isDeadAMC(f.schemeName)));
+    const filtered = (data||[]).filter(f=>!isDirectFund(f)&&!isInstitutionalFund(f)&&(!hideDeadAMC||!isDeadAMC(f.schemeName)));
     const ranked   = filtered.slice().sort((a,b)=>fundRank(a)-fundRank(b));
     const results  = ranked.slice(0,25);
     const ql = q.toLowerCase();
@@ -2399,7 +2428,12 @@ async function btDoSearch(q){
       return name.slice(0,i)+'<mark style="background:rgba(67,160,71,.18);color:var(--g1);border-radius:2px;padding:0 1px">'+name.slice(i,i+q.length)+'</mark>'+name.slice(i+q.length);
     }
     if(!results.length && !sifs.length){ dd.innerHTML='<div class="dropdown-loading">No results (try without "Regular")</div>'; return; }
-    const mfHTML = results.map(f=>`<div class="dropdown-item" onclick="btSelectFund(${f.schemeCode},${safeAttr(f.schemeName)},'mf')"><span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${btHighlight(f.schemeName)}</span><span class="di-code">${f.schemeCode}</span></div>`).join('');
+    const mfHTML = results.map(f=>{
+      const badge = getOptionBadge(f);
+      const badgeHtml = badge ? `<span class="di-opt ${badge.cls}">${badge.text}</span>` : '';
+      const displayLabel = badge ? `${f.schemeName} (${badge.text})` : f.schemeName;
+      return `<div class="dropdown-item" onclick="btSelectFund(${f.schemeCode},${safeAttr(displayLabel)},'mf')"><span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${btHighlight(f.schemeName)}</span>${badgeHtml}<span class="di-code">${f.schemeCode}</span></div>`;
+    }).join('');
     const sifHTML = sifs.map(s=>`<div class="dropdown-item" onclick="btSelectFund(${safeAttr(s.scheme_id)},${safeAttr(s.nav_name)},'sif',${safeAttr(s.sif_name)})"><span style="flex:1;min-width:0;white-space:normal;word-break:break-word">${btHighlight(escHtml(s.nav_name))}</span><span class="di-code" style="background:#e0f2f1;color:#00695c">SIF</span></div>`).join('');
     dd.innerHTML = '<div class="dd-count">'+(results.length+sifs.length)+' of '+(filtered.length+sifs.length)+' results</div>'+mfHTML+sifHTML;
   }catch(e){
@@ -3162,22 +3196,25 @@ function sipBTDoSearch(q) {
   ])
     .then(([data, sifList]) => {
       const funds = (data || [])
-        .filter(f => !/direct/i.test(f.schemeName) && !/institutional/i.test(f.schemeName) && !isDeadAMC(f.schemeName))
+        .filter(f => !isDirectFund(f) && !isInstitutionalFund(f) && !isDeadAMC(f.schemeName))
         .sort((a,b) => fundRank(a) - fundRank(b))
         .slice(0, 25);
       const sifs = searchSIFList(sifList, q).slice(0, 10);
       if (!funds.length && !sifs.length) { dd.innerHTML = '<div class="dropdown-loading">No results</div>'; return; }
       const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
       const mfHTML = funds.map(f => {
+        const badge = getOptionBadge(f);
+        const badgeHtml = badge ? `<span class="di-opt ${badge.cls}">${badge.text}</span>` : '';
+        const displayLabel = badge ? `${f.schemeName} (${badge.text})` : f.schemeName;
         const hi = f.schemeName.replace(new RegExp('('+esc(q)+')','gi'), '<strong>$1</strong>');
-        return `<div class="dropdown-item" onclick="sipBTSelectFund(${f.schemeCode},${safeAttr(f.schemeName)},'mf')">
-          <div>${hi}</div><span class="di-code">${f.schemeCode}</span>
+        return `<div class="dropdown-item" onclick="sipBTSelectFund(${f.schemeCode},${safeAttr(displayLabel)},'mf')">
+          <div style="flex:1;min-width:0;white-space:normal;word-break:break-word">${hi}</div>${badgeHtml}<span class="di-code">${f.schemeCode}</span>
         </div>`;
       }).join('');
       const sifHTML = sifs.map(s => {
         const hi = escHtml(s.nav_name).replace(new RegExp('('+esc(q)+')','gi'), '<strong>$1</strong>');
         return `<div class="dropdown-item" onclick="sipBTSelectFund(${safeAttr(s.scheme_id)},${safeAttr(s.nav_name)},'sif',${safeAttr(s.sif_name)})">
-          <div>${hi}</div><span class="di-code" style="background:#e0f2f1;color:#00695c">SIF</span>
+          <div style="flex:1;min-width:0;white-space:normal;word-break:break-word">${hi}</div><span class="di-code" style="background:#e0f2f1;color:#00695c">SIF</span>
         </div>`;
       }).join('');
       dd.innerHTML = `<div class="dd-count">${funds.length+sifs.length} result${(funds.length+sifs.length)!==1?'s':''}</div>` + mfHTML + sifHTML;
