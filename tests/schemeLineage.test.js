@@ -43,21 +43,21 @@ async function main() {
     assert.strictEqual(result.series.length, pred.length + current.length);
   });
 
-  await test('stitchSeries refuses a gap larger than 12 days', () => {
+  await test('stitchSeries refuses a gap larger than 30 days', () => {
     const current = series([[100, 20]]);
-    const pred = series([[80, 19]]); // 20-day gap
+    const pred = series([[60, 19], [65, 19.5]]); // 35-day gap
     assert.strictEqual(stitchSeries(current, pred), null);
   });
 
-  await test('stitchSeries refuses a boundary ratio outside 0.85-1.2', () => {
+  await test('stitchSeries refuses an invalid non-positive ratio or zero NAV', () => {
     const current = series([[100, 20]]);
-    const pred = series([[99, 10]]); // ratio 2.0
+    const pred = series([[95, 10], [99, 0]]); // ratio infinity or zero
     assert.strictEqual(stitchSeries(current, pred), null);
   });
 
   await test('stitchSeries refuses when there is no room before the current series starts', () => {
     const current = series([[100, 20]]);
-    const pred = series([[99, 19.8], [100, 20]]); // nothing strictly before cFirst.t
+    const pred = series([[100, 19.8], [101, 20]]); // nothing strictly before cFirst.t
     assert.strictEqual(stitchSeries(current, pred), null);
   });
 
@@ -106,7 +106,7 @@ async function main() {
   await test('walkLineage stops at a hop that fails the boundary check, keeping the earlier hop', async () => {
     const current = series([[200, 30]]);
     const bRaw = [{ t: 195, nav: 29.4 }, { t: 199, nav: 29.7 }]; // hop 1: clean (1-day gap)
-    const cRaw = [{ t: 50, nav: 10 }, { t: 194, nav: 10 }];  // hop 2: ratio = 29.7/10 = 2.97, outside 0.85-1.2, fails
+    const cRaw = [{ t: 50, nav: 10 }, { t: 100, nav: 10 }];  // hop 2: gap = 95 days > 30 days, fails
     const lineage = {
       A: { pred: 'B', from: 'Fund B' },
       B: { pred: 'C', from: 'Fund C' },
