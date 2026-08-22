@@ -285,6 +285,22 @@ export const FALLBACK_BENCHMARKS = {
     ret_7y: 14.36,
     ret_10y: null,
   },
+  MULTICAP_50_25_25: {
+    symbol: 'MULTICAP_50_25_25',
+    name: 'NIFTY 500 Multicap 50:25:25 TRI',
+    shortName: 'Nifty 500 Multicap',
+    desc: '50% Large Cap + 25% Mid Cap + 25% Small Cap (SEBI Mandate)',
+    nav: 447410.47,
+    nav_date: '2026-08-20',
+    ret_1m: 2.50,
+    ret_3m: 5.82,
+    ret_6m: 4.71,
+    ret_1y: 3.56,
+    ret_3y: 13.43,
+    ret_5y: 13.35,
+    ret_7y: 18.10,
+    ret_10y: 13.56,
+  },
 };
 
 export const CATEGORY_BENCHMARKS = {
@@ -294,7 +310,7 @@ export const CATEGORY_BENCHMARKS = {
   'mid cap': { symbol: 'BSEMID', name: 'BSE Midcap 150 TRI', badge: 'Category Benchmark · Mid Cap', desc: 'S&P BSE MidCap Index' },
   'small cap': { symbol: 'BSESML', name: 'BSE Smallcap 250 TRI', badge: 'Category Benchmark · Small Cap', desc: 'S&P BSE SmallCap Index' },
   'large & mid cap': { symbol: 'SPB25XIP', name: 'BSE LargeMidCap 250 TRI', badge: 'Category Benchmark · Large & Mid Cap', desc: 'S&P BSE 250 LargeMidCap Index' },
-  'multi cap': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Multi Cap', desc: 'S&P BSE 500 Total Return Index' },
+  'multi cap': { symbol: 'MULTICAP_50_25_25', name: 'NIFTY 500 Multicap 50:25:25 TRI', badge: 'Category Benchmark · Multi Cap', desc: '50% Large + 25% Mid + 25% Small Cap (SEBI Mandate)' },
   'value': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Value', desc: 'S&P BSE 500 Total Return Index' },
   'contra': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Contra', desc: 'S&P BSE 500 Total Return Index' },
   'focused': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Focused', desc: 'S&P BSE 500 Total Return Index' },
