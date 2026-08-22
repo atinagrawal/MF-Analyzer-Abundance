@@ -1,0 +1,680 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import Link from 'next/link';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import './pioneers.css';
+
+const ERAS = [
+  {
+    id: 'era-uti',
+    badge: '1964 – 1987',
+    title: 'The UTI Monopoly Era',
+    desc: 'Government monopoly under Unit Trust of India. Birth of US-64 and India’s first equity fund, UTI Mastershare (1986).',
+    milestone: '🏛️ 1986: UTI Mastershare launched',
+    filterVal: 'psu',
+  },
+  {
+    id: 'era-psu',
+    badge: '1987 – 1993',
+    title: 'The Public Sector Wave',
+    desc: 'SBI, Canbank, and LIC mutual funds introduced. First wave of institutional expansion across India.',
+    milestone: '🏦 1987: SBI MF & Canara Robeco',
+    filterVal: 'psu',
+  },
+  {
+    id: 'era-private',
+    badge: '1993 – 1996',
+    title: 'The Private Sector Dawn',
+    desc: 'SEBI MF Regulations 1993. Kothari Pioneer, Reliance, and HDFC launch India’s greatest multi-baggers.',
+    milestone: '🚀 1993: Franklin (Kothari) Bluechip',
+    filterVal: 'private',
+  },
+  {
+    id: 'era-growth',
+    badge: '1996 – 2008',
+    title: 'Demat & Bull Run Test',
+    desc: 'Physical paper certificates replaced by NSDL/CDSL demat. Schemes survive the 2000 Dot-com and 2008 GFC.',
+    milestone: '📈 Demat accounts revolution',
+    filterVal: 'silver',
+  },
+  {
+    id: 'era-reform',
+    badge: '2008 – 2018',
+    title: 'Direct Plans & SEBI Categorization',
+    desc: 'Entry loads banned (2009), Direct Plans mandated (2013), and SEBI 2018 Categorization streamlines schemes.',
+    milestone: '🎯 Zero entry load & Direct plans',
+    filterVal: 'all',
+  },
+  {
+    id: 'era-sip',
+    badge: '2018 – 2026',
+    title: 'The Retail SIP Supercycle',
+    desc: 'Monthly SIP flows cross ₹25,000+ Crore as retail investors become the dominant force in Indian equities.',
+    milestone: '💎 ₹25,000+ Cr monthly SIPs',
+    filterVal: 'all',
+  },
+];
+
+const SPOTLIGHTS = [
+  {
+    tag: '👑 Highest Wealth Multiplier',
+    title: 'Nippon India Growth Mid Cap Fund (Reliance Growth)',
+    desc: 'Launched in October 1995 at ₹10.00 par value, this fund delivered an astonishing 21.94% CAGR over 30.9 years. A ₹10,000 investment at NFO has grown into an unbelievable ₹45.75 Lakhs today.',
+    launch: '05-Oct-1995',
+    cagr: '21.94%',
+    multiplier: '457.5x',
+    nav: '₹4,575.45',
+    code: '100377',
+  },
+  {
+    tag: '🌟 The 3-Decade Flexi Cap Titan',
+    title: 'HDFC Flexi Cap Fund (HDFC Equity Fund)',
+    desc: 'Allotted in December 1994 (Centurion/HDFC Equity), this flagship fund compounded through Asian Financial Crisis, Dot-Com Bust, 2008 GFC, and Covid at 18.35% CAGR, turning ₹10,000 into ₹20.82 Lakhs.',
+    launch: '17-Dec-1994',
+    cagr: '18.35%',
+    multiplier: '208.2x',
+    nav: '₹2,082.61',
+    code: '101762',
+  },
+  {
+    tag: '🥇 The First Private Equity Fund',
+    title: 'Franklin India Bluechip Fund (Kothari Pioneer)',
+    desc: 'When SEBI opened the doors to private sector funds in 1993, Kothari Pioneer Bluechip was India’s first open-ended private equity scheme. Over 32.7 years, it compounded at 15.23% CAGR to cross ₹1,035 NAV.',
+    launch: '01-Dec-1993',
+    cagr: '15.23%',
+    multiplier: '103.5x',
+    nav: '₹1,035.70',
+    code: '100471',
+  },
+  {
+    tag: '⚖️ The Hybrid Wealth Pioneer',
+    title: 'Aditya Birla Sun Life Equity Hybrid \'95 Fund',
+    desc: 'Proving that balanced equity-debt allocation creates generational wealth with lower volatility, this fund compounded at 17.39% CAGR over 31.5 years, growing ₹10 into ₹1,568.46.',
+    launch: '11-Feb-1995',
+    cagr: '17.39%',
+    multiplier: '156.8x',
+    nav: '₹1,568.46',
+    code: '103155',
+  },
+  {
+    tag: '🏛️ The Founding Father (1986)',
+    title: 'UTI Mastershare Unit Scheme (Large Cap)',
+    desc: 'India’s very first equity mutual fund scheme launched by UTI in 1986. Over nearly 40 continuous years, it weathered every political and financial cycle in independent India’s modern history.',
+    launch: '15-Oct-1986',
+    cagr: '8.60%',
+    multiplier: '26.8x',
+    nav: '₹268.03',
+    code: '100651',
+  },
+  {
+    tag: '🎯 The Mid-Cap Pioneer',
+    title: 'Franklin India Prima Fund (Kothari Pioneer Prima)',
+    desc: 'India’s first dedicated mid-cap fund launched in 1993/1994. It pioneered bottom-up stock picking in emerging Indian companies, compounding at 17.29% CAGR to reach an extraordinary ₹1,619 NAV.',
+    launch: '29-Sep-1994',
+    cagr: '17.29%',
+    multiplier: '161.9x',
+    nav: '₹1,619.43',
+    code: '100520',
+  },
+];
+
+const FAQS = [
+  {
+    q: 'What is the oldest mutual fund in India that is still active today?',
+    a: 'The oldest surviving mutual fund scheme in India is UTI Mastershare Unit Scheme (now categorised as UTI Large Cap Fund), which was launched on October 15, 1986 by Unit Trust of India. It has been operating continuously for nearly 40 years. (The older US-64 scheme launched in 1964 was discontinued in 2002).',
+  },
+  {
+    q: 'Which mutual fund scheme has given the highest returns since inception in India?',
+    a: 'Nippon India Growth Fund (formerly Reliance Growth Fund, launched on October 5, 1995) holds the record for the highest compounded wealth creation among 30+ year veteran schemes, delivering a 21.94% CAGR over 30.9 years. Its NAV grew from ₹10.00 at NFO to over ₹4,575.00 today (a 457x wealth multiplier).',
+  },
+  {
+    q: 'What was the first private-sector mutual fund launched in India?',
+    a: 'The first private-sector mutual fund in India was Kothari Pioneer Mutual Fund (a joint venture between Chennai’s Kothari Group and Pioneer Group, USA, later acquired by Franklin Templeton in 2002). Its flagship funds—Franklin India Bluechip Fund and Franklin India Prima Fund—were launched on December 1, 1993.',
+  },
+  {
+    q: 'How did mutual funds operate before electronic NAV tracking in 2006?',
+    a: 'Prior to AMFI’s central digital portal launch in April 2006, mutual fund NAVs were published daily in major financial newspapers like The Economic Times and Business Standard. Investors held physical paper unit certificates (similar to share certificates) until the demat and registrar digital revolution simplified electronic tracking.',
+  },
+  {
+    q: 'What is the key takeaway from 30+ years of Indian mutual fund compounding?',
+    a: 'Across 30+ years encompassing the 1997 Asian Crisis, 2000 Dot-com crash, 2008 Global Financial Crisis, and 2020 Covid pandemic, top equity mutual funds generated 15% to 22% annualised CAGR—beating Gold (10.5%), Fixed Deposits (8.0%), and CPI Inflation (6.5%) by significant margins.',
+  },
+];
+
+export default function PioneersClient({ initialFunds = [] }) {
+  const [search, setSearch] = useState('');
+  const [eraFilter, setEraFilter] = useState('all');
+  const [catFilter, setCatFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('age');
+  const [sortDir, setSortDir] = useState('desc');
+
+  // Simulator State
+  const [simType, setSimType] = useState('lumpsum');
+  const [simLumpAmount, setSimLumpAmount] = useState(10000);
+  const [simSipAmount, setSimSipAmount] = useState(5000);
+  const [simSelectedCode, setSimSelectedCode] = useState('100377');
+  const [openFaq, setOpenFaq] = useState(null);
+
+  // Selected Fund for Simulator
+  const selectedFund = useMemo(() => {
+    return initialFunds.find((f) => String(f.code) === String(simSelectedCode)) || initialFunds[0] || {
+      name: 'Nippon India Growth Mid Cap Fund',
+      ret_inception: 21.94,
+      age_years: 30.9,
+      nav: 4575.45,
+    };
+  }, [initialFunds, simSelectedCode]);
+
+  // Compute Simulator Results
+  const simResults = useMemo(() => {
+    const ageYrs = parseFloat(selectedFund.age_years) || 30.0;
+    const cagr = (parseFloat(selectedFund.ret_inception) || 15.0) / 100;
+    const goldCagr = 0.105;
+    const fdCagr = 0.078;
+    const infCagr = 0.065;
+
+    if (simType === 'lumpsum') {
+      const p = simLumpAmount;
+      const fundCorpus = p * Math.pow(1 + cagr, ageYrs);
+      const goldCorpus = p * Math.pow(1 + goldCagr, ageYrs);
+      const fdCorpus = p * Math.pow(1 + fdCagr, ageYrs);
+      const infCorpus = p * Math.pow(1 + infCagr, ageYrs);
+      const multiplier = fundCorpus / p;
+
+      return {
+        principal: p,
+        fundCorpus,
+        goldCorpus,
+        fdCorpus,
+        infCorpus,
+        multiplier,
+        ageYrs,
+      };
+    } else {
+      // SIP Future Value: FV = P * [ (1+i)^n - 1 ] / i * (1+i)
+      const sip = simSipAmount;
+      const n = ageYrs * 12;
+      const totalInv = sip * n;
+
+      const calcFv = (r) => {
+        const i = Math.pow(1 + r, 1 / 12) - 1;
+        return sip * ((Math.pow(1 + i, n) - 1) / i) * (1 + i);
+      };
+
+      const fundCorpus = calcFv(cagr);
+      const goldCorpus = calcFv(goldCagr);
+      const fdCorpus = calcFv(fdCagr);
+      const infCorpus = calcFv(infCagr);
+      const multiplier = fundCorpus / totalInv;
+
+      return {
+        principal: totalInv,
+        fundCorpus,
+        goldCorpus,
+        fdCorpus,
+        infCorpus,
+        multiplier,
+        ageYrs,
+      };
+    }
+  }, [selectedFund, simType, simLumpAmount, simSipAmount]);
+
+  // Filter and Sort Directory
+  const filteredFunds = useMemo(() => {
+    return initialFunds.filter((f) => {
+      // Search
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchesName = f.name?.toLowerCase().includes(q);
+        const matchesAmc = f.amc?.toLowerCase().includes(q);
+        const matchesCat = f.category?.toLowerCase().includes(q);
+        if (!matchesName && !matchesAmc && !matchesCat) return false;
+      }
+
+      // Era
+      const age = parseFloat(f.age_years) || 0;
+      const incDate = String(f.inception_date || '');
+      if (eraFilter === '30y' && age < 30.0) return false;
+      if (eraFilter === 'silver' && (age < 25.0 || age >= 30.0)) return false;
+      if (eraFilter === 'millennium' && (age < 20.0 || age >= 25.0)) return false;
+      if (eraFilter === 'psu' && incDate > '1993-06-30') return false;
+      if (eraFilter === 'private' && (incDate < '1993-07-01' || incDate > '1996-12-31')) return false;
+
+      // Category
+      if (catFilter !== 'all') {
+        const cat = (f.category || '').toLowerCase();
+        if (catFilter === 'flexi' && !cat.includes('flexi') && !cat.includes('multi cap')) return false;
+        if (catFilter === 'large' && (!cat.includes('large cap') || cat.includes('large & mid'))) return false;
+        if (catFilter === 'mid' && !cat.includes('mid cap')) return false;
+        if (catFilter === 'largemid' && !cat.includes('large & mid')) return false;
+        if (catFilter === 'hybrid' && !cat.includes('hybrid') && !cat.includes('balanced')) return false;
+        if (catFilter === 'elss' && !cat.includes('elss') && !cat.includes('tax')) return false;
+      }
+
+      return true;
+    }).sort((a, b) => {
+      let vA = 0;
+      let vB = 0;
+      if (sortBy === 'age') {
+        vA = parseFloat(a.age_years) || 0;
+        vB = parseFloat(b.age_years) || 0;
+      } else if (sortBy === 'cagr') {
+        vA = parseFloat(a.ret_inception) || 0;
+        vB = parseFloat(b.ret_inception) || 0;
+      } else if (sortBy === 'multiplier') {
+        vA = (parseFloat(a.nav) || 10) / 10;
+        vB = (parseFloat(b.nav) || 10) / 10;
+      } else if (sortBy === '10y') {
+        vA = parseFloat(a.ret_10y) || 0;
+        vB = parseFloat(b.ret_10y) || 0;
+      } else if (sortBy === 'nav') {
+        vA = parseFloat(a.nav) || 0;
+        vB = parseFloat(b.nav) || 0;
+      }
+      return sortDir === 'desc' ? vB - vA : vA - vB;
+    });
+  }, [initialFunds, search, eraFilter, catFilter, sortBy, sortDir]);
+
+  const fmtCurrency = (v) => {
+    if (v == null || isNaN(v)) return '—';
+    if (v >= 10000000) return `₹${(v / 10000000).toFixed(2)} Cr`;
+    if (v >= 100000) return `₹${(v / 100000).toFixed(2)} Lakh`;
+    return `₹${Math.round(v).toLocaleString('en-IN')}`;
+  };
+
+  const handleEraCardClick = (filterVal) => {
+    setEraFilter(filterVal);
+    const el = document.getElementById('directory-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  return (
+    <div className="pnr-page">
+      <Navbar />
+
+      {/* ── HERO BANNER ── */}
+      <header className="pnr-hero">
+        <div className="pnr-hero-inner">
+          <div className="pnr-badge">
+            <span className="pnr-badge-dot"></span>
+            Hall of Fame · 30+ Years of Compounding
+          </div>
+          <h1 className="pnr-title">
+            The <span>30-Year Club</span>: Pioneers of Indian Wealth Creation
+          </h1>
+          <p className="pnr-subtitle">
+            Before UPI, demat accounts, and internet trading, a handful of visionary mutual funds set sail in Indian markets.
+            Explore the untold history of India’s oldest surviving schemes and how ₹10,000 grew into multi-crore wealth.
+          </p>
+
+          {/* Top-Line KPIs */}
+          <div className="pnr-kpis">
+            <div className="pnr-kpi-card">
+              <div className="pnr-kpi-val accent">39.9 Years</div>
+              <div className="pnr-kpi-lbl">Oldest Active Fund</div>
+              <div className="pnr-kpi-sub">UTI Mastershare (Oct 1986)</div>
+            </div>
+            <div className="pnr-kpi-card">
+              <div className="pnr-kpi-val gold">29 Funds</div>
+              <div className="pnr-kpi-lbl">The 30-Year Club</div>
+              <div className="pnr-kpi-sub">Launched before Aug 1996</div>
+            </div>
+            <div className="pnr-kpi-card">
+              <div className="pnr-kpi-val accent">457.5x</div>
+              <div className="pnr-kpi-lbl">Max Wealth Multiplier</div>
+              <div className="pnr-kpi-sub">Nippon India Growth (1995)</div>
+            </div>
+            <div className="pnr-kpi-card">
+              <div className="pnr-kpi-val purple">15.8% CAGR</div>
+              <div className="pnr-kpi-lbl">Average 30-Yr Equity CAGR</div>
+              <div className="pnr-kpi-sub">vs 10.5% Gold · 8.0% FD</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="pnr-container">
+        {/* ── SECTION 1: THE COMPOUNDING TIME MACHINE ── */}
+        <section className="pnr-section">
+          <div className="pnr-sec-header">
+            <div className="pnr-sec-tag">Interactive Simulator</div>
+            <h2 className="pnr-sec-title">The Compounding Time Machine</h2>
+            <p className="pnr-sec-desc">
+              Select an iconic fund and see how an investment made at inception compares against Gold, Fixed Deposits, and Inflation over decades.
+            </p>
+          </div>
+
+          <div className="pnr-sim-box">
+            <div className="pnr-type-toggles">
+              <button
+                className={`pnr-type-btn ${simType === 'lumpsum' ? 'active' : ''}`}
+                onClick={() => setSimType('lumpsum')}
+              >
+                💰 One-Time Lumpsum at Inception
+              </button>
+              <button
+                className={`pnr-type-btn ${simType === 'sip' ? 'active' : ''}`}
+                onClick={() => setSimType('sip')}
+              >
+                📅 Monthly SIP from Day 1
+              </button>
+            </div>
+
+            <div className="pnr-sim-controls">
+              <div className="pnr-sim-field">
+                <label>
+                  <span>{simType === 'lumpsum' ? 'Initial Investment Amount' : 'Monthly SIP Amount'}</span>
+                  <span className="val">{fmtCurrency(simType === 'lumpsum' ? simLumpAmount : simSipAmount)}</span>
+                </label>
+                {simType === 'lumpsum' ? (
+                  <input
+                    type="range"
+                    min="5000"
+                    max="500000"
+                    step="5000"
+                    value={simLumpAmount}
+                    onChange={(e) => setSimLumpAmount(Number(e.target.value))}
+                    className="pnr-range"
+                  />
+                ) : (
+                  <input
+                    type="range"
+                    min="1000"
+                    max="50000"
+                    step="1000"
+                    value={simSipAmount}
+                    onChange={(e) => setSimSipAmount(Number(e.target.value))}
+                    className="pnr-range"
+                  />
+                )}
+              </div>
+
+              <div className="pnr-sim-field">
+                <label>Select Pioneer Mutual Fund</label>
+                <select
+                  value={simSelectedCode}
+                  onChange={(e) => setSimSelectedCode(e.target.value)}
+                  className="pnr-select"
+                >
+                  {initialFunds.slice(0, 30).map((f) => (
+                    <option key={f.code} value={f.code}>
+                      {f.name} ({f.age_years}y — {f.ret_inception}% CAGR)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Asset Comparison Output Grid */}
+            <div className="pnr-sim-results">
+              <div className="pnr-asset-card hero">
+                <div className="pnr-asset-icon">🚀</div>
+                <div className="pnr-asset-name">{selectedFund.name}</div>
+                <div className="pnr-asset-corpus accent">{fmtCurrency(simResults.fundCorpus)}</div>
+                <div className="pnr-asset-details">
+                  <span>CAGR: {selectedFund.ret_inception}%</span>
+                  <span>Multiplier: {simResults.multiplier.toFixed(1)}x</span>
+                </div>
+              </div>
+
+              <div className="pnr-asset-card">
+                <div className="pnr-asset-icon">🪙</div>
+                <div className="pnr-asset-name">Physical Gold</div>
+                <div className="pnr-asset-corpus">{fmtCurrency(simResults.goldCorpus)}</div>
+                <div className="pnr-asset-details">
+                  <span>CAGR: ~10.5%</span>
+                  <span>Invested: {fmtCurrency(simResults.principal)}</span>
+                </div>
+              </div>
+
+              <div className="pnr-asset-card">
+                <div className="pnr-asset-icon">🏦</div>
+                <div className="pnr-asset-name">Fixed Deposit / PPF</div>
+                <div className="pnr-asset-corpus">{fmtCurrency(simResults.fdCorpus)}</div>
+                <div className="pnr-asset-details">
+                  <span>CAGR: ~7.8%</span>
+                  <span>Guaranteed Risk-Free</span>
+                </div>
+              </div>
+
+              <div className="pnr-asset-card">
+                <div className="pnr-asset-icon">📉</div>
+                <div className="pnr-asset-name">Inflation Baseline (CPI)</div>
+                <div className="pnr-asset-corpus">{fmtCurrency(simResults.infCorpus)}</div>
+                <div className="pnr-asset-details">
+                  <span>Avg CPI: ~6.5%</span>
+                  <span>Breakeven Cost</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── SECTION 2: INTERACTIVE ERA TIMELINE ── */}
+        <section className="pnr-section">
+          <div className="pnr-sec-header">
+            <div className="pnr-sec-tag">Historical Timeline</div>
+            <h2 className="pnr-sec-title">The Evolution of Indian Mutual Funds (1964 – 2026)</h2>
+            <p className="pnr-sec-desc">
+              Click any era to jump to and inspect the funds that originated during that milestone in Indian financial history.
+            </p>
+          </div>
+
+          <div className="pnr-timeline">
+            {ERAS.map((era) => (
+              <div
+                key={era.id}
+                className={`pnr-era-card ${eraFilter === era.filterVal ? 'active' : ''}`}
+                onClick={() => handleEraCardClick(era.filterVal)}
+              >
+                <span className="pnr-era-badge">{era.badge}</span>
+                <h3 className="pnr-era-title">{era.title}</h3>
+                <p className="pnr-era-text">{era.desc}</p>
+                <div className="pnr-era-milestone">{era.milestone}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── SECTION 3: SPOTLIGHT STORIES ── */}
+        <section className="pnr-section">
+          <div className="pnr-sec-header">
+            <div className="pnr-sec-tag">Case Studies</div>
+            <h2 className="pnr-sec-title">Titans That Defied Time</h2>
+            <p className="pnr-sec-desc">
+              Remarkable stories of the funds that shaped the modern Indian investment landscape.
+            </p>
+          </div>
+
+          <div className="pnr-spotlights">
+            {SPOTLIGHTS.map((sp, idx) => (
+              <div key={idx} className="pnr-story-card">
+                <div>
+                  <div className="pnr-story-tag">{sp.tag}</div>
+                  <h3 className="pnr-story-title">{sp.title}</h3>
+                  <p className="pnr-story-body">{sp.desc}</p>
+                </div>
+
+                <div>
+                  <div className="pnr-story-stats">
+                    <div className="pnr-stat-item">
+                      <div className="lbl">Inception Date</div>
+                      <div className="val">{sp.launch}</div>
+                    </div>
+                    <div className="pnr-stat-item">
+                      <div className="lbl">Since Inception CAGR</div>
+                      <div className="val">{sp.cagr}</div>
+                    </div>
+                    <div className="pnr-stat-item">
+                      <div className="lbl">Current NAV</div>
+                      <div className="val">{sp.nav}</div>
+                    </div>
+                    <div className="pnr-stat-item">
+                      <div className="lbl">Wealth Multiplier</div>
+                      <div className="val">{sp.multiplier}</div>
+                    </div>
+                  </div>
+
+                  <Link href={`/fund/${sp.code}`} className="pnr-btn-view">
+                    View Full Analytics & Rolling Returns →
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── SECTION 4: HALL OF FAME DIRECTORY ── */}
+        <section className="pnr-section" id="directory-section">
+          <div className="pnr-sec-header">
+            <div className="pnr-sec-tag">Verified Directory</div>
+            <h2 className="pnr-sec-title">The 20+ Year Veteran Directory ({filteredFunds.length} Funds)</h2>
+            <p className="pnr-sec-desc">
+              All active mutual fund schemes in India with 20 or more years of continuous compounding track record.
+            </p>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="pnr-filter-bar">
+            <div className="pnr-search-wrap">
+              <span className="pnr-search-icon">🔍</span>
+              <input
+                type="text"
+                placeholder="Search by fund name, AMC, or category..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pnr-search-input"
+              />
+            </div>
+
+            {/* Era Filter Pills */}
+            <div className="pnr-pills">
+              <button
+                className={`pnr-pill ${eraFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setEraFilter('all')}
+              >
+                All 20+ Yrs ({initialFunds.length})
+              </button>
+              <button
+                className={`pnr-pill ${eraFilter === '30y' ? 'active' : ''}`}
+                onClick={() => setEraFilter('30y')}
+              >
+                🏆 30-Year Club (29)
+              </button>
+              <button
+                className={`pnr-pill ${eraFilter === 'silver' ? 'active' : ''}`}
+                onClick={() => setEraFilter('silver')}
+              >
+                🥈 Silver Jubilee (25-30Y)
+              </button>
+              <button
+                className={`pnr-pill ${eraFilter === 'private' ? 'active' : ''}`}
+                onClick={() => setEraFilter('private')}
+              >
+                🚀 Private Pioneers (1993-96)
+              </button>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="pnr-table-wrap">
+            <table className="pnr-table">
+              <thead>
+                <tr>
+                  <th onClick={() => { setSortBy('age'); setSortDir(sortDir === 'desc' ? 'asc' : 'desc'); }}>
+                    Fund Name & Category {sortBy === 'age' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                  </th>
+                  <th>Inception Date</th>
+                  <th onClick={() => { setSortBy('age'); setSortDir(sortDir === 'desc' ? 'asc' : 'desc'); }}>
+                    Age (Yrs) {sortBy === 'age' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                  </th>
+                  <th onClick={() => { setSortBy('nav'); setSortDir(sortDir === 'desc' ? 'asc' : 'desc'); }}>
+                    Current NAV {sortBy === 'nav' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                  </th>
+                  <th onClick={() => { setSortBy('multiplier'); setSortDir(sortDir === 'desc' ? 'asc' : 'desc'); }}>
+                    Multiplier {sortBy === 'multiplier' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                  </th>
+                  <th onClick={() => { setSortBy('cagr'); setSortDir(sortDir === 'desc' ? 'asc' : 'desc'); }}>
+                    Inception CAGR {sortBy === 'cagr' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                  </th>
+                  <th onClick={() => { setSortBy('10y'); setSortDir(sortDir === 'desc' ? 'asc' : 'desc'); }}>
+                    10Y CAGR {sortBy === '10y' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                  </th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredFunds.map((f) => {
+                  const navVal = parseFloat(f.nav) || 10;
+                  const mult = (navVal / 10).toFixed(1);
+                  return (
+                    <tr key={f.code}>
+                      <td>
+                        <Link href={`/fund/${f.code}`} className="pnr-fund-name">
+                          {f.name}
+                        </Link>
+                        <div className="pnr-fund-cat">{f.category} · {f.amc}</div>
+                      </td>
+                      <td>{String(f.inception_date || '').slice(0, 10)}</td>
+                      <td><strong>{f.age_years} yrs</strong></td>
+                      <td>₹{navVal.toFixed(2)}</td>
+                      <td>
+                        <span className="pnr-multiplier-badge">
+                          {parseFloat(mult) >= 100 ? '🔥' : '⭐'} {mult}x
+                        </span>
+                      </td>
+                      <td>
+                        <span className="pnr-cagr-badge">
+                          {f.ret_inception ? `${f.ret_inception}%` : '—'}
+                        </span>
+                      </td>
+                      <td>{f.ret_10y ? `${f.ret_10y}%` : '—'}</td>
+                      <td>
+                        <Link href={`/fund/${f.code}`} className="pnr-btn-view">
+                          Analytics →
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* ── SECTION 5: FAQS & SEO CONTENT ── */}
+        <section className="pnr-section">
+          <div className="pnr-sec-header">
+            <div className="pnr-sec-tag">Knowledge Base</div>
+            <h2 className="pnr-sec-title">Frequently Asked Questions</h2>
+            <p className="pnr-sec-desc">
+              Everything you need to know about the history and compounding track record of Indian mutual funds.
+            </p>
+          </div>
+
+          <div className="pnr-faqs">
+            {FAQS.map((faq, idx) => (
+              <div
+                key={idx}
+                className={`pnr-faq-item ${openFaq === idx ? 'open' : ''}`}
+              >
+                <div
+                  className="pnr-faq-q"
+                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                >
+                  <span>{faq.q}</span>
+                  <span className="pnr-faq-icon">▼</span>
+                </div>
+                {openFaq === idx && <div className="pnr-faq-a">{faq.a}</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}

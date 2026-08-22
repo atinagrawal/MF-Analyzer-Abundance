@@ -37,6 +37,7 @@ const NAV_GROUPS = [
   {
     key: 'market', label: 'Market Data',
     items: [
+      { key: 'pioneers',     label: '🏛️ 30-Year Club',   href: '/pioneers',       desc: "India's oldest funds & 30-year wealth pioneers" },
       { key: 'market-watch', label: '📡 Market Watch',    href: '/market-watch',   desc: 'Live indices and sector moves' },
       { key: 'breadth',      label: '📊 Market Breadth',  href: '/market-breadth', desc: 'Advance/decline and highs-lows' },
       { key: 'indices',      label: '📊 Index Dashboard', href: '/indices',        desc: 'Nifty and benchmark indices' },
