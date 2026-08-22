@@ -55,3 +55,7 @@ scripts/portfolio_aggregator/data/
 scripts/portfolio_aggregator/logs/
 __pycache__/
 *.pyc
+
+# Local debug & scratch
+scratch/
+.claude/
