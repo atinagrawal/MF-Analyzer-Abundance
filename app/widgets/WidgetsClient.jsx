@@ -5,6 +5,36 @@ import { useSession, signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
+const TIME_HORIZONS = [
+  { key: 'ret_1m', label: '1M', sub: '1 Month', type: 'Abs' },
+  { key: 'ret_3m', label: '3M', sub: '3 Months', type: 'Abs' },
+  { key: 'ret_6m', label: '6M', sub: '6 Months', type: 'Abs' },
+  { key: 'ret_1y', label: '1Y', sub: '1 Year', type: 'CAGR' },
+  { key: 'ret_3y', label: '3Y', sub: '3 Years', type: 'CAGR' },
+  { key: 'ret_5y', label: '5Y', sub: '5 Years', type: 'CAGR' },
+  { key: 'ret_7y', label: '7Y', sub: '7 Years', type: 'CAGR' },
+  { key: 'ret_10y', label: '10Y', sub: '10 Years', type: 'CAGR' },
+  { key: 'ret_inception', label: 'Inception', sub: 'Since Inception', type: 'CAGR' },
+];
+
+const FUND_CATEGORIES = [
+  { key: 'All', label: 'All Categories' },
+  { key: 'Flexi Cap', label: 'Flexi Cap' },
+  { key: 'Large Cap', label: 'Large Cap' },
+  { key: 'Large & Mid Cap', label: 'Large & Mid Cap' },
+  { key: 'Mid Cap', label: 'Mid Cap' },
+  { key: 'Small Cap', label: 'Small Cap' },
+  { key: 'Multi Cap', label: 'Multi Cap' },
+  { key: 'Focused', label: 'Focused Fund' },
+  { key: 'Value', label: 'Value / Contra' },
+  { key: 'ELSS', label: 'ELSS Tax Saver' },
+  { key: 'Aggressive Hybrid', label: 'Aggressive Hybrid' },
+  { key: 'Balanced Advantage', label: 'Balanced Advantage' },
+  { key: 'Arbitrage', label: 'Arbitrage' },
+  { key: 'Corporate Bond', label: 'Corporate Bond' },
+  { key: 'Liquid', label: 'Liquid' },
+];
+
 export default function WidgetsClientWrapper() {
   return (
     <Suspense fallback={<div className="wdg-loading-shell">Loading Abundance Widgets…</div>}>
@@ -40,7 +70,10 @@ function WidgetsClient() {
   const [fundsData, setFundsData] = useState([]);
   const [fundsLoading, setFundsLoading] = useState(true);
   const [fundCategory, setFundCategory] = useState('Flexi Cap');
-  const [fundHorizon, setFundHorizon] = useState('ret_3y'); // 'ret_1y' | 'ret_3y' | 'ret_5y'
+  const [fundHorizon, setFundHorizon] = useState('ret_3y'); // default 3Y
+
+  // Active horizon object
+  const activeHorizonObj = TIME_HORIZONS.find(h => h.key === fundHorizon) || TIME_HORIZONS[4];
 
   // Inline Login state for unauthenticated users
   const [loginEmail, setLoginEmail] = useState('');
@@ -550,40 +583,51 @@ function WidgetsClient() {
         {/* ────────────────── 3. TOP FUNDS TAB ────────────────── */}
         {tab === 'funds' && (
           <div className="wdg-pane">
+            {/* Category selection row */}
             <div className="wdg-controls-row">
-              {/* Category selector */}
-              <select
-                className="wdg-select"
-                value={fundCategory}
-                onChange={(e) => setFundCategory(e.target.value)}
-              >
-                <option value="All">All Categories</option>
-                <option value="Flexi Cap">Flexi Cap</option>
-                <option value="Large Cap">Large Cap</option>
-                <option value="Mid Cap">Mid Cap</option>
-                <option value="Small Cap">Small Cap</option>
-                <option value="Multi Cap">Multi Cap</option>
-                <option value="Aggressive Hybrid">Aggressive Hybrid</option>
-                <option value="Liquid">Liquid</option>
-              </select>
-
-              {/* Horizon toggle */}
-              <div className="wdg-horizon-btns">
-                <button className={`wdg-h-btn ${fundHorizon === 'ret_1y' ? 'active' : ''}`} onClick={() => setFundHorizon('ret_1y')}>1Y</button>
-                <button className={`wdg-h-btn ${fundHorizon === 'ret_3y' ? 'active' : ''}`} onClick={() => setFundHorizon('ret_3y')}>3Y</button>
-                <button className={`wdg-h-btn ${fundHorizon === 'ret_5y' ? 'active' : ''}`} onClick={() => setFundHorizon('ret_5y')}>5Y</button>
+              <div className="wdg-sel-wrap">
+                <span className="wdg-sel-label">📂 Category:</span>
+                <select
+                  className="wdg-select"
+                  value={fundCategory}
+                  onChange={(e) => setFundCategory(e.target.value)}
+                >
+                  {FUND_CATEGORIES.map((c) => (
+                    <option key={c.key} value={c.key}>{c.label}</option>
+                  ))}
+                </select>
               </div>
+
+              {/* Active horizon tag */}
+              <div className="wdg-horizon-tag">
+                {activeHorizonObj?.sub} ({activeHorizonObj?.type})
+              </div>
+            </div>
+
+            {/* Horizontal Scrollable Time Horizon Rail */}
+            <div className="wdg-horizon-rail" role="tablist" aria-label="Return Time Horizon">
+              {TIME_HORIZONS.map((h) => (
+                <button
+                  key={h.key}
+                  className={`wdg-horizon-chip ${fundHorizon === h.key ? 'active' : ''}`}
+                  onClick={() => setFundHorizon(h.key)}
+                  title={`${h.sub} (${h.type} Return)`}
+                >
+                  {h.label}
+                </button>
+              ))}
             </div>
 
             {fundsLoading && !fundsData.length ? (
               <div className="wdg-loading">Loading top funds…</div>
             ) : topFundsFiltered.length === 0 ? (
-              <div className="wdg-loading">No funds found in this category.</div>
+              <div className="wdg-loading">No funds found with {activeHorizonObj?.sub} track record in this category.</div>
             ) : (
               <div className="wdg-funds-list">
                 {topFundsFiltered.map((fund, idx) => {
                   const retVal = fund[fundHorizon];
                   const cleanTitle = (fund.name || '').replace(/\s*-\s*(Regular Plan|Direct Plan|Regular|Direct|Growth( Option)?| Plan).*/i, '').trim();
+                  const rankClass = idx === 0 ? 'wdg-rank-1' : idx === 1 ? 'wdg-rank-2' : idx === 2 ? 'wdg-rank-3' : '';
                   return (
                     <Link
                       key={fund.code || idx}
@@ -591,16 +635,18 @@ function WidgetsClient() {
                       className="wdg-fund-card"
                       target="_blank"
                     >
-                      <div className="wdg-fund-rank">{idx + 1}</div>
+                      <div className={`wdg-fund-rank-badge ${rankClass}`}>
+                        {idx + 1}
+                      </div>
                       <div className="wdg-fund-info">
                         <div className="wdg-f-title" title={fund.name}>{cleanTitle}</div>
                         <div className="wdg-f-meta">
-                          <span>{fund.category}</span> · <span>NAV: ₹{fund.nav?.toFixed(2)}</span>
+                          <span>{fund.amc || fund.category}</span> · <span>NAV: ₹{fund.nav?.toFixed(2)}</span>
                         </div>
                       </div>
                       <div className="wdg-fund-ret pos">
-                        +{retVal ? retVal.toFixed(1) : '—'}%
-                        <small>{fundHorizon.replace('ret_', '').toUpperCase()}</small>
+                        {retVal > 0 ? '+' : ''}{retVal ? retVal.toFixed(1) : '—'}%
+                        <small>{activeHorizonObj?.label} {activeHorizonObj?.type}</small>
                       </div>
                     </Link>
                   );
@@ -1168,8 +1214,21 @@ function WidgetsClient() {
         .wdg-controls-row {
           display: flex;
           justify-content: space-between;
+          align-items: center;
           gap: 8px;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
+        }
+        .wdg-sel-wrap {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex: 1;
+        }
+        .wdg-sel-label {
+          font-size: 11.5px;
+          font-weight: 700;
+          color: var(--muted, #64748b);
+          white-space: nowrap;
         }
         .wdg-select {
           padding: 6px 10px;
@@ -1181,24 +1240,50 @@ function WidgetsClient() {
           color: var(--text, #1e293b);
           flex: 1;
         }
-        .wdg-horizon-btns {
-          display: flex;
-          gap: 4px;
-        }
-        .wdg-h-btn {
-          padding: 6px 10px;
-          border: 1px solid var(--border, #e2e8f0);
-          border-radius: 8px;
-          background: var(--s2, #f8fafc);
-          font-size: 11.5px;
+        .wdg-horizon-tag {
+          font-size: 10.5px;
           font-weight: 700;
+          color: var(--g1, #1a7a4a);
+          background: var(--g-xlight, #f0fdf4);
+          padding: 3px 8px;
+          border-radius: 6px;
+          border: 1px solid var(--g-light, #bbf7d0);
+          font-family: JetBrains Mono, monospace;
+          white-space: nowrap;
+        }
+        .wdg-horizon-rail {
+          display: flex;
+          gap: 5px;
+          overflow-x: auto;
+          padding: 2px 2px 8px;
+          margin-bottom: 10px;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .wdg-horizon-rail::-webkit-scrollbar {
+          display: none;
+        }
+        .wdg-horizon-chip {
+          flex: none;
+          padding: 5px 10px;
+          border-radius: 7px;
+          border: 1px solid var(--border, #e2e8f0);
+          background: var(--s2, #f8fafc);
+          font: 700 11px JetBrains Mono, monospace;
           color: var(--muted, #64748b);
           cursor: pointer;
+          transition: all .15s ease;
+          white-space: nowrap;
         }
-        .wdg-h-btn.active {
+        .wdg-horizon-chip:hover {
+          border-color: var(--g3, #86efac);
+          color: var(--text, #1e293b);
+        }
+        .wdg-horizon-chip.active {
           background: var(--g1, #1a7a4a);
-          color: #fff;
+          color: #ffffff;
           border-color: var(--g1, #1a7a4a);
+          box-shadow: 0 2px 6px rgba(26, 122, 74, 0.25);
         }
         .wdg-funds-list {
           display: flex;
@@ -1221,12 +1306,24 @@ function WidgetsClient() {
           border-color: var(--g-light, #86efac);
           transform: translateY(-1px);
         }
-        .wdg-fund-rank {
-          font-size: 13px;
+        .wdg-fund-rank-badge {
+          width: 22px;
+          height: 22px;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
           font-weight: 800;
-          color: var(--g1, #1a7a4a);
-          width: 18px;
+          font-family: JetBrains Mono, monospace;
+          background: var(--s2, #f8fafc);
+          color: var(--muted, #64748b);
+          flex: none;
+          border: 1px solid var(--border, #e2e8f0);
         }
+        .wdg-rank-1 { background: #fef9c3; color: #a16207; border: 1px solid #fde047; }
+        .wdg-rank-2 { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        .wdg-rank-3 { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
         .wdg-fund-info {
           flex: 1;
           min-width: 0;
@@ -1245,7 +1342,7 @@ function WidgetsClient() {
           margin-top: 2px;
         }
         .wdg-fund-ret {
-          font-size: 14px;
+          font-size: 13.5px;
           font-weight: 900;
           font-family: JetBrains Mono, monospace;
           text-align: right;
