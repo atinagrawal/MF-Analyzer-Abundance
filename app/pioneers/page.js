@@ -201,7 +201,7 @@ export default async function PioneersPage() {
         name: 'Where can I track live portfolio holdings, rolling returns, and stress tests of these 30-year veteran schemes?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'On this platform, click on any fund name in the directory to view its dedicated analytics page (/fund/[code]) or compare rolling return consistency on the Rolling Returns Calculator (/rolling).',
+          text: 'On this platform, click on any fund name in the directory to view its dedicated analytics page, or analyze multi-period rolling return consistency directly on the Rolling Returns Calculator at https://mfcalc.getabundance.in/rolling and filter live portfolios on the Mutual Fund Screener at https://mfcalc.getabundance.in/screener.',
         },
       },
     ],

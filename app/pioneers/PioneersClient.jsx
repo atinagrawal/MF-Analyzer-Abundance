@@ -123,15 +123,42 @@ const SPOTLIGHTS = [
 const FAQS = [
   {
     q: 'What is the oldest mutual fund in India that is still active today?',
-    a: 'The oldest surviving mutual fund scheme in India is UTI Mastershare Unit Scheme (now categorised as UTI Large Cap Fund), which was launched on October 15, 1986 by Unit Trust of India. It has been operating continuously for nearly 40 years. (The older US-64 scheme launched in 1964 was discontinued in 2002).',
+    a: (
+      <>
+        The oldest surviving mutual fund scheme in India is{' '}
+        <Link href="/fund/100651" className="pnr-link">
+          UTI Mastershare Unit Scheme (UTI Large Cap Fund)
+        </Link>
+        , which was launched on October 15, 1986 by Unit Trust of India. It has been operating continuously for nearly 40 years. (The older US-64 scheme launched in 1964 was discontinued in 2002).
+      </>
+    ),
   },
   {
     q: 'Which mutual fund scheme has given the highest returns since inception in India?',
-    a: 'Nippon India Growth Fund (formerly Reliance Growth Fund, launched on October 5, 1995) holds the record for the highest compounded wealth creation among 30+ year veteran schemes, delivering a 21.94% CAGR over 30.9 years. Its NAV grew from ₹10.00 at NFO to over ₹4,575.00 today (a 457x wealth multiplier).',
+    a: (
+      <>
+        <Link href="/fund/100377" className="pnr-link">
+          Nippon India Growth Mid Cap Fund
+        </Link>{' '}
+        (formerly Reliance Growth Fund, launched on October 5, 1995) holds the record for the highest compounded wealth creation among 30+ year veteran schemes, delivering a 21.94% CAGR over 30.9 years. Its NAV grew from ₹10.00 at NFO to over ₹4,575.00 today (a 457x wealth multiplier).
+      </>
+    ),
   },
   {
     q: 'What was the first private-sector mutual fund launched in India?',
-    a: 'The first private-sector mutual fund in India was Kothari Pioneer Mutual Fund (a joint venture between Chennai’s Kothari Group and Pioneer Group, USA, later acquired by Franklin Templeton in 2002). Its flagship funds—Franklin India Bluechip Fund and Franklin India Prima Fund—were launched on December 1, 1993.',
+    a: (
+      <>
+        The first private-sector mutual fund in India was Kothari Pioneer Mutual Fund (a joint venture between Chennai’s Kothari Group and Pioneer Group, USA, later acquired by Franklin Templeton in 2002). Its flagship funds—
+        <Link href="/fund/100471" className="pnr-link">
+          Franklin India Large Cap (Bluechip) Fund
+        </Link>{' '}
+        and{' '}
+        <Link href="/fund/100520" className="pnr-link">
+          Franklin India Prima (Flexi Cap) Fund
+        </Link>
+        —were launched on December 1, 1993.
+      </>
+    ),
   },
   {
     q: 'What happened to US-64 and the original Unit Trust of India (UTI)?',
@@ -139,7 +166,19 @@ const FAQS = [
   },
   {
     q: 'If I had invested ₹10,000 in India’s top mutual funds in 1995, what would it be worth in 2026?',
-    a: '₹10,000 invested at NFO in Nippon India Growth Fund grew to ₹45.75 Lakhs (21.94% CAGR); in HDFC Flexi Cap Fund grew to ₹20.82 Lakhs (18.35% CAGR); in ABSL Equity Hybrid \'95 Fund grew to ₹15.68 Lakhs (17.39% CAGR); compared to ~₹2.1 Lakhs in Gold and ~₹1.0 Lakh in Fixed Deposits.',
+    a: (
+      <>
+        ₹10,000 invested at NFO in Nippon India Growth Fund grew to ₹45.75 Lakhs (21.94% CAGR); in{' '}
+        <Link href="/fund/101762" className="pnr-link">
+          HDFC Flexi Cap Fund
+        </Link>{' '}
+        grew to ₹20.82 Lakhs (18.35% CAGR); in{' '}
+        <Link href="/fund/103155" className="pnr-link">
+          ABSL Equity Hybrid &apos;95 Fund
+        </Link>{' '}
+        grew to ₹15.68 Lakhs (17.39% CAGR); compared to ~₹2.1 Lakhs in Gold and ~₹1.0 Lakh in Fixed Deposits.
+      </>
+    ),
   },
   {
     q: 'Have any Indian equity mutual funds ever delivered negative returns over a 20-year holding period?',
@@ -159,7 +198,18 @@ const FAQS = [
   },
   {
     q: 'Where can I track live portfolio holdings, rolling returns, and stress tests of these 30-year veteran schemes?',
-    a: 'On this platform, click on any fund name in the directory to view its dedicated analytics page (/fund/[code]) or compare rolling return consistency on the Rolling Returns Calculator (/rolling).',
+    a: (
+      <>
+        On this platform, click on any fund name in the directory to view its dedicated analytics page, or analyze multi-period rolling return consistency directly on the{' '}
+        <Link href="/rolling" className="pnr-link">
+          Rolling Returns Calculator (https://mfcalc.getabundance.in/rolling)
+        </Link>{' '}
+        and filter live portfolios on the{' '}
+        <Link href="/screener" className="pnr-link">
+          Mutual Fund Screener (https://mfcalc.getabundance.in/screener)
+        </Link>.
+      </>
+    ),
   },
 ];
 
