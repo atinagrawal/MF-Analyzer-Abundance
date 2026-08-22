@@ -3,11 +3,10 @@
 // this route just SELECTs, so it stays well within Hobby function limits.
 
 import pool from '@/lib/db';
+import { getBenchmarkDataset, FALLBACK_BENCHMARKS } from '@/lib/benchmarks';
 
 // Cache the response for 6h (data is rebuilt once daily). This avoids hitting
-// Postgres — and the ~5s Neon cold-start — on every request. force-dynamic was
-// doing the opposite: it clobbered the Cache-Control header to max-age=0, so
-// most requests were slow cold MISSes.
+// Postgres — and the ~5s Neon cold-start — on every request.
 export const revalidate = 21600;
 
 const COLS = 'code,name,amc,category,structure,isin,nav,nav_date,ret_1m,ret_3m,ret_6m,ret_1y,ret_3y,ret_5y,ret_7y,ret_10y,vol,max_dd,ret_per_risk,age_years,inception_date,ret_inception,flag,asof';
@@ -31,7 +30,15 @@ export async function GET() {
       ret_inception: num(r.ret_inception), flag: r.flag, asof: r.asof,
     }));
     const asof = funds.length ? funds[0].asof : null;
-    return new Response(JSON.stringify({ asof, count: funds.length, funds }), {
+
+    let benchmarks = FALLBACK_BENCHMARKS;
+    try {
+      benchmarks = await getBenchmarkDataset();
+    } catch {
+      benchmarks = FALLBACK_BENCHMARKS;
+    }
+
+    return new Response(JSON.stringify({ asof, count: funds.length, funds, benchmarks }), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
@@ -40,7 +47,7 @@ export async function GET() {
     });
   } catch (e) {
     return Response.json(
-      { error: 'screener data unavailable', detail: String(e.message || e), funds: [] },
+      { error: 'screener data unavailable', detail: String(e.message || e), funds: [], benchmarks: FALLBACK_BENCHMARKS },
       { status: 503 }
     );
   }

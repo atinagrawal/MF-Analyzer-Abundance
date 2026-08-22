@@ -204,8 +204,117 @@ export const GLOSSARY_ITEMS = [
   { q: 'SIP (Systematic Investment Plan)', a: 'A disciplined way to invest a fixed amount (as low as ₹100 in some funds) at regular intervals — daily, weekly, or monthly — instead of investing a lumpsum. SIPs benefit from rupee-cost averaging: you automatically buy more units when prices are low and fewer when prices are high. They also remove the need to time the market and make equity investing accessible to those without large lump sums.' },
 ];
 
+export const FALLBACK_BENCHMARKS = {
+  BSE500: {
+    symbol: 'BSE500',
+    name: 'BSE 500 TRI',
+    shortName: 'BSE 500',
+    desc: 'S&P BSE 500 Total Return Index',
+    nav: 36814.22,
+    nav_date: '2026-08-20',
+    ret_1m: 1.71,
+    ret_3m: 3.95,
+    ret_6m: 0.38,
+    ret_1y: 1.34,
+    ret_3y: 11.13,
+    ret_5y: 10.65,
+    ret_7y: 14.89,
+    ret_10y: 12.22,
+  },
+  BSE100: {
+    symbol: 'BSE100',
+    name: 'BSE 100 TRI',
+    shortName: 'BSE 100',
+    desc: 'S&P BSE 100 Total Return Index',
+    nav: 25994.17,
+    nav_date: '2026-08-20',
+    ret_1m: 1.54,
+    ret_3m: 3.33,
+    ret_6m: -2.97,
+    ret_1y: -1.11,
+    ret_3y: 9.41,
+    ret_5y: 9.29,
+    ret_7y: 13.20,
+    ret_10y: 11.36,
+  },
+  BSEMID: {
+    symbol: 'BSEMID',
+    name: 'BSE Midcap 150 TRI',
+    shortName: 'BSE Midcap',
+    desc: 'S&P BSE MidCap Index',
+    nav: 49165.67,
+    nav_date: '2026-08-20',
+    ret_1m: 2.60,
+    ret_3m: 5.49,
+    ret_6m: 7.19,
+    ret_1y: 6.90,
+    ret_3y: 16.85,
+    ret_5y: 16.74,
+    ret_7y: 20.66,
+    ret_10y: 14.28,
+  },
+  BSESML: {
+    symbol: 'BSESML',
+    name: 'BSE Smallcap 250 TRI',
+    shortName: 'BSE Smallcap',
+    desc: 'S&P BSE SmallCap Index',
+    nav: 58300.62,
+    nav_date: '2026-08-20',
+    ret_1m: 4.34,
+    ret_3m: 11.26,
+    ret_6m: 18.86,
+    ret_1y: 9.62,
+    ret_3y: 17.60,
+    ret_5y: 17.75,
+    ret_7y: 25.06,
+    ret_10y: 16.71,
+  },
+  SPB25XIP: {
+    symbol: 'SPB25XIP',
+    name: 'BSE LargeMidCap 250 TRI',
+    shortName: 'BSE 250 LargeMidCap',
+    desc: 'S&P BSE 250 LargeMidCap Index',
+    nav: 10880.81,
+    nav_date: '2026-08-20',
+    ret_1m: 1.54,
+    ret_3m: 3.46,
+    ret_6m: -1.03,
+    ret_1y: 0.75,
+    ret_3y: 10.74,
+    ret_5y: 10.19,
+    ret_7y: 14.36,
+    ret_10y: null,
+  },
+};
+
+export const CATEGORY_BENCHMARKS = {
+  'flexi cap': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Flexi Cap', desc: 'S&P BSE 500 Total Return Index' },
+  'elss': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · ELSS', desc: 'S&P BSE 500 Total Return Index' },
+  'large cap': { symbol: 'BSE100', name: 'BSE 100 TRI', badge: 'Category Benchmark · Large Cap', desc: 'S&P BSE 100 Total Return Index' },
+  'mid cap': { symbol: 'BSEMID', name: 'BSE Midcap 150 TRI', badge: 'Category Benchmark · Mid Cap', desc: 'S&P BSE MidCap Index' },
+  'small cap': { symbol: 'BSESML', name: 'BSE Smallcap 250 TRI', badge: 'Category Benchmark · Small Cap', desc: 'S&P BSE SmallCap Index' },
+  'large & mid cap': { symbol: 'SPB25XIP', name: 'BSE LargeMidCap 250 TRI', badge: 'Category Benchmark · Large & Mid Cap', desc: 'S&P BSE 250 LargeMidCap Index' },
+  'multi cap': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Multi Cap', desc: 'S&P BSE 500 Total Return Index' },
+  'value': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Value', desc: 'S&P BSE 500 Total Return Index' },
+  'contra': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Contra', desc: 'S&P BSE 500 Total Return Index' },
+  'focused': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Focused', desc: 'S&P BSE 500 Total Return Index' },
+};
+
+export function resolveCategoryBenchmark(category, benchmarks = FALLBACK_BENCHMARKS) {
+  const norm = normalizeCategory(category || '');
+  const matchedConfig = CATEGORY_BENCHMARKS[norm] || (norm === 'all' || !norm ? { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Broad Market Benchmark', desc: 'S&P BSE 500 Total Return Index' } : null);
+  if (!matchedConfig) return null;
+
+  const data = (benchmarks && benchmarks[matchedConfig.symbol]) || FALLBACK_BENCHMARKS[matchedConfig.symbol] || {};
+  return {
+    ...matchedConfig,
+    ...data,
+  };
+}
+
 export const FAQ_ITEMS = [
   // Using the Screener
+  { group: 'Using the Screener', q: 'What is the Category Benchmark row at the bottom of the table?', a: 'The benchmark row (pinned at the bottom of the table) shows the official benchmark index performance for the selected mutual fund category (e.g. S&P BSE 500 TRI for Flexi Cap and ELSS, BSE 100 TRI for Large Cap, BSE Midcap 150 for Mid Cap, BSE Smallcap 250 for Small Cap). It displays the index\'s live level in the NAV column and its point-to-point and CAGR returns across all available timeframes (1M, 3M, 6M, 1Y, 3Y, 5Y, 7Y, 10Y), allowing you to immediately benchmark active mutual fund performance against the market index.' },
   { group: 'Using the Screener', q: 'How are the returns calculated?', a: 'Point-to-point CAGR from real AMFI NAVs — the latest NAV versus the NAV one, three and five years earlier. For periods shorter than a fund\'s age, the figure is left blank rather than estimated. Since-inception return is the CAGR from the fund\'s launch NAV (₹10) to today, using the oldest available NAV record from AMFI.' },
   { group: 'Using the Screener', q: 'How current is the data?', a: 'The dataset is rebuilt every day from AMFI\'s official NAV files, so the figures reflect the most recent published NAVs. Holdings and stress test data are updated within a few days of each fund\'s monthly portfolio disclosure, typically within 2–5 business days of month-end.' },
   { group: 'Using the Screener', q: 'What do volatility and max drawdown mean?', a: 'Volatility is the annualised standard deviation of monthly returns — how bumpy the ride was. Max drawdown is the largest peak-to-trough fall. Both are on a month-end basis over the available history. For most equity funds, you should expect the max drawdown in any given year to exceed the annualised volatility figure, since drawdowns compound across consecutive bad months.' },

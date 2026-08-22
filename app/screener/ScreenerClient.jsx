@@ -9,8 +9,7 @@ import { MFCompareBar, MFCompareModal } from './MFCompare';
 import { FundDetailPanel, SifDetailPanel } from '@/components/HoldingDetailDrawer';
 import { useRouter } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
-import { startCheckout } from '@/lib/checkoutClient';
-import { shortCat, FAQ_ITEMS, GLOSSARY_ITEMS, CURATED_CATEGORIES, categoryToSlug, matchCategory, normalizeCategory } from './screenerContent';
+import { shortCat, FAQ_ITEMS, GLOSSARY_ITEMS, CURATED_CATEGORIES, categoryToSlug, matchCategory, normalizeCategory, resolveCategoryBenchmark, FALLBACK_BENCHMARKS } from './screenerContent';
 
 // Slim, server-fetched projection of data/isin-scheme-master.json (see
 // app/api/scheme-master-facts/route.js) — fetched once and cached across
@@ -284,6 +283,8 @@ export default function ScreenerClient({ initialCategory }) {
   }, [isSIF, sifData, sifLoading]);
 
   const funds = data?.funds || [];
+  const benchmarks = data?.benchmarks || FALLBACK_BENCHMARKS;
+  const activeBenchmark = useMemo(() => resolveCategoryBenchmark(cat, benchmarks), [cat, benchmarks]);
   const groups = ['All', 'Equity', 'Hybrid', 'Debt', 'Index / FoF', 'Other', 'SIF'];
 
   /* ---- SIF derived state ---- */
@@ -732,6 +733,49 @@ export default function ScreenerClient({ initialCategory }) {
                     );
                   })}
                 </tbody>
+                {activeBenchmark && (
+                  <tfoot className="scr-tfoot">
+                    <tr className="scr-bench-row" title={`Official benchmark for ${shortCat(cat)}`}>
+                      <td style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '12px' }}>🎯</td>
+                      <td className="scr-name">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div className="scr-bench-icon" title="Category Benchmark Index">🎯</div>
+                          <div>
+                            <div className="scr-bench-title-wrap">
+                              <span className="scr-bench-name">{activeBenchmark.name}</span>
+                              <span className="scr-bench-badge">{activeBenchmark.badge || 'Category Benchmark'}</span>
+                            </div>
+                            <div className="scr-bench-sub">{activeBenchmark.desc || 'Market Benchmark'}</div>
+                          </div>
+                        </div>
+                      </td>
+                      {visibleCols.map((m) => {
+                        if (m.key === 'nav') {
+                          return (
+                            <td key={m.key} className="scr-bench-cell" style={{ color: 'var(--text)' }}>
+                              <b>{activeBenchmark.nav ? activeBenchmark.nav.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}</b>
+                            </td>
+                          );
+                        }
+                        if (m.key.startsWith('ret_') && m.key !== 'ret_inception' && m.key !== 'ret_per_risk') {
+                          const v = activeBenchmark[m.key];
+                          if (v != null) {
+                            return (
+                              <td key={m.key} className={`scr-bench-cell ${v >= 0 ? 'scr-pos' : 'scr-neg'}`}>
+                                <b>{v > 0 ? '+' : ''}{v.toFixed(1)}%</b>
+                              </td>
+                            );
+                          }
+                        }
+                        return (
+                          <td key={m.key} className="scr-bench-cell scr-muted">
+                            —
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
             {!data && !err && <div className="scr-loading">Loading funds…</div>}
@@ -1000,6 +1044,18 @@ const CSS = `
 .scr-neg{color:var(--neg)}
 .scr-muted{color:var(--muted)}
 .scr-more,.scr-loading{padding:14px;text-align:center;color:var(--muted);font-size:13px}
+
+/* Benchmark Footer Row */
+.scr-tfoot{position:sticky;bottom:0;z-index:4}
+.scr-bench-row{background:var(--s2)!important}
+.scr-bench-row td{background:var(--s2)!important;border-top:2px solid var(--g1)!important;border-bottom:0!important;font-weight:700}
+.scr-bench-row .scr-name{background:var(--s2)!important;position:sticky;left:0;z-index:5}
+.scr-bench-icon{width:26px;height:26px;border-radius:6px;background:var(--g-xlight);color:var(--g1);display:flex;align-items:center;justify-content:center;font-size:12px;flex:none}
+.scr-bench-title-wrap{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.scr-bench-name{font:700 13px Raleway,sans-serif;color:var(--g1)}
+.scr-bench-badge{background:var(--g-xlight);color:var(--g1);border:1px solid var(--g-light);font:700 9px JetBrains Mono,monospace;padding:1px 5px;border-radius:4px;text-transform:uppercase;letter-spacing:.03em}
+.scr-bench-sub{font:500 11px JetBrains Mono,monospace;color:var(--muted);margin-top:1px}
+.scr-bench-cell{font-variant-numeric:tabular-nums}
 /* pager is OUTSIDE the horizontal-scroll wrap, so it never scrolls sideways */
 .scr-pager{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;margin-top:10px;background:var(--s2)}
 .scr-pager-info{font-size:12.5px;color:var(--muted)}
