@@ -94,7 +94,7 @@ function WidgetsClient() {
       const res = await fetch('/api/screener');
       if (res.ok) {
         const data = await res.json();
-        setFundsData(data.rows || []);
+        setFundsData(data.funds || data.rows || []);
       }
     } catch (err) {
       console.error(err);
@@ -196,13 +196,14 @@ function WidgetsClient() {
 
   // Filter top funds by category and horizon
   const topFundsFiltered = React.useMemo(() => {
-    if (!fundsData.length) return [];
+    if (!fundsData || !fundsData.length) return [];
     let list = fundsData;
     if (fundCategory !== 'All') {
-      list = list.filter(f => f.category?.toLowerCase().includes(fundCategory.toLowerCase()));
+      const matchCat = fundCategory.toLowerCase().replace(/fund/i, '').trim();
+      list = list.filter(f => f.category && f.category.toLowerCase().includes(matchCat));
     }
     return [...list]
-      .filter(f => f[fundHorizon] != null && f[fundHorizon] > 0)
+      .filter(f => f[fundHorizon] != null && typeof f[fundHorizon] === 'number' && f[fundHorizon] > 0)
       .sort((a, b) => (b[fundHorizon] || 0) - (a[fundHorizon] || 0))
       .slice(0, 5);
   }, [fundsData, fundCategory, fundHorizon]);
@@ -582,6 +583,7 @@ function WidgetsClient() {
               <div className="wdg-funds-list">
                 {topFundsFiltered.map((fund, idx) => {
                   const retVal = fund[fundHorizon];
+                  const cleanTitle = (fund.name || '').replace(/\s*-\s*(Regular Plan|Direct Plan|Regular|Direct|Growth( Option)?| Plan).*/i, '').trim();
                   return (
                     <Link
                       key={fund.code || idx}
@@ -591,7 +593,7 @@ function WidgetsClient() {
                     >
                       <div className="wdg-fund-rank">{idx + 1}</div>
                       <div className="wdg-fund-info">
-                        <div className="wdg-f-title">{fund.name}</div>
+                        <div className="wdg-f-title" title={fund.name}>{cleanTitle}</div>
                         <div className="wdg-f-meta">
                           <span>{fund.category}</span> · <span>NAV: ₹{fund.nav?.toFixed(2)}</span>
                         </div>
@@ -651,12 +653,15 @@ function WidgetsClient() {
             {/* Top 2 Mover Funds */}
             <div className="wdg-mini-funds">
               <div className="wdg-sec-title">Top 3Y Performers</div>
-              {topFundsFiltered.slice(0, 2).map((f, i) => (
-                <div key={f.code || i} className="wdg-mf-row">
-                  <span className="wdg-mf-name">{f.name}</span>
-                  <span className="wdg-mf-ret pos">+{f.ret_3y?.toFixed(1)}%</span>
-                </div>
-              ))}
+              {topFundsFiltered.slice(0, 2).map((f, i) => {
+                const cleanMFName = (f.name || '').replace(/\s*-\s*(Regular Plan|Direct Plan|Regular|Direct|Growth( Option)?| Plan).*/i, '').trim();
+                return (
+                  <div key={f.code || i} className="wdg-mf-row">
+                    <span className="wdg-mf-name" title={f.name}>{cleanMFName}</span>
+                    <span className="wdg-mf-ret pos">+{f.ret_3y?.toFixed(1)}%</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
