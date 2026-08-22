@@ -137,6 +137,112 @@
   font-weight: 600;
 }
 
+/* ── Key Takeaways Box (Featured Snippet Optimized) ── */
+.pnr-takeaways-box {
+  background: var(--surface, #ffffff);
+  border: 2px solid var(--border2, #a8cfa8);
+  border-radius: var(--radius, 14px);
+  padding: 24px 28px;
+  margin-top: 36px;
+  box-shadow: var(--shadow, 0 2px 16px rgba(46,125,50,.09));
+  position: relative;
+}
+
+.pnr-takeaways-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid var(--border, #c2dfc2);
+}
+
+.pnr-takeaways-icon {
+  font-size: 1.3rem;
+}
+
+.pnr-takeaways-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--g1, #1b5e20);
+  margin: 0;
+}
+
+.pnr-takeaways-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.pnr-takeaway-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--text2, #2e4d2e);
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.pnr-takeaway-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--g2, #2e7d32);
+  margin-top: 7px;
+  flex-shrink: 0;
+}
+
+/* ── 3 Golden Rules Grid ── */
+.pnr-rules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.pnr-rule-card {
+  background: var(--surface, #ffffff);
+  border: 1.5px solid var(--border, #c2dfc2);
+  border-radius: var(--radius, 14px);
+  padding: 24px 20px;
+  box-shadow: var(--shadow, 0 2px 16px rgba(46,125,50,.09));
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  position: relative;
+}
+
+.pnr-rule-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--g2, #2e7d32);
+}
+
+.pnr-rule-num {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--g1, #1b5e20);
+  background: var(--s3, #dff0df);
+  padding: 4px 10px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+.pnr-rule-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text, #162616);
+  margin: 0 0 8px;
+}
+
+.pnr-rule-body {
+  font-size: 0.86rem;
+  color: var(--text2, #2e4d2e);
+  line-height: 1.6;
+  margin: 0;
+  font-weight: 500;
+}
+
 /* ── Container Layout ── */
 .pnr-container {
   max-width: 1100px;

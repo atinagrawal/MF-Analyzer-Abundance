@@ -134,12 +134,32 @@ const FAQS = [
     a: 'The first private-sector mutual fund in India was Kothari Pioneer Mutual Fund (a joint venture between Chennai’s Kothari Group and Pioneer Group, USA, later acquired by Franklin Templeton in 2002). Its flagship funds—Franklin India Bluechip Fund and Franklin India Prima Fund—were launched on December 1, 1993.',
   },
   {
-    q: 'How did mutual funds operate before electronic NAV tracking in 2006?',
+    q: 'What happened to US-64 and the original Unit Trust of India (UTI)?',
+    a: 'Unit Scheme 1964 (US-64) was India’s first scheme in 1964 under a statutory government monopoly. Following the 2001–2002 UTI restructuring, US-64 was bifurcated into SUUTI (Special Undertaking of UTI) and UTI Mutual Fund, leaving UTI Mastershare (1986) as the oldest continuous open-ended scheme.',
+  },
+  {
+    q: 'If I had invested ₹10,000 in India’s top mutual funds in 1995, what would it be worth in 2026?',
+    a: '₹10,000 invested at NFO in Nippon India Growth Fund grew to ₹45.75 Lakhs (21.94% CAGR); in HDFC Flexi Cap Fund grew to ₹20.82 Lakhs (18.35% CAGR); in ABSL Equity Hybrid \'95 Fund grew to ₹15.68 Lakhs (17.39% CAGR); compared to ~₹2.1 Lakhs in Gold and ~₹1.0 Lakh in Fixed Deposits.',
+  },
+  {
+    q: 'Have any Indian equity mutual funds ever delivered negative returns over a 20-year holding period?',
+    a: 'No. Historically in India, no diversified equity mutual fund held continuously for 20 years has ever delivered a negative return or trailed inflation. Over 20-year horizons, equity mutual fund returns have consistently stayed between 11% and 22% annualised CAGR.',
+  },
+  {
+    q: 'Are older mutual funds (30+ years) safer or better to invest in than new NFOs?',
+    a: 'Older funds offer the distinct advantage of a proven 30-year track record navigating multiple extreme market cycles (1997 Asian crisis, 2000 tech crash, 2008 GFC, 2020 Covid), whereas NFOs have no verifiable track record.',
+  },
+  {
+    q: 'How did mutual funds calculate and publish NAVs before the 2006 electronic system?',
     a: 'Prior to AMFI’s central digital portal launch in April 2006, mutual fund NAVs were published daily in major financial newspapers like The Economic Times and Business Standard. Investors held physical paper unit certificates (similar to share certificates) until the demat and registrar digital revolution simplified electronic tracking.',
   },
   {
-    q: 'What is the key takeaway from 30+ years of Indian mutual fund compounding?',
-    a: 'Across 30+ years encompassing the 1997 Asian Crisis, 2000 Dot-com crash, 2008 Global Financial Crisis, and 2020 Covid pandemic, top equity mutual funds generated 15% to 22% annualised CAGR—beating Gold (10.5%), Fixed Deposits (8.0%), and CPI Inflation (6.5%) by significant margins.',
+    q: 'How does a 30-year SIP return compare against a 30-year lumpsum in Indian funds?',
+    a: 'A ₹5,000 monthly SIP over 30 years (₹18 Lakhs total investment) compounded at 16% CAGR grew to ~₹3.8 Crore, proving that systematic disciplined investing delivers generational wealth without needing market timing.',
+  },
+  {
+    q: 'Where can I track live portfolio holdings, rolling returns, and stress tests of these 30-year veteran schemes?',
+    a: 'On this platform, click on any fund name in the directory to view its dedicated analytics page (/fund/[code]) or compare rolling return consistency on the Rolling Returns Calculator (/rolling).',
   },
 ];
 
@@ -332,6 +352,32 @@ export default function PioneersClient({ initialFunds = [] }) {
               <div className="pnr-kpi-val purple">15.8% CAGR</div>
               <div className="pnr-kpi-lbl">Average 30-Yr Equity CAGR</div>
               <div className="pnr-kpi-sub">vs 10.5% Gold · 8.0% FD</div>
+            </div>
+          </div>
+
+          {/* ── Key Takeaways (Featured Snippet Optimized) ── */}
+          <div className="pnr-takeaways-box">
+            <div className="pnr-takeaways-header">
+              <span className="pnr-takeaways-icon">💡</span>
+              <h2 className="pnr-takeaways-title">Key Historical Takeaways & Compounding Facts</h2>
+            </div>
+            <div className="pnr-takeaways-grid">
+              <div className="pnr-takeaway-item">
+                <span className="pnr-takeaway-dot"></span>
+                <span><strong>Oldest Surviving Fund:</strong> UTI Mastershare (launched 15-Oct-1986, running for nearly 40 continuous years).</span>
+              </div>
+              <div className="pnr-takeaway-item">
+                <span className="pnr-takeaway-dot"></span>
+                <span><strong>Highest Wealth Multiplier:</strong> Nippon India Growth Fund delivered a 457.5x return (21.94% CAGR since Oct 1995).</span>
+              </div>
+              <div className="pnr-takeaway-item">
+                <span className="pnr-takeaway-dot"></span>
+                <span><strong>Zero 15-Year Loss Probability:</strong> No diversified open-ended Indian equity scheme has ever lost money over a 15+ year holding period.</span>
+              </div>
+              <div className="pnr-takeaway-item">
+                <span className="pnr-takeaway-dot"></span>
+                <span><strong>Inflation Outperformance:</strong> Top equity pioneers generated 800 to 1,500 bps over CPI inflation (~6.5%) annually.</span>
+              </div>
             </div>
           </div>
         </div>
@@ -528,7 +574,44 @@ export default function PioneersClient({ initialFunds = [] }) {
           </div>
         </section>
 
-        {/* ── SECTION 4: HALL OF FAME DIRECTORY ── */}
+        {/* ── SECTION 4: 3 GOLDEN RULES OF COMPOUNDING ── */}
+        <section className="pnr-section">
+          <div className="pnr-sec-header">
+            <div className="pnr-sec-tag">Compounding Insights</div>
+            <h2 className="pnr-sec-title">The 3 Golden Rules of Multi-Decade Wealth Creation</h2>
+            <p className="pnr-sec-desc">
+              Lessons distilled from 30+ years of Indian stock market cycles, crises, and economic expansions.
+            </p>
+          </div>
+
+          <div className="pnr-rules-grid">
+            <div className="pnr-rule-card">
+              <span className="pnr-rule-num">Rule 01</span>
+              <h3 className="pnr-rule-title">The 15-Year Zero-Loss Rule</h3>
+              <p className="pnr-rule-body">
+                Across Indian mutual fund history, rolling returns demonstrate that the probability of negative returns drops to <strong>0.0%</strong> for holding periods of 15 years or longer in diversified equity schemes.
+              </p>
+            </div>
+
+            <div className="pnr-rule-card">
+              <span className="pnr-rule-num">Rule 02</span>
+              <h3 className="pnr-rule-title">The High Cost of Market Timing</h3>
+              <p className="pnr-rule-body">
+                Investors who attempted to jump in and out of markets missed the few explosive recovery days. Over 30 years, staying uninterruptedly invested generated <strong>100x to 450x</strong> wealth multipliers.
+              </p>
+            </div>
+
+            <div className="pnr-rule-card">
+              <span className="pnr-rule-num">Rule 03</span>
+              <h3 className="pnr-rule-title">The Silent Wealth Killer: Inflation</h3>
+              <p className="pnr-rule-body">
+                Over 30 years, ₹10,000 kept in cash lost 85% of purchasing power. Fixed Deposits grew it to ~₹1.0 Lakh, Gold to ~₹2.1 Lakhs, while top mutual fund pioneers compounded it to <strong>₹20 Lakhs to ₹45 Lakhs</strong>.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ── SECTION 5: HALL OF FAME DIRECTORY ── */}
         <section className="pnr-section" id="directory-section">
           <div className="pnr-sec-header">
             <div className="pnr-sec-tag">Verified Directory</div>
