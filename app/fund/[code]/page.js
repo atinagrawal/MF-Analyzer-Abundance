@@ -1,34 +1,99 @@
 import { redirect, notFound } from 'next/navigation';
+import fs from 'fs';
+import path from 'path';
 import pool from '@/lib/db';
 import LINEAGE from '@/data/scheme-lineage.json';
 import FundDetailClient from './FundDetailClient';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Robust fund record resolver with multi-layer fallback:
+ * 1. PostgreSQL `mf_screener` table
+ * 2. Local `data/screener.json` fallback (guarantees resilience during DB cold-starts)
+ * 3. Lineage resolver for predecessor/merged scheme codes
+ */
+async function getFundMetadataRecord(code) {
+  if (!code || isNaN(Number(code))) return null;
+  const numCode = Number(code);
+  const strCode = String(code);
+
+  // 1. Try PostgreSQL database first
+  try {
+    const { rows } = await pool.query(
+      `SELECT name, amc, category, structure, isin, nav, inception_date, age_years
+       FROM mf_screener WHERE code = $1 LIMIT 1`,
+      [numCode]
+    );
+    if (rows && rows.length > 0) {
+      return { ...rows[0], code: strCode, isSuccessor: false };
+    }
+  } catch (err) {
+    console.warn(`[getFundMetadataRecord] Database query failed for code ${code}:`, err.message);
+  }
+
+  // 2. Check local data/screener.json fallback
+  try {
+    const filePath = path.join(process.cwd(), 'data', 'screener.json');
+    if (fs.existsSync(filePath)) {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      const found = data.find((f) => String(f.code) === strCode);
+      if (found) {
+        return {
+          name: found.name,
+          amc: found.amc,
+          category: found.category,
+          structure: found.structure,
+          isin: found.isin,
+          nav: found.nav,
+          inception_date: found.inception_date,
+          age_years: found.age_years,
+          code: strCode,
+          isSuccessor: false,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn(`[getFundMetadataRecord] Local file fallback failed for code ${code}:`, err.message);
+  }
+
+  // 3. Check if it's a predecessor code in scheme-lineage.json
+  const successorEntry = Object.entries(LINEAGE || {}).find(
+    ([, entry]) => String(entry.pred) === strCode
+  );
+  if (successorEntry) {
+    const succCode = successorEntry[0];
+    const succRecord = await getFundMetadataRecord(succCode);
+    if (succRecord) {
+      return {
+        ...succRecord,
+        canonicalCode: succCode,
+        isSuccessor: true,
+      };
+    }
+  }
+
+  return null;
+}
+
 export async function generateMetadata({ params }) {
   const { code } = await params;
+  const f = await getFundMetadataRecord(code);
 
-  if (!code || isNaN(Number(code))) {
+  if (!f) {
     return {
       title: 'Fund Not Found | Abundance',
-      robots: { index: false, follow: false },
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
-  const { rows } = await pool.query(
-    `SELECT name, amc, category, structure, isin, nav, inception_date, age_years
-     FROM mf_screener WHERE code = $1`,
-    [Number(code)]
-  ).catch(() => ({ rows: [] }));
+  // If this was a predecessor scheme code, point canonical URL directly to successor
+  const targetCode = f.canonicalCode || code;
+  const canonicalUrl = `https://mfcalc.getabundance.in/fund/${targetCode}`;
 
-  if (!rows.length) {
-    return {
-      title: 'Fund Not Found | Abundance',
-      robots: { index: false, follow: false },
-    };
-  }
-
-  const f = rows[0];
   const shortCat = (f.category || '')
     .replace(/^(Equity|Debt|Hybrid|Other|Solution Oriented).*? - /i, '')
     .replace(/ Fund$/i, '');
@@ -43,8 +108,6 @@ export async function generateMetadata({ params }) {
     (inceptionFormatted ? ` Launched ${inceptionFormatted}.` : '') +
     ` View minimum investment, exit load, portfolio holdings, stress test & full analytics on Abundance — ARN-251838.`;
 
-  const url = `https://mfcalc.getabundance.in/fund/${code}`;
-
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -53,13 +116,13 @@ export async function generateMetadata({ params }) {
         name: f.name,
         description,
         provider: { '@type': 'Organization', name: f.amc },
-        url,
+        url: canonicalUrl,
         category: f.category,
-        identifier: f.isin || code,
+        identifier: f.isin || targetCode,
       },
       {
         '@type': 'FAQPage',
-        mainEntity: buildFaqJsonLd(f, code),
+        mainEntity: buildFaqJsonLd(f, targetCode),
       },
     ],
   };
@@ -68,9 +131,37 @@ export async function generateMetadata({ params }) {
     title,
     description,
     keywords: `${f.name}, ${f.amc}, ${shortCat} mutual fund India, ISIN ${f.isin || ''}, portfolio holdings, exit load, NAV history`,
-    alternates: { canonical: url },
-    openGraph: { title, description, type: 'website', url },
-    twitter: { card: 'summary', title, description },
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      url: canonicalUrl,
+      images: [
+        {
+          url: `https://mfcalc.getabundance.in/api/og?code=${targetCode}&name=${encodeURIComponent(f.name)}`,
+          width: 1200,
+          height: 630,
+          alt: f.name,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
+    },
     other: {
       'script:ld+json': JSON.stringify(jsonLd),
     },
@@ -144,20 +235,15 @@ export default async function FundDetailPage({ params }) {
     notFound();
   }
 
-  const { rows } = await pool.query(
-    'SELECT code FROM mf_screener WHERE code = $1',
-    [Number(code)]
-  ).catch(() => ({ rows: [] }));
+  const f = await getFundMetadataRecord(code);
 
-  if (!rows.length) {
-    // Check if it's a merged scheme in lineage mapping
-    const successorEntry = Object.entries(LINEAGE || {}).find(
-      ([, entry]) => String(entry.pred) === String(code)
-    );
-    if (successorEntry) {
-      redirect(`/fund/${successorEntry[0]}`); // 301 Redirect
-    }
-    notFound(); // 404
+  if (!f) {
+    notFound();
+  }
+
+  if (f.isSuccessor && f.canonicalCode) {
+    // 308 Permanent Redirect to successor scheme
+    redirect(`/fund/${f.canonicalCode}`);
   }
 
   return <FundDetailClient code={code} />;
