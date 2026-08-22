@@ -10,6 +10,11 @@
   "140356": { "pred": 133492, "from": "JPMorgan India Economic Resurgence Fund - Regular Plan - Dividend Option" },
   "140354": { "pred": 133490, "from": "JPMorgan India Economic Resurgence Fund - Direct Plan - Dividend Option" },
 
+  "138308": { "pred": 101629, "from": "DWS Alpha Equity Fund - Regular Plan - Growth" },
+  "138312": { "pred": 118936, "from": "DWS Alpha Equity Fund - Direct Plan - Growth" },
+  "138307": { "pred": 101628, "from": "DWS Alpha Equity Fund - Regular Plan - Dividend" },
+  "138313": { "pred": 118937, "from": "DWS Alpha Equity Fund - Direct Plan - Dividend" },
+
   "149599": { "pred": 101265, "from": "Principal Hybrid Equity Fund - Regular - Growth Option" },
   "149601": { "pred": 119484, "from": "Principal Hybrid Equity Fund - Direct - Growth Option" },
   "149715": { "pred": 114301, "from": "Principal Balanced Advantage Fund - Regular - Growth Option" },
