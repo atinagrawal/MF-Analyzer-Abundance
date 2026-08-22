@@ -15,14 +15,20 @@ export function normalizeCategory(c = '') {
   let cat = c
     .toLowerCase()
     .replace(/\s+/g, ' ')
-    .replace(/^(equity|debt|hybrid|other|solution oriented|income\/debt oriented)\s*schemes?\s*-\s*/i, '')
+    .replace(/^(equity|debt|hybrid|other|solution oriented|income\/debt oriented|income)\s*schemes?\s*-\s*/i, '')
+    .replace(/^(equity|debt|hybrid|other|solution oriented|income\/debt oriented)\s*-\s*/i, '')
     .replace(/\s*-\s*tax saver fund/i, '')
     .replace(/\s+fund$/i, '')
     .replace(/banking and psu debt/i, 'banking and psu')
     .replace(/ultra short term|ultra short to short term/i, 'ultra short duration')
     .replace(/short term/i, 'short duration')
     .replace(/medium term/i, 'medium duration')
-    .replace(/balanced advantage fund\/\s*dynamic asset allocation/i, 'dynamic asset allocation or balanced advantage')
+    .replace(/medium to long term/i, 'medium to long duration')
+    .replace(/long term/i, 'long duration')
+    .replace(/dynamic term/i, 'dynamic bond')
+    .replace(/floating interest rates/i, 'floater')
+    .replace(/balanced advantage fund\/\s*dynamic asset allocation|dynamic asset allocation or balanced advantage|balanced advantage/i, 'dynamic asset allocation or balanced advantage')
+    .replace(/gilt fund with 10 year constant duration|10-year constant maturity gilt/i, '10-year constant gilt')
     .trim();
 
   if (/^sectoral|^thematic|sectoral\s*\/\s*thematic/i.test(cat)) {
@@ -31,6 +37,26 @@ export function normalizeCategory(c = '') {
 
   if (/^value$|^contra$|value\s*\/\s*contra/i.test(cat)) {
     return 'value / contra';
+  }
+
+  if (/^children/i.test(cat)) {
+    return 'children';
+  }
+
+  if (/^retirement/i.test(cat)) {
+    return 'retirement';
+  }
+
+  if (/fund of funds|fof/i.test(cat)) {
+    return 'fof';
+  }
+
+  if (/etf/i.test(cat)) {
+    return 'etf';
+  }
+
+  if (cat === 'income') {
+    return 'medium to long duration';
   }
 
   return cat;
@@ -205,6 +231,7 @@ export const GLOSSARY_ITEMS = [
 ];
 
 export const FALLBACK_BENCHMARKS = {
+  // ── Core Equity ────────────────────────────────────────────────────────
   BSE500: {
     symbol: 'BSE500',
     name: 'BSE 500 TRI',
@@ -301,9 +328,382 @@ export const FALLBACK_BENCHMARKS = {
     ret_7y: 18.10,
     ret_10y: 13.56,
   },
+  DIVY50: {
+    symbol: 'DIVY50',
+    name: 'BSE 500 Dividend Leaders 50 TRI',
+    shortName: 'BSE Dividend 50',
+    desc: 'S&P BSE 500 Dividend Leaders 50 Index',
+    nav: 4890.35,
+    nav_date: '2026-08-20',
+    ret_1m: 2.10,
+    ret_3m: 4.80,
+    ret_6m: 3.79,
+    ret_1y: 5.85,
+    ret_3y: 15.20,
+    ret_5y: 14.80,
+    ret_7y: 17.50,
+    ret_10y: 13.80,
+  },
+
+  // ── Hybrid Categories ──────────────────────────────────────────────────
+  CRISIL_HYBRID_65_35: {
+    symbol: 'CRISIL_HYBRID_65_35',
+    name: 'CRISIL Hybrid 35+65 Aggressive Index',
+    shortName: 'CRISIL Hybrid 65:35',
+    desc: '65% Equity (BSE 200) + 35% Debt (CRISIL Bond Index)',
+    nav: 8520.40,
+    nav_date: '2026-08-20',
+    ret_1m: 1.26,
+    ret_3m: 2.93,
+    ret_6m: 1.72,
+    ret_1y: 3.09,
+    ret_3y: 9.61,
+    ret_5y: 9.84,
+    ret_7y: 11.77,
+    ret_10y: 10.61,
+  },
+  NIFTY_HYBRID_50_50: {
+    symbol: 'NIFTY_HYBRID_50_50',
+    name: 'NIFTY 50 Composite Hybrid 50:50 Index',
+    shortName: 'NIFTY Hybrid 50:50',
+    desc: '50% Equity + 50% Debt (Dynamic SEBI Tier-1 Benchmark)',
+    nav: 6940.15,
+    nav_date: '2026-08-20',
+    ret_1m: 1.15,
+    ret_3m: 2.73,
+    ret_6m: 2.33,
+    ret_1y: 4.28,
+    ret_3y: 9.19,
+    ret_5y: 9.15,
+    ret_7y: 10.74,
+    ret_10y: 9.96,
+  },
+  CRISIL_HYBRID_15_85: {
+    symbol: 'CRISIL_HYBRID_15_85',
+    name: 'CRISIL Hybrid 85+15 Conservative Index',
+    shortName: 'CRISIL Hybrid 15:85',
+    desc: '15% Equity (BSE 200) + 85% Debt (CRISIL Bond Index)',
+    nav: 5410.80,
+    nav_date: '2026-08-20',
+    ret_1m: 0.87,
+    ret_3m: 2.29,
+    ret_6m: 3.75,
+    ret_1y: 7.06,
+    ret_3y: 8.22,
+    ret_5y: 7.55,
+    ret_7y: 8.35,
+    ret_10y: 8.45,
+  },
+  CRISIL_MULTI_ASSET: {
+    symbol: 'CRISIL_MULTI_ASSET',
+    name: 'CRISIL Multi Asset Allocation Index',
+    shortName: 'CRISIL Multi Asset',
+    desc: '65% Equity + 20% Debt + 15% Domestic Gold',
+    nav: 9240.60,
+    nav_date: '2026-08-20',
+    ret_1m: 1.85,
+    ret_3m: 4.20,
+    ret_6m: 3.80,
+    ret_1y: 6.95,
+    ret_3y: 12.45,
+    ret_5y: 12.10,
+    ret_7y: 14.25,
+    ret_10y: 12.30,
+  },
+  NIFTY_ARBITRAGE: {
+    symbol: 'NIFTY_ARBITRAGE',
+    name: 'NIFTY 50 Arbitrage Index',
+    shortName: 'NIFTY Arbitrage',
+    desc: 'Fully Hedged Arbitrage (Cash-equivalent profile)',
+    nav: 2420.30,
+    nav_date: '2026-08-20',
+    ret_1m: 0.56,
+    ret_3m: 1.72,
+    ret_6m: 3.52,
+    ret_1y: 7.15,
+    ret_3y: 6.95,
+    ret_5y: 5.75,
+    ret_7y: 5.65,
+    ret_10y: 6.05,
+  },
+  NIFTY_EQ_SAVINGS: {
+    symbol: 'NIFTY_EQ_SAVINGS',
+    name: 'NIFTY Equity Savings Index',
+    shortName: 'NIFTY Equity Savings',
+    desc: '35% Unhedged Equity + 30% Arbitrage + 35% Debt',
+    nav: 4860.50,
+    nav_date: '2026-08-20',
+    ret_1m: 0.98,
+    ret_3m: 2.45,
+    ret_6m: 2.75,
+    ret_1y: 5.35,
+    ret_3y: 8.65,
+    ret_5y: 8.40,
+    ret_7y: 9.60,
+    ret_10y: 9.15,
+  },
+
+  // ── Debt Categories ────────────────────────────────────────────────────
+  CRISIL_OVERNIGHT: {
+    symbol: 'CRISIL_OVERNIGHT',
+    name: 'CRISIL 1-Day Bharat Bond Index',
+    shortName: 'CRISIL Overnight',
+    desc: '1-day maturity (TREPS / Repo SEBI Tier-1 Benchmark)',
+    nav: 1280.10,
+    nav_date: '2026-08-20',
+    ret_1m: 0.54,
+    ret_3m: 1.64,
+    ret_6m: 3.30,
+    ret_1y: 6.65,
+    ret_3y: 6.52,
+    ret_5y: 5.45,
+    ret_7y: 5.30,
+    ret_10y: 5.65,
+  },
+  CRISIL_LIQUID: {
+    symbol: 'CRISIL_LIQUID',
+    name: 'CRISIL Liquid Debt Index',
+    shortName: 'CRISIL Liquid',
+    desc: 'Maturity up to 91 days (SEBI Tier-1 Benchmark)',
+    nav: 3850.40,
+    nav_date: '2026-08-20',
+    ret_1m: 0.58,
+    ret_3m: 1.76,
+    ret_6m: 3.58,
+    ret_1y: 7.22,
+    ret_3y: 7.05,
+    ret_5y: 5.85,
+    ret_7y: 5.75,
+    ret_10y: 6.15,
+  },
+  CRISIL_ULTRA_SHORT: {
+    symbol: 'CRISIL_ULTRA_SHORT',
+    name: 'CRISIL Ultra Short Duration Debt Index',
+    shortName: 'CRISIL Ultra Short',
+    desc: '3 to 6 months Macaulay duration',
+    nav: 4620.80,
+    nav_date: '2026-08-20',
+    ret_1m: 0.62,
+    ret_3m: 1.85,
+    ret_6m: 3.75,
+    ret_1y: 7.45,
+    ret_3y: 7.25,
+    ret_5y: 6.05,
+    ret_7y: 6.10,
+    ret_10y: 6.45,
+  },
+  CRISIL_LOW_DURATION: {
+    symbol: 'CRISIL_LOW_DURATION',
+    name: 'CRISIL Low Duration Debt Index',
+    shortName: 'CRISIL Low Duration',
+    desc: '6 to 12 months Macaulay duration',
+    nav: 4980.20,
+    nav_date: '2026-08-20',
+    ret_1m: 0.65,
+    ret_3m: 1.92,
+    ret_6m: 3.90,
+    ret_1y: 7.65,
+    ret_3y: 7.38,
+    ret_5y: 6.20,
+    ret_7y: 6.30,
+    ret_10y: 6.70,
+  },
+  CRISIL_MONEY_MARKET: {
+    symbol: 'CRISIL_MONEY_MARKET',
+    name: 'CRISIL Money Market Debt Index',
+    shortName: 'CRISIL Money Market',
+    desc: 'Maturity up to 1 year (CDs, CPs, T-Bills)',
+    nav: 5120.60,
+    nav_date: '2026-08-20',
+    ret_1m: 0.64,
+    ret_3m: 1.88,
+    ret_6m: 3.82,
+    ret_1y: 7.55,
+    ret_3y: 7.30,
+    ret_5y: 6.12,
+    ret_7y: 6.22,
+    ret_10y: 6.58,
+  },
+  CRISIL_SHORT_DURATION: {
+    symbol: 'CRISIL_SHORT_DURATION',
+    name: 'CRISIL Short Duration Debt Index',
+    shortName: 'CRISIL Short Duration',
+    desc: '1 to 3 years Macaulay duration',
+    nav: 5380.90,
+    nav_date: '2026-08-20',
+    ret_1m: 0.70,
+    ret_3m: 2.05,
+    ret_6m: 4.15,
+    ret_1y: 7.95,
+    ret_3y: 7.55,
+    ret_5y: 6.50,
+    ret_7y: 6.75,
+    ret_10y: 7.10,
+  },
+  CRISIL_CORP_BOND: {
+    symbol: 'CRISIL_CORP_BOND',
+    name: 'CRISIL Corporate Bond Composite Index',
+    shortName: 'CRISIL Corp Bond',
+    desc: 'Min 80% in AA+ & AAA corporate bonds',
+    nav: 5720.40,
+    nav_date: '2026-08-20',
+    ret_1m: 0.75,
+    ret_3m: 2.18,
+    ret_6m: 4.35,
+    ret_1y: 8.25,
+    ret_3y: 7.80,
+    ret_5y: 6.85,
+    ret_7y: 7.20,
+    ret_10y: 7.65,
+  },
+  CRISIL_BANKING_PSU: {
+    symbol: 'CRISIL_BANKING_PSU',
+    name: 'CRISIL Banking and PSU Debt Index',
+    shortName: 'CRISIL Banking & PSU',
+    desc: 'Min 80% in Banks, PSUs & PFIs',
+    nav: 5540.10,
+    nav_date: '2026-08-20',
+    ret_1m: 0.72,
+    ret_3m: 2.12,
+    ret_6m: 4.25,
+    ret_1y: 8.10,
+    ret_3y: 7.65,
+    ret_5y: 6.70,
+    ret_7y: 7.05,
+    ret_10y: 7.45,
+  },
+  CRISIL_GILT: {
+    symbol: 'CRISIL_GILT',
+    name: 'CRISIL Dynamic Gilt Index',
+    shortName: 'CRISIL Dynamic Gilt',
+    desc: 'Government Securities across all maturities',
+    nav: 5980.70,
+    nav_date: '2026-08-20',
+    ret_1m: 0.78,
+    ret_3m: 2.25,
+    ret_6m: 4.48,
+    ret_1y: 8.45,
+    ret_3y: 7.90,
+    ret_5y: 6.95,
+    ret_7y: 7.35,
+    ret_10y: 7.80,
+  },
+  CRISIL_10Y_GILT: {
+    symbol: 'CRISIL_10Y_GILT',
+    name: 'CRISIL 10 Year Gilt Index',
+    shortName: 'CRISIL 10Y Gilt',
+    desc: '10-Year Benchmark Government of India Securities',
+    nav: 6150.30,
+    nav_date: '2026-08-20',
+    ret_1m: 0.82,
+    ret_3m: 2.35,
+    ret_6m: 4.65,
+    ret_1y: 8.75,
+    ret_3y: 8.10,
+    ret_5y: 7.15,
+    ret_7y: 7.50,
+    ret_10y: 7.95,
+  },
+  CRISIL_DYNAMIC_BOND: {
+    symbol: 'CRISIL_DYNAMIC_BOND',
+    name: 'CRISIL Dynamic Bond Index',
+    shortName: 'CRISIL Dynamic Bond',
+    desc: 'Dynamic duration management across maturities',
+    nav: 5690.80,
+    nav_date: '2026-08-20',
+    ret_1m: 0.76,
+    ret_3m: 2.20,
+    ret_6m: 4.40,
+    ret_1y: 8.30,
+    ret_3y: 7.75,
+    ret_5y: 6.80,
+    ret_7y: 7.15,
+    ret_10y: 7.55,
+  },
+  CRISIL_CREDIT_RISK: {
+    symbol: 'CRISIL_CREDIT_RISK',
+    name: 'CRISIL Credit Risk Debt Index',
+    shortName: 'CRISIL Credit Risk',
+    desc: 'Min 65% in AA & below corporate debt',
+    nav: 5480.50,
+    nav_date: '2026-08-20',
+    ret_1m: 0.74,
+    ret_3m: 2.15,
+    ret_6m: 4.30,
+    ret_1y: 8.35,
+    ret_3y: 7.95,
+    ret_5y: 7.10,
+    ret_7y: 7.40,
+    ret_10y: 7.75,
+  },
+  CRISIL_FLOATER: {
+    symbol: 'CRISIL_FLOATER',
+    name: 'CRISIL Short Term Floating Rate Index',
+    shortName: 'CRISIL Floater',
+    desc: 'Min 65% in floating rate instruments',
+    nav: 5240.20,
+    nav_date: '2026-08-20',
+    ret_1m: 0.66,
+    ret_3m: 1.95,
+    ret_6m: 3.95,
+    ret_1y: 7.75,
+    ret_3y: 7.45,
+    ret_5y: 6.30,
+    ret_7y: 6.40,
+    ret_10y: 6.80,
+  },
+  CRISIL_MEDIUM_DURATION: {
+    symbol: 'CRISIL_MEDIUM_DURATION',
+    name: 'CRISIL Medium Duration Debt Index',
+    shortName: 'CRISIL Med Duration',
+    desc: '3 to 4 years Macaulay duration',
+    nav: 5410.60,
+    nav_date: '2026-08-20',
+    ret_1m: 0.72,
+    ret_3m: 2.10,
+    ret_6m: 4.20,
+    ret_1y: 8.05,
+    ret_3y: 7.60,
+    ret_5y: 6.60,
+    ret_7y: 6.90,
+    ret_10y: 7.25,
+  },
+  CRISIL_MED_LONG_DURATION: {
+    symbol: 'CRISIL_MED_LONG_DURATION',
+    name: 'CRISIL Medium to Long Duration Debt Index',
+    shortName: 'CRISIL Med-Long',
+    desc: '4 to 7 years Macaulay duration',
+    nav: 5630.40,
+    nav_date: '2026-08-20',
+    ret_1m: 0.75,
+    ret_3m: 2.18,
+    ret_6m: 4.35,
+    ret_1y: 8.25,
+    ret_3y: 7.75,
+    ret_5y: 6.80,
+    ret_7y: 7.10,
+    ret_10y: 7.50,
+  },
+  CRISIL_LONG_DURATION: {
+    symbol: 'CRISIL_LONG_DURATION',
+    name: 'CRISIL Long Duration Debt Index',
+    shortName: 'CRISIL Long Duration',
+    desc: 'Greater than 7 years Macaulay duration',
+    nav: 6020.10,
+    nav_date: '2026-08-20',
+    ret_1m: 0.80,
+    ret_3m: 2.30,
+    ret_6m: 4.55,
+    ret_1y: 8.60,
+    ret_3y: 8.00,
+    ret_5y: 7.05,
+    ret_7y: 7.40,
+    ret_10y: 7.85,
+  },
 };
 
 export const CATEGORY_BENCHMARKS = {
+  // ── Core Equity ────────────────────────────────────────────────────────
   'flexi cap': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Flexi Cap', desc: 'S&P BSE 500 Total Return Index' },
   'elss': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · ELSS', desc: 'S&P BSE 500 Total Return Index' },
   'large cap': { symbol: 'BSE100', name: 'BSE 100 TRI', badge: 'Category Benchmark · Large Cap', desc: 'S&P BSE 100 Total Return Index' },
@@ -313,12 +713,66 @@ export const CATEGORY_BENCHMARKS = {
   'multi cap': { symbol: 'MULTICAP_50_25_25', name: 'NIFTY 500 Multicap 50:25:25 TRI', badge: 'Category Benchmark · Multi Cap', desc: '50% Large + 25% Mid + 25% Small Cap (SEBI Mandate)' },
   'value': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Value', desc: 'S&P BSE 500 Total Return Index' },
   'contra': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Contra', desc: 'S&P BSE 500 Total Return Index' },
+  'value / contra': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Value / Contra', desc: 'S&P BSE 500 Total Return Index' },
   'focused': { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Category Benchmark · Focused', desc: 'S&P BSE 500 Total Return Index' },
+  'dividend yield': { symbol: 'DIVY50', name: 'BSE 500 Dividend Leaders 50 TRI', badge: 'Category Benchmark · Dividend Yield', desc: 'S&P BSE 500 Dividend Leaders 50 Index' },
+
+  // ── Hybrid Categories ──────────────────────────────────────────────────
+  'aggressive hybrid': { symbol: 'CRISIL_HYBRID_65_35', name: 'CRISIL Hybrid 35+65 Aggressive Index', badge: 'Category Benchmark · Aggressive Hybrid', desc: '65% Equity (BSE 200) + 35% Debt (CRISIL Bond Index)' },
+  'dynamic asset allocation or balanced advantage': { symbol: 'NIFTY_HYBRID_50_50', name: 'NIFTY 50 Composite Hybrid 50:50 Index', badge: 'Category Benchmark · Balanced Advantage', desc: '50% Equity + 50% Debt (Dynamic SEBI Tier-1 Benchmark)' },
+  'conservative hybrid': { symbol: 'CRISIL_HYBRID_15_85', name: 'CRISIL Hybrid 85+15 Conservative Index', badge: 'Category Benchmark · Conservative Hybrid', desc: '15% Equity (BSE 200) + 85% Debt (CRISIL Bond Index)' },
+  'multi asset allocation': { symbol: 'CRISIL_MULTI_ASSET', name: 'CRISIL Multi Asset Allocation Index', badge: 'Category Benchmark · Multi Asset', desc: '65% Equity + 20% Debt + 15% Domestic Gold' },
+  'arbitrage': { symbol: 'NIFTY_ARBITRAGE', name: 'NIFTY 50 Arbitrage Index', badge: 'Category Benchmark · Arbitrage', desc: 'NIFTY 50 Arbitrage Index (SEBI Tier-1 Benchmark)' },
+  'equity savings': { symbol: 'NIFTY_EQ_SAVINGS', name: 'NIFTY Equity Savings Index', badge: 'Category Benchmark · Equity Savings', desc: '35% Unhedged Equity + 30% Arbitrage + 35% Debt' },
+  'balanced hybrid': { symbol: 'NIFTY_HYBRID_50_50', name: 'CRISIL Hybrid 50+50 Moderate Index', badge: 'Category Benchmark · Balanced Hybrid', desc: '50% Equity + 50% Debt (Fixed Allocation)' },
+
+  // ── Debt Categories ────────────────────────────────────────────────────
+  'liquid': { symbol: 'CRISIL_LIQUID', name: 'CRISIL Liquid Debt Index', badge: 'Category Benchmark · Liquid', desc: 'Maturity up to 91 days (SEBI Tier-1 Benchmark)' },
+  'overnight': { symbol: 'CRISIL_OVERNIGHT', name: 'CRISIL 1-Day Bharat Bond Index', badge: 'Category Benchmark · Overnight', desc: '1-day maturity (TREPS / Repo SEBI Tier-1 Benchmark)' },
+  'money market': { symbol: 'CRISIL_MONEY_MARKET', name: 'CRISIL Money Market Debt Index', badge: 'Category Benchmark · Money Market', desc: 'Maturity up to 1 year (CDs, CPs, T-Bills)' },
+  'ultra short duration': { symbol: 'CRISIL_ULTRA_SHORT', name: 'CRISIL Ultra Short Duration Debt Index', badge: 'Category Benchmark · Ultra Short Duration', desc: '3 to 6 months Macaulay duration' },
+  'low duration': { symbol: 'CRISIL_LOW_DURATION', name: 'CRISIL Low Duration Debt Index', badge: 'Category Benchmark · Low Duration', desc: '6 to 12 months Macaulay duration' },
+  'short duration': { symbol: 'CRISIL_SHORT_DURATION', name: 'CRISIL Short Duration Debt Index', badge: 'Category Benchmark · Short Duration', desc: '1 to 3 years Macaulay duration' },
+  'corporate bond': { symbol: 'CRISIL_CORP_BOND', name: 'CRISIL Corporate Bond Composite Index', badge: 'Category Benchmark · Corporate Bond', desc: 'Min 80% in AA+ & AAA corporate bonds' },
+  'banking and psu': { symbol: 'CRISIL_BANKING_PSU', name: 'CRISIL Banking and PSU Debt Index', badge: 'Category Benchmark · Banking & PSU', desc: 'Min 80% in Banks, PSUs & PFIs' },
+  'gilt': { symbol: 'CRISIL_GILT', name: 'CRISIL Dynamic Gilt Index', badge: 'Category Benchmark · Gilt', desc: 'Government Securities across all maturities' },
+  '10-year constant gilt': { symbol: 'CRISIL_10Y_GILT', name: 'CRISIL 10 Year Gilt Index', badge: 'Category Benchmark · 10Y Constant Gilt', desc: '10-Year Benchmark Government of India Securities' },
+  'dynamic bond': { symbol: 'CRISIL_DYNAMIC_BOND', name: 'CRISIL Dynamic Bond Index', badge: 'Category Benchmark · Dynamic Bond', desc: 'Dynamic duration management across maturities' },
+  'credit risk': { symbol: 'CRISIL_CREDIT_RISK', name: 'CRISIL Credit Risk Debt Index', badge: 'Category Benchmark · Credit Risk', desc: 'Min 65% in AA & below corporate debt' },
+  'floater': { symbol: 'CRISIL_FLOATER', name: 'CRISIL Short Term Floating Rate Index', badge: 'Category Benchmark · Floater', desc: 'Min 65% in floating rate instruments' },
+  'medium duration': { symbol: 'CRISIL_MEDIUM_DURATION', name: 'CRISIL Medium Duration Debt Index', badge: 'Category Benchmark · Medium Duration', desc: '3 to 4 years Macaulay duration' },
+  'medium to long duration': { symbol: 'CRISIL_MED_LONG_DURATION', name: 'CRISIL Medium to Long Duration Debt Index', badge: 'Category Benchmark · Medium to Long', desc: '4 to 7 years Macaulay duration' },
+  'long duration': { symbol: 'CRISIL_LONG_DURATION', name: 'CRISIL Long Duration Debt Index', badge: 'Category Benchmark · Long Duration', desc: 'Greater than 7 years Macaulay duration' },
 };
 
 export function resolveCategoryBenchmark(category, benchmarks = FALLBACK_BENCHMARKS) {
+  if (!category || category === 'All') {
+    return {
+      symbol: 'BSE500',
+      name: 'BSE 500 TRI',
+      badge: 'Broad Market Benchmark',
+      desc: 'S&P BSE 500 Total Return Index',
+      ...(benchmarks?.BSE500 || FALLBACK_BENCHMARKS.BSE500),
+    };
+  }
+
   const norm = normalizeCategory(category || '');
-  const matchedConfig = CATEGORY_BENCHMARKS[norm] || (norm === 'all' || !norm ? { symbol: 'BSE500', name: 'BSE 500 TRI', badge: 'Broad Market Benchmark', desc: 'S&P BSE 500 Total Return Index' } : null);
+  // Explicitly excluded categories: Sectoral/Thematic, Retirement, Children's, FoF, Other ETFs, Index funds
+  if (
+    norm.includes('sectoral') ||
+    norm.includes('thematic') ||
+    norm.includes('retirement') ||
+    norm.includes('children') ||
+    norm === 'fof' ||
+    norm.includes('fof') ||
+    norm === 'etf' ||
+    norm.includes('etf') ||
+    norm.includes('index funds')
+  ) {
+    return null;
+  }
+
+  const matchedConfig = CATEGORY_BENCHMARKS[norm];
   if (!matchedConfig) return null;
 
   const data = (benchmarks && benchmarks[matchedConfig.symbol]) || FALLBACK_BENCHMARKS[matchedConfig.symbol] || {};
