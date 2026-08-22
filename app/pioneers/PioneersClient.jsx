@@ -292,7 +292,9 @@ export default function PioneersClient({ initialFunds = [] }) {
 
   return (
     <div className="pnr-page">
-      <Navbar />
+      <div className="container">
+        <Navbar />
+      </div>
 
       {/* ── HERO BANNER ── */}
       <header className="pnr-hero">
@@ -674,7 +676,9 @@ export default function PioneersClient({ initialFunds = [] }) {
         </section>
       </main>
 
-      <Footer />
+      <div className="container" style={{ marginTop: '56px' }}>
+        <Footer />
+      </div>
     </div>
   );
 }
