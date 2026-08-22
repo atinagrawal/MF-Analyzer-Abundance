@@ -650,18 +650,27 @@ function WidgetsClient() {
               </div>
             )}
 
-            {/* Top 2 Mover Funds */}
+            {/* Top 3 Portfolio Holdings */}
             <div className="wdg-mini-funds">
-              <div className="wdg-sec-title">Top 3Y Performers</div>
-              {topFundsFiltered.slice(0, 2).map((f, i) => {
-                const cleanMFName = (f.name || '').replace(/\s*-\s*(Regular Plan|Direct Plan|Regular|Direct|Growth( Option)?| Plan).*/i, '').trim();
-                return (
-                  <div key={f.code || i} className="wdg-mf-row">
-                    <span className="wdg-mf-name" title={f.name}>{cleanMFName}</span>
-                    <span className="wdg-mf-ret pos">+{f.ret_3y?.toFixed(1)}%</span>
+              <div className="wdg-sec-title">Top 3 Holdings</div>
+              {portfolioData?.authenticated && portfolioData?.hasPortfolio && portfolioData?.summary?.topHoldings?.length > 0 ? (
+                portfolioData.summary.topHoldings.slice(0, 3).map((h, i) => (
+                  <div key={i} className="wdg-mf-row">
+                    <span className="wdg-mf-name" title={h.fullName}>{h.name}</span>
+                    <span className="wdg-mf-ret">
+                      ₹{h.curVal?.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                      <span className={h.gain >= 0 ? 'pos' : 'neg'} style={{ marginLeft: 5, fontSize: '10.5px' }}>
+                        ({h.gainPct >= 0 ? '+' : ''}{h.gainPct?.toFixed(1)}%)
+                      </span>
+                    </span>
                   </div>
-                );
-              })}
+                ))
+              ) : (
+                <div className="wdg-mini-port-promo" style={{ margin: '4px 0', padding: '9px 12px' }} onClick={() => setTab('portfolio')}>
+                  <span>Sign in to view top holdings</span>
+                  <span className="wdg-promo-arrow">→</span>
+                </div>
+              )}
             </div>
           </div>
         )}
