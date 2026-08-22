@@ -738,11 +738,13 @@ export default function ScreenerClient({ initialCategory }) {
                     <tr className="scr-bench-row" title={`Official benchmark for ${shortCat(cat)}: ${activeBenchmark.name} (${activeBenchmark.desc || ''})`}>
                       <td style={{ textAlign: 'center' }}></td>
                       <td className="scr-name">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                           <div className="scr-bench-icon" title="Category Benchmark Index">🎯</div>
-                          <div className="scr-fundlink" style={{ cursor: 'default' }}>
-                            <span className="scr-fund-n" style={{ color: 'var(--g1)' }}>{activeBenchmark.name}</span>
-                            <span className="scr-fund-sub">
+                          <div className="scr-fundlink" style={{ cursor: 'default', minWidth: 0 }}>
+                            <span className="scr-fund-n" style={{ color: 'var(--g1)' }} title={activeBenchmark.name}>
+                              {activeBenchmark.shortName || activeBenchmark.name}
+                            </span>
+                            <span className="scr-fund-sub" title={activeBenchmark.badge || 'Category Benchmark'}>
                               {activeBenchmark.badge || 'Category Benchmark'}
                             </span>
                           </div>
@@ -1023,7 +1025,7 @@ const CSS = `
 .scr-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
 .scr-table{width:100%;border-collapse:collapse;font-size:13px;min-width:520px}
 .scr-table th{position:sticky;top:0;background:var(--s2);text-align:right;padding:11px 12px;font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);white-space:nowrap;z-index:2}
-.scr-table th.scr-name-h{text-align:left;left:0;z-index:3}
+.scr-table th.scr-name-h{text-align:left;left:0;z-index:3;max-width:240px}
 .scr-sortable{cursor:pointer;user-select:none}
 .scr-sortable:hover{color:var(--g2)}
 .scr-sortable.active{color:var(--g1)}
@@ -1032,10 +1034,10 @@ const CSS = `
 .scr-row{cursor:pointer;transition:background .12s ease}
 .scr-row:hover{background:var(--g-xlight)}
 .scr-row.row-comparing{background:var(--g-xlight)}
-.scr-name,.scr-name-h{text-align:left!important;position:sticky;left:0;background:var(--surface)}
+.scr-name,.scr-name-h{text-align:left!important;position:sticky;left:0;background:var(--surface);max-width:240px;overflow:hidden}
 .scr-row:hover .scr-name{background:var(--g-xlight)}
-.scr-fundlink{display:flex;flex-direction:column;gap:2px;background:none;border:0;padding:0;text-align:left;cursor:pointer;max-width:230px}
-.scr-fund-n{font:700 13px Raleway,sans-serif;color:var(--g1);line-height:1.25;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.scr-fundlink{display:flex;flex-direction:column;gap:2px;background:none;border:0;padding:0;text-align:left;cursor:pointer;max-width:210px;min-width:0;overflow:hidden}
+.scr-fund-n{font:700 13px Raleway,sans-serif;color:var(--g1);line-height:1.25;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
 .scr-fundlink:hover .scr-fund-n{text-decoration:underline}
 .scr-fund-sub{font:500 11px JetBrains Mono,monospace;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scr-flag{color:var(--warn);margin-left:5px;font-size:12px}
@@ -1051,7 +1053,8 @@ const CSS = `
 .scr-bench-row .scr-name{background:var(--s2)!important;position:sticky;left:0;z-index:5}
 .scr-bench-icon{width:26px;height:26px;border-radius:6px;background:var(--g-xlight);color:var(--g1);display:flex;align-items:center;justify-content:center;font-size:13px;flex:none}
 .scr-bench-cell{font-variant-numeric:tabular-nums}
-/* pager is OUTSIDE the horizontal-scroll wrap, so it never scrolls sideways */
+
+/* pager */
 .scr-pager{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;margin-top:10px;background:var(--s2)}
 .scr-pager-info{font-size:12.5px;color:var(--muted)}
 .scr-pager-info b{color:var(--text)}
@@ -1062,16 +1065,12 @@ const CSS = `
 .scr-pg-now{font:700 12.5px JetBrains Mono,monospace;color:var(--text2);min-width:96px;text-align:center}
 .scr-pager-size{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
 .scr-pager-size select{padding:6px 9px;border:1px solid var(--border);border-radius:8px;font:700 12.5px Raleway,sans-serif;background:var(--surface);color:var(--text)}
-@media(max-width:560px){
-  .scr-pager{justify-content:center}.scr-pager-info{order:3;width:100%;text-align:center}
-  /* shrink the sticky fund column so the data columns get room */
-  .scr-table{min-width:420px}
-  .scr-fundlink{max-width:132px}
-  .scr-fund-n{font-size:12px}
-  .scr-fund-sub{font-size:9.5px}
-  .scr-table th,.scr-table td{padding:9px 8px}
-  .scr-name,.scr-name-h{max-width:140px}
-}
+
+/* Table liquidity badge styles */
+.scr-table-liq-badge{display:inline-flex;align-items:center;border-radius:4px;padding:1px 5px;font:700 9px JetBrains Mono,monospace;margin-left:6px;vertical-align:middle}
+.scr-table-liq-green{background:rgba(46,125,50,0.08);color:#2e7d32;border:1px solid rgba(46,125,50,0.15)}
+.scr-table-liq-amber{background:rgba(230,81,0,0.08);color:#e65100;border:1px solid rgba(230,81,0,0.15)}
+.scr-table-liq-red{background:rgba(211,47,47,0.08);color:#d32f2f;border:1px solid rgba(211,47,47,0.15)}
 
 .scr-faq{margin-top:24px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
 .scr-faq h2{font-size:17px;margin:0 0 14px;color:var(--text)}
@@ -1091,74 +1090,12 @@ const CSS = `
 .scr-faq-group-h{font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
 h2 + .scr-faq-group-h{margin-top:0}
 
-/* drawer wrap/panel -- still used by Detail/SifDetail as the overlay+slide-in
-   shell around FundDetailPanel/SifDetailPanel */
+/* drawer */
 .scr-drawer-wrap{position:fixed;inset:0;background:#0d260d55;backdrop-filter:blur(3px);z-index:10000;display:flex;justify-content:flex-end;animation:scrfade .2s ease}
 .scr-drawer{background:var(--surface);width:460px;max-width:100%;height:100%;overflow-y:auto;box-shadow:var(--shadow-lg);padding:22px;animation:scrslide .28s cubic-bezier(.2,.7,.3,1)}
 @keyframes scrfade{from{opacity:0}to{opacity:1}}
 @keyframes scrslide{from{transform:translateX(40px);opacity:.4}to{transform:none;opacity:1}}
 @keyframes scrup{from{transform:translateY(60px);opacity:.5}to{transform:none;opacity:1}}
-@media(max-width:560px){
-  .scr-drawer-wrap{justify-content:center;align-items:flex-end}
-  .scr-drawer{width:100%;height:auto;max-height:90vh;border-radius:18px 18px 0 0;animation:scrup .3s cubic-bezier(.2,.7,.3,1)}
-  .scr-select{max-width:100%;flex:1}
-}
-@media (prefers-reduced-motion: reduce){ .scr-drawer,.scr-drawer-wrap{animation:none} }
-
-/* Table liquidity badge styles */
-.scr-table-liq-badge {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 4px;
-  padding: 1px 5px;
-  font: 700 9px JetBrains Mono, monospace;
-  margin-left: 6px;
-  vertical-align: middle;
-}
-.scr-table-liq-green {
-  background: rgba(46, 125, 50, 0.08);
-  color: #2e7d32;
-  border: 1px solid rgba(46, 125, 50, 0.15);
-}
-.scr-table-liq-amber {
-  background: rgba(230, 81, 0, 0.08);
-  color: #e65100;
-  border: 1px solid rgba(230, 81, 0, 0.15);
-}
-.scr-table-liq-red {
-  background: rgba(211, 47, 47, 0.08);
-  color: #d32f2f;
-  border: 1px solid rgba(211, 47, 47, 0.15);
-}
-
-@media(max-width:560px){
-  .scr-pager{justify-content:center}.scr-pager-info{order:3;width:100%;text-align:center}
-  /* shrink the sticky fund column so the data columns get room */
-  .scr-table{min-width:420px}
-  .scr-fundlink{max-width:132px}
-  .scr-fund-n{font-size:12px}
-  .scr-fund-sub{font-size:9.5px}
-  .scr-table th,.scr-table td{padding:9px 8px}
-  .scr-name,.scr-name-h{max-width:140px}
-}
-
-.scr-faq{margin-top:24px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
-.scr-faq h2{font-size:17px;margin:0 0 14px;color:var(--text)}
-.scr-faq-item{border:1px solid var(--border);border-radius:10px;background:var(--s2);margin-bottom:8px;overflow:hidden}
-.scr-faq-item.open{border-color:var(--g-light)}
-.scr-faq-q{width:100%;display:flex;justify-content:space-between;gap:12px;background:none;border:0;padding:14px 15px;text-align:left;font:700 14px Raleway,sans-serif;color:var(--text);cursor:pointer}
-.scr-faq-q:hover{color:var(--g1)}
-.scr-faq-ic{font:700 18px JetBrains Mono,monospace;color:var(--g3)}
-.scr-faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease}
-.scr-faq-a p{margin:0;padding:0 15px 15px;font-size:13px;line-height:1.65;color:var(--text2)}
-.scr-disc{margin-top:20px;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:15px 17px;font-size:11.5px;line-height:1.65;color:var(--muted)}
-.scr-disc b{color:var(--text2)}
-
-/* category explainer + FAQ group headings */
-.scr-explainer{background:var(--g-xlight);border:1px solid var(--g-light);border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.6;color:var(--text2);margin-bottom:16px}
-.scr-explainer b{color:var(--g1)}
-.scr-faq-group-h{font:700 11px JetBrains Mono,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
-h2 + .scr-faq-group-h{margin-top:0}
 
 @media(max-width:860px){
   .scr-leaders-grid{grid-template-columns:repeat(2,1fr)}
@@ -1168,11 +1105,12 @@ h2 + .scr-faq-group-h{margin-top:0}
   .scr-pager{justify-content:center}
   .scr-pager-info{order:3;width:100%;text-align:center}
   .scr-table{min-width:420px}
-  .scr-fundlink{max-width:132px}
-  .scr-fund-n{font-size:12px}
-  .scr-fund-sub{font-size:9.5px}
-  .scr-table th,.scr-table td{padding:9px 8px}
-  .scr-name,.scr-name-h{max-width:140px}
+  .scr-name,.scr-name-h{max-width:136px;width:136px;box-shadow:2px 0 4px -2px rgba(0,0,0,0.08)}
+  .scr-fundlink{max-width:100px}
+  .scr-fund-n{font-size:11.5px;line-height:1.2}
+  .scr-fund-sub{font-size:9px}
+  .scr-table th,.scr-table td{padding:8px 6px}
+  .scr-bench-icon{width:22px;height:22px;font-size:11px;border-radius:5px}
   .scr-drawer-wrap{justify-content:center;align-items:flex-end}
   .scr-drawer{width:100%;height:auto;max-height:90vh;border-radius:18px 18px 0 0;animation:scrup .3s cubic-bezier(.2,.7,.3,1)}
   .scr-select{max-width:100%;flex:1}
