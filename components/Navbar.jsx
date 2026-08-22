@@ -49,6 +49,7 @@ const NAV_GROUPS = [
   {
     key: 'tools', label: 'Tools',
     items: [
+      { key: 'widgets',          label: '🪟 Desktop Widgets',  href: '/widgets',          desc: 'Live Windows desktop companion' },
       { key: 'rolling',          label: '📉 Rolling Returns',  href: '/rolling',          desc: 'Consistency across time windows' },
       { key: 'backtest',         label: '🧪 Backtester',       href: '/backtest',         desc: 'Simulate historical SIP/lumpsum' },
       { key: 'proposal-studio',  label: '🧩 Proposal Studio',  href: '/proposal-studio',  desc: 'Build client-ready proposals' },
