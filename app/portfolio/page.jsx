@@ -505,6 +505,9 @@ function PortfolioInner() {
                 if (units > 0 && scheme.amfi) allAmfi.add(scheme.amfi);
               });
             });
+            manual.forEach(h => {
+              if (h.amfi_code && h.fund_type !== 'SIF') allAmfi.add(h.amfi_code);
+            });
 
             // Fetch NAVs
             const navMap = {};
@@ -708,12 +711,14 @@ function PortfolioInner() {
 
             // Manual holdings: attribute to specific PAN if set, always include in 'all'
             let manualVal = 0;
+            let manualInvested = 0;
             manual.forEach(h => {
               const pu  = parseFloat(h.purchase_nav);
               const u   = parseFloat(h.units);
-              const ln  = h.fund_type === 'SIF' ? (localSifMap[h.amfi_code] ?? null) : null;
+              const ln  = h.fund_type === 'SIF' ? (localSifMap[h.amfi_code] ?? null) : (navMap[h.amfi_code] ?? null);
               const val = (ln ?? pu) * u;
               manualVal += val;
+              manualInvested += (pu * u);
               const mh = {
                 id: `manual-${h.id}`,
                 name: h.fund_name, code: h.amfi_code || null, value: val, invested: pu * u,
@@ -737,9 +742,12 @@ function PortfolioInner() {
                   : [],
               };
               holdings.push(mh);
-              // Attribute to specific PAN if set and that PAN exists in the CAS
+              // Attribute to specific PAN if set
               const hp = (h.pan || '').toUpperCase().trim();
-              if (hp && PAN_RE.test(hp) && panMap[hp]) {
+              if (hp && PAN_RE.test(hp)) {
+                if (!panMap[hp]) {
+                  panMap[hp] = { name: hp, current: 0, invested: 0, holdings: [] };
+                }
                 panMap[hp].current  += val;
                 panMap[hp].invested += pu * u;
                 panMap[hp].holdings.push(mh);
@@ -771,7 +779,7 @@ function PortfolioInner() {
                 }))
             );
             setTotals({
-              current: casCurrent + manualVal, invested: casInvested, manual: manualVal,
+              current: casCurrent + manualVal, invested: casInvested + manualInvested, manual: manualVal,
               xirr: overallXirrInfo.xirr, xirrPartial: overallXirrInfo.partial,
               xirrIncluded: overallXirrInfo.included, xirrTotal: overallXirrInfo.total,
             });
@@ -783,17 +791,37 @@ function PortfolioInner() {
         } else {
           // No CAS — check manual
           let manualVal = 0;
+          let manualInvested = 0;
           const mhList = [];
+          const allAmfi = new Set();
+          manual.forEach(h => {
+            if (h.amfi_code && h.fund_type !== 'SIF') allAmfi.add(h.amfi_code);
+          });
+          const navMap = {};
+          await Promise.allSettled([...allAmfi].map(async amfi => {
+            try {
+              const r = await fetch(`/api/mf?code=${amfi}&latest=1`);
+              if (r.ok) {
+                const d = await r.json();
+                if (d.status === 'SUCCESS' && d.data?.[0]) {
+                  navMap[amfi] = parseFloat(d.data[0].nav);
+                }
+              }
+            } catch {}
+          }));
+
           manual.forEach(h => {
             const pu = parseFloat(h.purchase_nav);
             const u  = parseFloat(h.units);
-            const ln = h.fund_type === 'SIF' ? (localSifMap[h.amfi_code] ?? null) : null;
-            manualVal += (ln ?? pu) * u;
+            const ln = h.fund_type === 'SIF' ? (localSifMap[h.amfi_code] ?? null) : (navMap[h.amfi_code] ?? null);
+            const val = (ln ?? pu) * u;
+            manualVal += val;
+            manualInvested += (pu * u);
             mhList.push({
               id:       `manual-${h.id}`,
               name:     h.fund_name,
               code:     h.amfi_code || null,
-              value:    (ln ?? pu) * u,
+              value:    val,
               invested: pu * u,
               liveNav:  ln ?? pu,
               units:    u,
@@ -802,7 +830,7 @@ function PortfolioInner() {
               isSIF:    h.fund_type === 'SIF',
               sifName:  h.fund_type === 'SIF' ? (sifNameByCode[h.amfi_code] || null) : null,
               isManual: true,
-              xirr:     manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: (ln ?? pu) * u }),
+              xirr:     manualHoldingXirr({ purchaseDate: h.purchase_date, invested: pu * u, currentValue: val }),
               xirrFlows: manualHoldingCashFlows({ purchaseDate: h.purchase_date, invested: pu * u }),
               folio: h.folio || null,
               amfiCode: h.amfi_code || null,
@@ -815,7 +843,7 @@ function PortfolioInner() {
           });
           const manualOnlyXirrInfo = bestEffortXirr(mhList, manualVal);
           setTotals({
-            current: manualVal, invested: 0, manual: manualVal,
+            current: manualVal, invested: manualInvested, manual: manualVal,
             xirr: manualOnlyXirrInfo.xirr, xirrPartial: manualOnlyXirrInfo.partial,
             xirrIncluded: manualOnlyXirrInfo.included, xirrTotal: manualOnlyXirrInfo.total,
           });
