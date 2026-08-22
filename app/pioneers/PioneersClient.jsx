@@ -327,6 +327,18 @@ export default function PioneersClient({ initialFunds = [] }) {
 
       return true;
     }).sort((a, b) => {
+      if (sortBy === 'name') {
+        const nA = a.name || '';
+        const nB = b.name || '';
+        return sortDir === 'asc' ? nA.localeCompare(nB) : nB.localeCompare(nA);
+      }
+      if (sortBy === 'incDate') {
+        const dA = a.inception_date || '';
+        const dB = b.inception_date || '';
+        // desc = oldest first (1986 -> 2006)
+        return sortDir === 'desc' ? dA.localeCompare(dB) : dB.localeCompare(dA);
+      }
+
       let vA = 0;
       let vB = 0;
       if (sortBy === 'age') {
@@ -353,6 +365,16 @@ export default function PioneersClient({ initialFunds = [] }) {
   useEffect(() => {
     setPage(0);
   }, [search, eraFilter, catFilter, sortBy, sortDir, pageSize]);
+
+  const handleSort = (col) => {
+    if (sortBy === col) {
+      setSortDir((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setSortBy(col);
+      // Default to DESC (large to small / highest first) on first click
+      setSortDir(col === 'name' ? 'asc' : 'desc');
+    }
+  };
 
   const pageCount = Math.max(1, Math.ceil(filteredFunds.length / pageSize));
   const from = filteredFunds.length ? page * pageSize + 1 : 0;
@@ -747,23 +769,25 @@ export default function PioneersClient({ initialFunds = [] }) {
             <table className="pnr-table">
               <thead>
                 <tr>
-                  <th onClick={() => { setSortBy('age'); setSortDir(sortDir === 'desc' ? 'asc' : 'desc'); }}>
-                    Fund Name & Category {sortBy === 'age' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                  <th onClick={() => handleSort('name')}>
+                    Fund Name & Category {sortBy === 'name' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
-                  <th>Inception Date</th>
-                  <th onClick={() => { setSortBy('age'); setSortDir(sortDir === 'desc' ? 'asc' : 'desc'); }}>
+                  <th onClick={() => handleSort('incDate')}>
+                    Inception Date {sortBy === 'incDate' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                  </th>
+                  <th onClick={() => handleSort('age')}>
                     Age (Yrs) {sortBy === 'age' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
-                  <th onClick={() => { setSortBy('nav'); setSortDir(sortDir === 'desc' ? 'asc' : 'desc'); }}>
+                  <th onClick={() => handleSort('nav')}>
                     Current NAV {sortBy === 'nav' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
-                  <th onClick={() => { setSortBy('multiplier'); setSortDir(sortDir === 'desc' ? 'asc' : 'desc'); }}>
+                  <th onClick={() => handleSort('multiplier')}>
                     Multiplier {sortBy === 'multiplier' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
-                  <th onClick={() => { setSortBy('cagr'); setSortDir(sortDir === 'desc' ? 'asc' : 'desc'); }}>
+                  <th onClick={() => handleSort('cagr')}>
                     Inception CAGR {sortBy === 'cagr' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
-                  <th onClick={() => { setSortBy('10y'); setSortDir(sortDir === 'desc' ? 'asc' : 'desc'); }}>
+                  <th onClick={() => handleSort('10y')}>
                     10Y CAGR {sortBy === '10y' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
                   <th>Action</th>
