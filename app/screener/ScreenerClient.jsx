@@ -545,54 +545,6 @@ export default function ScreenerClient({ initialCategory }) {
           }
         </div>
 
-        {/* SIF leaders */}
-        {isSIF && sifLeaders.length > 0 && (
-          <section className="scr-leaders" aria-label="SIF strategy overview">
-            <div className="scr-leaders-h">SIF strategies <em>· top 3 by best available return per category</em></div>
-            <div className="scr-leaders-grid">
-              {sifLeaders.map((c) => (
-                <div className="scr-lead-card" key={c.label}>
-                  <button className="scr-lead-cat" onClick={() => { setSifCat(c.cat); setSifFamily('all'); }}>
-                    {c.label} <span className="scr-lead-all">view all →</span>
-                  </button>
-                  {c.top.map((s, i) => (
-                    <button className="scr-lead-row" key={s.scheme_id} onClick={() => setSifSel(s)}>
-                      <span className="scr-lead-rank">{i + 1}</span>
-                      <span className="scr-lead-name">{s.sif_name}</span>
-                      {c.period ? (
-                        <span className="scr-lead-ret scr-pos">{s[c.period.key] > 0 ? '+' : ''}{s[c.period.key].toFixed(1)}% ({c.period.label})</span>
-                      ) : (
-                        <span className="scr-lead-ret scr-muted">₹{s.nav.toFixed(2)}</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* MF leaders */}
-        {!isSIF && leaders.length > 0 && (
-          <section className="scr-leaders" aria-label="Category leaders">
-            <div className="scr-leaders-h">Category leaders {group !== 'All' && <b className="scr-leaders-g">{group}</b>} <em>· top 3 by 3-year return</em></div>
-            <div className="scr-leaders-grid">
-              {leaders.map((c) => (
-                <div className="scr-lead-card" key={c.label}>
-                  <button className="scr-lead-cat" onClick={() => jumpTo(c.top[0])}>{c.label} <span className="scr-lead-all">view all →</span></button>
-                  {c.top.map((f, i) => (
-                    <button className="scr-lead-row" key={f.code} onClick={() => setSel(f)}>
-                      <span className="scr-lead-rank">{i + 1}</span>
-                      <span className="scr-lead-name">{f.name.replace(/\s*-\s*(Regular Plan|Regular|Growth( Option)?| Plan).*/i, '').trim()}</span>
-                      <span className="scr-lead-ret scr-pos">{f.ret_3y > 0 ? '+' : ''}{f.ret_3y.toFixed(1)}%</span>
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* SIF table */}
         {isSIF && (
           <>
@@ -662,6 +614,33 @@ export default function ScreenerClient({ initialCategory }) {
                   per page
                 </label>
               </div>
+            )}
+
+            {/* SIF leaders (below table for SEO & mobile UX) */}
+            {sifLeaders.length > 0 && (
+              <section className="scr-leaders" aria-label="SIF strategy overview">
+                <div className="scr-leaders-h">SIF strategies <em>· top 3 by best available return per category</em></div>
+                <div className="scr-leaders-grid">
+                  {sifLeaders.map((c) => (
+                    <div className="scr-lead-card" key={c.label}>
+                      <button className="scr-lead-cat" onClick={() => { setSifCat(c.cat); setSifFamily('all'); }}>
+                        {c.label} <span className="scr-lead-all">view all →</span>
+                      </button>
+                      {c.top.map((s, i) => (
+                        <button className="scr-lead-row" key={s.scheme_id} onClick={() => setSifSel(s)}>
+                          <span className="scr-lead-rank">{i + 1}</span>
+                          <span className="scr-lead-name">{s.sif_name}</span>
+                          {c.period ? (
+                            <span className="scr-lead-ret scr-pos">{s[c.period.key] > 0 ? '+' : ''}{s[c.period.key].toFixed(1)}% ({c.period.label})</span>
+                          ) : (
+                            <span className="scr-lead-ret scr-muted">₹{s.nav.toFixed(2)}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </section>
             )}
           </>
         )}
@@ -800,6 +779,27 @@ export default function ScreenerClient({ initialCategory }) {
                   per page
                 </label>
               </div>
+            )}
+
+            {/* MF leaders (below table for SEO & mobile UX) */}
+            {leaders.length > 0 && (
+              <section className="scr-leaders" aria-label="Category leaders">
+                <div className="scr-leaders-h">Category leaders {group !== 'All' && <b className="scr-leaders-g">{group}</b>} <em>· top 3 by 3-year return</em></div>
+                <div className="scr-leaders-grid">
+                  {leaders.map((c) => (
+                    <div className="scr-lead-card" key={c.label}>
+                      <button className="scr-lead-cat" onClick={() => jumpTo(c.top[0])}>{c.label} <span className="scr-lead-all">view all →</span></button>
+                      {c.top.map((f, i) => (
+                        <button className="scr-lead-row" key={f.code} onClick={() => setSel(f)}>
+                          <span className="scr-lead-rank">{i + 1}</span>
+                          <span className="scr-lead-name">{f.name.replace(/\s*-\s*(Regular Plan|Regular|Growth( Option)?| Plan).*/i, '').trim()}</span>
+                          <span className="scr-lead-ret scr-pos">{f.ret_3y > 0 ? '+' : ''}{f.ret_3y.toFixed(1)}%</span>
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </section>
             )}
           </>
         )}
@@ -1005,7 +1005,7 @@ const CSS = `
 .scr-colchip.on{background:var(--g-xlight);color:var(--g1);border-color:var(--g-light)}
 
 /* category leaders */
-.scr-leaders{margin-bottom:18px}
+.scr-leaders{margin-top:22px;margin-bottom:18px}
 .scr-leaders-h{font:600 11px JetBrains Mono,monospace;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
 .scr-leaders-h em{font-style:normal;text-transform:none;letter-spacing:0;color:var(--muted);font-weight:500}
 .scr-leaders-g{color:var(--g1);font-weight:800}
