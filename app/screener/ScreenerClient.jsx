@@ -735,17 +735,16 @@ export default function ScreenerClient({ initialCategory }) {
                 </tbody>
                 {activeBenchmark && (
                   <tfoot className="scr-tfoot">
-                    <tr className="scr-bench-row" title={`Official benchmark for ${shortCat(cat)}`}>
-                      <td style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '12px' }}>🎯</td>
+                    <tr className="scr-bench-row" title={`Official benchmark for ${shortCat(cat)}: ${activeBenchmark.name} (${activeBenchmark.desc || ''})`}>
+                      <td style={{ textAlign: 'center' }}></td>
                       <td className="scr-name">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <div className="scr-bench-icon" title="Category Benchmark Index">🎯</div>
-                          <div>
-                            <div className="scr-bench-title-wrap">
-                              <span className="scr-bench-name">{activeBenchmark.name}</span>
-                              <span className="scr-bench-badge">{activeBenchmark.badge || 'Category Benchmark'}</span>
-                            </div>
-                            <div className="scr-bench-sub">{activeBenchmark.desc || 'Market Benchmark'}</div>
+                          <div className="scr-fundlink" style={{ cursor: 'default' }}>
+                            <span className="scr-fund-n" style={{ color: 'var(--g1)' }}>{activeBenchmark.name}</span>
+                            <span className="scr-fund-sub">
+                              {activeBenchmark.badge || 'Category Benchmark'}
+                            </span>
                           </div>
                         </div>
                       </td>
@@ -1050,11 +1049,7 @@ const CSS = `
 .scr-bench-row{background:var(--s2)!important}
 .scr-bench-row td{background:var(--s2)!important;border-top:2px solid var(--g1)!important;border-bottom:0!important;font-weight:700}
 .scr-bench-row .scr-name{background:var(--s2)!important;position:sticky;left:0;z-index:5}
-.scr-bench-icon{width:26px;height:26px;border-radius:6px;background:var(--g-xlight);color:var(--g1);display:flex;align-items:center;justify-content:center;font-size:12px;flex:none}
-.scr-bench-title-wrap{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.scr-bench-name{font:700 13px Raleway,sans-serif;color:var(--g1)}
-.scr-bench-badge{background:var(--g-xlight);color:var(--g1);border:1px solid var(--g-light);font:700 9px JetBrains Mono,monospace;padding:1px 5px;border-radius:4px;text-transform:uppercase;letter-spacing:.03em}
-.scr-bench-sub{font:500 11px JetBrains Mono,monospace;color:var(--muted);margin-top:1px}
+.scr-bench-icon{width:26px;height:26px;border-radius:6px;background:var(--g-xlight);color:var(--g1);display:flex;align-items:center;justify-content:center;font-size:13px;flex:none}
 .scr-bench-cell{font-variant-numeric:tabular-nums}
 /* pager is OUTSIDE the horizontal-scroll wrap, so it never scrolls sideways */
 .scr-pager{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;margin-top:10px;background:var(--s2)}
