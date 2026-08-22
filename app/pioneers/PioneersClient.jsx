@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -219,6 +219,8 @@ export default function PioneersClient({ initialFunds = [] }) {
   const [catFilter, setCatFilter] = useState('all');
   const [sortBy, setSortBy] = useState('age');
   const [sortDir, setSortDir] = useState('desc');
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   // Simulator State
   const [simType, setSimType] = useState('lumpsum');
@@ -346,6 +348,18 @@ export default function PioneersClient({ initialFunds = [] }) {
       return sortDir === 'desc' ? vB - vA : vA - vB;
     });
   }, [initialFunds, search, eraFilter, catFilter, sortBy, sortDir]);
+
+  // Reset to first page whenever filters or page size change
+  useEffect(() => {
+    setPage(0);
+  }, [search, eraFilter, catFilter, sortBy, sortDir, pageSize]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredFunds.length / pageSize));
+  const from = filteredFunds.length ? page * pageSize + 1 : 0;
+  const to = Math.min(filteredFunds.length, (page + 1) * pageSize);
+  const visibleFunds = useMemo(() => {
+    return filteredFunds.slice(page * pageSize, (page + 1) * pageSize);
+  }, [filteredFunds, page, pageSize]);
 
   const fmtCurrency = (v) => {
     if (v == null || isNaN(v)) return '—';
@@ -684,6 +698,21 @@ export default function PioneersClient({ initialFunds = [] }) {
               />
             </div>
 
+            {/* Category Filter Select */}
+            <select
+              value={catFilter}
+              onChange={(e) => setCatFilter(e.target.value)}
+              className="pnr-cat-select"
+            >
+              <option value="all">All Categories</option>
+              <option value="flexi">Flexi / Multi Cap</option>
+              <option value="large">Large Cap</option>
+              <option value="mid">Mid Cap</option>
+              <option value="largemid">Large & Mid Cap</option>
+              <option value="hybrid">Aggressive / Hybrid</option>
+              <option value="elss">ELSS (Tax Saver)</option>
+            </select>
+
             {/* Era Filter Pills */}
             <div className="pnr-pills">
               <button
@@ -741,7 +770,7 @@ export default function PioneersClient({ initialFunds = [] }) {
                 </tr>
               </thead>
               <tbody>
-                {filteredFunds.map((f) => {
+                {visibleFunds.map((f) => {
                   const navVal = parseFloat(f.nav) || 10;
                   const mult = (navVal / 10).toFixed(1);
                   return (
@@ -774,9 +803,55 @@ export default function PioneersClient({ initialFunds = [] }) {
                     </tr>
                   );
                 })}
+                {visibleFunds.length === 0 && (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
+                      No veteran funds match the selected filters.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {filteredFunds.length > 0 && (
+            <div className="pnr-pager">
+              <div className="pnr-pager-info">
+                Showing <b>{from.toLocaleString('en-IN')}–{to.toLocaleString('en-IN')}</b> of {filteredFunds.length.toLocaleString('en-IN')} funds
+              </div>
+              <div className="pnr-pager-ctrls">
+                <button
+                  className="pnr-pg-btn"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                >
+                  ‹ Prev
+                </button>
+                <span className="pnr-pg-now">
+                  Page {page + 1} / {pageCount}
+                </span>
+                <button
+                  className="pnr-pg-btn"
+                  disabled={page >= pageCount - 1}
+                  onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                >
+                  Next ›
+                </button>
+              </div>
+              <label className="pnr-pager-size">
+                Show
+                <select value={pageSize} onChange={(e) => setPageSize(+e.target.value)}>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={100000}>All</option>
+                </select>
+                per page
+              </label>
+            </div>
+          )}
         </section>
 
         {/* ── SECTION 5: FAQS & SEO CONTENT ── */}

@@ -679,6 +679,117 @@
   border-color: var(--g1, #1b5e20);
 }
 
+/* ── Pagination Controls ── */
+.pnr-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--surface, #ffffff);
+  border: 1.5px solid var(--border, #c2dfc2);
+  border-radius: var(--radius, 14px);
+  margin-top: 14px;
+  box-shadow: var(--shadow, 0 2px 16px rgba(46,125,50,.09));
+}
+
+.pnr-pager-info {
+  font-size: 0.85rem;
+  color: var(--muted, #5e8a5e);
+  font-weight: 600;
+}
+
+.pnr-pager-info b {
+  color: var(--text, #162616);
+  font-weight: 800;
+}
+
+.pnr-pager-ctrls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pnr-pg-btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border, #c2dfc2);
+  background: var(--s2, #edf6ed);
+  color: var(--text, #162616);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.pnr-pg-btn:hover:not(:disabled) {
+  background: var(--g1, #1b5e20);
+  color: #ffffff;
+  border-color: var(--g1, #1b5e20);
+}
+
+.pnr-pg-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pnr-pg-now {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text2, #2e4d2e);
+  min-width: 90px;
+  text-align: center;
+}
+
+.pnr-pager-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text2, #2e4d2e);
+  font-weight: 600;
+}
+
+.pnr-pager-size select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border2, #a8cfa8);
+  background: var(--s2, #edf6ed);
+  color: var(--text, #162616);
+  font-weight: 700;
+  font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.pnr-pager-size select:focus {
+  border-color: var(--g1, #1b5e20);
+  background: #ffffff;
+}
+
+/* Category Filter Select in Filter Bar */
+.pnr-cat-select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border2, #a8cfa8);
+  background: var(--s2, #edf6ed);
+  color: var(--text, #162616);
+  font-weight: 700;
+  font-size: 0.82rem;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.pnr-cat-select:focus {
+  border-color: var(--g1, #1b5e20);
+  background: #ffffff;
+}
+
 /* ── Section 4: Spotlight Stories Grid ── */
 .pnr-spotlights {
   display: grid;
