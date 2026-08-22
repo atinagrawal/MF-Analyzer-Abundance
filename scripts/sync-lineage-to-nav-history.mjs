@@ -164,17 +164,14 @@ async function main() {
         continue;
       }
 
-      // 3. Extract the pre-merger rebased rows to insert under the current scheme code
-      const cFirstTime = curNorm[0].t;
-      const preMergerRows = stitched.series
-        .filter(p => p.t < cFirstTime)
-        .map(p => ({
-          code: String(code),
-          nav_date: new Date(p.t).toISOString().slice(0, 10),
-          nav: p.nav,
-        }));
+      // 3. Extract the full stitched series to insert under the current scheme code
+      const allCurRows = stitched.series.map(p => ({
+        code: String(code),
+        nav_date: new Date(p.t).toISOString().slice(0, 10),
+        nav: p.nav,
+      }));
 
-      console.log(`[lineage-sync] Found ${preMergerRows.length} rebased predecessor records for scheme ${code}.`);
+      console.log(`[lineage-sync] Stitched full continuous series of ${allCurRows.length} records for scheme ${code}.`);
 
       // Also ensure the raw predecessor rows are preserved under pred code
       const rawPredRows = predNorm.map(p => ({
@@ -183,14 +180,14 @@ async function main() {
         nav: p.nav,
       }));
 
-      // Insert pre-merger rows for surviving code
-      const insertedCur = await insertRows(client, preMergerRows);
+      // Insert full stitched series for surviving code
+      const insertedCur = await insertRows(client, allCurRows);
       // Insert raw predecessor rows for predecessor code
       const insertedPred = await insertRows(client, rawPredRows);
 
       totalStitchedRows += insertedCur;
       successCount++;
-      console.log(`✅ Upserted ${insertedCur} rows for ${code} and ${insertedPred} rows for ${pred}. Oldest: ${preMergerRows[0]?.nav_date}`);
+      console.log(`✅ Upserted ${insertedCur} rows for ${code} and ${insertedPred} rows for ${pred}. Oldest: ${allCurRows[0]?.nav_date}`);
 
     } catch (err) {
       console.error(`❌ Error syncing lineage for ${code}:`, err.message);

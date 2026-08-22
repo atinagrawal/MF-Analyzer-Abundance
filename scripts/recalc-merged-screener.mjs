@@ -34,15 +34,35 @@ async function main() {
     );
     if (!histRes.rows.length) continue;
 
-    const series = histRes.rows.map(r => ({
+    // Fetch live mfapi series for current modern NAVs
+    let mfapiData = [];
+    try {
+      const res = await fetch(`https://api.mfapi.in/mf/${code}`);
+      const json = await res.json();
+      if (json && json.data) {
+        mfapiData = json.data.map(d => {
+          const [dd, mm, yy] = d.date.split('-').map(Number);
+          return { t: Date.UTC(yy, mm - 1, dd), nav: parseFloat(d.nav), date: d.date };
+        }).filter(p => !isNaN(p.nav) && p.nav > 0);
+      }
+    } catch (e) {}
+
+    const dbData = histRes.rows.map(r => ({
       t: new Date(r.nav_date).getTime(),
       nav: parseFloat(r.nav),
       date: r.nav_date
     })).filter(r => !isNaN(r.nav) && r.nav > 0);
 
+    const tMap = new Map();
+    for (const p of dbData) tMap.set(p.t, p);
+    for (const p of mfapiData) tMap.set(p.t, p);
+    const series = Array.from(tMap.values()).sort((a, b) => a.t - b.t);
+
+    if (!series.length) continue;
+
     const latest = series[series.length - 1];
     const now = latest.t;
-    const currentNav = latest.nav;
+    const currentNav = parseFloat(f.nav) || latest.nav;
 
     function getNavAtOrBefore(targetT) {
       for (let i = series.length - 1; i >= 0; i--) {
