@@ -1950,7 +1950,13 @@ function CasTrackerInner() {
         setLoadingText(isMfCentral ? 'Parsing MF Central report…' : 'Decrypting & Parsing…');
         const uploadFormData = new FormData();
         uploadFormData.append('file', pdfFile);
-        if (!isMfCentral) uploadFormData.append('password', password);
+        if (!isMfCentral) {
+          uploadFormData.append('password', password);
+          const isPanPassword = /^[A-Za-z]{5}[0-9]{4}[A-Za-z]$/.test((password || '').trim());
+          if (isPanPassword) {
+            uploadFormData.append('pan', password.trim().toUpperCase());
+          }
+        }
 
         const parseRes = await fetch(isMfCentral ? '/api/parse-mfcentral' : '/api/parse', {
           method: 'POST',
@@ -1985,8 +1991,8 @@ function CasTrackerInner() {
         // surfaced via the saveStatus banner instead, with a retry option.
         const panCount = (data.folios || []).reduce((acc, f) => {
           const pan = (f.PAN || '').toUpperCase().trim();
-          return pan && pan.length === 10 ? acc.add(pan) : acc;
-        }, new Set()).size;
+          return pan && pan.length === 10 && /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan) ? acc.add(pan) : acc;
+        }, new Set()).size || (data.folios?.length ? 1 : 0);
         savedBlobKey = await saveToBlobIfSignedIn(data, pdfFile.name, panCount);
       }
 

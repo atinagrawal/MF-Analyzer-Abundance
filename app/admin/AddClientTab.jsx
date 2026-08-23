@@ -43,7 +43,11 @@ export default function AddClientTab() {
     try {
       const formData = new FormData();
       formData.append('file', casFile);
-      if (!isMfCentral) formData.append('password', password);
+      if (!isMfCentral) {
+        formData.append('password', password);
+        const isPan = /^[A-Za-z]{5}[0-9]{4}[A-Za-z]$/.test((password || '').trim());
+        if (isPan) formData.append('pan', password.trim().toUpperCase());
+      }
       const parseRes = await fetch(isMfCentral ? '/api/parse-mfcentral' : '/api/parse', {
         method: 'POST', body: formData,
       });
@@ -56,8 +60,8 @@ export default function AddClientTab() {
       const data = await parseRes.json();
       setMsg('Saving portfolio…');
       const panCount = new Set(
-        (data.folios || []).map(f => (f.PAN || '').toUpperCase().trim()).filter(p => p.length === 10)
-      ).size;
+        (data.folios || []).map(f => (f.PAN || '').toUpperCase().trim()).filter(p => p.length === 10 && /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(p))
+      ).size || (data.folios?.length ? 1 : 0);
       const saveRes = await fetch('/api/cas/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

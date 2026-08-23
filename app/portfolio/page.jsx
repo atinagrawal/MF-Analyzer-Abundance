@@ -451,7 +451,37 @@ function PortfolioInner() {
               if (!(k in folioTransmissionsMerged)) folioTransmissionsMerged[k] = v;
             });
 
-            (fileData.folios || []).forEach(folio => {
+            let fileFolios = fileData.folios || [];
+            // Client-side fallback normalizer for any raw NSDL file
+            if (fileFolios.length === 0 && Array.isArray(fileData.accounts) && fileData.accounts.length > 0) {
+              const foliosMap = {};
+              const maskedPan = fileData.accounts[0]?.owners?.[0]?.PAN || 'NSDL';
+              const asOfDate = fileData.statement_period?.to || null;
+              fileData.accounts.forEach(acc => {
+                (acc.mutual_funds || []).forEach(mf => {
+                  const folioNo = String(mf.folio || acc.client_id || 'NSDL_FOLIO').trim();
+                  if (!foliosMap[folioNo]) {
+                    foliosMap[folioNo] = { folio: folioNo, PAN: maskedPan, schemes: [] };
+                  }
+                  const units = parseFloat(mf.balance || 0);
+                  const nav = parseFloat(mf.nav || 0);
+                  const val = parseFloat(mf.value || (units * nav));
+                  const cost = parseFloat(mf.total_cost || 0);
+                  const avgCost = parseFloat(mf.avg_cost || (units > 0 && cost > 0 ? cost / units : nav));
+                  foliosMap[folioNo].schemes.push({
+                    scheme: mf.name,
+                    isin: mf.isin,
+                    amfi: mf.amfi || null,
+                    close: units,
+                    valuation: { date: asOfDate, nav, value: val, cost },
+                    transactions: units > 0 ? [{ date: asOfDate || '2026-07-31', type: 'PURCHASE', amount: cost || val, units, nav: avgCost }] : [],
+                  });
+                });
+              });
+              fileFolios = Object.values(foliosMap);
+            }
+
+            fileFolios.forEach(folio => {
               const pan = (folio.PAN || '').toUpperCase().trim();
               const folioNo = (folio.folio || '').trim();
               const keptSchemes = (folio.schemes || []).filter(scheme => {

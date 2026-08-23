@@ -39,11 +39,21 @@ export async function POST(req) {
     // Extract PANs server-side (not trusted from the client) — this becomes
     // the authorization source for pan_investor_names: a user/admin may only
     // read or rename a PAN that appears in one of their own saved uploads.
-    const pans = [...new Set(
+    let pans = [...new Set(
       (parsedData.folios || [])
         .map(f => (f.PAN || '').toUpperCase().trim())
         .filter(p => PAN_REGEX.test(p))
     )];
+
+    if (pans.length === 0 && parsedData.resolved_pan && PAN_REGEX.test(parsedData.resolved_pan.toUpperCase().trim())) {
+      pans = [parsedData.resolved_pan.toUpperCase().trim()];
+    }
+
+    // For NSDL statements with masked PANs (e.g. BSXXXXXX4B)
+    if (pans.length === 0 && (parsedData.folios || []).length > 0) {
+      const masked = (parsedData.folios[0]?.PAN || parsedData.masked_pan || '').toUpperCase().trim();
+      if (masked) pans = [masked];
+    }
 
     // Write to R2: cas/{userId}/{timestamp}-{sanitisedName}.json
     const ts       = Date.now();
@@ -53,11 +63,12 @@ export async function POST(req) {
     await r2Put(blobKey, JSON.stringify(parsedData));
 
     // Log to database
+    const effectivePanCount = pans.length || (parsedData.folios?.length ? 1 : 0);
     const result = await pool.query(
       `INSERT INTO cas_portfolios (user_id, file_name, blob_key, pan_count, pans)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, uploaded_at`,
-      [userId, fileName, blobKey, panCount ?? 0, pans]
+      [userId, fileName, blobKey, panCount ?? effectivePanCount, pans]
     );
 
     const row = result.rows[0];

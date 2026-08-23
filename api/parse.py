@@ -176,10 +176,111 @@ def build_folio_transmission_map(raw_text: str) -> dict:
     return result
 
 
+def normalize_nsdl_data(dict_data: dict, explicit_pan: str = None) -> dict:
+    """
+    Normalizes NSDL CAS accounts (dict_data['accounts']) into the standard
+    top-level folios schema (dict_data['folios']) so the mutual fund portfolio
+    pipeline, live NAVs, and FIFO engine work seamlessly.
+    Also extracts equities and bonds to top-level dict_data['equities'] and dict_data['bonds'].
+    """
+    accounts = dict_data.get('accounts', [])
+    if not accounts and dict_data.get('folios'):
+        return dict_data
+
+    # 1. Resolve PAN
+    resolved_pan = ""
+    if explicit_pan and re.match(r'^[A-Z]{5}[0-9]{4}[A-Z]$', explicit_pan.upper()):
+        resolved_pan = explicit_pan.upper()
+
+    masked_pan = ""
+    for acc in accounts:
+        for owner in acc.get('owners', []):
+            op = (owner.get('PAN') or '').strip()
+            if op:
+                masked_pan = op
+                if len(op) == 10 and re.match(r'^[A-Z]{5}[0-9]{4}[A-Z]$', op):
+                    resolved_pan = op
+                    break
+        if resolved_pan:
+            break
+
+    # If no explicit PAN or valid PAN, use masked PAN (or "NSDL" fallback)
+    effective_pan = resolved_pan or masked_pan or "NSDL"
+
+    folios_map = {}
+    all_equities = []
+    all_bonds = []
+    as_of_date = dict_data.get('statement_period', {}).get('to') or None
+
+    for acc in accounts:
+        # Equities
+        if isinstance(acc.get('equities'), list):
+            all_equities.extend(acc['equities'])
+
+        # Bonds
+        if isinstance(acc.get('bonds'), list):
+            all_bonds.extend(acc['bonds'])
+
+        # Mutual Funds
+        if isinstance(acc.get('mutual_funds'), list):
+            for mf in acc['mutual_funds']:
+                folio_no = str(mf.get('folio') or acc.get('client_id') or 'NSDL_FOLIO').strip()
+                if folio_no not in folios_map:
+                    folios_map[folio_no] = {
+                        "folio": folio_no,
+                        "PAN": effective_pan,
+                        "KYC": "OK",
+                        "PANKYC": "OK",
+                        "schemes": []
+                    }
+
+                units = float(mf.get('balance') or 0)
+                nav = float(mf.get('nav') or 0)
+                val = float(mf.get('value') or (units * nav))
+                total_cost = float(mf.get('total_cost') or 0)
+                avg_cost = float(mf.get('avg_cost') or (total_cost / units if units > 0 and total_cost > 0 else nav))
+
+                scheme_obj = {
+                    "scheme": mf.get('name'),
+                    "isin": mf.get('isin'),
+                    "amfi": mf.get('amfi') or None,
+                    "advisor": None,
+                    "close": units,
+                    "valuation": {
+                        "date": as_of_date,
+                        "nav": nav,
+                        "value": val,
+                        "cost": total_cost
+                    },
+                    "transactions": [
+                        {
+                            "date": as_of_date or "2026-07-31",
+                            "type": "PURCHASE",
+                            "amount": total_cost or val,
+                            "units": units,
+                            "nav": avg_cost
+                        }
+                    ] if units > 0 else []
+                }
+                folios_map[folio_no]["schemes"].append(scheme_obj)
+
+    dict_data['folios'] = list(folios_map.values())
+    dict_data['equities'] = all_equities
+    dict_data['bonds'] = all_bonds
+    if resolved_pan:
+        dict_data['resolved_pan'] = resolved_pan
+    elif masked_pan:
+        dict_data['masked_pan'] = masked_pan
+        dict_data['is_masked_pan'] = True
+
+    return dict_data
+
+
 @app.post("/api/parse")
 async def parse_cas_statement(
     request: Request,
     password: str = Form(...),
+    pan: str = Form(None),
     file: UploadFile = File(...)
 ):
     if not get_session_user_id(request):
@@ -197,6 +298,15 @@ async def parse_cas_statement(
         # ── 1. Core extraction via casparser ──────────────────────────────────
         data = casparser.read_cas_pdf(temp_pdf_path, password)
         dict_data = jsonable_encoder(data)
+
+        # Check if password is a 10-char PAN
+        pwd_pan = password.strip().upper() if re.match(r'^[A-Za-z]{5}[0-9]{4}[A-Za-z]$', password.strip()) else None
+        effective_user_pan = (pan.strip().upper() if pan and re.match(r'^[A-Za-z]{5}[0-9]{4}[A-Za-z]$', pan.strip()) else None) or pwd_pan
+
+        # ── 1.1 Normalize NSDL data if necessary ──────────────────────────────
+        if dict_data.get('file_type') == 'NSDL' or (dict_data.get('accounts') and not dict_data.get('folios')):
+            print("📋 Normalizing NSDL CAS statement into standard folios schema...")
+            dict_data = normalize_nsdl_data(dict_data, effective_user_pan)
 
         # ══════════════════════════════════════════════════════════════════════
         # CRITICAL: casparser Folio model uses UPPERCASE field "PAN", not "pan"
@@ -235,9 +345,13 @@ async def parse_cas_statement(
         # ── 4. Fallback name assignment ───────────────────────────────────────
         # For single-PAN CAS: investor_info.name is safe to use for that PAN
         if is_single_pan and global_investor_name and len(global_investor_name) > 2:
-            for pan in all_pans:
-                if pan not in pan_investor_map:
-                    pan_investor_map[pan] = global_investor_name
+            for p in all_pans:
+                if p not in pan_investor_map:
+                    pan_investor_map[p] = global_investor_name
+
+        # If effective_user_pan was supplied, ensure it's in the map
+        if effective_user_pan and global_investor_name:
+            pan_investor_map[effective_user_pan] = global_investor_name
 
         # For multi-PAN: if a PAN still has no name but investor_info provides
         # one, assign it to the FIRST PAN only (primary holder — risky for
