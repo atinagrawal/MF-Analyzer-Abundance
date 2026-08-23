@@ -290,6 +290,7 @@ const COLORS=["#2e7d32","#1565c0","#e65100","#6a1b9a","#00838f"];
 const COLORS_LIGHT=["rgba(46,125,50,.13)","rgba(21,101,192,.13)","rgba(230,81,0,.13)","rgba(106,27,154,.13)","rgba(0,131,143,.13)"];
 let selectedFunds=[],currentPeriod='1Y',searchTimeout=null;
 let navChart=null,currentTab="nav";
+let compareCustomFrom=null,compareCustomTo=null,compareSelection=null,compareDragState=null,compareHoverIdx=null;
 
 let searchAbortCtrl=null;
 const searchCache=new Map();
@@ -548,6 +549,9 @@ function renderChips(){
 }
 function setPeriod(key,btn){
   currentPeriod=key;
+  compareCustomFrom=null;
+  compareCustomTo=null;
+  compareSelection=null;
   document.querySelectorAll(".period-btn").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");renderAll();
 }
@@ -757,35 +761,445 @@ function buildBanner(metrics, actualStartDate, actualEndDate){
   return "";
 }
 
+function getCompareChartImg() {
+  const svg = document.getElementById('interactiveNavSvg');
+  if (svg) {
+    const xml = new XMLSerializer().serializeToString(svg);
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+  }
+  const canvas = document.getElementById('navChart');
+  return canvas && typeof canvas.toDataURL === 'function' ? canvas.toDataURL('image/png') : '';
+}
+
 function renderNavTab(container,metrics){
-    // Derive actual displayed date range from chart points (most accurate)
+  if (navChart) { navChart.destroy(); navChart = null; }
+  // Derive actual displayed date range from chart points (most accurate)
   const _minLen=Math.min(...metrics.map(m=>m.points.length));
   const _pts0=metrics[0].points.slice(-_minLen);
   const _navStart=_pts0.length?parseNAVDate(_pts0[0].date):null;
   const _navEnd=_pts0.length?parseNAVDate(_pts0[_pts0.length-1].date):null;
   container.innerHTML=buildBanner(metrics,_navStart,_navEnd)+`
-    <div class="card"><div class="card-header"><div class="card-title">NAV Performance — % Change from Period Start</div></div>
-    <div class="card-body"><div class="chart-container"><canvas id="navChart" role="img" aria-label="NAV performance chart comparing selected mutual funds"></canvas></div></div></div>
-    <div class="card"><div class="card-header"><div class="card-title">Risk Summary Table</div></div>
-    <div style="overflow:hidden"><table class="risk-table" id="riskTable"></table></div></div>`;
-  if(navChart)navChart.destroy();
-  const ctx=document.getElementById("navChart").getContext("2d");
-  const minLen=Math.min(...metrics.map(m=>m.points.length));
-  navChart=new Chart(ctx,{type:"line",data:{
-    labels:metrics[0].points.slice(-minLen).map(p=>p.date),
-    datasets:metrics.map((m,i)=>{
-      const pts=m.points.slice(-minLen);
-      const base=parseFloat(pts[0].pct); // rebase so first visible point = 0%
-      return{label:m.name,data:pts.map(p=>parseFloat((parseFloat(p.pct)-base).toFixed(2))),
-        navValues:m.navs.slice(-minLen), // raw NAV per point for tooltip
-        borderColor:COLORS[i],backgroundColor:COLORS_LIGHT[i],borderWidth:2,
-        pointRadius:0,pointHoverRadius:5,tension:.3,fill:metrics.length===1};
-    })
-  },options:chartOpts()});
+    <div class="card">
+      <div class="card-header"><div class="card-title">NAV Performance — Interactive Growth Comparator</div></div>
+      <div class="card-body" id="interactiveChartContainer" style="padding: 10px 0 16px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Risk Summary Table</div></div>
+      <div style="overflow:hidden"><table class="risk-table" id="riskTable"></table></div>
+    </div>`;
+
+  const chartBox = document.getElementById('interactiveChartContainer');
+  if (chartBox) {
+    drawInteractiveCompareChart(chartBox, metrics);
+  }
+
   // Risk table: each fund uses its own full slice for the period (no common cutoff clipping)
-  // Chart is aligned for visual comparison; table shows each fund's actual data
   const individualMetrics=selectedFunds.map(f=>({...calcMetrics(f.rawData),rawData:f.rawData,name:f.name,code:f.code,category:f.category||'',subCategory:f.subCategory||''}));
   renderRiskTable(individualMetrics,getPeriodLabel());
+}
+
+function drawInteractiveCompareChart(containerEl, metrics) {
+  const minLen = Math.min(...metrics.map(m => m.points.length));
+  if (minLen < 2) {
+    containerEl.innerHTML = '<div class="cmp-range-empty">Not enough data points to plot comparison chart.</div>';
+    return;
+  }
+
+  const rawSeries = metrics.map((m, i) => {
+    const pts = m.points.slice(-minLen);
+    const navs = m.navs && m.navs.length ? m.navs.slice(-minLen) : pts.map(p => parseFloat(p.pct));
+    const baseNav = parseFloat(navs[0]) || 1;
+    const basePct = parseFloat(pts[0].pct) || 0;
+    return {
+      name: m.name,
+      color: COLORS[i % COLORS.length],
+      data: pts.map((p, idx) => {
+        const t = parseNAVDate(p.date).getTime();
+        const rawNav = parseFloat(navs[idx]);
+        const v = (rawNav / baseNav) * 100;
+        const rebasedPct = parseFloat((parseFloat(p.pct) - basePct).toFixed(2));
+        return { t, v, dateStr: p.date, rawNav, rebasedPct };
+      })
+    };
+  });
+
+  const defaultFrom = rawSeries[0].data[0].t;
+  const defaultTo = rawSeries[0].data[rawSeries[0].data.length - 1].t;
+  const effectiveFrom = compareCustomFrom ?? defaultFrom;
+  const effectiveTo = compareCustomTo ?? defaultTo;
+  const hasCustomRange = compareCustomFrom != null || compareCustomTo != null;
+
+  const filteredSeries = rawSeries.map(s => ({
+    ...s,
+    data: s.data.filter(p => p.t >= effectiveFrom && p.t <= effectiveTo)
+  }));
+
+  const n = filteredSeries[0]?.data.length || 0;
+
+  const fmtDate = t => new Date(t).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const fmtDateShort = t => new Date(t).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  const toDateInputValue = t => t ? new Date(t).toISOString().slice(0, 10) : '';
+  const fromDateInputValue = str => str ? Date.parse(str + 'T00:00:00Z') : null;
+  const pctChange = (a, b) => (((b - a) / a) * 100).toFixed(1);
+
+  function renderRangePickerHtml() {
+    return `
+      <div class="cmp-range-picker">
+        <div class="cmp-range-field">
+          <span class="cmp-range-label">From</span>
+          <input type="date" id="cmpInputFrom" class="cmp-date-input"
+            value="${toDateInputValue(effectiveFrom)}"
+            min="${toDateInputValue(defaultFrom)}"
+            max="${toDateInputValue(effectiveTo)}" />
+        </div>
+        <div class="cmp-range-field">
+          <span class="cmp-range-label">To</span>
+          <input type="date" id="cmpInputTo" class="cmp-date-input"
+            value="${toDateInputValue(effectiveTo)}"
+            min="${toDateInputValue(effectiveFrom)}"
+            max="${toDateInputValue(defaultTo)}" />
+        </div>
+        ${hasCustomRange ? `
+          <button type="button" class="cmp-range-reset-btn" id="cmpResetRangeBtn">
+            ↺ Reset range
+          </button>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  if (n < 2) {
+    containerEl.innerHTML = `
+      <div class="cmp-chart-wrap">
+        ${renderRangePickerHtml()}
+        <div class="cmp-range-empty">No data available in the selected date range.</div>
+      </div>
+    `;
+    const fromEl = document.getElementById('cmpInputFrom');
+    const toEl = document.getElementById('cmpInputTo');
+    const resetBtn = document.getElementById('cmpResetRangeBtn');
+    if (fromEl) fromEl.onchange = e => { compareCustomFrom = fromDateInputValue(e.target.value); compareSelection = null; drawInteractiveCompareChart(containerEl, metrics); };
+    if (toEl) toEl.onchange = e => { compareCustomTo = fromDateInputValue(e.target.value); compareSelection = null; drawInteractiveCompareChart(containerEl, metrics); };
+    if (resetBtn) resetBtn.onclick = () => { compareCustomFrom = null; compareCustomTo = null; compareSelection = null; drawInteractiveCompareChart(containerEl, metrics); };
+    return;
+  }
+
+  const allVals = filteredSeries.flatMap(s => s.data.map(p => p.v).filter(v => v != null && isFinite(v)));
+  const vMin = allVals.length ? Math.min(...allVals) : 0;
+  const vMax = allVals.length ? Math.max(...allVals) : 100;
+
+  const W = 760, H = 200, PAD_L = 48, PAD_R = 16, PAD_T = 14, PAD_B = 28;
+  const iw = W - PAD_L - PAD_R, ih = H - PAD_T - PAD_B;
+  const X = (i) => PAD_L + (i / (n - 1 || 1)) * iw;
+  const Y = (v) => PAD_T + (1 - (v - vMin) / (vMax - vMin || 1)) * ih;
+
+  const validSelection = compareSelection && compareSelection.hi < n ? compareSelection : null;
+
+  const pathsHtml = filteredSeries.map(s => {
+    const d = s.data.map((p, i) => `${i === 0 ? 'M' : 'L'}${X(i).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ');
+    return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }).join('');
+
+  const gridHtml = [0, 1, 2, 3, 4].map(g => {
+    const v = vMin + (vMax - vMin) * (g / 4);
+    const pctLabel = (v - 100).toFixed(1);
+    const labelStr = (pctLabel >= 0 ? '+' : '') + pctLabel + '%';
+    return `
+      <g>
+        <line x1="${PAD_L}" y1="${Y(v).toFixed(1)}" x2="${(W - PAD_R).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="var(--border)" stroke-width="0.6" stroke-dasharray="3 3" />
+        <text x="2" y="${(Y(v) + 3.5).toFixed(1)}" font-size="8.5" fill="var(--muted)" font-family="monospace">${labelStr}</text>
+      </g>
+    `;
+  }).join('');
+
+  let rangeRows = null;
+  if (validSelection) {
+    rangeRows = filteredSeries.map(s => {
+      const pLo = s.data[Math.min(validSelection.lo, s.data.length - 1)];
+      const pHi = s.data[Math.min(validSelection.hi, s.data.length - 1)];
+      if (!pLo || !pHi || pLo.v == null || pHi.v == null) return null;
+      const pct = pctChange(pLo.v, pHi.v);
+      return { name: s.name, color: s.color, pct, pos: +pct >= 0 };
+    }).filter(Boolean);
+  }
+
+  const legendHtml = `
+    <div class="cmp-chart-legend">
+      ${filteredSeries.map(s => `<span><i style="background:${s.color}"></i>${s.name.length > 32 ? s.name.slice(0, 32) + '…' : s.name}</span>`).join('')}
+    </div>
+  `;
+
+  // Pre-generate initial selection overlay if already committed
+  let initSelX = 0, initSelW = 0, initSelDisplay = 'none';
+  if (validSelection) {
+    initSelX = X(validSelection.lo);
+    initSelW = Math.max(1, X(validSelection.hi) - X(validSelection.lo));
+    initSelDisplay = 'block';
+  }
+
+  containerEl.innerHTML = `
+    <div class="cmp-chart-wrap" id="cmpChartWrap">
+      ${renderRangePickerHtml()}
+      ${legendHtml}
+      <div style="position:relative; width:100%;">
+        <svg id="interactiveNavSvg" class="cmp-chart-svg" viewBox="0 0 ${W} ${H}">
+          ${gridHtml}
+          ${pathsHtml}
+          <!-- Selection Rectangle -->
+          <rect id="cmpSelectionRect" x="${initSelX.toFixed(1)}" y="${PAD_T}" width="${initSelW.toFixed(1)}" height="${ih}"
+            fill="var(--g1)" opacity="0.12" stroke="var(--g1)" stroke-width="1.2" stroke-dasharray="4 3" style="display:${initSelDisplay};" />
+
+          <!-- Selection End Dots -->
+          <g id="cmpSelectionDots">
+            ${validSelection ? filteredSeries.map(s => {
+              const pt = s.data[Math.min(validSelection.hi, s.data.length - 1)];
+              if (!pt || pt.v == null) return '';
+              return `<circle cx="${X(validSelection.hi).toFixed(1)}" cy="${Y(pt.v).toFixed(1)}" r="4.5" fill="${s.color}" stroke="#fff" stroke-width="2" />`;
+            }).join('') : ''}
+          </g>
+
+          <!-- Hover Crosshair & Dots Group -->
+          <g id="cmpHoverGroup" style="display:none;">
+            <line id="cmpHoverLine" x1="0" y1="${PAD_T}" x2="0" y2="${(H - PAD_B).toFixed(1)}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3" />
+            <g id="cmpHoverDots">
+              ${filteredSeries.map((s, i) => `<circle id="cmpHoverDot_${i}" cx="0" cy="0" r="4" fill="${s.color}" stroke="#fff" stroke-width="1.5" />`).join('')}
+            </g>
+          </g>
+        </svg>
+
+        <!-- Hover Tooltip -->
+        <div id="cmpHoverTip" class="cmp-tip" style="display:none;"></div>
+
+        <!-- Drag Date Badges -->
+        <div id="cmpDragStartBadge" class="cmp-drag-date start" style="display:none;"></div>
+        <div id="cmpDragEndBadge" class="cmp-drag-date end" style="display:none;"></div>
+
+        <!-- On-Chart Summary Box -->
+        <div id="cmpOnchartSummary" class="cmp-onchart-summary ${validSelection && rangeRows ? 'show' : ''}" style="${validSelection ? `left:${((X(validSelection.lo) + X(validSelection.hi)) / 2 / W) * 100}%; transform:translateX(-50%);` : ''}">
+          ${validSelection && rangeRows && filteredSeries[0]?.data[validSelection.lo] && filteredSeries[0]?.data[validSelection.hi] ? `
+            <div class="cmp-onchart-header" style="font-weight:800;color:var(--g1);margin-bottom:4px;font-size:10px;">
+              ${fmtDate(filteredSeries[0].data[validSelection.lo].t)} → ${fmtDate(filteredSeries[0].data[validSelection.hi].t)}
+            </div>
+            ${rangeRows.map(r => `
+              <div class="cmp-onchart-row">
+                <span class="cmp-onchart-name" style="font-size:10px;color:var(--text);">${r.name.length > 22 ? r.name.slice(0, 22) + '…' : r.name}</span>
+                <b class="cmp-onchart-val" style="color:${r.color};font-size:10.5px;">${r.pos ? '+' : ''}${r.pct}%</b>
+              </div>
+            `).join('')}
+          ` : ''}
+        </div>
+      </div>
+
+      <div class="cmp-hint">💡 Drag across the chart to measure returns between any 2 dates · Click anywhere to reset</div>
+
+      <!-- Below-Chart Summary Card -->
+      <div id="cmpRangeSummaryCard" class="cmp-range-summary ${validSelection && rangeRows ? 'show' : ''}">
+        ${validSelection && rangeRows && filteredSeries[0]?.data[validSelection.lo] && filteredSeries[0]?.data[validSelection.hi] ? `
+          <div class="cmp-range-summary-h">
+            <span>📅 Window Performance: ${fmtDate(filteredSeries[0].data[validSelection.lo].t)} → ${fmtDate(filteredSeries[0].data[validSelection.hi].t)}</span>
+            <span class="cmp-range-clear" id="cmpRangeClearBtn">✕ Clear Selection</span>
+          </div>
+          ${rangeRows.map(r => `
+            <div class="cmp-range-row">
+              <span class="cmp-range-name" style="color:var(--text);font-weight:700;"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${r.color};margin-right:6px;"></i>${r.name}</span>
+              <span class="cmp-range-val" style="font-family:'JetBrains Mono',monospace;color:${r.pos ? 'var(--g1)' : 'var(--neg, #b71c1c)'};font-weight:800;">${r.pos ? '+' : ''}${r.pct}%</span>
+            </div>
+          `).join('')}
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  // Attach Date Picker Handlers
+  const fromEl = document.getElementById('cmpInputFrom');
+  const toEl = document.getElementById('cmpInputTo');
+  const resetBtn = document.getElementById('cmpResetRangeBtn');
+  if (fromEl) fromEl.onchange = e => { compareCustomFrom = fromDateInputValue(e.target.value); compareSelection = null; drawInteractiveCompareChart(containerEl, metrics); };
+  if (toEl) toEl.onchange = e => { compareCustomTo = fromDateInputValue(e.target.value); compareSelection = null; drawInteractiveCompareChart(containerEl, metrics); };
+  if (resetBtn) resetBtn.onclick = () => { compareCustomFrom = null; compareCustomTo = null; compareSelection = null; drawInteractiveCompareChart(containerEl, metrics); };
+
+  const clearBtn = document.getElementById('cmpRangeClearBtn');
+  if (clearBtn) clearBtn.onclick = (e) => { e.stopPropagation(); compareSelection = null; drawInteractiveCompareChart(containerEl, metrics); };
+
+  // DOM Elements for fast continuous interaction
+  const svgEl = document.getElementById('interactiveNavSvg');
+  const selRectEl = document.getElementById('cmpSelectionRect');
+  const selDotsEl = document.getElementById('cmpSelectionDots');
+  const hoverGroupEl = document.getElementById('cmpHoverGroup');
+  const hoverLineEl = document.getElementById('cmpHoverLine');
+  const hoverTipEl = document.getElementById('cmpHoverTip');
+  const dragStartBadgeEl = document.getElementById('cmpDragStartBadge');
+  const dragEndBadgeEl = document.getElementById('cmpDragEndBadge');
+  const onchartSummaryEl = document.getElementById('cmpOnchartSummary');
+  const rangeSummaryCardEl = document.getElementById('cmpRangeSummaryCard');
+
+  if (!svgEl) return;
+
+  function clientXFromEvent(e) {
+    if (e.touches && e.touches.length) return e.touches[0].clientX;
+    if (e.changedTouches && e.changedTouches.length) return e.changedTouches[0].clientX;
+    return e.clientX;
+  }
+  function idxFromEvent(e) {
+    const r = svgEl.getBoundingClientRect();
+    const cx = ((clientXFromEvent(e) - r.left) / r.width) * W;
+    const i = Math.round(((cx - PAD_L) / iw) * (n - 1));
+    return Math.max(0, Math.min(n - 1, i));
+  }
+
+  const dragSession = { dragging: false, startIdx: null, moved: false };
+
+  function updateHover(idx) {
+    if (idx == null || idx < 0 || idx >= n) {
+      if (hoverGroupEl) hoverGroupEl.style.display = 'none';
+      if (hoverTipEl) hoverTipEl.style.display = 'none';
+      return;
+    }
+    const hX = X(idx);
+    if (hoverGroupEl) hoverGroupEl.style.display = 'block';
+    if (hoverLineEl) {
+      hoverLineEl.setAttribute('x1', hX.toFixed(1));
+      hoverLineEl.setAttribute('x2', hX.toFixed(1));
+    }
+    filteredSeries.forEach((s, i) => {
+      const dot = document.getElementById(`cmpHoverDot_${i}`);
+      if (dot) {
+        const pt = s.data[Math.min(idx, s.data.length - 1)];
+        if (pt && pt.v != null) {
+          dot.setAttribute('cx', hX.toFixed(1));
+          dot.setAttribute('cy', Y(pt.v).toFixed(1));
+          dot.style.display = 'block';
+        } else {
+          dot.style.display = 'none';
+        }
+      }
+    });
+
+    if (hoverTipEl) {
+      const isRight = (hX / W) > 0.6;
+      hoverTipEl.style.left = isRight ? `calc(${(hX / W) * 100}% - 210px)` : `calc(${(hX / W) * 100}% + 14px)`;
+      hoverTipEl.innerHTML = `
+        <div style="margin-bottom:4px;opacity:0.75;font-weight:700;">${filteredSeries[0]?.data[idx]?.dateStr || ''}</div>
+        ${filteredSeries.map(s => {
+          const pt = s.data[Math.min(idx, s.data.length - 1)];
+          if (!pt) return '';
+          const sign = pt.rebasedPct >= 0 ? '+' : '';
+          return `<div class="cmp-tip-row"><span>${s.name.length > 22 ? s.name.slice(0, 22) + '…' : s.name}</span><b style="color:${s.color}">${sign}${pt.rebasedPct}%</b></div>`;
+        }).join('')}
+      `;
+      hoverTipEl.style.display = 'block';
+    }
+  }
+
+  function updateDrag(startI, curI) {
+    const lo = Math.min(startI, curI);
+    const hi = Math.max(startI, curI);
+    const selX = X(lo);
+    const selW = Math.max(1, X(hi) - X(lo));
+
+    // Update overlay rect
+    if (selRectEl) {
+      selRectEl.setAttribute('x', selX.toFixed(1));
+      selRectEl.setAttribute('width', selW.toFixed(1));
+      selRectEl.style.display = 'block';
+    }
+    // Hide hover & committed elements during active drag
+    if (hoverGroupEl) hoverGroupEl.style.display = 'none';
+    if (hoverTipEl) hoverTipEl.style.display = 'none';
+    if (selDotsEl) selDotsEl.innerHTML = '';
+    if (onchartSummaryEl) onchartSummaryEl.classList.remove('show');
+    if (rangeSummaryCardEl) rangeSummaryCardEl.classList.remove('show');
+
+    // Update floating badges
+    if (dragStartBadgeEl) {
+      dragStartBadgeEl.textContent = fmtDateShort(filteredSeries[0].data[startI].t);
+      dragStartBadgeEl.style.left = `${(X(startI) / W) * 100}%`;
+      dragStartBadgeEl.style.display = 'block';
+    }
+    if (dragEndBadgeEl) {
+      dragEndBadgeEl.textContent = fmtDateShort(filteredSeries[0].data[curI].t);
+      dragEndBadgeEl.style.left = `${(X(curI) / W) * 100}%`;
+      dragEndBadgeEl.style.top = Math.abs(X(curI) - X(startI)) < 70 ? '22px' : '-2px';
+      dragEndBadgeEl.style.display = 'block';
+    }
+  }
+
+  function onDown(e) {
+    dragSession.dragging = true;
+    dragSession.startIdx = idxFromEvent(e);
+    dragSession.moved = false;
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchend', onUp);
+    window.addEventListener('touchcancel', onCancelDrag);
+  }
+
+  function onMove(e) {
+    if (!dragSession.dragging) {
+      if (!compareSelection) {
+        const nextIdx = idxFromEvent(e);
+        updateHover(nextIdx);
+      }
+      return;
+    }
+    const curI = idxFromEvent(e);
+    if (curI !== dragSession.startIdx) dragSession.moved = true;
+    if (dragSession.moved) {
+      if (e.cancelable) e.preventDefault();
+      updateDrag(dragSession.startIdx, curI);
+    }
+  }
+
+  function onUp(e) {
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('touchmove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    window.removeEventListener('touchend', onUp);
+    window.removeEventListener('touchcancel', onCancelDrag);
+
+    if (dragSession.dragging) {
+      const endIdx = idxFromEvent(e);
+      if (dragSession.moved && Math.abs(endIdx - dragSession.startIdx) > 2) {
+        compareSelection = { lo: Math.min(dragSession.startIdx, endIdx), hi: Math.max(dragSession.startIdx, endIdx) };
+      } else {
+        compareSelection = null;
+      }
+    }
+    dragSession.dragging = false;
+    dragSession.startIdx = null;
+    dragSession.moved = false;
+
+    // Redraw committed summary state
+    drawInteractiveCompareChart(containerEl, metrics);
+  }
+
+  function onCancelDrag() {
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('touchmove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    window.removeEventListener('touchend', onUp);
+    window.removeEventListener('touchcancel', onCancelDrag);
+
+    dragSession.dragging = false;
+    dragSession.startIdx = null;
+    dragSession.moved = false;
+
+    drawInteractiveCompareChart(containerEl, metrics);
+  }
+
+  function onLeave() {
+    if (!dragSession.dragging) {
+      updateHover(null);
+    }
+  }
+
+  svgEl.onmousedown = onDown;
+  svgEl.onmousemove = onMove;
+  svgEl.onmouseleave = onLeave;
+  svgEl.ontouchstart = onDown;
+  svgEl.ontouchmove = onMove;
 }
 
 function renderMetricsTab(container,metrics){
@@ -874,7 +1288,7 @@ function chartOpts(){
 // ════════════════════════════════════════
 
 function exportPDF(){
-  const chartImg = document.getElementById('navChart') ? document.getElementById('navChart').toDataURL('image/png') : '';
+  const chartImg = getCompareChartImg();
   const mainHTML  = document.getElementById('mainContent').innerHTML;
   const chipsHTML = document.getElementById('chips').outerHTML;
   const periodLabel = getPeriodLabel()||'Selected Period';
