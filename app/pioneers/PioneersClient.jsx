@@ -61,8 +61,9 @@ const SPOTLIGHTS = [
   {
     tag: '👑 Highest Wealth Multiplier',
     title: 'Nippon India Growth Mid Cap Fund (Reliance Growth)',
-    desc: 'Launched in October 1995 at ₹10.00 par value, this fund delivered an astonishing 21.94% CAGR over 30.9 years. A ₹10,000 investment at NFO has grown into an unbelievable ₹45.75 Lakhs today.',
+    desc: 'Launched in October 1995 at ₹10.00 par value, this equity fund delivered an astonishing 21.94% CAGR over 30.9 years. A ₹10,000 investment at NFO has grown into an unbelievable ₹45.75 Lakhs today.',
     launch: '05-Oct-1995',
+    initNav: '₹10.00',
     cagr: '21.94%',
     multiplier: '457.5x',
     nav: '₹4,575.45',
@@ -71,8 +72,9 @@ const SPOTLIGHTS = [
   {
     tag: '🌟 The 3-Decade Flexi Cap Titan',
     title: 'HDFC Flexi Cap Fund (HDFC Equity Fund)',
-    desc: 'Allotted in December 1994 (Centurion/HDFC Equity), this flagship fund compounded through Asian Financial Crisis, Dot-Com Bust, 2008 GFC, and Covid at 18.35% CAGR, turning ₹10,000 into ₹20.82 Lakhs.',
+    desc: 'Allotted in December 1994 at ₹10.00 par value, this flagship fund compounded through the Asian Crisis, Dot-Com Bust, 2008 GFC, and Covid at 18.35% CAGR, turning ₹10,000 into ₹20.82 Lakhs.',
     launch: '17-Dec-1994',
+    initNav: '₹10.00',
     cagr: '18.35%',
     multiplier: '208.2x',
     nav: '₹2,082.61',
@@ -81,8 +83,9 @@ const SPOTLIGHTS = [
   {
     tag: '🥇 The First Private Equity Fund',
     title: 'Franklin India Bluechip Fund (Kothari Pioneer)',
-    desc: 'When SEBI opened the doors to private sector funds in 1993, Kothari Pioneer Bluechip was India’s first open-ended private equity scheme. Over 32.7 years, it compounded at 15.23% CAGR to cross ₹1,035 NAV.',
+    desc: 'When SEBI opened the doors to private funds in 1993, Kothari Pioneer Bluechip was India’s first open-ended private equity scheme (₹10.00 NFO par value), compounding at 15.23% CAGR to cross ₹1,035 NAV.',
     launch: '01-Dec-1993',
+    initNav: '₹10.00',
     cagr: '15.23%',
     multiplier: '103.5x',
     nav: '₹1,035.70',
@@ -91,8 +94,9 @@ const SPOTLIGHTS = [
   {
     tag: '⚖️ The Hybrid Wealth Pioneer',
     title: 'Aditya Birla Sun Life Equity Hybrid \'95 Fund',
-    desc: 'Proving that balanced equity-debt allocation creates generational wealth with lower volatility, this fund compounded at 17.39% CAGR over 31.5 years, growing ₹10 into ₹1,568.46.',
+    desc: 'Proving that balanced equity-debt allocation creates generational wealth with lower drawdowns, this fund compounded at 17.39% CAGR over 31.5 years, growing ₹10 into ₹1,568.46.',
     launch: '11-Feb-1995',
+    initNav: '₹10.00',
     cagr: '17.39%',
     multiplier: '156.8x',
     nav: '₹1,568.46',
@@ -101,22 +105,24 @@ const SPOTLIGHTS = [
   {
     tag: '🏛️ The Founding Father (1986)',
     title: 'UTI Mastershare Unit Scheme (Large Cap)',
-    desc: 'India’s very first equity mutual fund scheme launched by UTI in 1986. Over nearly 40 continuous years, it weathered every political and financial cycle in independent India’s modern history.',
+    desc: 'India’s very first equity mutual fund scheme launched by UTI in 1986 at ₹10.00 par value. Over nearly 40 continuous years, it weathered every political and financial cycle in modern Indian history.',
     launch: '15-Oct-1986',
+    initNav: '₹10.00',
     cagr: '8.60%',
     multiplier: '26.8x',
     nav: '₹268.03',
     code: '100651',
   },
   {
-    tag: '🎯 The Mid-Cap Pioneer',
-    title: 'Franklin India Prima Fund (Kothari Pioneer Prima)',
-    desc: 'India’s first dedicated mid-cap fund launched in 1993/1994. It pioneered bottom-up stock picking in emerging Indian companies, compounding at 17.29% CAGR to reach an extraordinary ₹1,619 NAV.',
-    launch: '29-Sep-1994',
-    cagr: '17.29%',
-    multiplier: '161.9x',
-    nav: '₹1,619.43',
-    code: '100520',
+    tag: '🛡️ The 30-Year Debt & Income Pioneer',
+    title: 'Aditya Birla Sun Life Income Fund (Long Duration)',
+    desc: 'Launched in October 1995 at ₹10.00 face value, ABSL Income Fund has delivered a steady 8.69% CAGR over 30.8 years (13.0x multiplier). Meanwhile, UTI Money Market (₹1,000 face value at launch in 1997) has grown to ₹7,660 (7.7x, 7.20% CAGR).',
+    launch: '21-Oct-1995',
+    initNav: '₹10.00 / ₹1,000',
+    cagr: '8.69%',
+    multiplier: '13.0x',
+    nav: '₹130.12',
+    code: '100038',
   },
 ];
 
@@ -130,6 +136,14 @@ const FAQS = [
           UTI Mastershare Unit Scheme (UTI Large Cap Fund)
         </Link>
         , which was launched on October 15, 1986 by Unit Trust of India. It has been operating continuously for nearly 40 years. (The older US-64 scheme launched in 1964 was discontinued in 2002).
+      </>
+    ),
+  },
+  {
+    q: 'Why do older debt and liquid mutual funds have NAVs in the thousands while equity funds started at ₹10?',
+    a: (
+      <>
+        In the Indian mutual fund industry, Equity and Hybrid funds historically launched with an NFO face value of <strong>₹10.00</strong>. In contrast, Liquid, Money Market, and Overnight funds were introduced with a face value (initial NAV) of <strong>₹1,000.00</strong> (or <strong>₹100.00</strong> for certain low-duration and savings funds). Therefore, a liquid fund with a current NAV of ₹6,000 grew ~6x over 25+ years (compounding at ~6.5% to 7.5% annualised CAGR), not 600x.
       </>
     ),
   },
@@ -215,6 +229,7 @@ const FAQS = [
 
 export default function PioneersClient({ initialFunds = [] }) {
   const [search, setSearch] = useState('');
+  const [assetFilter, setAssetFilter] = useState('all');
   const [eraFilter, setEraFilter] = useState('all');
   const [catFilter, setCatFilter] = useState('all');
   const [sortBy, setSortBy] = useState('age');
@@ -229,14 +244,44 @@ export default function PioneersClient({ initialFunds = [] }) {
   const [simSelectedCode, setSimSelectedCode] = useState('100377');
   const [openFaq, setOpenFaq] = useState(null);
 
+  // Asset Class Counts
+  const assetCounts = useMemo(() => {
+    let eq = 0,
+      hy = 0,
+      dt = 0,
+      ot = 0;
+    for (const f of initialFunds) {
+      const cat = (f.category || '').toLowerCase();
+      if (cat.includes('equity') || cat.includes('elss')) eq++;
+      else if (cat.includes('hybrid') || cat.includes('balanced') || cat.includes('asset allocation')) hy++;
+      else if (
+        cat.includes('debt') ||
+        cat.includes('income') ||
+        cat.includes('liquid') ||
+        cat.includes('money market') ||
+        cat.includes('gilt') ||
+        cat.includes('bond') ||
+        cat.includes('floater') ||
+        cat.includes('duration')
+      )
+        dt++;
+      else ot++;
+    }
+    return { all: initialFunds.length, equity: eq, hybrid: hy, debt: dt, other: ot };
+  }, [initialFunds]);
+
   // Selected Fund for Simulator
   const selectedFund = useMemo(() => {
-    return initialFunds.find((f) => String(f.code) === String(simSelectedCode)) || initialFunds[0] || {
-      name: 'Nippon India Growth Mid Cap Fund',
-      ret_inception: 21.94,
-      age_years: 30.9,
-      nav: 4575.45,
-    };
+    return (
+      initialFunds.find((f) => String(f.code) === String(simSelectedCode)) ||
+      initialFunds[0] || {
+        name: 'Nippon India Growth Mid Cap Fund',
+        ret_inception: 21.94,
+        age_years: 30.9,
+        nav: 4575.45,
+        initial_nav: 10,
+      }
+    );
   }, [initialFunds, simSelectedCode]);
 
   // Compute Simulator Results
@@ -295,76 +340,107 @@ export default function PioneersClient({ initialFunds = [] }) {
 
   // Filter and Sort Directory
   const filteredFunds = useMemo(() => {
-    return initialFunds.filter((f) => {
-      // Search
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        const matchesName = f.name?.toLowerCase().includes(q);
-        const matchesAmc = f.amc?.toLowerCase().includes(q);
-        const matchesCat = f.category?.toLowerCase().includes(q);
-        if (!matchesName && !matchesAmc && !matchesCat) return false;
-      }
+    return initialFunds
+      .filter((f) => {
+        // Search
+        if (search.trim()) {
+          const q = search.toLowerCase();
+          const matchesName = f.name?.toLowerCase().includes(q);
+          const matchesAmc = f.amc?.toLowerCase().includes(q);
+          const matchesCat = f.category?.toLowerCase().includes(q);
+          if (!matchesName && !matchesAmc && !matchesCat) return false;
+        }
 
-      // Era
-      const age = parseFloat(f.age_years) || 0;
-      const incDate = String(f.inception_date || '');
-      if (eraFilter === '30y' && age < 30.0) return false;
-      if (eraFilter === 'silver' && (age < 25.0 || age >= 30.0)) return false;
-      if (eraFilter === 'millennium' && (age < 20.0 || age >= 25.0)) return false;
-      if (eraFilter === 'psu' && incDate > '1993-06-30') return false;
-      if (eraFilter === 'private' && (incDate < '1993-07-01' || incDate > '1996-12-31')) return false;
-
-      // Category
-      if (catFilter !== 'all') {
+        // Asset Class
         const cat = (f.category || '').toLowerCase();
-        if (catFilter === 'flexi' && !cat.includes('flexi') && !cat.includes('multi cap')) return false;
-        if (catFilter === 'large' && (!cat.includes('large cap') || cat.includes('large & mid'))) return false;
-        if (catFilter === 'mid' && !cat.includes('mid cap')) return false;
-        if (catFilter === 'largemid' && !cat.includes('large & mid')) return false;
-        if (catFilter === 'hybrid' && !cat.includes('hybrid') && !cat.includes('balanced')) return false;
-        if (catFilter === 'elss' && !cat.includes('elss') && !cat.includes('tax')) return false;
-      }
+        const isEq = cat.includes('equity') || cat.includes('elss');
+        const isHy = cat.includes('hybrid') || cat.includes('balanced') || cat.includes('asset allocation');
+        const isDt =
+          cat.includes('debt') ||
+          cat.includes('income') ||
+          cat.includes('liquid') ||
+          cat.includes('money market') ||
+          cat.includes('gilt') ||
+          cat.includes('bond') ||
+          cat.includes('floater') ||
+          cat.includes('duration');
 
-      return true;
-    }).sort((a, b) => {
-      if (sortBy === 'name') {
-        const nA = a.name || '';
-        const nB = b.name || '';
-        return sortDir === 'asc' ? nA.localeCompare(nB) : nB.localeCompare(nA);
-      }
-      if (sortBy === 'incDate') {
-        const dA = a.inception_date || '';
-        const dB = b.inception_date || '';
-        // desc = oldest first (1986 -> 2006)
-        return sortDir === 'desc' ? dA.localeCompare(dB) : dB.localeCompare(dA);
-      }
+        if (assetFilter === 'equity' && !isEq) return false;
+        if (assetFilter === 'hybrid' && !isHy) return false;
+        if (assetFilter === 'debt' && !isDt) return false;
+        if (assetFilter === 'other' && (isEq || isHy || isDt)) return false;
 
-      let vA = 0;
-      let vB = 0;
-      if (sortBy === 'age') {
-        vA = parseFloat(a.age_years) || 0;
-        vB = parseFloat(b.age_years) || 0;
-      } else if (sortBy === 'cagr') {
-        vA = parseFloat(a.ret_inception) || 0;
-        vB = parseFloat(b.ret_inception) || 0;
-      } else if (sortBy === 'multiplier') {
-        vA = (parseFloat(a.nav) || 10) / 10;
-        vB = (parseFloat(b.nav) || 10) / 10;
-      } else if (sortBy === '10y') {
-        vA = parseFloat(a.ret_10y) || 0;
-        vB = parseFloat(b.ret_10y) || 0;
-      } else if (sortBy === 'nav') {
-        vA = parseFloat(a.nav) || 0;
-        vB = parseFloat(b.nav) || 0;
-      }
-      return sortDir === 'desc' ? vB - vA : vA - vB;
-    });
-  }, [initialFunds, search, eraFilter, catFilter, sortBy, sortDir]);
+        // Era
+        const age = parseFloat(f.age_years) || 0;
+        const incDate = String(f.inception_date || '');
+        if (eraFilter === '30y' && age < 30.0) return false;
+        if (eraFilter === 'silver' && (age < 25.0 || age >= 30.0)) return false;
+        if (eraFilter === 'millennium' && (age < 20.0 || age >= 25.0)) return false;
+        if (eraFilter === 'psu' && incDate > '1993-06-30') return false;
+        if (eraFilter === 'private' && (incDate < '1993-07-01' || incDate > '1996-12-31')) return false;
+
+        // Category
+        if (catFilter !== 'all') {
+          if (catFilter === 'flexi' && !cat.includes('flexi') && !cat.includes('multi cap')) return false;
+          if (catFilter === 'large' && (!cat.includes('large cap') || cat.includes('large & mid'))) return false;
+          if (catFilter === 'mid' && !cat.includes('mid cap')) return false;
+          if (catFilter === 'largemid' && !cat.includes('large & mid')) return false;
+          if (catFilter === 'hybrid' && !cat.includes('hybrid') && !cat.includes('balanced')) return false;
+          if (catFilter === 'elss' && !cat.includes('elss') && !cat.includes('tax')) return false;
+          if (catFilter === 'debt_long' && !cat.includes('medium to long') && !cat.includes('long duration') && !cat.includes('income')) return false;
+          if (catFilter === 'debt_liquid' && !cat.includes('liquid') && !cat.includes('overnight')) return false;
+          if (catFilter === 'debt_money' && !cat.includes('money market')) return false;
+          if (catFilter === 'debt_gilt' && !cat.includes('gilt')) return false;
+          if (catFilter === 'debt_corp' && !cat.includes('corporate bond') && !cat.includes('credit risk')) return false;
+          if (catFilter === 'debt_short' && !cat.includes('short duration') && !cat.includes('low duration') && !cat.includes('ultra short')) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'name') {
+          const nA = a.name || '';
+          const nB = b.name || '';
+          return sortDir === 'asc' ? nA.localeCompare(nB) : nB.localeCompare(nA);
+        }
+        if (sortBy === 'incDate') {
+          const dA = a.inception_date || '';
+          const dB = b.inception_date || '';
+          // desc = oldest first (1986 -> 2006)
+          return sortDir === 'desc' ? dA.localeCompare(dB) : dB.localeCompare(dA);
+        }
+
+        let vA = 0;
+        let vB = 0;
+        if (sortBy === 'age') {
+          vA = parseFloat(a.age_years) || 0;
+          vB = parseFloat(b.age_years) || 0;
+        } else if (sortBy === 'initNav') {
+          vA = parseFloat(a.initial_nav) || 10;
+          vB = parseFloat(b.initial_nav) || 10;
+        } else if (sortBy === 'cagr') {
+          vA = parseFloat(a.ret_inception) || 0;
+          vB = parseFloat(b.ret_inception) || 0;
+        } else if (sortBy === 'multiplier') {
+          const initA = parseFloat(a.initial_nav) || 10;
+          const initB = parseFloat(b.initial_nav) || 10;
+          vA = (parseFloat(a.nav) || initA) / initA;
+          vB = (parseFloat(b.nav) || initB) / initB;
+        } else if (sortBy === '10y') {
+          vA = parseFloat(a.ret_10y) || 0;
+          vB = parseFloat(b.ret_10y) || 0;
+        } else if (sortBy === 'nav') {
+          vA = parseFloat(a.nav) || 0;
+          vB = parseFloat(b.nav) || 0;
+        }
+        return sortDir === 'desc' ? vB - vA : vA - vB;
+      });
+  }, [initialFunds, search, assetFilter, eraFilter, catFilter, sortBy, sortDir]);
 
   // Reset to first page whenever filters or page size change
   useEffect(() => {
     setPage(0);
-  }, [search, eraFilter, catFilter, sortBy, sortDir, pageSize]);
+  }, [search, assetFilter, eraFilter, catFilter, sortBy, sortDir, pageSize]);
 
   const handleSort = (col) => {
     if (sortBy === col) {
@@ -458,11 +534,11 @@ export default function PioneersClient({ initialFunds = [] }) {
               </div>
               <div className="pnr-takeaway-item">
                 <span className="pnr-takeaway-dot"></span>
-                <span><strong>Zero 15-Year Loss Probability:</strong> No diversified open-ended Indian equity scheme has ever lost money over a 15+ year holding period.</span>
+                <span><strong>Initial Face Values:</strong> Equity funds launched at ₹10 face value, while Liquid & Money Market funds launched at ₹1,000 face value.</span>
               </div>
               <div className="pnr-takeaway-item">
                 <span className="pnr-takeaway-dot"></span>
-                <span><strong>Inflation Outperformance:</strong> Top equity pioneers generated 800 to 1,500 bps over CPI inflation (~6.5%) annually.</span>
+                <span><strong>Zero 15-Year Loss Probability:</strong> No diversified open-ended Indian equity scheme has ever lost money over a 15+ year holding period.</span>
               </div>
             </div>
           </div>
@@ -526,77 +602,87 @@ export default function PioneersClient({ initialFunds = [] }) {
               </div>
 
               <div className="pnr-sim-field">
-                <label>Select Pioneer Mutual Fund</label>
+                <label>
+                  <span>Select Pioneer Scheme</span>
+                  <span className="val">{selectedFund.name}</span>
+                </label>
                 <select
                   value={simSelectedCode}
                   onChange={(e) => setSimSelectedCode(e.target.value)}
                   className="pnr-select"
                 >
-                  {initialFunds.slice(0, 30).map((f) => (
+                  {initialFunds.slice(0, 40).map((f) => (
                     <option key={f.code} value={f.code}>
-                      {f.name} ({f.age_years}y — {f.ret_inception}% CAGR)
+                      {f.name} ({f.age_years} yrs · {f.ret_inception ? `${f.ret_inception}% CAGR` : '—'})
                     </option>
                   ))}
                 </select>
               </div>
             </div>
 
-            {/* Asset Comparison Output Grid */}
+            {/* Results Grid */}
             <div className="pnr-sim-results">
-              <div className="pnr-asset-card hero">
-                <div className="pnr-asset-icon">🚀</div>
-                <div className="pnr-asset-name">{selectedFund.name}</div>
-                <div className="pnr-asset-corpus accent">{fmtCurrency(simResults.fundCorpus)}</div>
-                <div className="pnr-asset-details">
-                  <span>CAGR: {selectedFund.ret_inception}%</span>
+              <div className="pnr-res-card fund">
+                <div className="pnr-res-title">
+                  <span>🚀 {selectedFund.name}</span>
+                  <span className="pnr-res-rate">{selectedFund.ret_inception || '15.0'}% CAGR</span>
+                </div>
+                <div className="pnr-res-val">{fmtCurrency(simResults.fundCorpus)}</div>
+                <div className="pnr-res-sub">
                   <span>Multiplier: {simResults.multiplier.toFixed(1)}x</span>
+                  <span>Over {simResults.ageYrs} Years</span>
                 </div>
               </div>
 
-              <div className="pnr-asset-card">
-                <div className="pnr-asset-icon">🪙</div>
-                <div className="pnr-asset-name">Physical Gold</div>
-                <div className="pnr-asset-corpus">{fmtCurrency(simResults.goldCorpus)}</div>
-                <div className="pnr-asset-details">
-                  <span>CAGR: ~10.5%</span>
-                  <span>Invested: {fmtCurrency(simResults.principal)}</span>
+              <div className="pnr-res-card gold">
+                <div className="pnr-res-title">
+                  <span>🥇 Physical Gold (India)</span>
+                  <span className="pnr-res-rate">10.5% CAGR</span>
+                </div>
+                <div className="pnr-res-val">{fmtCurrency(simResults.goldCorpus)}</div>
+                <div className="pnr-res-sub">
+                  <span>Multiplier: {(simResults.goldCorpus / simResults.principal).toFixed(1)}x</span>
+                  <span>Historical bullion price growth</span>
                 </div>
               </div>
 
-              <div className="pnr-asset-card">
-                <div className="pnr-asset-icon">🏦</div>
-                <div className="pnr-asset-name">Fixed Deposit / PPF</div>
-                <div className="pnr-asset-corpus">{fmtCurrency(simResults.fdCorpus)}</div>
-                <div className="pnr-asset-details">
-                  <span>CAGR: ~7.8%</span>
-                  <span>Guaranteed Risk-Free</span>
+              <div className="pnr-res-card fd">
+                <div className="pnr-res-title">
+                  <span>🏦 Bank Fixed Deposit</span>
+                  <span className="pnr-res-rate">7.8% CAGR</span>
+                </div>
+                <div className="pnr-res-val">{fmtCurrency(simResults.fdCorpus)}</div>
+                <div className="pnr-res-sub">
+                  <span>Multiplier: {(simResults.fdCorpus / simResults.principal).toFixed(1)}x</span>
+                  <span>Pre-tax compounded deposit rate</span>
                 </div>
               </div>
 
-              <div className="pnr-asset-card">
-                <div className="pnr-asset-icon">📉</div>
-                <div className="pnr-asset-name">Inflation Baseline (CPI)</div>
-                <div className="pnr-asset-corpus">{fmtCurrency(simResults.infCorpus)}</div>
-                <div className="pnr-asset-details">
-                  <span>Avg CPI: ~6.5%</span>
-                  <span>Breakeven Cost</span>
+              <div className="pnr-res-card inf">
+                <div className="pnr-res-title">
+                  <span>📉 CPI Inflation (Purchasing Power)</span>
+                  <span className="pnr-res-rate">6.5% Inflation</span>
+                </div>
+                <div className="pnr-res-val">{fmtCurrency(simResults.infCorpus)}</div>
+                <div className="pnr-res-sub">
+                  <span>Required just to maintain purchasing power</span>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ── SECTION 2: INTERACTIVE ERA TIMELINE ── */}
+        {/* ── SECTION 2: 6 HISTORICAL ERAS OF INDIAN MUTUAL FUNDS ── */}
         <section className="pnr-section">
           <div className="pnr-sec-header">
             <div className="pnr-sec-tag">Historical Timeline</div>
-            <h2 className="pnr-sec-title">The Evolution of Indian Mutual Funds (1964 – 2026)</h2>
+            <h2 className="pnr-sec-title">The 6 Eras of Indian Mutual Fund History</h2>
             <p className="pnr-sec-desc">
-              Click any era to jump to and inspect the funds that originated during that milestone in Indian financial history.
+              From the 1964 UTI monopoly to the ₹25,000+ Crore monthly SIP supercycle of 2026. Click any era to filter veteran schemes.
             </p>
           </div>
 
-          <div className="pnr-timeline">
+          <div className="pnr-eras-grid">
             {ERAS.map((era) => (
               <div
                 key={era.id}
@@ -636,6 +722,10 @@ export default function PioneersClient({ initialFunds = [] }) {
                     <div className="pnr-stat-item">
                       <div className="lbl">Inception Date</div>
                       <div className="val">{sp.launch}</div>
+                    </div>
+                    <div className="pnr-stat-item">
+                      <div className="lbl">Initial Face Value</div>
+                      <div className="val">{sp.initNav}</div>
                     </div>
                     <div className="pnr-stat-item">
                       <div className="lbl">Since Inception CAGR</div>
@@ -683,7 +773,7 @@ export default function PioneersClient({ initialFunds = [] }) {
               <span className="pnr-rule-num">Rule 02</span>
               <h3 className="pnr-rule-title">The High Cost of Market Timing</h3>
               <p className="pnr-rule-body">
-                Investors who attempted to jump in and out of markets missed the few explosive recovery days. Over 30 years, staying uninterruptedly invested generated <strong>100x to 450x</strong> wealth multipliers.
+                Investors who attempted to jump in and out of markets missed the few explosive recovery days. Over 30 years, staying uninterruptedly invested generated <strong>100x to 450x</strong> wealth multipliers in equities.
               </p>
             </div>
 
@@ -707,8 +797,70 @@ export default function PioneersClient({ initialFunds = [] }) {
             </p>
           </div>
 
+          {/* ── Educational Banner on Face Values ── */}
+          <div className="pnr-facevalue-banner">
+            <div className="pnr-fv-header">
+              <span className="pnr-fv-badge">💡 Crucial Historical Fact</span>
+              <h3 className="pnr-fv-title">Understanding Historical Face Values & Starting NAVs (₹10 vs ₹100 vs ₹1,000)</h3>
+            </div>
+            <p className="pnr-fv-desc">
+              Not all mutual funds in India started with an NAV of ₹10. Depending on the asset class, AMCs launched schemes at different initial face values:
+            </p>
+            <div className="pnr-fv-grid">
+              <div className="pnr-fv-card">
+                <div className="pnr-fv-card-tag eq">Equity & Hybrid Funds</div>
+                <div className="pnr-fv-val">₹10.00 Starting NAV</div>
+                <p>Launched at ₹10 face value. Compounded into 25x to 457x multi-baggers (15%–22% CAGR) over 30 years.</p>
+              </div>
+              <div className="pnr-fv-card">
+                <div className="pnr-fv-card-tag debt">Liquid & Money Market Funds</div>
+                <div className="pnr-fv-val">₹1,000.00 Starting NAV</div>
+                <p>Launched at ₹1,000 face value. Current NAVs of ₹4,000–₹7,600 represent a realistic 4x–7.7x wealth growth (6.5%–7.5% CAGR), not 600x.</p>
+              </div>
+              <div className="pnr-fv-card">
+                <div className="pnr-fv-card-tag savings">Savings & Low Duration Funds</div>
+                <div className="pnr-fv-val">₹100.00 Starting NAV</div>
+                <p>Launched at or consolidated to ₹100 face value. Current NAVs of ₹400–₹700 represent 4x–7x steady debt returns.</p>
+              </div>
+            </div>
+          </div>
+
           {/* Filter Bar */}
           <div className="pnr-filter-bar">
+            {/* Asset Class Filter Tabs */}
+            <div className="pnr-asset-tabs">
+              <button
+                className={`pnr-asset-btn ${assetFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setAssetFilter('all')}
+              >
+                All Asset Classes <span className="pnr-asset-count">{assetCounts.all}</span>
+              </button>
+              <button
+                className={`pnr-asset-btn ${assetFilter === 'equity' ? 'active' : ''}`}
+                onClick={() => setAssetFilter('equity')}
+              >
+                📈 Equity Schemes <span className="pnr-asset-count">{assetCounts.equity}</span>
+              </button>
+              <button
+                className={`pnr-asset-btn ${assetFilter === 'hybrid' ? 'active' : ''}`}
+                onClick={() => setAssetFilter('hybrid')}
+              >
+                ⚖️ Hybrid & Balanced <span className="pnr-asset-count">{assetCounts.hybrid}</span>
+              </button>
+              <button
+                className={`pnr-asset-btn ${assetFilter === 'debt' ? 'active' : ''}`}
+                onClick={() => setAssetFilter('debt')}
+              >
+                🛡️ Debt & Money Market <span className="pnr-asset-count">{assetCounts.debt}</span>
+              </button>
+              <button
+                className={`pnr-asset-btn ${assetFilter === 'other' ? 'active' : ''}`}
+                onClick={() => setAssetFilter('other')}
+              >
+                📊 Index & Other <span className="pnr-asset-count">{assetCounts.other}</span>
+              </button>
+            </div>
+
             <div className="pnr-search-wrap">
               <span className="pnr-search-icon">🔍</span>
               <input
@@ -726,13 +878,19 @@ export default function PioneersClient({ initialFunds = [] }) {
               onChange={(e) => setCatFilter(e.target.value)}
               className="pnr-cat-select"
             >
-              <option value="all">All Categories</option>
+              <option value="all">All Sub-Categories</option>
               <option value="flexi">Flexi / Multi Cap</option>
               <option value="large">Large Cap</option>
               <option value="mid">Mid Cap</option>
               <option value="largemid">Large & Mid Cap</option>
               <option value="hybrid">Aggressive / Hybrid</option>
               <option value="elss">ELSS (Tax Saver)</option>
+              <option value="debt_long">Long / Medium Duration / Income</option>
+              <option value="debt_liquid">Liquid & Overnight Funds</option>
+              <option value="debt_money">Money Market Funds</option>
+              <option value="debt_gilt">Gilt & Govt Securities</option>
+              <option value="debt_corp">Corporate Bond & Credit Risk</option>
+              <option value="debt_short">Short & Low Duration</option>
             </select>
 
             {/* Era Filter Pills */}
@@ -778,6 +936,9 @@ export default function PioneersClient({ initialFunds = [] }) {
                   <th onClick={() => handleSort('age')}>
                     Age (Yrs) {sortBy === 'age' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
+                  <th onClick={() => handleSort('initNav')}>
+                    Initial Face Value {sortBy === 'initNav' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                  </th>
                   <th onClick={() => handleSort('nav')}>
                     Current NAV {sortBy === 'nav' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
@@ -795,8 +956,10 @@ export default function PioneersClient({ initialFunds = [] }) {
               </thead>
               <tbody>
                 {visibleFunds.map((f) => {
-                  const navVal = parseFloat(f.nav) || 10;
-                  const mult = (navVal / 10).toFixed(1);
+                  const initNav = f.initial_nav || 10;
+                  const navVal = parseFloat(f.nav) || initNav;
+                  const mult = (navVal / initNav).toFixed(1);
+                  const isHighMult = parseFloat(mult) >= 100;
                   return (
                     <tr key={f.code}>
                       <td>
@@ -807,15 +970,20 @@ export default function PioneersClient({ initialFunds = [] }) {
                       </td>
                       <td>{String(f.inception_date || '').slice(0, 10)}</td>
                       <td><strong>{f.age_years} yrs</strong></td>
+                      <td>
+                        <span className={`pnr-initnav-badge ${initNav >= 1000 ? 'init-1000' : initNav >= 100 ? 'init-100' : 'init-10'}`}>
+                          ₹{initNav.toLocaleString('en-IN')}
+                        </span>
+                      </td>
                       <td>₹{navVal.toFixed(2)}</td>
                       <td>
                         <span className="pnr-multiplier-badge">
-                          {parseFloat(mult) >= 100 ? '🔥' : '⭐'} {mult}x
+                          {isHighMult ? '🔥' : '⭐'} {mult}x
                         </span>
                       </td>
                       <td>
                         <span className="pnr-cagr-badge">
-                          {f.ret_inception ? `${f.ret_inception}%` : '—'}
+                          {f.ret_inception != null ? `${f.ret_inception}%` : '—'}
                         </span>
                       </td>
                       <td>{f.ret_10y ? `${f.ret_10y}%` : '—'}</td>
@@ -829,7 +997,7 @@ export default function PioneersClient({ initialFunds = [] }) {
                 })}
                 {visibleFunds.length === 0 && (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
+                    <td colSpan={9} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
                       No veteran funds match the selected filters.
                     </td>
                   </tr>
@@ -863,54 +1031,42 @@ export default function PioneersClient({ initialFunds = [] }) {
                   Next ›
                 </button>
               </div>
-              <label className="pnr-pager-size">
-                Show
-                <select value={pageSize} onChange={(e) => setPageSize(+e.target.value)}>
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                  <option value={100000}>All</option>
-                </select>
-                per page
-              </label>
             </div>
           )}
         </section>
 
-        {/* ── SECTION 5: FAQS & SEO CONTENT ── */}
+        {/* ── SECTION 6: FAQS ── */}
         <section className="pnr-section">
           <div className="pnr-sec-header">
             <div className="pnr-sec-tag">Knowledge Base</div>
             <h2 className="pnr-sec-title">Frequently Asked Questions</h2>
             <p className="pnr-sec-desc">
-              Everything you need to know about the history and compounding track record of Indian mutual funds.
+              Essential facts about the origins, regulations, and long-term track records of Indian mutual funds.
             </p>
           </div>
 
           <div className="pnr-faqs">
-            {FAQS.map((faq, idx) => (
-              <div
-                key={idx}
-                className={`pnr-faq-item ${openFaq === idx ? 'open' : ''}`}
-              >
-                <div
-                  className="pnr-faq-q"
-                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                >
-                  <span>{faq.q}</span>
-                  <span className="pnr-faq-icon">▼</span>
+            {FAQS.map((faq, idx) => {
+              const isOpen = openFaq === idx;
+              return (
+                <div key={idx} className={`pnr-faq-item ${isOpen ? 'open' : ''}`}>
+                  <button
+                    className="pnr-faq-q"
+                    onClick={() => setOpenFaq(isOpen ? null : idx)}
+                    aria-expanded={isOpen}
+                  >
+                    <span>{faq.q}</span>
+                    <span className="pnr-faq-icon">▾</span>
+                  </button>
+                  {isOpen && <div className="pnr-faq-a">{faq.a}</div>}
                 </div>
-                {openFaq === idx && <div className="pnr-faq-a">{faq.a}</div>}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </main>
 
-      <div className="container" style={{ marginTop: '56px' }}>
-        <Footer />
-      </div>
+      <Footer />
     </div>
   );
 }

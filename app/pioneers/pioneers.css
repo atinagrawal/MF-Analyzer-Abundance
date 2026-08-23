@@ -492,6 +492,151 @@
 }
 
 /* ── Section 3: Hall of Fame Directory ── */
+.pnr-facevalue-banner {
+  background: linear-gradient(135deg, #f0fdf4 0%, #fefce8 100%);
+  border: 1.5px solid #86efac;
+  border-radius: var(--radius, 14px);
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(22, 101, 52, 0.06);
+}
+
+.pnr-fv-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.pnr-fv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #166534;
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pnr-fv-title {
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: var(--text, #162616);
+  margin: 0;
+}
+
+.pnr-fv-desc {
+  font-size: 0.88rem;
+  color: var(--text2, #2e4d2e);
+  line-height: 1.55;
+  margin: 0 0 14px;
+  font-weight: 500;
+}
+
+.pnr-fv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.pnr-fv-card {
+  background: #ffffff;
+  border: 1px solid var(--border, #c2dfc2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.pnr-fv-card-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.pnr-fv-card-tag.eq {
+  color: #166534;
+}
+
+.pnr-fv-card-tag.debt {
+  color: #1e40af;
+}
+
+.pnr-fv-card-tag.savings {
+  color: #0e7490;
+}
+
+.pnr-fv-val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text, #162616);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  margin-bottom: 6px;
+}
+
+.pnr-fv-card p {
+  font-size: 0.8rem;
+  color: var(--muted, #5e8a5e);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Asset Class Filter Tabs */
+.pnr-asset-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border, #c2dfc2);
+}
+
+.pnr-asset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--s2, #edf6ed);
+  border: 1.5px solid var(--border2, #a8cfa8);
+  color: var(--text2, #2e4d2e);
+  transition: all 0.18s ease;
+}
+
+.pnr-asset-btn:hover {
+  border-color: var(--g1, #1b5e20);
+  color: var(--g1, #1b5e20);
+}
+
+.pnr-asset-btn.active {
+  background: var(--g1, #1b5e20);
+  border-color: var(--g1, #1b5e20);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(27, 94, 32, 0.25);
+}
+
+.pnr-asset-count {
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  font-weight: 800;
+}
+
+.pnr-asset-btn.active .pnr-asset-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
 .pnr-filter-bar {
   display: flex;
   flex-wrap: wrap;
@@ -650,6 +795,35 @@
   background: #fef3c7;
   color: #92400e;
   border: 1px solid #fcd34d;
+}
+
+.pnr-initnav-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.pnr-initnav-badge.init-10 {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.pnr-initnav-badge.init-100 {
+  background: #ecfeff;
+  color: #155e75;
+  border: 1px solid #a5f3fc;
+}
+
+.pnr-initnav-badge.init-1000 {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
 }
 
 .pnr-cagr-badge {

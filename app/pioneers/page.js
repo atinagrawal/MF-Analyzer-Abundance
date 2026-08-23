@@ -9,6 +9,36 @@ export const metadata = getPageMeta('pioneers');
 export const dynamic = 'force-static';
 export const revalidate = 86400; // 24 hours
 
+function resolveInitialNav(r) {
+  if (r.initial_nav && parseFloat(r.initial_nav) > 0) return parseFloat(r.initial_nav);
+  const cat = (r.category || '').toLowerCase();
+  const nav = parseFloat(r.nav) || 10;
+  const isDebt =
+    cat.includes('debt') ||
+    cat.includes('income') ||
+    cat.includes('liquid') ||
+    cat.includes('money market') ||
+    cat.includes('gilt') ||
+    cat.includes('bond') ||
+    cat.includes('floater') ||
+    cat.includes('duration');
+  if (isDebt) {
+    if (nav > 1000) return 1000;
+    if (
+      nav > 250 &&
+      (cat.includes('liquid') ||
+        cat.includes('money market') ||
+        cat.includes('low duration') ||
+        cat.includes('ultra short') ||
+        cat.includes('floater') ||
+        cat.includes('savings'))
+    )
+      return 100;
+    return 10;
+  }
+  return 10;
+}
+
 async function getVeteranFunds() {
   const POSTGRES_URL = process.env.POSTGRES_URL || process.env.DATABASE_URL;
   if (POSTGRES_URL) {
@@ -22,7 +52,7 @@ async function getVeteranFunds() {
       const sql = `
         SELECT 
           code, name, amc, category, structure, nav, nav_date,
-          inception_date, age_years, ret_inception,
+          inception_date, age_years, ret_inception, initial_nav,
           ret_1y, ret_3y, ret_5y, ret_7y, ret_10y, vol, max_dd
         FROM mf_screener
         WHERE inception_date <= '2006-04-01'
@@ -34,19 +64,33 @@ async function getVeteranFunds() {
       await client.end();
 
       if (res.rows && res.rows.length > 0) {
-        return res.rows.map((r) => ({
-          ...r,
-          code: String(r.code),
-          inception_date: r.inception_date ? String(r.inception_date).slice(0, 10) : null,
-          nav: r.nav ? parseFloat(r.nav) : null,
-          age_years: r.age_years ? parseFloat(r.age_years) : null,
-          ret_inception: r.ret_inception ? parseFloat(r.ret_inception) : null,
-          ret_1y: r.ret_1y ? parseFloat(r.ret_1y) : null,
-          ret_3y: r.ret_3y ? parseFloat(r.ret_3y) : null,
-          ret_5y: r.ret_5y ? parseFloat(r.ret_5y) : null,
-          ret_7y: r.ret_7y ? parseFloat(r.ret_7y) : null,
-          ret_10y: r.ret_10y ? parseFloat(r.ret_10y) : null,
-        }));
+        return res.rows.map((r) => {
+          const initNav = resolveInitialNav(r);
+          const navVal = r.nav ? parseFloat(r.nav) : null;
+          const ageVal = r.age_years ? parseFloat(r.age_years) : null;
+          let retInc = r.ret_inception ? parseFloat(r.ret_inception) : null;
+          if (navVal && initNav && ageVal && ageVal > 0) {
+            retInc =
+              ageVal >= 1.0
+                ? +((Math.pow(navVal / initNav, 1 / ageVal) - 1) * 100).toFixed(2)
+                : +(((navVal - initNav) / initNav) * 100).toFixed(2);
+          }
+          return {
+            ...r,
+            code: String(r.code),
+            inception_date: r.inception_date ? String(r.inception_date).slice(0, 10) : null,
+            nav: navVal,
+            initial_nav: initNav,
+            multiplier: navVal && initNav ? +(navVal / initNav).toFixed(2) : null,
+            age_years: ageVal,
+            ret_inception: retInc,
+            ret_1y: r.ret_1y ? parseFloat(r.ret_1y) : null,
+            ret_3y: r.ret_3y ? parseFloat(r.ret_3y) : null,
+            ret_5y: r.ret_5y ? parseFloat(r.ret_5y) : null,
+            ret_7y: r.ret_7y ? parseFloat(r.ret_7y) : null,
+            ret_10y: r.ret_10y ? parseFloat(r.ret_10y) : null,
+          };
+        });
       }
     } catch (e) {
       console.warn('Could not load veteran funds from Postgres, falling back to data/screener.json:', e.message);
@@ -66,6 +110,27 @@ async function getVeteranFunds() {
             !f.name?.includes('Direct') &&
             (!f.name?.includes('Dividend') && !f.name?.includes('IDCW') || f.structure === 'Growth')
         )
+        .map((f) => {
+          const initNav = resolveInitialNav(f);
+          const navVal = f.nav ? parseFloat(f.nav) : null;
+          const ageVal = f.age_years ? parseFloat(f.age_years) : null;
+          let retInc = f.ret_inception ? parseFloat(f.ret_inception) : null;
+          if (navVal && initNav && ageVal && ageVal > 0) {
+            retInc =
+              ageVal >= 1.0
+                ? +((Math.pow(navVal / initNav, 1 / ageVal) - 1) * 100).toFixed(2)
+                : +(((navVal - initNav) / initNav) * 100).toFixed(2);
+          }
+          return {
+            ...f,
+            code: String(f.code),
+            nav: navVal,
+            initial_nav: initNav,
+            multiplier: navVal && initNav ? +(navVal / initNav).toFixed(2) : null,
+            age_years: ageVal,
+            ret_inception: retInc,
+          };
+        })
         .sort((a, b) => (a.inception_date || '').localeCompare(b.inception_date || ''));
     }
   } catch (e) {
@@ -138,6 +203,14 @@ export default async function PioneersPage() {
         acceptedAnswer: {
           '@type': 'Answer',
           text: 'Nippon India Growth Fund (formerly Reliance Growth Fund, launched on October 5, 1995) holds the record for the highest compounded wealth creation among 30+ year veteran schemes, delivering a 21.94% CAGR over 30.9 years. Its NAV grew from ₹10.00 at NFO to over ₹4,575.00 today (a 457x wealth multiplier).',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Why do older debt and liquid mutual funds have NAVs in the thousands while equity funds started at ₹10?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'In the Indian mutual fund industry, Equity and Hybrid funds historically launched with an NFO face value of ₹10.00. In contrast, Liquid, Money Market, and Overnight funds were introduced with a face value (initial NAV) of ₹1,000.00 (or ₹100.00 for certain low-duration and savings funds). Therefore, a liquid fund with a current NAV of ₹6,000 grew ~6x over 25+ years (compounding at ~6.5% to 7.5% annualised CAGR), not 600x.',
         },
       },
       {

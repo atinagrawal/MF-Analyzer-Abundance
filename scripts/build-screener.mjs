@@ -382,11 +382,13 @@ async function main() {
     const pc = (x) => (x == null ? null : +(x * 100).toFixed(2));
     const r3 = ret.ret_3y;
 
-    // since-inception CAGR: (current_nav / inception_nav)^(1/years) - 1
+    // since-inception returns: CAGR if >= 1 year, absolute return if < 1 year
     const inc = inceptionMap[f.code];
     const incTs = inc ? parseISO(inc.date) : null;
     const incYears = incTs ? (now - incTs) / Y : null;
-    const retInception = (inc && incYears > 0.5) ? pc(Math.pow(f.nav / inc.nav, 1 / incYears) - 1) : null;
+    const retInception = (inc && incYears > 0.05 && inc.nav > 0)
+      ? (incYears >= 1.0 ? pc(Math.pow(f.nav / inc.nav, 1 / incYears) - 1) : pc((f.nav - inc.nav) / inc.nav))
+      : null;
     // age from true inception if available, otherwise from oldest monthly snapshot
     const ageYears = incTs ? (now - incTs) / Y : (ser.length ? (now - ser[0].t) / Y : null);
 
