@@ -16,7 +16,7 @@
 
 import { useMemo } from 'react';
 
-const TXN_BUY_RE  = /PURCHASE|SIP|SWITCH.?IN|REINVEST|TRANSMISSION/;
+const TXN_BUY_RE  = /PURCHASE|SIP|SWITCH.?IN|REINVEST|TRANSMISSION|HOLDING_SNAPSHOT/;
 const TXN_SELL_RE = /REDEMPTION|SWITCH.?OUT/;
 
 // casparser never gives transmission (units inherited/transmitted in from
@@ -59,18 +59,20 @@ export function navHistoryCacheKey(fund) {
 }
 
 const TXN_TYPE_META = {
-  PURCHASE:        { label: 'Purchase',        color: 'var(--g2)',   cls: 'buy' },
-  PURCHASE_SIP:    { label: 'SIP',             color: 'var(--g3)',   cls: 'buy' },
-  SWITCH_IN:       { label: 'Switch In',       color: 'var(--warn)', cls: 'switch' },
-  TRANSMISSION_IN: { label: 'Transmission In', color: 'var(--muted)', cls: 'transmission' },
-  REDEMPTION:      { label: 'Redemption',      color: 'var(--neg)',  cls: 'sell' },
-  SWITCH_OUT:      { label: 'Switch Out',      color: 'var(--neg)',  cls: 'sell' },
+  PURCHASE:         { label: 'Purchase',          color: 'var(--g2)',   cls: 'buy' },
+  PURCHASE_SIP:     { label: 'SIP',               color: 'var(--g3)',   cls: 'buy' },
+  HOLDING_SNAPSHOT: { label: 'Statement Balance', color: '#2563eb',     cls: 'snapshot' },
+  SWITCH_IN:        { label: 'Switch In',         color: 'var(--warn)', cls: 'switch' },
+  TRANSMISSION_IN:  { label: 'Transmission In',   color: 'var(--muted)', cls: 'transmission' },
+  REDEMPTION:       { label: 'Redemption',        color: 'var(--neg)',  cls: 'sell' },
+  SWITCH_OUT:       { label: 'Switch Out',        color: 'var(--neg)',  cls: 'sell' },
 };
 function txnMeta(type) {
   return TXN_TYPE_META[type] || { label: type, color: 'var(--g2)', cls: 'buy' };
 }
 const TXN_BADGE_STYLE = {
   buy:          { bg: 'var(--g-xlight)', fg: 'var(--g1)' },
+  snapshot:     { bg: 'rgba(37, 99, 235, 0.1)', fg: '#2563eb' },
   sell:         { bg: 'var(--neg-bg)',   fg: 'var(--neg)' },
   switch:       { bg: 'var(--warn-bg)',  fg: 'var(--warn)' },
   transmission: { bg: 'var(--s2)',       fg: 'var(--muted)' },
@@ -80,6 +82,21 @@ const TXN_BADGE_STYLE = {
 // JSX nodes (not HTML strings) so nothing here ever needs dangerouslySetInnerHTML.
 function commentaryItems(rows, stats, currentNav, navHistory, folioTransmission) {
   const fmtD = (d) => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const snapshotTxn = rows.find(r => r.type === 'HOLDING_SNAPSHOT');
+  if (snapshotTxn) {
+    const items = [
+      <>Consolidated statement balance of <b>{snapshotTxn.units.toLocaleString('en-IN', { maximumFractionDigits: 3 })} units</b> as on <b>{fmtD(snapshotTxn.date)}</b> (imported from NSDL e-CAS).</>
+    ];
+    if (Number.isFinite(currentNav) && snapshotTxn.nav > 0) {
+      const pct = (currentNav - snapshotTxn.nav) / snapshotTxn.nav * 100;
+      items.push(
+        <>Reported average acquisition NAV is <b>₹{snapshotTxn.nav.toFixed(2)}</b>, against a current live NAV of <b>₹{currentNav.toFixed(2)}</b> — {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%{' '}
+          {pct >= 0 ? 'above' : 'below'} your reported cost basis.</>
+      );
+    }
+    return items;
+  }
+
   const multi = rows.length > 1;
   const parts = [];
   if (stats.lumpCount)        parts.push(`${stats.lumpCount} lump-sum purchase${stats.lumpCount > 1 ? 's' : ''}`);
@@ -344,24 +361,32 @@ export default function TransactionHistoryDrawer({ fund, navHistory, onFetchNavH
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }} onClick={onClose}>
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.35)', backdropFilter: 'blur(2px)' }} />
-      <div onClick={e => e.stopPropagation()} style={{
-        position: 'relative', zIndex: 1, width: '100%', maxWidth: 'min(680px, 100vw)',
-        height: '100dvh', overflowY: 'auto', background: 'var(--surface)',
-        boxShadow: '-8px 0 40px rgba(0,0,0,.15)', display: 'flex', flexDirection: 'column',
-      }}>
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1.5px solid var(--border)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div style={{ fontSize: '.6rem', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 6 }}>
-                Transaction History
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(3px)',
+        zIndex: 1000, display: 'flex', justifyContent: 'flex-end', animation: 'fadeIn .15s ease-out',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 580, height: '100%', background: 'var(--surface)',
+          borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column',
+          overflowY: 'auto', boxShadow: '-12px 0 32px rgba(0,0,0,.15)',
+        }}
+      >
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 2 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '.55rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
+                {fund.amfiCode ? `AMFI ${fund.amfiCode}` : 'Holding'}
               </div>
-              <div style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1.3, maxWidth: 420 }}>
+              <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text)', margin: '2px 0 0', lineHeight: 1.3 }}>
                 {fund.name}
-              </div>
+              </h2>
               <div style={{ fontSize: '.65rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginTop: 4 }}>
-                {fund.folio ? `Folio ${fund.folio} · ` : ''}{rows.length} transaction{rows.length !== 1 ? 's' : ''}{fund.__ownerName ? ` · ${fund.__ownerName}` : ''}
+                {fund.folio ? `Folio ${fund.folio} · ` : ''}{rows.length} {hasSnapshotTxn ? 'statement balance entry' : `transaction${rows.length !== 1 ? 's' : ''}`}{fund.__ownerName ? ` · ${fund.__ownerName}` : ''}
               </div>
             </div>
             <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--muted)', padding: '4px 8px', marginTop: -4 }}>✕</button>
@@ -385,6 +410,26 @@ export default function TransactionHistoryDrawer({ fund, navHistory, onFetchNavH
             </div>
           ) : (
             <>
+              {hasSnapshotTxn && (
+                <div style={{
+                  margin: '0 0 16px 0',
+                  padding: '12px 16px',
+                  borderRadius: 10,
+                  background: 'rgba(37, 99, 235, 0.06)',
+                  border: '1px solid rgba(37, 99, 235, 0.2)',
+                  fontSize: '.78rem',
+                  lineHeight: 1.5,
+                  color: 'var(--text)'
+                }}>
+                  <div style={{ fontWeight: 800, color: '#2563eb', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <span>ℹ️</span> NSDL e-CAS Statement Balance
+                  </div>
+                  <div style={{ color: 'var(--muted)', fontSize: '.74rem' }}>
+                    Monthly NSDL e-CAS depository statements provide consolidated closing balances and cost summaries as of month-end ({fmtD(rows[0].date)}). Real-time valuation, 1D returns, and gains are calculated from this reported cost basis. For lifetime transaction history and SIP dates since inception, upload a Detailed CAMS/KFintech CAS or MF Central report.
+                  </div>
+                </div>
+              )}
+
               {/* ── Rate Journey: entry -> today, the clear headline comparison ── */}
               <div style={{
                 border: '1.5px solid var(--border)', borderRadius: 12, padding: '16px 18px', marginBottom: 20,
@@ -393,7 +438,7 @@ export default function TransactionHistoryDrawer({ fund, navHistory, onFetchNavH
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                   <div>
                     <div style={{ fontSize: '.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.7px', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
-                      {hasMultipleTxns ? 'Avg. Entry' : 'Entry'}
+                      {hasMultipleTxns ? 'Avg. Entry' : (hasSnapshotTxn ? 'Reported Avg. Cost' : 'Entry')}
                     </div>
                     <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)', fontFamily: "'JetBrains Mono', monospace" }}>₹{journeyEntryNav.toFixed(2)}</div>
                     <div style={{ fontSize: '.6rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>{journeyEntryLabel}</div>

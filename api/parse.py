@@ -255,7 +255,8 @@ def normalize_nsdl_data(dict_data: dict, explicit_pan: str = None) -> dict:
                     "transactions": [
                         {
                             "date": as_of_date or "2026-07-31",
-                            "type": "PURCHASE",
+                            "type": "HOLDING_SNAPSHOT",
+                            "description": f"Consolidated month-end balance as of {as_of_date or '31-Jul-2026'} (NSDL e-CAS)",
                             "amount": total_cost or val,
                             "units": units,
                             "nav": avg_cost
@@ -267,6 +268,7 @@ def normalize_nsdl_data(dict_data: dict, explicit_pan: str = None) -> dict:
     dict_data['folios'] = list(folios_map.values())
     dict_data['equities'] = all_equities
     dict_data['bonds'] = all_bonds
+    dict_data['is_snapshot'] = True
     if resolved_pan:
         dict_data['resolved_pan'] = resolved_pan
     elif masked_pan:

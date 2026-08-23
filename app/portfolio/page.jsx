@@ -474,7 +474,14 @@ function PortfolioInner() {
                     amfi: mf.amfi || null,
                     close: units,
                     valuation: { date: asOfDate, nav, value: val, cost },
-                    transactions: units > 0 ? [{ date: asOfDate || '2026-07-31', type: 'PURCHASE', amount: cost || val, units, nav: avgCost }] : [],
+                    transactions: units > 0 ? [{
+                      date: asOfDate || '2026-07-31',
+                      type: 'HOLDING_SNAPSHOT',
+                      description: `Consolidated month-end balance as of ${asOfDate || '31-Jul-2026'} (NSDL e-CAS)`,
+                      amount: cost || val,
+                      units,
+                      nav: avgCost
+                    }] : [],
                   });
                 });
               });
