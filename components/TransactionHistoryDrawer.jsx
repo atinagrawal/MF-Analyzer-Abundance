@@ -81,7 +81,8 @@ const TXN_BADGE_STYLE = {
 // Plain, factual observations only -- no "you should" language. Returns
 // JSX nodes (not HTML strings) so nothing here ever needs dangerouslySetInnerHTML.
 function commentaryItems(rows, stats, currentNav, navHistory, folioTransmission) {
-  const fmtD = (d) => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  if (!rows || rows.length === 0 || !stats) return [];
+  const fmtD = (d) => d instanceof Date && !isNaN(d) ? d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
   const snapshotTxn = rows.find(r => r.type === 'HOLDING_SNAPSHOT');
   if (snapshotTxn) {
     const items = [
@@ -107,11 +108,13 @@ function commentaryItems(rows, stats, currentNav, navHistory, folioTransmission)
 
   // Same day for every transaction (always true for exactly one) reads
   // oddly as "between 24 Feb 2026 and 24 Feb 2026" -- collapse to "on".
-  const sameDate = rows[0].date.getTime() === rows[rows.length - 1].date.getTime();
+  const firstDate = rows[0]?.date;
+  const lastDate = rows[rows.length - 1]?.date;
+  const sameDate = firstDate && lastDate && firstDate.getTime() === lastDate.getTime();
   const items = [
     sameDate
-      ? <>{parts.join(', ')} on <b>{fmtD(rows[0].date)}</b>.</>
-      : <>{parts.join(', ')} between <b>{fmtD(rows[0].date)}</b> and <b>{fmtD(rows[rows.length - 1].date)}</b>.</>,
+      ? <>{parts.join(', ')} on <b>{fmtD(firstDate)}</b>.</>
+      : <>{parts.join(', ')} between <b>{fmtD(firstDate)}</b> and <b>{fmtD(lastDate)}</b>.</>,
   ];
 
   if (Number.isFinite(currentNav) && stats.avgNav > 0) {
@@ -145,7 +148,7 @@ function commentaryItems(rows, stats, currentNav, navHistory, folioTransmission)
   // rates -- for a single transaction (or several at an identical NAV,
   // e.g. same-day switches) it degenerates into repeating one number
   // twice, which reads as a copy bug rather than a real range.
-  if (multi) {
+  if (multi && stats.minTxn && stats.maxTxn) {
     if (stats.minTxn.nav === stats.maxTxn.nav) {
       items.push(<>All {rows.length} transactions were at the same NAV: <b>₹{stats.minTxn.nav.toFixed(2)}</b>.</>);
     } else {
@@ -156,9 +159,10 @@ function commentaryItems(rows, stats, currentNav, navHistory, folioTransmission)
     }
   }
 
-  if (navHistory?.points?.length) {
-    const histNavs = navHistory.points.map(p => p.nav);
-    const histMin = Math.min(...histNavs), histMax = Math.max(...histNavs);
+  if (navHistory?.points?.length && stats.minTxn) {
+    const histNavs = navHistory.points.map(p => p.nav).filter(Number.isFinite);
+    const histMin = histNavs.length ? Math.min(...histNavs) : 0;
+    const histMax = histNavs.length ? Math.max(...histNavs) : 0;
     const rangeWidth = histMax - histMin;
     const describePosition = (nav) => {
       if (rangeWidth <= 0) return 'the only rate in that window';
@@ -229,17 +233,18 @@ export default function TransactionHistoryDrawer({ fund, navHistory, onFetchNavH
   }, [fund.transactions]);
 
   const hasHistory = rows.length > 0;
-  const currentNav = fund.liveNav;
+  const currentNav = fund?.liveNav;
 
   const stats = useMemo(() => {
-    if (!hasHistory) return null;
+    if (!hasHistory || rows.length === 0) return null;
     const buys = rows.filter(t => TXN_BUY_RE.test(t.type));
-    const totalBuyAmount = buys.reduce((s, t) => s + t.amount, 0);
-    const totalBuyUnits  = buys.reduce((s, t) => s + t.units, 0);
+    const totalBuyAmount = buys.reduce((s, t) => s + (t.amount || 0), 0);
+    const totalBuyUnits  = buys.reduce((s, t) => s + (t.units || 0), 0);
+    const fallbackFirst = rows[0] || { nav: 0, date: new Date() };
     return {
-      avgNav: totalBuyUnits > 0 ? totalBuyAmount / totalBuyUnits : 0,
-      minTxn: rows.reduce((a, b) => (b.nav < a.nav ? b : a)),
-      maxTxn: rows.reduce((a, b) => (b.nav > a.nav ? b : a)),
+      avgNav: totalBuyUnits > 0 ? totalBuyAmount / totalBuyUnits : (fallbackFirst.nav || 0),
+      minTxn: rows.reduce((a, b) => ((b.nav || 0) < (a.nav || 0) ? b : a), fallbackFirst),
+      maxTxn: rows.reduce((a, b) => ((b.nav || 0) > (a.nav || 0) ? b : a), fallbackFirst),
       sipCount:         rows.filter(t => t.type === 'PURCHASE_SIP').length,
       lumpCount:        rows.filter(t => t.type === 'PURCHASE').length,
       switchCount:      rows.filter(t => t.type === 'SWITCH_IN').length,
@@ -248,16 +253,17 @@ export default function TransactionHistoryDrawer({ fund, navHistory, onFetchNavH
     };
   }, [rows, hasHistory]);
 
-  const fmtD = (d) => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const fmtD = (d) => d instanceof Date && !isNaN(d) ? d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
 
   // ── "Rate Journey" strip: entry -> today, always computable from a
   // single transaction, unlike the line chart below which needs 2+ points
   // to show a trend. Doubles as the primary, unambiguous depiction of
   // avg/current NAV that a legend-only chart made easy to miss.
   const hasMultipleTxns = rows.length > 1;
-  const journeyEntryNav   = hasHistory ? (hasMultipleTxns ? stats.avgNav : rows[0].nav) : null;
-  const journeyEntryLabel = hasHistory ? (hasMultipleTxns ? `Since ${fmtD(rows[0].date)}` : fmtD(rows[0].date)) : '';
-  const journeyPct = hasHistory && Number.isFinite(currentNav) && journeyEntryNav > 0
+  const hasSnapshotTxn = rows.some(t => t.type === 'HOLDING_SNAPSHOT');
+  const journeyEntryNav   = hasHistory ? (hasMultipleTxns ? (stats?.avgNav || 0) : (rows[0]?.nav || 0)) : null;
+  const journeyEntryLabel = hasHistory && rows[0]?.date ? (hasSnapshotTxn ? `As of ${fmtD(rows[0].date)}` : (hasMultipleTxns ? `Since ${fmtD(rows[0].date)}` : fmtD(rows[0].date))) : '';
+  const journeyPct = hasHistory && Number.isFinite(currentNav) && Number.isFinite(journeyEntryNav) && journeyEntryNav > 0
     ? (currentNav - journeyEntryNav) / journeyEntryNav * 100
     : null;
   const journeyUp = journeyPct == null || journeyPct >= 0;
@@ -271,18 +277,20 @@ export default function TransactionHistoryDrawer({ fund, navHistory, onFetchNavH
   const hasHistPoints = (navHistory?.points?.length ?? 0) > 0;
   const canShowChart = hasMultipleTxns || hasHistPoints;
   let chart = null;
-  if (canShowChart) {
+  if (canShowChart && rows.length > 0 && stats) {
     const histPoints = navHistory?.points || [];
-    const x0 = Math.min(rows[0].date.getTime(), histPoints[0]?.t ?? Infinity);
+    const firstDateMs = rows[0]?.date?.getTime() || Date.now();
+    const x0 = Math.min(firstDateMs, histPoints[0]?.t ?? Infinity);
     const x1 = Date.now();
     const navPool = rows.map(t => t.nav)
       .concat(Number.isFinite(currentNav) ? [currentNav] : [])
-      .concat(stats.avgNav ? [stats.avgNav] : [])
-      .concat(histPoints.map(p => p.nav));
-    const yMin = Math.min(...navPool) * 0.94;
-    const yMax = Math.max(...navPool) * 1.06;
-    const px = (t) => padL + (t - x0) / Math.max(1, x1 - x0) * (W - padL - padR);
-    const py = (v) => padT + (1 - (v - yMin) / Math.max(0.0001, yMax - yMin)) * (H - padT - padB);
+      .concat(Number.isFinite(stats?.avgNav) ? [stats.avgNav] : [])
+      .concat(histPoints.map(p => p.nav).filter(Number.isFinite));
+    const validNavs = navPool.filter(Number.isFinite);
+    const yMin = (validNavs.length ? Math.min(...validNavs) : 10) * 0.94;
+    const yMax = (validNavs.length ? Math.max(...validNavs) : 100) * 1.06;
+    const px = (t) => padL + ((t - x0) / Math.max(1, x1 - x0)) * (W - padL - padR);
+    const py = (v) => padT + (1 - ((v - yMin) / Math.max(0.0001, yMax - yMin))) * (H - padT - padB);
 
     const yTicks = [0, 1, 2, 3, 4].map(i => yMin + (yMax - yMin) * i / 4);
     const startYear = new Date(x0).getFullYear(), endYear = new Date(x1).getFullYear();
@@ -311,12 +319,6 @@ export default function TransactionHistoryDrawer({ fund, navHistory, onFetchNavH
           <polyline points={histPoints.map(p => `${px(p.t)},${py(p.nav)}`).join(' ')} fill="none" stroke="var(--border2)" strokeWidth={1.5} />
         )}
         {(() => {
-          // Avg-NAV (dashed) and current-NAV (solid) reference lines get
-          // their own inline value labels at the right edge -- distinct
-          // dash pattern AND an explicit "Avg ₹x" / "Now ₹x" callout, since
-          // two same-style dashed lines close together were easy to
-          // mistake for one another. Nudge the labels apart when the two
-          // lines land within a few px of each other.
           const avgY = py(stats.avgNav);
           const curY = Number.isFinite(currentNav) ? py(currentNav) : null;
           let avgLabelY = avgY - 5, curLabelY = curY != null ? curY - 5 : null;
@@ -570,16 +572,16 @@ export default function TransactionHistoryDrawer({ fund, navHistory, onFetchNavH
                   <tbody>
                     {rows.slice().reverse().map((t, i) => {
                       const meta = txnMeta(t.type);
-                      const badge = TXN_BADGE_STYLE[meta.cls];
+                      const badge = TXN_BADGE_STYLE[meta?.cls] || { bg: 'var(--g-xlight)', fg: 'var(--g1)' };
                       return (
                         <tr key={i} style={{ background: i % 2 ? 'var(--s2)' : 'transparent' }}>
                           <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--s3)', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--muted)' }}>{fmtD(t.date)}</td>
                           <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--s3)' }}>
-                            <span style={{ fontSize: '.52rem', fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: badge.bg, color: badge.fg }}>{meta.label}</span>
+                            <span style={{ fontSize: '.52rem', fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: badge.bg, color: badge.fg }}>{meta?.label || t.type}</span>
                           </td>
-                          <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--s3)', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text2)' }}>₹{Math.abs(t.amount).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-                          <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--s3)', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text2)' }}>{Math.abs(t.units).toFixed(3)}</td>
-                          <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--s3)', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text2)' }}>₹{t.nav.toFixed(2)}</td>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--s3)', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text2)' }}>₹{Math.abs(t.amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--s3)', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text2)' }}>{Math.abs(t.units || 0).toFixed(3)}</td>
+                          <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--s3)', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'var(--text2)' }}>₹{Number.isFinite(t.nav) ? t.nav.toFixed(2) : '—'}</td>
                         </tr>
                       );
                     })}
