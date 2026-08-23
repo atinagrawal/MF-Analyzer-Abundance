@@ -509,21 +509,52 @@ function PortfolioInner() {
               if (h.amfi_code && h.fund_type !== 'SIF') allAmfi.add(h.amfi_code);
             });
 
-            // Fetch NAVs
+            // Fetch NAVs via batch endpoint
             const navMap = {};
+            const prevNavMap = {};
+            const ret1dMap = {};
             let maxDateStr = null;
-            await Promise.allSettled([...allAmfi].map(async amfi => {
+            const amfiList = [...allAmfi];
+            if (amfiList.length > 0) {
               try {
-                const r = await fetch(`/api/mf?code=${amfi}&latest=1`);
+                const r = await fetch(`/api/mf?codes=${encodeURIComponent(amfiList.join(','))}&latest=1`);
                 if (r.ok) {
                   const d = await r.json();
-                  if (d.status === 'SUCCESS' && d.data?.[0]) {
-                    navMap[amfi] = parseFloat(d.data[0].nav);
-                    if (!maxDateStr) maxDateStr = d.data[0].date;
+                  if (d.status === 'SUCCESS') {
+                    for (const [c, n] of Object.entries(d.navs || {})) {
+                      navMap[c] = parseFloat(n);
+                    }
+                    for (const [c, pn] of Object.entries(d.prev_navs || {})) {
+                      prevNavMap[c] = parseFloat(pn);
+                    }
+                    for (const [c, r1d] of Object.entries(d.ret_1d || {})) {
+                      ret1dMap[c] = parseFloat(r1d);
+                    }
+                    const dateEntries = Object.values(d.dates || {});
+                    if (dateEntries.length > 0 && dateEntries[0]) maxDateStr = dateEntries[0];
                   }
                 }
-              } catch {}
-            }));
+              } catch (_) {}
+            }
+
+            // Fallback for any unresolved codes
+            const missingCodes = amfiList.filter(c => !navMap[c]);
+            if (missingCodes.length > 0) {
+              await Promise.allSettled(missingCodes.map(async amfi => {
+                try {
+                  const r = await fetch(`/api/mf?code=${amfi}&latest=1`);
+                  if (r.ok) {
+                    const d = await r.json();
+                    if (d.status === 'SUCCESS' && d.data?.[0]) {
+                      navMap[amfi] = parseFloat(d.data[0].nav);
+                      if (d.prev_nav) prevNavMap[amfi] = parseFloat(d.prev_nav);
+                      if (d.ret_1d != null) ret1dMap[amfi] = parseFloat(d.ret_1d);
+                      if (!maxDateStr && d.data[0].date) maxDateStr = d.data[0].date;
+                    }
+                  }
+                } catch {}
+              }));
+            }
 
             // Parse fetched DD-MM-YYYY date for display
             if (maxDateStr) {
@@ -601,6 +632,8 @@ function PortfolioInner() {
               } catch { /* non-fatal -- these folios simply stay Shared for now */ }
             }
 
+            let casDayGain = 0;
+
             mergedFolios.forEach(folio => {
               const pan = (folio.PAN || '').toUpperCase().trim();
               const baseFolioNo = (folio.folio || '').split('/')[0].trim();
@@ -632,6 +665,7 @@ function PortfolioInner() {
                   name:     txnName || maskedPan,
                   current:  0,
                   invested: 0,
+                  dayGain:  0,
                   holdings: [],
                   folioNos: [],
                 };
@@ -648,7 +682,15 @@ function PortfolioInner() {
                 // against the AMFI SIF scheme master instead (see comment above).
                 const sifMatch = resolveSif(scheme);
                 const liveNav = sifMatch ? sifMatch.nav : (navMap[scheme.amfi] || parseFloat(scheme.valuation?.nav || 0));
+                const prevNav = sifMatch ? null : (prevNavMap[scheme.amfi] ?? null);
                 const value   = units * liveNav;
+                // 1-Day gain/loss for this holding
+                const change1d = prevNav && prevNav > 0 ? (liveNav - prevNav) : 0;
+                const change1dPct = prevNav && prevNav > 0
+                  ? (ret1dMap[scheme.amfi] != null ? ret1dMap[scheme.amfi] : +(((liveNav - prevNav) / prevNav) * 100).toFixed(2))
+                  : null;
+                const dayGain = prevNav && prevNav > 0 ? (units * change1d) : 0;
+
                 // FIFO cost basis (not the CAS's own declared "cost", which is
                 // just units × avg NAV and doesn't drive ELSS lock-in or match
                 // what CAS Tracker itself shows) — same calculateFifoCost used
@@ -658,13 +700,16 @@ function PortfolioInner() {
                 const isELSS = !sifMatch && (/ELSS|TAX.?SAVER/i.test(scheme.scheme) || (masterFacts.byIsin[scheme.isin || '']?.isLocked || false));
                 casCurrent  += value;
                 casInvested += invested;
+                casDayGain  += dayGain;
                 panMap[validPan].current  += value;
                 panMap[validPan].invested += invested;
+                panMap[validPan].dayGain  = (panMap[validPan].dayGain || 0) + dayGain;
                 const h = {
                   id: `${validPan}-${folio.folio || ''}-${scheme.amfi || scheme.scheme}`,
                   name:     scheme.scheme,
                   code:     sifMatch ? sifMatch.scheme_id : (scheme.amfi || null),
-                  value, invested, liveNav, units,
+                  value, invested, liveNav, prevNav, units,
+                  change1d, change1dPct, dayGain,
                   isLive:   sifMatch ? true : !!navMap[scheme.amfi],
                   category: sifMatch ? 'sif' : inferCategory(scheme.scheme),
                   isSIF:    !!sifMatch,
@@ -712,17 +757,28 @@ function PortfolioInner() {
             // Manual holdings: attribute to specific PAN if set, always include in 'all'
             let manualVal = 0;
             let manualInvested = 0;
+            let manualDayGain = 0;
             manual.forEach(h => {
               const pu  = parseFloat(h.purchase_nav);
               const u   = parseFloat(h.units);
               const ln  = h.fund_type === 'SIF' ? (localSifMap[h.amfi_code] ?? null) : (navMap[h.amfi_code] ?? null);
-              const val = (ln ?? pu) * u;
+              const pn  = h.fund_type === 'SIF' ? null : (prevNavMap[h.amfi_code] ?? null);
+              const liveNav = ln ?? pu;
+              const prevNav = pn ?? null;
+              const val = liveNav * u;
+              const change1d = prevNav && prevNav > 0 ? (liveNav - prevNav) : 0;
+              const change1dPct = prevNav && prevNav > 0
+                ? (ret1dMap[h.amfi_code] != null ? ret1dMap[h.amfi_code] : +(((liveNav - prevNav) / prevNav) * 100).toFixed(2))
+                : null;
+              const dayGain = prevNav && prevNav > 0 ? (u * change1d) : 0;
+
               manualVal += val;
               manualInvested += (pu * u);
+              manualDayGain += dayGain;
               const mh = {
                 id: `manual-${h.id}`,
                 name: h.fund_name, code: h.amfi_code || null, value: val, invested: pu * u,
-                liveNav: ln ?? pu, units: u, isLive: ln != null,
+                liveNav, prevNav, units: u, change1d, change1dPct, dayGain, isLive: ln != null,
                 category: h.fund_type === 'SIF' ? 'sif' : inferCategory(h.fund_name),
                 isSIF: h.fund_type === 'SIF', isManual: true,
                 sifName: h.fund_type === 'SIF' ? (sifNameByCode[h.amfi_code] || null) : null,
@@ -746,10 +802,11 @@ function PortfolioInner() {
               const hp = (h.pan || '').toUpperCase().trim();
               if (hp && PAN_RE.test(hp)) {
                 if (!panMap[hp]) {
-                  panMap[hp] = { name: hp, current: 0, invested: 0, holdings: [] };
+                  panMap[hp] = { name: hp, current: 0, invested: 0, dayGain: 0, holdings: [] };
                 }
                 panMap[hp].current  += val;
                 panMap[hp].invested += pu * u;
+                panMap[hp].dayGain  = (panMap[hp].dayGain || 0) + dayGain;
                 panMap[hp].holdings.push(mh);
               }
             });
@@ -768,6 +825,11 @@ function PortfolioInner() {
             });
             const overallXirrInfo = bestEffortXirr(holdings, casCurrent + manualVal);
 
+            const totalCurrent = casCurrent + manualVal;
+            const totalDayGain = casDayGain + manualDayGain;
+            const prevTotal = totalCurrent - totalDayGain;
+            const totalDayGainPct = prevTotal > 0 ? ((totalDayGain / prevTotal) * 100) : 0;
+
             setPanPortfolios(panMap);
             setActiveOverrides(
               Object.entries(externalResolutions)
@@ -779,7 +841,8 @@ function PortfolioInner() {
                 }))
             );
             setTotals({
-              current: casCurrent + manualVal, invested: casInvested + manualInvested, manual: manualVal,
+              current: totalCurrent, invested: casInvested + manualInvested, manual: manualVal,
+              dayGain: totalDayGain, dayGainPct: totalDayGainPct,
               xirr: overallXirrInfo.xirr, xirrPartial: overallXirrInfo.partial,
               xirrIncluded: overallXirrInfo.included, xirrTotal: overallXirrInfo.total,
             });
@@ -792,39 +855,96 @@ function PortfolioInner() {
           // No CAS — check manual
           let manualVal = 0;
           let manualInvested = 0;
+          let manualDayGain = 0;
           const mhList = [];
           const allAmfi = new Set();
           manual.forEach(h => {
             if (h.amfi_code && h.fund_type !== 'SIF') allAmfi.add(h.amfi_code);
           });
           const navMap = {};
-          await Promise.allSettled([...allAmfi].map(async amfi => {
+          const prevNavMap = {};
+          const ret1dMap = {};
+          let maxDateStr = null;
+          const amfiList = [...allAmfi];
+          if (amfiList.length > 0) {
             try {
-              const r = await fetch(`/api/mf?code=${amfi}&latest=1`);
+              const r = await fetch(`/api/mf?codes=${encodeURIComponent(amfiList.join(','))}&latest=1`);
               if (r.ok) {
                 const d = await r.json();
-                if (d.status === 'SUCCESS' && d.data?.[0]) {
-                  navMap[amfi] = parseFloat(d.data[0].nav);
+                if (d.status === 'SUCCESS') {
+                  for (const [c, n] of Object.entries(d.navs || {})) {
+                    navMap[c] = parseFloat(n);
+                  }
+                  for (const [c, pn] of Object.entries(d.prev_navs || {})) {
+                    prevNavMap[c] = parseFloat(pn);
+                  }
+                  for (const [c, r1d] of Object.entries(d.ret_1d || {})) {
+                    ret1dMap[c] = parseFloat(r1d);
+                  }
+                  const dateEntries = Object.values(d.dates || {});
+                  if (dateEntries.length > 0 && dateEntries[0]) maxDateStr = dateEntries[0];
                 }
               }
-            } catch {}
-          }));
+            } catch (_) {}
+          }
+
+          // Fallback for unresolved
+          const missingCodes = amfiList.filter(c => !navMap[c]);
+          if (missingCodes.length > 0) {
+            await Promise.allSettled(missingCodes.map(async amfi => {
+              try {
+                const r = await fetch(`/api/mf?code=${amfi}&latest=1`);
+                if (r.ok) {
+                  const d = await r.json();
+                  if (d.status === 'SUCCESS' && d.data?.[0]) {
+                    navMap[amfi] = parseFloat(d.data[0].nav);
+                    if (d.prev_nav) prevNavMap[amfi] = parseFloat(d.prev_nav);
+                    if (d.ret_1d != null) ret1dMap[amfi] = parseFloat(d.ret_1d);
+                    if (!maxDateStr && d.data[0].date) maxDateStr = d.data[0].date;
+                  }
+                }
+              } catch {}
+            }));
+          }
+
+          if (maxDateStr) {
+            const [dd, mm, yy] = maxDateStr.split('-');
+            if (dd && mm && yy) {
+              const dObj = new Date(`${yy}-${mm}-${dd}`);
+              setNavDate(dObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
+            }
+          }
 
           manual.forEach(h => {
             const pu = parseFloat(h.purchase_nav);
             const u  = parseFloat(h.units);
             const ln = h.fund_type === 'SIF' ? (localSifMap[h.amfi_code] ?? null) : (navMap[h.amfi_code] ?? null);
-            const val = (ln ?? pu) * u;
+            const pn = h.fund_type === 'SIF' ? null : (prevNavMap[h.amfi_code] ?? null);
+            const liveNav = ln ?? pu;
+            const prevNav = pn ?? null;
+            const val = liveNav * u;
+            const change1d = prevNav && prevNav > 0 ? (liveNav - prevNav) : 0;
+            const change1dPct = prevNav && prevNav > 0
+              ? (ret1dMap[h.amfi_code] != null ? ret1dMap[h.amfi_code] : +(((liveNav - prevNav) / prevNav) * 100).toFixed(2))
+              : null;
+            const dayGain = prevNav && prevNav > 0 ? (u * change1d) : 0;
+
             manualVal += val;
             manualInvested += (pu * u);
+            manualDayGain += dayGain;
+
             mhList.push({
               id:       `manual-${h.id}`,
               name:     h.fund_name,
               code:     h.amfi_code || null,
               value:    val,
               invested: pu * u,
-              liveNav:  ln ?? pu,
+              liveNav,
+              prevNav,
               units:    u,
+              change1d,
+              change1dPct,
+              dayGain,
               isLive:   ln != null,
               category: h.fund_type === 'SIF' ? 'sif' : inferCategory(h.fund_name),
               isSIF:    h.fund_type === 'SIF',
@@ -842,8 +962,12 @@ function PortfolioInner() {
             });
           });
           const manualOnlyXirrInfo = bestEffortXirr(mhList, manualVal);
+          const prevTotal = manualVal - manualDayGain;
+          const manualDayGainPct = prevTotal > 0 ? ((manualDayGain / prevTotal) * 100) : 0;
+
           setTotals({
             current: manualVal, invested: manualInvested, manual: manualVal,
+            dayGain: manualDayGain, dayGainPct: manualDayGainPct,
             xirr: manualOnlyXirrInfo.xirr, xirrPartial: manualOnlyXirrInfo.partial,
             xirrIncluded: manualOnlyXirrInfo.included, xirrTotal: manualOnlyXirrInfo.total,
           });
@@ -1100,9 +1224,10 @@ function PortfolioInner() {
         <div className="container">
           <Navbar activePage="portfolio" />
 
+          {/* Admin / Distributor view banner (read-only notification) */}
           {isViewingOther && (
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
               margin: '0 0 18px', padding: '10px 16px', borderRadius: 10,
               background: 'rgba(255,255,255,.14)', border: '1px solid rgba(255,255,255,.25)',
               fontSize: '.78rem', fontWeight: 700, color: '#fff',
@@ -1178,37 +1303,74 @@ function PortfolioInner() {
       {/* ── Main content ── */}
       <div className="container">
 
-        {/* ── Stat row ── */}
+        {/* ── Stat row (4 cards: Current Value, Invested, Total Gain, 1-Day Return) ── */}
         <div className="pf-stat-row">
-          {[
-            { label: 'Current Value', val: displayTotals.current, color: 'var(--g1)', big: true },
-            { label: 'Total Invested', val: displayTotals.invested, color: 'var(--text2)' },
-            { label: isProfit ? 'Unrealised Gain' : 'Unrealised Loss', val: gain, color: isProfit ? 'var(--g2)' : 'var(--neg)', signed: true },
-          ].map(({ label, val, color, big, signed }) => (
-            <div key={label} className="pf-stat-card">
-              <div className="pf-stat-label">{label}</div>
-              <div className="pf-stat-val" style={{ color, fontSize: big ? '1.35rem' : '1.1rem' }}>
-                {signed && val > 0 ? '+' : ''}₹{fmtINR(val)}
-              </div>
-              {signed && totals.invested > 0 && (
-                <div className="pf-stat-sub" style={{ color: isProfit ? 'var(--g3)' : 'var(--neg-light)' }}>
-                  {isProfit ? '+' : ''}{gainPct}% all-time
-                </div>
-              )}
-              {signed && Number.isFinite(displayTotals.xirr) && (
-                <div className="pf-stat-sub" style={{ color: displayTotals.xirr >= 0 ? 'var(--g3)' : 'var(--neg-light)' }}
-                  title={displayTotals.xirrPartial ? `Based on ${displayTotals.xirrIncluded} of ${displayTotals.xirrTotal} holdings with a complete transaction history — the rest couldn't be verified against your CAS.` : undefined}>
-                  {displayTotals.xirr >= 0 ? '+' : ''}{(displayTotals.xirr * 100).toFixed(1)}% Portfolio XIRR
-                  {displayTotals.xirrPartial && <span style={{ opacity: .7 }}> *</span>}
-                </div>
-              )}
-              {signed && displayTotals.xirrPartial && Number.isFinite(displayTotals.xirr) && (
-                <div className="pf-stat-sub" style={{ color: 'var(--muted)', fontSize: '.6rem', marginTop: 1 }}>
-                  * based on {displayTotals.xirrIncluded}/{displayTotals.xirrTotal} holdings
-                </div>
-              )}
+          <div className="pf-stat-card">
+            <div className="pf-stat-label">Current Value</div>
+            <div className="pf-stat-val" style={{ color: 'var(--g1)', fontSize: '1.35rem' }}>
+              ₹{fmtINR(displayTotals.current)}
             </div>
-          ))}
+            <div className="pf-stat-sub" style={{ color: 'var(--muted)' }}>
+              Live NAVs · {navDate || fmtDate(portfolios[0]?.uploaded_at) || 'Latest'}
+            </div>
+          </div>
+
+          <div className="pf-stat-card">
+            <div className="pf-stat-label">Total Invested</div>
+            <div className="pf-stat-val" style={{ color: 'var(--text2)', fontSize: '1.25rem' }}>
+              ₹{fmtINR(displayTotals.invested)}
+            </div>
+            <div className="pf-stat-sub" style={{ color: 'var(--muted)' }}>
+              FIFO Cost Basis
+            </div>
+          </div>
+
+          <div className="pf-stat-card">
+            <div className="pf-stat-label">{isProfit ? 'Total Gain' : 'Total Loss'}</div>
+            <div className="pf-stat-val" style={{ color: isProfit ? 'var(--g2)' : 'var(--neg)', fontSize: '1.25rem' }}>
+              {gain > 0 ? '+' : gain < 0 ? '−' : ''}₹{fmtINR(Math.abs(gain))}
+            </div>
+            {displayTotals.invested > 0 && (
+              <div className="pf-stat-sub" style={{ color: isProfit ? 'var(--g3)' : 'var(--neg-light)' }}>
+                {isProfit ? '+' : ''}{gainPct}% all-time
+              </div>
+            )}
+            {Number.isFinite(displayTotals.xirr) && (
+              <div className="pf-stat-sub" style={{ color: displayTotals.xirr >= 0 ? 'var(--g3)' : 'var(--neg-light)' }}
+                title={displayTotals.xirrPartial ? `Based on ${displayTotals.xirrIncluded} of ${displayTotals.xirrTotal} holdings with a complete transaction history — the rest couldn't be verified against your CAS.` : undefined}>
+                {displayTotals.xirr >= 0 ? '+' : ''}{(displayTotals.xirr * 100).toFixed(1)}% Portfolio XIRR
+                {displayTotals.xirrPartial && <span style={{ opacity: .7 }}> *</span>}
+              </div>
+            )}
+            {displayTotals.xirrPartial && Number.isFinite(displayTotals.xirr) && (
+              <div className="pf-stat-sub" style={{ color: 'var(--muted)', fontSize: '.6rem', marginTop: 1 }}>
+                * based on {displayTotals.xirrIncluded}/{displayTotals.xirrTotal} holdings
+              </div>
+            )}
+          </div>
+
+          <div className="pf-stat-card">
+            <div className="pf-stat-label">1-Day Return</div>
+            <div
+              className="pf-stat-val"
+              style={{
+                color: (displayTotals.dayGain || 0) > 0 ? 'var(--g2)' : (displayTotals.dayGain || 0) < 0 ? 'var(--neg)' : 'var(--text2)',
+                fontSize: '1.25rem',
+              }}
+            >
+              {(displayTotals.dayGain || 0) > 0 ? '+' : (displayTotals.dayGain || 0) < 0 ? '−' : ''}₹{fmtINR(Math.abs(displayTotals.dayGain || 0))}
+            </div>
+            <div
+              className="pf-stat-sub"
+              style={{
+                color: (displayTotals.dayGainPct || 0) > 0 ? 'var(--g3)' : (displayTotals.dayGainPct || 0) < 0 ? 'var(--neg-light)' : 'var(--muted)',
+                fontWeight: 700,
+              }}
+            >
+              {(displayTotals.dayGainPct || 0) > 0 ? '▲ +' : (displayTotals.dayGainPct || 0) < 0 ? '▼ −' : ''}
+              {Math.abs(displayTotals.dayGainPct || 0).toFixed(2)}% today
+            </div>
+          </div>
         </div>
 
         {/* ── Tab bar ── */}
@@ -1275,8 +1437,24 @@ function PortfolioInner() {
                         <span className="pf-holding-pct">{pct}%</span>
                       </div>
                       <div className="pf-holding-val">₹{fmtINR(h.value)}</div>
-                      <div className="pf-holding-gain" data-pos={gPos ? 'true' : 'false'}>
-                        {gPos ? '+' : ''}{gPct}%
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                        <div className="pf-holding-gain" data-pos={gPos ? 'true' : 'false'}>
+                          {gPos ? '+' : ''}{gPct}%
+                        </div>
+                        {h.change1dPct != null && (
+                          <div
+                            style={{
+                              fontSize: '.58rem',
+                              fontWeight: 700,
+                              color: h.change1dPct >= 0 ? 'var(--g3)' : 'var(--neg-light)',
+                              fontFamily: "'JetBrains Mono', monospace",
+                              marginTop: 1,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {h.change1dPct >= 0 ? '▲ +' : '▼ '}{h.change1dPct.toFixed(2)}%
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -1295,32 +1473,24 @@ function PortfolioInner() {
                 </div>
                 <span className="pf-action-arrow">→</span>
               </button>
-              <a href="/cas-tracker#upload-section" className="pf-action-card">
-                <div className="pf-action-icon">📤</div>
+              <button onClick={() => setActiveTab('uploads')} className="pf-action-card"
+                style={{ font: 'inherit', textAlign: 'left', width: '100%' }}>
+                <div className="pf-action-icon">📄</div>
                 <div>
-                  <div className="pf-action-title">Upload New Statement</div>
-                  <div className="pf-action-sub">CAMS or KFintech CAS PDF</div>
+                  <div className="pf-action-title">Manage Statements</div>
+                  <div className="pf-action-sub">{portfolios.length} statement{portfolios.length !== 1 ? 's' : ''} uploaded · Upload new CAS</div>
                 </div>
                 <span className="pf-action-arrow">→</span>
-              </a>
-              <a href="https://www.getabundance.in/contact-us" target="_blank" rel="noopener noreferrer" className="pf-action-card">
-                <div className="pf-action-icon">📞</div>
-                <div>
-                  <div className="pf-action-title">Talk to Your Advisor</div>
-                  <div className="pf-action-sub">Abundance Financial · ARN-251838</div>
-                </div>
-                <span className="pf-action-arrow">→</span>
-              </a>
+              </button>
             </div>
 
-            {/* Distributor card */}
+            {/* Abundance advisory banner */}
             <div className="pf-advisor-card">
-              <img src="/logo-192.png" alt="Abundance" className="pf-advisor-logo" />
-              <div className="pf-advisor-info">
-                <div className="pf-advisor-name">Abundance Financial Services</div>
-                <div className="pf-advisor-detail">AMFI Registered Distributor · ARN-251838 · Haldwani, Uttarakhand</div>
-                <div className="pf-advisor-detail" style={{ marginTop: 2 }}>
-                  Your portfolio is managed securely through this portal.
+              <div className="pf-advisor-icon">✦</div>
+              <div className="pf-advisor-body">
+                <div className="pf-advisor-title">Want a professional review of your portfolio?</div>
+                <div className="pf-advisor-sub">
+                  Abundance Advisors analyzes your scheme overlap, risk-adjusted returns, and tax efficiency to recommend an optimized portfolio.
                 </div>
               </div>
               <a href="https://www.getabundance.in" target="_blank" rel="noopener noreferrer" className="pf-advisor-btn">
@@ -1381,7 +1551,8 @@ function PortfolioInner() {
                       {[
                         ['Current Value', '₹' + fmtINR(h.value), 'var(--text)', '.82rem'],
                         ['Invested',      '₹' + fmtINR(h.invested), 'var(--text2)', '.72rem'],
-                        ['Live NAV',      '₹' + h.liveNav.toFixed(4), 'var(--text2)', '.7rem'],
+                        ['Live NAV',      '₹' + h.liveNav.toFixed(4) + (h.change1dPct != null ? ` (${h.change1dPct >= 0 ? '▲ +' : '▼ '}${h.change1dPct.toFixed(2)}%)` : ''), 'var(--text2)', '.7rem'],
+                        ['1D Gain',       (h.dayGain > 0 ? '+₹' : h.dayGain < 0 ? '−₹' : '₹') + fmtINR(Math.abs(h.dayGain || 0)), (h.dayGain || 0) >= 0 ? 'var(--g3)' : 'var(--neg-light)', '.72rem'],
                         ['Units',         h.units.toFixed(4), 'var(--muted)', '.7rem'],
                       ].map(([lbl, val, col, fs]) => (
                         <div key={lbl} className="pf-hc-metric">

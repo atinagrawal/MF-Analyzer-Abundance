@@ -343,37 +343,97 @@ export default async function handler(req, res) {
     }
 
     const navs = {};
+    const prev_navs = {};
+    const dates = {};
+    const prev_dates = {};
+    const ret_1d = {};
+    const diff_1d = {};
     const names = {};
 
-    // 1. Resolve known screener funds from local DB first (fast single SQL query)
+    // 1. Resolve known screener funds & history from local DB first (fast SQL query)
     const numericCodes = uniqueCodes.map(Number).filter((n) => !isNaN(n));
+    const textCodes = uniqueCodes.map(String);
     if (numericCodes.length > 0) {
       try {
-        const dbRes = await pool.query(
-          'SELECT code, name, nav::text FROM mf_screener WHERE code = ANY($1::int[])',
+        const histRes = await pool.query(
+          `WITH ranked AS (
+             SELECT code, nav::numeric, to_char(nav_date, 'DD-MM-YYYY') as dt,
+                    ROW_NUMBER() OVER (PARTITION BY code ORDER BY nav_date DESC) as rn
+             FROM mf_nav_history
+             WHERE code = ANY($1::text[])
+           )
+           SELECT code,
+                  MAX(CASE WHEN rn = 1 THEN nav END) as nav,
+                  MAX(CASE WHEN rn = 1 THEN dt END) as date,
+                  MAX(CASE WHEN rn = 2 THEN nav END) as prev_nav,
+                  MAX(CASE WHEN rn = 2 THEN dt END) as prev_date
+           FROM ranked
+           WHERE rn <= 2
+           GROUP BY code`,
+          [textCodes]
+        );
+        for (const row of histRes.rows) {
+          const c = String(row.code);
+          const cur = parseFloat(row.nav);
+          const prev = row.prev_nav ? parseFloat(row.prev_nav) : null;
+          if (!isNaN(cur)) {
+            navs[c] = String(cur);
+            dates[c] = row.date;
+            if (prev && !isNaN(prev) && prev > 0) {
+              prev_navs[c] = String(prev);
+              prev_dates[c] = row.prev_date;
+              const diff = cur - prev;
+              const pct = (diff / prev) * 100;
+              diff_1d[c] = +diff.toFixed(4);
+              ret_1d[c] = +pct.toFixed(2);
+            }
+          }
+        }
+
+        const scrRes = await pool.query(
+          "SELECT code, name, nav::text, to_char(nav_date, 'DD-MM-YYYY') as date FROM mf_screener WHERE code = ANY($1::int[])",
           [numericCodes]
         );
-        for (const row of dbRes.rows) {
+        for (const row of scrRes.rows) {
           const c = String(row.code);
-          if (row.nav) navs[c] = row.nav;
           if (row.name) names[c] = row.name;
+          if (!navs[c] && row.nav) {
+            navs[c] = row.nav;
+            dates[c] = row.date;
+          }
         }
       } catch (_) { /* fall through to upstream */ }
     }
 
-    const unresolvedCodes = uniqueCodes.filter((c) => !navs[c]);
+    const unresolvedCodes = uniqueCodes.filter((c) => !navs[c] || !prev_navs[c]);
     if (unresolvedCodes.length > 0) {
       await Promise.allSettled(unresolvedCodes.map(async (c) => {
         try {
           const r = await fetch(
-            `https://api.mfapi.in/mf/${c}/latest`,
-            { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(4000) }
+            `https://api.mfapi.in/mf/${c}`,
+            { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(5000) }
           );
           if (r.ok) {
             const data = await r.json();
             if (data?.data?.length) {
-              navs[c] = data.data[0].nav;
-              if (data.meta?.scheme_name) names[c] = data.meta.scheme_name;
+              const cur = parseFloat(data.data[0].nav);
+              if (!isNaN(cur)) {
+                if (!navs[c]) navs[c] = data.data[0].nav;
+                if (!dates[c]) dates[c] = data.data[0].date;
+                if (data.meta?.scheme_name && !names[c]) names[c] = data.meta.scheme_name;
+
+                if (data.data.length > 1 && !prev_navs[c]) {
+                  const prev = parseFloat(data.data[1].nav);
+                  if (!isNaN(prev) && prev > 0) {
+                    prev_navs[c] = data.data[1].nav;
+                    prev_dates[c] = data.data[1].date;
+                    const diff = cur - prev;
+                    const pct = (diff / prev) * 100;
+                    diff_1d[c] = +diff.toFixed(4);
+                    ret_1d[c] = +pct.toFixed(2);
+                  }
+                }
+              }
               return;
             }
           }
@@ -383,14 +443,19 @@ export default async function handler(req, res) {
           const amfi = await getAmfiMap();
           const fund = amfi.get(String(c));
           if (fund) {
-            navs[c] = fund.nav;
-            if (fund.name) names[c] = fund.name;
+            if (!navs[c]) navs[c] = fund.nav;
+            if (!dates[c]) dates[c] = amfiDateToMfapi(fund.date);
+            if (fund.name && !names[c]) names[c] = fund.name;
           }
         } catch (_) { /* leave unresolved -- caller falls back to CAS-reported NAV */ }
       }));
     }
 
-    return sendOk(res, { status: 'SUCCESS', navs, names }, 's-maxage=3600, stale-while-revalidate=7200');
+    return sendOk(
+      res,
+      { status: 'SUCCESS', navs, prev_navs, dates, prev_dates, ret_1d, diff_1d, names },
+      's-maxage=3600, stale-while-revalidate=7200'
+    );
   }
 
   // ── SEARCH ──
@@ -460,12 +525,43 @@ export default async function handler(req, res) {
   if (code && latest) {
     // 1. Check self-hosted database first
     try {
-      const dbRes = await pool.query(
-        "SELECT name, amc, category, structure, isin, nav::text, to_char(nav_date, 'DD-MM-YYYY') as date FROM mf_screener WHERE code = $1",
-        [Number(code)]
-      );
-      if (dbRes.rows.length > 0 && dbRes.rows[0].nav) {
-        const fund = dbRes.rows[0];
+      const [metaRes, histRes] = await Promise.all([
+        pool.query(
+          "SELECT name, amc, category, structure, isin, nav::text, to_char(nav_date, 'DD-MM-YYYY') as date FROM mf_screener WHERE code = $1",
+          [Number(code)]
+        ),
+        pool.query(
+          "SELECT to_char(nav_date, 'DD-MM-YYYY') as date, nav::numeric FROM mf_nav_history WHERE code = $1 ORDER BY nav_date DESC LIMIT 2",
+          [String(code)]
+        ),
+      ]);
+
+      const fund = metaRes.rows[0];
+      if (histRes.rows.length > 0) {
+        const cur = parseFloat(histRes.rows[0].nav);
+        const prev = histRes.rows.length > 1 ? parseFloat(histRes.rows[1].nav) : null;
+        const diff = prev ? +(cur - prev).toFixed(4) : null;
+        const ret1d = prev && prev > 0 ? +((diff / prev) * 100).toFixed(2) : null;
+
+        const data = {
+          meta: {
+            scheme_code: Number(code),
+            scheme_name: fund?.name || 'Mutual Fund Scheme',
+            fund_house: fund?.amc || '',
+            scheme_category: fund?.category || '',
+            scheme_type: fund?.structure || 'Open Ended Schemes',
+            isin_growth: fund?.isin || null,
+          },
+          data: histRes.rows.map((r) => ({ date: r.date, nav: String(r.nav) })),
+          nav: cur,
+          prev_nav: prev,
+          diff_1d: diff,
+          ret_1d: ret1d,
+          status: 'SUCCESS',
+        };
+        return sendOk(res, data, 's-maxage=3600, stale-while-revalidate=7200');
+      } else if (fund && fund.nav) {
+        const cur = parseFloat(fund.nav);
         const data = {
           meta: {
             scheme_code: Number(code),
@@ -476,21 +572,41 @@ export default async function handler(req, res) {
             isin_growth: fund.isin || null,
           },
           data: [{ date: fund.date, nav: fund.nav }],
+          nav: cur,
+          prev_nav: null,
+          diff_1d: null,
+          ret_1d: null,
           status: 'SUCCESS',
         };
         return sendOk(res, data, 's-maxage=3600, stale-while-revalidate=7200');
       }
     } catch (_) { /* fall through */ }
 
-    // 2. Upstream mfapi.in
+    // 2. Upstream mfapi.in (top 2 NAV points)
     try {
       const r = await fetch(
-        `https://api.mfapi.in/mf/${code}/latest`,
-        { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(4000) }
+        `https://api.mfapi.in/mf/${code}`,
+        { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(5000) }
       );
       if (r.ok) {
-        const data = await r.json();
-        return sendOk(res, data, 's-maxage=3600, stale-while-revalidate=7200');
+        const raw = await r.json();
+        if (raw?.data?.length) {
+          const cur = parseFloat(raw.data[0].nav);
+          const prev = raw.data.length > 1 ? parseFloat(raw.data[1].nav) : null;
+          const diff = prev ? +(cur - prev).toFixed(4) : null;
+          const ret1d = prev && prev > 0 ? +((diff / prev) * 100).toFixed(2) : null;
+
+          const data = {
+            meta: raw.meta || { scheme_code: Number(code) },
+            data: raw.data.slice(0, 2),
+            nav: cur,
+            prev_nav: prev,
+            diff_1d: diff,
+            ret_1d: ret1d,
+            status: 'SUCCESS',
+          };
+          return sendOk(res, data, 's-maxage=3600, stale-while-revalidate=7200');
+        }
       }
     } catch (_) { /* fall through */ }
 
@@ -500,6 +616,10 @@ export default async function handler(req, res) {
       const fund = amfi.get(String(code));
       if (!fund) return sendError(res, 404, `Scheme code ${code} not found`, 'NOT_FOUND');
       const data = buildLatestFromAmfi(code, fund);
+      data.nav = parseFloat(fund.nav);
+      data.prev_nav = null;
+      data.diff_1d = null;
+      data.ret_1d = null;
       return sendOk(res, data, 's-maxage=3600, stale-while-revalidate=7200');
     } catch (e) {
       return sendError(res, 502, 'Latest NAV unavailable — both mfapi.in and AMFI fallback failed: ' + e.message, 'UPSTREAM_DOWN');

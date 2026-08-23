@@ -5689,11 +5689,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 /* ── Stat row ── */
 .pf-stat-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   margin: -28px 0 28px;
   position: relative;
   /* z-index removed — was creating stacking context above nav panel */
+}
+@media (max-width: 1024px) {
+  .pf-stat-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 .pf-stat-card {
   background: var(--surface);
