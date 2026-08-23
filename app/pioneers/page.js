@@ -234,7 +234,7 @@ export default async function PioneersPage() {
         name: 'If I had invested ₹10,000 in India’s top mutual funds in 1995, what would it be worth in 2026?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: '₹10,000 invested at NFO in Nippon India Growth Fund grew to ₹45.75 Lakhs (21.94% CAGR); in HDFC Flexi Cap Fund grew to ₹20.82 Lakhs (18.35% CAGR); in ABSL Equity Hybrid \'95 Fund grew to ₹15.68 Lakhs (17.39% CAGR); compared to ~₹2.1 Lakhs in Gold and ~₹1.0 Lakh in Fixed Deposits.',
+          text: '₹10,000 invested at NFO in Nippon India Growth Mid Cap Fund (formerly Reliance Growth Fund) grew to ₹45.75 Lakhs (21.94% CAGR); in HDFC Flexi Cap Fund grew to ₹20.82 Lakhs (18.35% CAGR); in ABSL Equity Hybrid \'95 Fund grew to ₹15.68 Lakhs (17.39% CAGR); compared to ~₹2.1 Lakhs in Gold and ~₹1.0 Lakh in Fixed Deposits.',
         },
       },
       {

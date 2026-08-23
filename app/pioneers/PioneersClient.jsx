@@ -176,13 +176,25 @@ const FAQS = [
   },
   {
     q: 'What happened to US-64 and the original Unit Trust of India (UTI)?',
-    a: 'Unit Scheme 1964 (US-64) was India’s first scheme in 1964 under a statutory government monopoly. Following the 2001–2002 UTI restructuring, US-64 was bifurcated into SUUTI (Special Undertaking of UTI) and UTI Mutual Fund, leaving UTI Mastershare (1986) as the oldest continuous open-ended scheme.',
+    a: (
+      <>
+        Unit Scheme 1964 (US-64) was India’s first scheme in 1964 under a statutory government monopoly. Following the 2001–2002 UTI restructuring, US-64 was bifurcated into SUUTI (Special Undertaking of UTI) and UTI Mutual Fund, leaving{' '}
+        <Link href="/fund/100651" className="pnr-link">
+          UTI Mastershare Unit Scheme (1986)
+        </Link>{' '}
+        as the oldest continuous open-ended scheme.
+      </>
+    ),
   },
   {
     q: 'If I had invested ₹10,000 in India’s top mutual funds in 1995, what would it be worth in 2026?',
     a: (
       <>
-        ₹10,000 invested at NFO in Nippon India Growth Fund grew to ₹45.75 Lakhs (21.94% CAGR); in{' '}
+        ₹10,000 invested at NFO in{' '}
+        <Link href="/fund/100377" className="pnr-link">
+          Nippon India Growth Mid Cap Fund
+        </Link>{' '}
+        grew to ₹45.75 Lakhs (21.94% CAGR); in{' '}
         <Link href="/fund/101762" className="pnr-link">
           HDFC Flexi Cap Fund
         </Link>{' '}
