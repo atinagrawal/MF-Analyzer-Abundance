@@ -261,8 +261,9 @@ function PortfolioList({ selectedUser, portfolios, portsLoading, deletingId, set
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {portfolios.map(p => (
             <div key={p.id} style={{
-              padding: '10px 12px', borderRadius: 10,
+              padding: '11px 13px', borderRadius: 10,
               border: '1.5px solid var(--border)', background: 'var(--s2)',
+              display: 'flex', flexDirection: 'column', gap: 8,
             }}>
               {deletingId === p.id ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -283,52 +284,85 @@ function PortfolioList({ selectedUser, portfolios, portsLoading, deletingId, set
                   </div>
                 </div>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
+                    <div
+                      title={p.file_name}
+                      style={{
+                        fontSize: '.74rem', fontWeight: 800, color: 'var(--text)',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        marginBottom: 3,
+                      }}
+                    >
                       📄 {p.file_name}
                     </div>
                     <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
                       {p.pan_count} PAN{p.pan_count !== 1 ? 's' : ''} · {fmtDate(p.uploaded_at)}
                     </div>
                   </div>
-                  <div style={{ display:'flex', flexDirection:'column', gap:4, flexShrink:0, alignItems:'flex-end' }}>
-                    <div style={{ display:'flex', gap:5 }}>
-                      <button onClick={e=>{e.stopPropagation();notifyClient(p);}} disabled={notifying===p.id}
-                        style={{ fontSize:'.6rem', fontWeight:700, padding:'4px 9px', borderRadius:6,
-                          border:'1.5px solid var(--border)', background:notifying===p.id?'var(--s3)':'var(--s2)',
-                          color:'var(--g2)', cursor:notifying===p.id?'not-allowed':'pointer',
-                          whiteSpace:'nowrap', fontFamily:'Raleway, sans-serif' }}>
-                        {notifying===p.id?'…':'✉'}
+
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    gap: 6, paddingTop: 6, borderTop: '1px solid var(--border)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                      <button
+                        onClick={e => { e.stopPropagation(); notifyClient(p); }}
+                        disabled={notifying === p.id}
+                        title="Send email notification to client"
+                        style={{
+                          fontSize: '.62rem', fontWeight: 700, padding: '4px 9px', borderRadius: 6,
+                          border: '1.5px solid var(--border)', background: notifying === p.id ? 'var(--s3)' : 'var(--surface)',
+                          color: 'var(--g2)', cursor: notifying === p.id ? 'not-allowed' : 'pointer',
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          whiteSpace: 'nowrap', fontFamily: 'Raleway, sans-serif',
+                        }}
+                      >
+                        {notifying === p.id ? 'Sending…' : '✉ Notify'}
                       </button>
-                      <button onClick={e=>{e.stopPropagation();setDeletingId(p.id);}}
+                      {notifyMsg.id === p.id && (
+                        <span style={{
+                          fontSize: '.58rem', fontWeight: 800,
+                          color: notifyMsg.type === 'ok' ? 'var(--g1)' : 'var(--neg)',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {notifyMsg.text}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
+                      <button
+                        onClick={e => { e.stopPropagation(); setDeletingId(p.id); }}
                         title="Delete this CAS upload"
-                        style={{ fontSize:'.6rem', fontWeight:700, padding:'4px 9px', borderRadius:6,
-                          border:'1.5px solid var(--border)', background:'var(--s2)',
-                          color:'var(--muted)', cursor:'pointer',
-                          whiteSpace:'nowrap', fontFamily:'Raleway, sans-serif' }}
-                        onMouseEnter={e=>e.currentTarget.style.color='var(--neg)'}
-                        onMouseLeave={e=>e.currentTarget.style.color='var(--muted)'}>
+                        style={{
+                          fontSize: '.62rem', fontWeight: 700, padding: '4px 8px', borderRadius: 6,
+                          border: '1.5px solid var(--border)', background: 'var(--surface)',
+                          color: 'var(--muted)', cursor: 'pointer',
+                          whiteSpace: 'nowrap', fontFamily: 'Raleway, sans-serif',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--neg)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
+                      >
                         🗑
                       </button>
-                      <a href={`/cas-tracker?load=${encodeURIComponent(p.blob_key)}`}
+                      <a
+                        href={`/cas-tracker?load=${encodeURIComponent(p.blob_key)}`}
                         target="_blank" rel="noopener noreferrer"
-                        onClick={e=>e.stopPropagation()}
-                        style={{ fontSize:'.65rem', fontWeight:700, padding:'5px 11px', borderRadius:6,
-                          background:'var(--g1)', color:'#fff', textDecoration:'none', whiteSpace:'nowrap' }}
-                        onMouseEnter={e=>e.currentTarget.style.background='var(--g2)'}
-                        onMouseLeave={e=>e.currentTarget.style.background='var(--g1)'}>
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                          fontSize: '.65rem', fontWeight: 700, padding: '4px 10px', borderRadius: 6,
+                          background: 'var(--g1)', color: '#fff', textDecoration: 'none',
+                          whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--g2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'var(--g1)'}
+                      >
                         View →
                       </a>
                     </div>
-                    {notifyMsg.id===p.id&&(
-                      <div style={{ fontSize:'.58rem', fontWeight:700,
-                        color:notifyMsg.type==='ok'?'var(--g1)':'var(--neg)' }}>
-                        {notifyMsg.text}
-                      </div>
-                    )}
                   </div>
-                </div>
+                </>
               )}
             </div>
           ))}

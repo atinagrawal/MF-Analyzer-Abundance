@@ -103,9 +103,7 @@ export async function POST(req) {
     const { userId, email, name, fileName, blobKey, panCount, uploadedAt } = await req.json();
 
     if (!email) return Response.json({ error: 'email is required' }, { status: 400 });
-    if (!blobKey) return Response.json({ error: 'blobKey is required' }, { status: 400 });
-
-    const viewUrl = `https://mfcalc.getabundance.in/cas-tracker?load=${encodeURIComponent(blobKey)}`;
+    const viewUrl = 'https://mfcalc.getabundance.in/portfolio';
     const { html, text } = buildNotifyEmail({ name, fileName, panCount, uploadedAt, viewUrl });
 
     const res = await fetch('https://api.resend.com/emails', {
