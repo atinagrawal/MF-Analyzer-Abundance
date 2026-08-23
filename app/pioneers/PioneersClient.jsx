@@ -825,42 +825,44 @@ export default function PioneersClient({ initialFunds = [] }) {
             </div>
           </div>
 
-          {/* Filter Bar */}
-          <div className="pnr-filter-bar">
-            {/* Asset Class Filter Tabs */}
+          {/* Asset Class Filter Switcher */}
+          <div className="pnr-asset-tabs-wrap">
             <div className="pnr-asset-tabs">
               <button
                 className={`pnr-asset-btn ${assetFilter === 'all' ? 'active' : ''}`}
                 onClick={() => setAssetFilter('all')}
               >
-                All Asset Classes <span className="pnr-asset-count">{assetCounts.all}</span>
+                All Assets <span className="pnr-asset-count">{assetCounts.all}</span>
               </button>
               <button
                 className={`pnr-asset-btn ${assetFilter === 'equity' ? 'active' : ''}`}
                 onClick={() => setAssetFilter('equity')}
               >
-                📈 Equity Schemes <span className="pnr-asset-count">{assetCounts.equity}</span>
+                📈 Equity <span className="pnr-asset-count">{assetCounts.equity}</span>
               </button>
               <button
                 className={`pnr-asset-btn ${assetFilter === 'hybrid' ? 'active' : ''}`}
                 onClick={() => setAssetFilter('hybrid')}
               >
-                ⚖️ Hybrid & Balanced <span className="pnr-asset-count">{assetCounts.hybrid}</span>
+                ⚖️ Hybrid <span className="pnr-asset-count">{assetCounts.hybrid}</span>
               </button>
               <button
                 className={`pnr-asset-btn ${assetFilter === 'debt' ? 'active' : ''}`}
                 onClick={() => setAssetFilter('debt')}
               >
-                🛡️ Debt & Money Market <span className="pnr-asset-count">{assetCounts.debt}</span>
+                🛡️ Debt & Liquid <span className="pnr-asset-count">{assetCounts.debt}</span>
               </button>
               <button
                 className={`pnr-asset-btn ${assetFilter === 'other' ? 'active' : ''}`}
                 onClick={() => setAssetFilter('other')}
               >
-                📊 Index & Other <span className="pnr-asset-count">{assetCounts.other}</span>
+                📊 Other/Index <span className="pnr-asset-count">{assetCounts.other}</span>
               </button>
             </div>
+          </div>
 
+          {/* Filter Bar */}
+          <div className="pnr-filter-bar">
             <div className="pnr-search-wrap">
               <span className="pnr-search-icon">🔍</span>
               <input
@@ -899,13 +901,13 @@ export default function PioneersClient({ initialFunds = [] }) {
                 className={`pnr-pill ${eraFilter === 'all' ? 'active' : ''}`}
                 onClick={() => setEraFilter('all')}
               >
-                All 20+ Yrs ({initialFunds.length})
+                All Eras ({initialFunds.length})
               </button>
               <button
                 className={`pnr-pill ${eraFilter === '30y' ? 'active' : ''}`}
                 onClick={() => setEraFilter('30y')}
               >
-                🏆 30-Year Club (29)
+                🏆 30Y Club (29)
               </button>
               <button
                 className={`pnr-pill ${eraFilter === 'silver' ? 'active' : ''}`}
@@ -931,27 +933,27 @@ export default function PioneersClient({ initialFunds = [] }) {
                     Fund Name & Category {sortBy === 'name' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
                   <th onClick={() => handleSort('incDate')}>
-                    Inception Date {sortBy === 'incDate' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                    Launch Date {sortBy === 'incDate' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
-                  <th onClick={() => handleSort('age')}>
-                    Age (Yrs) {sortBy === 'age' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                  <th className="num" onClick={() => handleSort('age')}>
+                    Age {sortBy === 'age' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
-                  <th onClick={() => handleSort('initNav')}>
-                    Initial Face Value {sortBy === 'initNav' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                  <th className="num" onClick={() => handleSort('initNav')}>
+                    Face Value {sortBy === 'initNav' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
-                  <th onClick={() => handleSort('nav')}>
+                  <th className="num" onClick={() => handleSort('nav')}>
                     Current NAV {sortBy === 'nav' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
-                  <th onClick={() => handleSort('multiplier')}>
+                  <th className="num" onClick={() => handleSort('multiplier')}>
                     Multiplier {sortBy === 'multiplier' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
-                  <th onClick={() => handleSort('cagr')}>
+                  <th className="num" onClick={() => handleSort('cagr')}>
                     Inception CAGR {sortBy === 'cagr' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
-                  <th onClick={() => handleSort('10y')}>
+                  <th className="num" onClick={() => handleSort('10y')}>
                     10Y CAGR {sortBy === '10y' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                   </th>
-                  <th>Action</th>
+                  <th style={{ textAlign: 'center' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -968,26 +970,26 @@ export default function PioneersClient({ initialFunds = [] }) {
                         </Link>
                         <div className="pnr-fund-cat">{f.category} · {f.amc}</div>
                       </td>
-                      <td>{String(f.inception_date || '').slice(0, 10)}</td>
-                      <td><strong>{f.age_years} yrs</strong></td>
-                      <td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{String(f.inception_date || '').slice(0, 10)}</td>
+                      <td className="num">{f.age_years} yrs</td>
+                      <td className="num">
                         <span className={`pnr-initnav-badge ${initNav >= 1000 ? 'init-1000' : initNav >= 100 ? 'init-100' : 'init-10'}`}>
                           ₹{initNav.toLocaleString('en-IN')}
                         </span>
                       </td>
-                      <td>₹{navVal.toFixed(2)}</td>
-                      <td>
+                      <td className="num">₹{navVal.toFixed(2)}</td>
+                      <td className="num">
                         <span className="pnr-multiplier-badge">
                           {isHighMult ? '🔥' : '⭐'} {mult}x
                         </span>
                       </td>
-                      <td>
+                      <td className="num">
                         <span className="pnr-cagr-badge">
                           {f.ret_inception != null ? `${f.ret_inception}%` : '—'}
                         </span>
                       </td>
-                      <td>{f.ret_10y ? `${f.ret_10y}%` : '—'}</td>
-                      <td>
+                      <td className="num">{f.ret_10y ? `${f.ret_10y}%` : '—'}</td>
+                      <td style={{ textAlign: 'center' }}>
                         <Link href={`/fund/${f.code}`} className="pnr-btn-view">
                           Analytics →
                         </Link>
