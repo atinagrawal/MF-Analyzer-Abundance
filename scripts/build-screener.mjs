@@ -366,6 +366,28 @@ async function main() {
     return null;
   }
 
+  // Debt/liquid schemes launch at a face value of ₹1000 or ₹100, not the
+  // ₹10 equity default -- mirrors app/pioneers/page.js's resolveInitialNav()
+  // fallback heuristic so a fund gets the same face value whether the
+  // mf_screener.initial_nav column is populated or (post-rebuild) reset to
+  // the schema default.
+  function computeInitialNav(cat, nav) {
+    const c = (cat || "").toLowerCase();
+    const isDebt =
+      c.includes("debt") || c.includes("income") || c.includes("liquid") ||
+      c.includes("money market") || c.includes("gilt") || c.includes("bond") ||
+      c.includes("floater") || c.includes("duration");
+    if (!isDebt) return 10;
+    if (nav > 1000) return 1000;
+    if (
+      nav > 250 &&
+      (c.includes("liquid") || c.includes("money market") || c.includes("low duration") ||
+        c.includes("ultra short") || c.includes("floater") || c.includes("savings"))
+    )
+      return 100;
+    return 10;
+  }
+
   // ---- 4. build rows ----
   const rows = [];
   for (const f of uni.values()) {
@@ -404,6 +426,7 @@ async function main() {
       age_years: ageYears == null ? null : +ageYears.toFixed(1),
       inception_date: inc?.date || null,
       ret_inception: retInception,
+      initial_nav: computeInitialNav(f.cat, f.nav),
       // data-hygiene flag: implausible 1Y move (often a stale/glitched intl-FoF NAV) → review
       flag: (ret.ret_1y != null && (ret.ret_1y > 1.5 || ret.ret_1y < -0.6)) ? "check" : null,
       asof: fmt(now),
@@ -456,7 +479,7 @@ async function main() {
       ["ret_1m","NUMERIC"],["ret_3m","NUMERIC"],["ret_6m","NUMERIC"],
       ["ret_7y","NUMERIC"],["ret_10y","NUMERIC"],
       ["inception_date","TEXT"],["ret_inception","NUMERIC"],
-      ["isin","TEXT"],
+      ["isin","TEXT"],["initial_nav","NUMERIC"],
     ]) {
       await c.query(`ALTER TABLE mf_screener ADD COLUMN IF NOT EXISTS ${col} ${type}`);
     }
@@ -464,7 +487,7 @@ async function main() {
     await c.query(`CREATE INDEX IF NOT EXISTS idx_mf_screener_structure ON mf_screener (structure)`);
     await c.query(`CREATE INDEX IF NOT EXISTS idx_mf_screener_ret3y ON mf_screener (ret_3y)`);
 
-    const COLS = ["code","name","amc","category","structure","isin","nav","nav_date","ret_1m","ret_3m","ret_6m","ret_1y","ret_3y","ret_5y","ret_7y","ret_10y","vol","max_dd","ret_per_risk","age_years","inception_date","ret_inception","flag","asof"];
+    const COLS = ["code","name","amc","category","structure","isin","nav","nav_date","ret_1m","ret_3m","ret_6m","ret_1y","ret_3y","ret_5y","ret_7y","ret_10y","vol","max_dd","ret_per_risk","age_years","inception_date","ret_inception","initial_nav","flag","asof"];
     const N = COLS.length;
     await c.query("BEGIN");
     await c.query("DELETE FROM mf_screener");
