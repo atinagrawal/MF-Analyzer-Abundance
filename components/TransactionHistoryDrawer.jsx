@@ -367,7 +367,7 @@ export default function TransactionHistoryDrawer({ fund, navHistory, onFetchNavH
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(3px)',
-        zIndex: 1000, display: 'flex', justifyContent: 'flex-end', animation: 'fadeIn .15s ease-out',
+        zIndex: 10000, display: 'flex', justifyContent: 'flex-end', animation: 'fadeIn .15s ease-out',
       }}
     >
       <div
