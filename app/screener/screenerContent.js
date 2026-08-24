@@ -776,9 +776,15 @@ export function resolveCategoryBenchmark(category, benchmarks = FALLBACK_BENCHMA
   if (!matchedConfig) return null;
 
   const data = (benchmarks && benchmarks[matchedConfig.symbol]) || FALLBACK_BENCHMARKS[matchedConfig.symbol] || {};
+  // data is keyed by index symbol and carries shared performance numbers
+  // (nav/ret_*) plus its own generic name/desc -- several categories
+  // (e.g. 'balanced hybrid' and 'dynamic asset allocation or balanced
+  // advantage') intentionally point at the same underlying index symbol
+  // but need distinct category-specific name/badge/desc text, so
+  // matchedConfig must win the merge, not be overwritten by it.
   return {
-    ...matchedConfig,
     ...data,
+    ...matchedConfig,
   };
 }
 
