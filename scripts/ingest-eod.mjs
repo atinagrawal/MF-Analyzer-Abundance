@@ -6,14 +6,15 @@
  * is open, covers the same large/liquid universe, and serves historical dates too —
  * which is what lets us backfill the ~250 trading days needed for 200-DMA / 52-week.
  *
- * Writes into Postgres table `stock_eod` (one row per stock per day), keyed by
- * (trade_date, isin). Idempotent: re-running a date just upserts.
+ * Writes into Turso `stock_eod` table (via lib/stockEodStore.js, in the `stock-eod`
+ * database), one row per stock per day, keyed by (trade_date, isin). Idempotent:
+ * re-running a date just upserts.
  *
  * Usage:
  *   node scripts/ingest-eod.mjs                       # latest available trading day
  *   node scripts/ingest-eod.mjs --date=2026-06-09     # one specific day
  *   node scripts/ingest-eod.mjs --from=2025-06-01 --to=2026-06-09   # backfill a range
- * Env: POSTGRES_URL (required to persist; without it, dry-run prints a summary).
+ * Env: TURSO_STOCK_EOD_URL, TURSO_STOCK_EOD_TOKEN (required to persist; without them, dry-run prints a summary).
  */
 
 import { upsertDay, pruneOlderThan } from "../lib/stockEodStore.js";
