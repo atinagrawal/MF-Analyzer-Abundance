@@ -16,7 +16,7 @@
  * Env: POSTGRES_URL (required to persist; without it, dry-run prints a summary).
  */
 
-import pg from "pg";
+import { upsertDay, pruneOlderThan } from "../lib/stockEodStore.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -72,47 +72,6 @@ export function parseBhav(txt) {
   return out;
 }
 
-async function ensureTable(c) {
-  await c.query(`CREATE TABLE IF NOT EXISTS stock_eod (
-    trade_date DATE NOT NULL,
-    isin       TEXT NOT NULL,
-    symbol     TEXT,
-    name       TEXT,
-    series     TEXT,
-    open       NUMERIC, high NUMERIC, low NUMERIC,
-    close      NUMERIC NOT NULL,
-    prev_close NUMERIC,
-    volume     BIGINT,
-    turnover   NUMERIC,
-    PRIMARY KEY (trade_date, isin)
-  )`);
-  await c.query(`CREATE INDEX IF NOT EXISTS idx_stock_eod_isin_date ON stock_eod (isin, trade_date)`);
-  await c.query(`CREATE INDEX IF NOT EXISTS idx_stock_eod_date ON stock_eod (trade_date)`);
-}
-
-async function upsertDay(c, dateIso, rows) {
-  // chunked multi-row upsert
-  const CHUNK = 500;
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    const slice = rows.slice(i, i + CHUNK);
-    const vals = [];
-    const ph = slice.map((r, j) => {
-      const b = j * 12;
-      vals.push(dateIso, r.isin, r.symbol, r.name, r.series, r.open, r.high, r.low, r.close, r.prev_close, r.volume, r.turnover);
-      return `($${b + 1},$${b + 2},$${b + 3},$${b + 4},$${b + 5},$${b + 6},$${b + 7},$${b + 8},$${b + 9},$${b + 10},$${b + 11},$${b + 12})`;
-    }).join(",");
-    await c.query(
-      `INSERT INTO stock_eod (trade_date,isin,symbol,name,series,open,high,low,close,prev_close,volume,turnover)
-       VALUES ${ph}
-       ON CONFLICT (trade_date,isin) DO UPDATE SET
-         symbol=EXCLUDED.symbol, name=EXCLUDED.name, series=EXCLUDED.series,
-         open=EXCLUDED.open, high=EXCLUDED.high, low=EXCLUDED.low, close=EXCLUDED.close,
-         prev_close=EXCLUDED.prev_close, volume=EXCLUDED.volume, turnover=EXCLUDED.turnover`,
-      vals
-    );
-  }
-}
-
 function arg(name) { const a = process.argv.find((x) => x.startsWith(`--${name}=`)); return a ? a.split("=")[1] : null; }
 
 // Main-board equity groups only (A = most liquid, B = other main board). This is the
@@ -139,10 +98,7 @@ async function main() {
     while (dates.length < 5) { const wd = d.getUTCDay(); if (wd !== 0 && wd !== 6) dates.push(new Date(d)); d = new Date(d - DAY); }
   }
 
-  const url = process.env.POSTGRES_URL;
-  const pool = url ? new pg.Pool({ connectionString: url, ssl: { rejectUnauthorized: false }, max: 4 }) : null;
-  const c = pool ? await pool.connect() : null;
-  if (c) await ensureTable(c);
+  const live = Boolean(process.env.TURSO_STOCK_EOD_URL);
 
   let okDays = 0, totalRows = 0;
   for (const d of dates) {
@@ -150,17 +106,15 @@ async function main() {
     if (!txt) { if (!from) console.log(`[eod] ${iso(d)}: no file (holiday/weekend)`); continue; }
     const rows = parseBhav(txt).filter((r) => EQUITY_GROUPS.has(r.series));
     if (!rows.length) { console.log(`[eod] ${iso(d)}: 0 equity rows?!`); continue; }
-    if (c) await upsertDay(c, iso(d), rows);
+    if (live) await upsertDay(iso(d), rows);
     okDays++; totalRows += rows.length;
-    console.log(`[eod] ${iso(d)}: ${rows.length} equities${c ? " upserted" : " (dry-run)"}`);
+    console.log(`[eod] ${iso(d)}: ${rows.length} equities${live ? " upserted" : " (dry-run)"}`);
   }
-  if (c && okDays) {
-    const { rowCount } = await c.query(`DELETE FROM stock_eod WHERE trade_date < (CURRENT_DATE - $1::int)`, [RETENTION_DAYS]);
-    if (rowCount) console.log(`[eod] pruned ${rowCount} rows older than ${RETENTION_DAYS}d`);
+  if (live && okDays) {
+    const pruned = await pruneOlderThan(RETENTION_DAYS);
+    if (pruned) console.log(`[eod] pruned ${pruned} rows older than ${RETENTION_DAYS}d`);
   }
-  console.log(`[eod] done — ${okDays} trading days, ${totalRows} rows total${c ? "" : " (no POSTGRES_URL → dry-run)"}`);
-  if (c) c.release();
-  if (pool) await pool.end();
+  console.log(`[eod] done — ${okDays} trading days, ${totalRows} rows total${live ? "" : " (no TURSO_STOCK_EOD_URL → dry-run)"}`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

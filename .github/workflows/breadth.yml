@@ -27,10 +27,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm install pg@8 --no-save
+      - run: npm install pg@8 @tursodatabase/serverless
       - name: Ingest EOD prices
         env:
-          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+          TURSO_STOCK_EOD_URL: ${{ secrets.TURSO_STOCK_EOD_URL }}
+          TURSO_STOCK_EOD_TOKEN: ${{ secrets.TURSO_STOCK_EOD_TOKEN }}
         run: |
           if [ -n "${{ github.event.inputs.from }}" ]; then
             node scripts/ingest-eod.mjs --from=${{ github.event.inputs.from }} --to=${{ github.event.inputs.to }}
