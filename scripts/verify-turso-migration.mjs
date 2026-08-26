@@ -11,37 +11,113 @@ import pg from 'pg';
 import { getGlobalStats as navStats, getDb as navDb } from '../lib/navHistoryStore.js';
 import { getDb as eodDb } from '../lib/stockEodStore.js';
 
+// Parse DATE columns as strings to match Turso's TEXT format
+pg.types.setTypeParser(1082, (val) => val);
+
 async function main() {
   const client = new pg.Client({ connectionString: process.env.POSTGRES_URL, ssl: { rejectUnauthorized: false } });
   await client.connect();
 
   let ok = true;
 
-  const pgNav = await client.query(`SELECT COUNT(*) AS n, SUM(nav) AS sum_nav FROM mf_nav_history`);
+  // ===== mf_nav_history verification =====
+  const pgNavCount = await client.query(`SELECT COUNT(*) AS n FROM mf_nav_history`);
   const tNavStats = await navStats();
   const db1 = await navDb();
-  const { rows: sumRows } = await db1.execute(`SELECT SUM(nav) AS sum_nav FROM mf_nav_history`);
 
-  const pgNavRows = Number(pgNav.rows[0].n);
-  const pgNavSum = Number(pgNav.rows[0].sum_nav);
-  const tNavSum = Number(sumRows[0].sum_nav);
+  const pgNavRows = Number(pgNavCount.rows[0].n);
 
-  console.log(`[verify] mf_nav_history — Postgres: ${pgNavRows.toLocaleString()} rows, sum(nav)=${pgNavSum.toFixed(2)} | Turso: ${tNavStats.totalRows.toLocaleString()} rows, sum(nav)=${tNavSum.toFixed(2)}`);
-  if (pgNavRows !== tNavStats.totalRows) { console.error('[verify] MISMATCH: mf_nav_history row count differs'); ok = false; }
-  if (Math.abs(pgNavSum - tNavSum) > 0.01) { console.error('[verify] MISMATCH: mf_nav_history sum(nav) differs'); ok = false; }
+  console.log(`[verify] mf_nav_history row count — Postgres: ${pgNavRows.toLocaleString()} rows | Turso: ${tNavStats.totalRows.toLocaleString()} rows`);
+  if (pgNavRows !== tNavStats.totalRows) {
+    console.error('[verify] MISMATCH: mf_nav_history row count differs');
+    ok = false;
+  }
 
-  const pgEod = await client.query(`SELECT COUNT(*) AS n, SUM(close) AS sum_close FROM stock_eod`);
+  // Per-date-bucketed sum comparison for mf_nav_history
+  const pgNavByDate = await client.query(
+    `SELECT nav_date, SUM(nav) AS sum_nav FROM mf_nav_history GROUP BY nav_date ORDER BY nav_date`
+  );
+  const { rows: tursoNavByDate } = await db1.execute(
+    `SELECT nav_date, SUM(nav) AS sum_nav FROM mf_nav_history GROUP BY nav_date ORDER BY nav_date`
+  );
+
+  const pgNavMap = new Map(pgNavByDate.rows.map(row => [row.nav_date, Number(row.sum_nav)]));
+  const tNavMap = new Map(tursoNavByDate.map(row => [row.nav_date, Number(row.sum_nav)]));
+
+  let navDateMismatches = [];
+  for (const [date, pgSum] of pgNavMap) {
+    const tSum = tNavMap.get(date);
+    if (tSum === undefined) {
+      navDateMismatches.push(`${date} (missing in Turso)`);
+    } else if (Math.abs(pgSum - tSum) > 0.01) {
+      navDateMismatches.push(`${date} (PG: ${pgSum.toFixed(2)}, Turso: ${tSum.toFixed(2)})`);
+    }
+  }
+  for (const date of tNavMap.keys()) {
+    if (!pgNavMap.has(date)) {
+      navDateMismatches.push(`${date} (missing in Postgres)`);
+    }
+  }
+
+  if (navDateMismatches.length > 0) {
+    const display = navDateMismatches.length > 10
+      ? navDateMismatches.slice(0, 10).join(', ') + ` ... and ${navDateMismatches.length - 10} more`
+      : navDateMismatches.join(', ');
+    console.error(`[verify] MISMATCH: mf_nav_history date-bucketed sums differ: ${display}`);
+    ok = false;
+  } else {
+    console.log(`[verify] mf_nav_history — ${pgNavMap.size} distinct dates checked, all sums match`);
+  }
+
+  // ===== stock_eod verification =====
+  const pgEodCount = await client.query(`SELECT COUNT(*) AS n FROM stock_eod`);
   const db2 = await eodDb();
-  const { rows: eodRows } = await db2.execute(`SELECT COUNT(*) AS n, SUM(close) AS sum_close FROM stock_eod`);
+  const { rows: tursoEodCount } = await db2.execute(`SELECT COUNT(*) AS n FROM stock_eod`);
 
-  const pgEodRows = Number(pgEod.rows[0].n);
-  const pgEodSum = Number(pgEod.rows[0].sum_close);
-  const tEodRows = Number(eodRows[0].n);
-  const tEodSum = Number(eodRows[0].sum_close);
+  const pgEodRows = Number(pgEodCount.rows[0].n);
+  const tEodRows = Number(tursoEodCount[0].n);
 
-  console.log(`[verify] stock_eod — Postgres: ${pgEodRows.toLocaleString()} rows, sum(close)=${pgEodSum.toFixed(2)} | Turso: ${tEodRows.toLocaleString()} rows, sum(close)=${tEodSum.toFixed(2)}`);
-  if (pgEodRows !== tEodRows) { console.error('[verify] MISMATCH: stock_eod row count differs'); ok = false; }
-  if (Math.abs(pgEodSum - tEodSum) > 0.01) { console.error('[verify] MISMATCH: stock_eod sum(close) differs'); ok = false; }
+  console.log(`[verify] stock_eod row count — Postgres: ${pgEodRows.toLocaleString()} rows | Turso: ${tEodRows.toLocaleString()} rows`);
+  if (pgEodRows !== tEodRows) {
+    console.error('[verify] MISMATCH: stock_eod row count differs');
+    ok = false;
+  }
+
+  // Per-date-bucketed sum comparison for stock_eod
+  const pgEodByDate = await client.query(
+    `SELECT trade_date, SUM(close) AS sum_close FROM stock_eod GROUP BY trade_date ORDER BY trade_date`
+  );
+  const { rows: tursoEodByDate } = await db2.execute(
+    `SELECT trade_date, SUM(close) AS sum_close FROM stock_eod GROUP BY trade_date ORDER BY trade_date`
+  );
+
+  const pgEodMap = new Map(pgEodByDate.rows.map(row => [row.trade_date, Number(row.sum_close)]));
+  const tEodMap = new Map(tursoEodByDate.map(row => [row.trade_date, Number(row.sum_close)]));
+
+  let eodDateMismatches = [];
+  for (const [date, pgSum] of pgEodMap) {
+    const tSum = tEodMap.get(date);
+    if (tSum === undefined) {
+      eodDateMismatches.push(`${date} (missing in Turso)`);
+    } else if (Math.abs(pgSum - tSum) > 0.01) {
+      eodDateMismatches.push(`${date} (PG: ${pgSum.toFixed(2)}, Turso: ${tSum.toFixed(2)})`);
+    }
+  }
+  for (const date of tEodMap.keys()) {
+    if (!pgEodMap.has(date)) {
+      eodDateMismatches.push(`${date} (missing in Postgres)`);
+    }
+  }
+
+  if (eodDateMismatches.length > 0) {
+    const display = eodDateMismatches.length > 10
+      ? eodDateMismatches.slice(0, 10).join(', ') + ` ... and ${eodDateMismatches.length - 10} more`
+      : eodDateMismatches.join(', ');
+    console.error(`[verify] MISMATCH: stock_eod date-bucketed sums differ: ${display}`);
+    ok = false;
+  } else {
+    console.log(`[verify] stock_eod — ${pgEodMap.size} distinct dates checked, all sums match`);
+  }
 
   await client.end();
 
