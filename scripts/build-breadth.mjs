@@ -1,6 +1,6 @@
 /**
  * scripts/build-breadth.mjs — computes one Market Breadth snapshot per trading day
- * from the accumulated stock_eod table (Turso), and upserts into `market_breadth` (Postgres).
+ * from the accumulated stock_eod table, and upserts into `market_breadth`.
  *
  * For the latest trading day D (or --date=YYYY-MM-DD) it computes, across the equity
  * universe that traded on D:
@@ -14,13 +14,12 @@
  * Usage: node scripts/build-breadth.mjs [--date=YYYY-MM-DD] [--all]
  *   --all recomputes a snapshot for every distinct trade_date that has >= 200 days of
  *         prior history (used once after a backfill to populate the time-travel series).
- * Env: POSTGRES_URL (required), TURSO_STOCK_EOD_URL, TURSO_STOCK_EOD_TOKEN (required).
+ * Env: POSTGRES_URL (required).
  */
 
 import pg from "pg";
 import path from "path";
 import { fileURLToPath } from "url";
-import { getWindow, getAll, getDistinctTradeDates } from "../lib/stockEodStore.js";
 
 const arg = (n) => { const a = process.argv.find((x) => x.startsWith(`--${n}`)); return a ? (a.includes("=") ? a.split("=")[1] : true) : null; };
 const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
@@ -99,12 +98,19 @@ function computeSnapshot(byIsin, D) {
   return acc;
 }
 
-async function loadWindow(endDate, days = 400) {
-  const rows = await getWindow(endDate, days);
+async function loadWindow(c, endDate, days = 400) {
+  const { rows } = await c.query(
+    `SELECT isin, trade_date, close, high, low, prev_close, turnover
+       FROM stock_eod
+      WHERE trade_date > ($1::date - $2::int) AND trade_date <= $1::date
+      ORDER BY isin, trade_date`,
+    [endDate, days]
+  );
   const byIsin = new Map();
   for (const r of rows) {
+    const t = r.trade_date.toISOString().slice(0, 10);
     if (!byIsin.has(r.isin)) byIsin.set(r.isin, []);
-    byIsin.get(r.isin).push({ t: r.tradeDate, close: r.close, high: r.high, low: r.low, prev: r.prevClose, tov: r.turnover ?? 0 });
+    byIsin.get(r.isin).push({ t, close: +r.close, high: r.high == null ? null : +r.high, low: r.low == null ? null : +r.low, prev: r.prev_close == null ? null : +r.prev_close, tov: r.turnover == null ? 0 : +r.turnover });
   }
   return byIsin;
 }
@@ -127,12 +133,12 @@ async function upsert(c, D, s) {
 
 async function runAll(c) {
   // load the whole table once, then compute every date in memory (fast backfill)
-  const rows = await getAll();
+  const { rows } = await c.query(`SELECT isin, trade_date, close, high, low, prev_close, turnover FROM stock_eod ORDER BY isin, trade_date`);
   const full = new Map(); const dateSet = new Set();
   for (const r of rows) {
-    dateSet.add(r.tradeDate);
+    const t = r.trade_date.toISOString().slice(0, 10); dateSet.add(t);
     if (!full.has(r.isin)) full.set(r.isin, []);
-    full.get(r.isin).push({ t: r.tradeDate, close: r.close, high: r.high, low: r.low, prev: r.prevClose, tov: r.turnover ?? 0 });
+    full.get(r.isin).push({ t, close: +r.close, high: r.high == null ? null : +r.high, low: r.low == null ? null : +r.low, prev: r.prev_close == null ? null : +r.prev_close, tov: r.turnover == null ? 0 : +r.turnover });
   }
   const dates = [...dateSet].sort();
   const targets = dates.slice(199); // need >=200 prior days
@@ -162,19 +168,20 @@ async function main() {
     await runAll(c);
   } else if (arg("date")) {
     const D = arg("date");
-    const s = computeSnapshot(await loadWindow(D), D);
+    const s = computeSnapshot(await loadWindow(c, D), D);
     await upsert(c, D, s);
     console.log(`[breadth] ${D}: universe ${s.universe} | >200DMA ${s.a200}/${s.t200} (${s.regime_pct}%) | GC ${s.golden_cross} DC ${s.death_cross} bull ${s.bull_stacked} bear ${s.bear_stacked}`);
   } else {
     // self-heal: compute every eod date that doesn't yet have a snapshot (and has >=200 prior days)
-    const eodDates = await getDistinctTradeDates();
+    const { rows: er } = await c.query(`SELECT DISTINCT trade_date FROM stock_eod ORDER BY trade_date`);
+    const eodDates = er.map((r) => r.trade_date.toISOString().slice(0, 10));
     const { rows: sr } = await c.query(`SELECT snap_date FROM market_breadth`);
     const have = new Set(sr.map((r) => r.snap_date.toISOString().slice(0, 10)));
     const eligible = eodDates.slice(199);
     const missing = eligible.filter((d) => !have.has(d));
     if (!missing.length) { console.log(`[breadth] up to date — latest eod ${eodDates[eodDates.length - 1]}, latest snapshot already present`); }
     for (const D of missing) {
-      const s = computeSnapshot(await loadWindow(D), D);
+      const s = computeSnapshot(await loadWindow(c, D), D);
       await upsert(c, D, s);
       console.log(`[breadth] ${D}: universe ${s.universe} | >200DMA ${s.regime_pct}% | GC ${s.golden_cross} DC ${s.death_cross} bull ${s.bull_stacked} bear ${s.bear_stacked} | adv ${s.advancing} dec ${s.declining}`);
     }

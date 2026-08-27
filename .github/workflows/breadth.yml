@@ -41,8 +41,6 @@ jobs:
       - name: Compute breadth snapshot
         env:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
-          TURSO_STOCK_EOD_URL: ${{ secrets.TURSO_STOCK_EOD_URL }}
-          TURSO_STOCK_EOD_TOKEN: ${{ secrets.TURSO_STOCK_EOD_TOKEN }}
         run: |
           if [ -n "${{ github.event.inputs.from }}" ]; then
             node scripts/build-breadth.mjs --all
