@@ -233,6 +233,129 @@
   justify-content: flex-end;
 }
 
+/* ── Users tab: search bar (shared by mobile card list and desktop table) ── */
+.admin-search-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.admin-search-input {
+  flex: 1 1 200px;
+  min-width: 0;
+  font-size: .74rem;
+  font-family: 'Raleway', sans-serif;
+  padding: 8px 12px;
+  border: 1.5px solid var(--border2);
+  border-radius: 8px;
+  background: var(--s2);
+  color: var(--text);
+}
+.admin-search-input:focus {
+  outline: none;
+  border-color: var(--g2);
+}
+.admin-mobile-sort-select {
+  font-size: .68rem;
+  font-weight: 700;
+  font-family: 'Raleway', sans-serif;
+  border: 1.5px solid var(--border2);
+  border-radius: 8px;
+  background: var(--s2);
+  color: var(--text);
+  padding: 7px 9px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.admin-search-count {
+  font-size: .6rem;
+  font-weight: 700;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Users tab: sortable desktop column headers ── */
+.admin-th-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color .15s;
+}
+.admin-th-sortable:hover {
+  color: var(--g2);
+}
+.admin-th-arrow {
+  font-size: .85em;
+}
+
+/* ── Users tab: pager (shared by mobile card list and desktop table) ── */
+.admin-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.admin-pager-info {
+  font-size: .62rem;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+.admin-pager-ctrls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.admin-pg-btn {
+  font-size: .68rem;
+  font-weight: 700;
+  font-family: 'Raleway', sans-serif;
+  padding: 6px 12px;
+  border-radius: 7px;
+  border: 1.5px solid var(--border2);
+  background: var(--s2);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.admin-pg-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+.admin-pg-now {
+  font-size: .62rem;
+  font-weight: 700;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+.admin-pager-size {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .62rem;
+  color: var(--muted);
+  font-family: 'Raleway', sans-serif;
+  white-space: nowrap;
+}
+.admin-pager-size select {
+  font-size: .68rem;
+  font-weight: 700;
+  font-family: 'Raleway', sans-serif;
+  border: 1.5px solid var(--border2);
+  border-radius: 6px;
+  background: var(--s2);
+  color: var(--text);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
 /* ── Inline two-step delete confirm — reused wherever this pattern applies ── */
 .admin-inline-confirm {
   display: flex;

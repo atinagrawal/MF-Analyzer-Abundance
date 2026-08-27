@@ -1,6 +1,41 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+// Column sort comparators for the desktop table's clickable headers and the
+// mobile drill-down's "Sort by" select -- both read/write the same {key, dir}
+// state so switching between breakpoints (e.g. rotating a phone) never loses
+// the current sort.
+const SORT_ACCESSORS = {
+  name:            (u) => (u.name || u.email || '').toLowerCase(),
+  role:            (u) => u.role || '',
+  portfolio_count: (u) => u.portfolio_count || 0,
+  last_upload:     (u) => (u.last_upload ? new Date(u.last_upload).getTime() : -Infinity),
+  last_active_at:  (u) => (u.last_active_at ? new Date(u.last_active_at).getTime() : -Infinity),
+  created_at:      (u) => (u.created_at ? new Date(u.created_at).getTime() : 0),
+};
+
+function sortUsers(list, sort) {
+  const acc = SORT_ACCESSORS[sort.key] || SORT_ACCESSORS.created_at;
+  return [...list].sort((a, b) => {
+    const av = acc(a), bv = acc(b);
+    if (av < bv) return -sort.dir;
+    if (av > bv) return sort.dir;
+    return 0;
+  });
+}
+
+function searchUsers(list, q) {
+  const t = q.trim().toLowerCase();
+  if (!t) return list;
+  return list.filter((u) =>
+    (u.name || '').toLowerCase().includes(t) ||
+    (u.email || '').toLowerCase().includes(t) ||
+    (u.distributor_name || '').toLowerCase().includes(t)
+  );
+}
 
 const ROLE_STYLES = {
   admin:       { background: '#fff3e0', color: '#e65100', border: '#ffe0b2' },
@@ -222,6 +257,76 @@ function RoleAndPlanSelect({ user, sessionUserId, distributors = [], roleChangin
   );
 }
 
+// Mobile has no clickable column headers to sort by, so it gets a plain-
+// English "Sort by" select instead -- each option maps to the same {key, dir}
+// shape the desktop headers write, so switching viewport width mid-session
+// (e.g. rotating a tablet) never loses the current sort.
+const MOBILE_SORT_OPTIONS = [
+  { label: 'Newest first',        key: 'created_at',     dir: -1 },
+  { label: 'Oldest first',        key: 'created_at',     dir:  1 },
+  { label: 'Name (A–Z)',          key: 'name',            dir:  1 },
+  { label: 'Name (Z–A)',          key: 'name',            dir: -1 },
+  { label: 'Most portfolios',     key: 'portfolio_count', dir: -1 },
+  { label: 'Most recently active', key: 'last_active_at', dir: -1 },
+];
+
+/** Search input + result count — shared between the mobile card list and desktop table. */
+function AdminSearchBar({ search, setSearch, resultCount, totalCount, sortSelect }) {
+  return (
+    <div className="admin-search-bar">
+      <input
+        className="admin-search-input"
+        type="text"
+        placeholder="Search by name, email or MFD…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      {sortSelect}
+      <div className="admin-search-count">
+        {search.trim() ? `${resultCount} of ${totalCount}` : totalCount} client{totalCount === 1 ? '' : 's'}
+      </div>
+    </div>
+  );
+}
+
+/** Prev/Next pager + page-size select — shared between the mobile card list and desktop table. */
+function AdminPager({ curPage, pageCount, pageSize, setPageSize, setPage, total }) {
+  if (total === 0) return null;
+  const from = curPage * pageSize + 1;
+  const to = Math.min(total, (curPage + 1) * pageSize);
+  return (
+    <div className="admin-pager">
+      <div className="admin-pager-info">Showing <b>{from}–{to}</b> of {total}</div>
+      <div className="admin-pager-ctrls">
+        <button className="admin-pg-btn" disabled={curPage === 0} onClick={() => setPage(curPage - 1)}>‹ Prev</button>
+        <span className="admin-pg-now">Page {curPage + 1} / {pageCount}</span>
+        <button className="admin-pg-btn" disabled={curPage >= pageCount - 1} onClick={() => setPage(curPage + 1)}>Next ›</button>
+      </div>
+      <label className="admin-pager-size">Show
+        <select value={pageSize} onChange={(e) => setPageSize(+e.target.value)}>
+          {PAGE_SIZE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+        </select>
+        per page
+      </label>
+    </div>
+  );
+}
+
+/** Clickable, sort-aware column header for the desktop table. */
+function SortTh({ label, sortKey, sort, onSort, align = 'center' }) {
+  const active = sort.key === sortKey;
+  return (
+    <th
+      onClick={() => onSort(sortKey)}
+      className="admin-th-sortable"
+      style={{ textAlign: align, color: active ? 'var(--g2)' : undefined }}
+      title="Click to sort"
+    >
+      {label}{active && <span className="admin-th-arrow">{sort.dir === 1 ? ' ↑' : ' ↓'}</span>}
+    </th>
+  );
+}
+
 /** CAS portfolio list — reused in both the desktop side panel and the mobile drill-down. */
 function PortfolioList({ selectedUser, portfolios, portsLoading, deletingId, setDeletingId, deleteInFlight, deletePortfolio, notifying, notifyMsg, notifyClient }) {
   return (
@@ -389,6 +494,10 @@ export default function UsersTab({ session }) {
   const [notifyMsg,    setNotifyMsg]    = useState({ id: '', type: '', text: '' });
   const [deletingId,     setDeletingId]     = useState('');
   const [deleteInFlight, setDeleteInFlight] = useState(false);
+  const [search,   setSearch]   = useState('');
+  const [sort,     setSort]     = useState({ key: 'created_at', dir: -1 }); // matches the API's default order (newest first)
+  const [page,     setPage]     = useState(0);
+  const [pageSize, setPageSize] = useState(20);
 
   useEffect(() => {
     fetch('/api/admin/users')
@@ -401,6 +510,13 @@ export default function UsersTab({ session }) {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  const filteredUsers = useMemo(() => sortUsers(searchUsers(users, search), sort), [users, search, sort]);
+  useEffect(() => { setPage(0); }, [search, sort, pageSize]);
+  const pageCount = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const curPage = Math.min(page, pageCount - 1);
+  const visibleUsers = filteredUsers.slice(curPage * pageSize, curPage * pageSize + pageSize);
+  const setSortKey = (key) => setSort((s) => (s.key === key ? { key, dir: -s.dir } : { key, dir: key === 'name' || key === 'role' ? 1 : -1 }));
 
   function selectUser(user) {
     setSelectedUser(user);
@@ -576,11 +692,33 @@ export default function UsersTab({ session }) {
           </div>
         ) : (
           <div>
+            {!loading && (
+              <AdminSearchBar
+                search={search} setSearch={setSearch}
+                resultCount={filteredUsers.length} totalCount={users.length}
+                sortSelect={
+                  <select
+                    className="admin-mobile-sort-select"
+                    value={`${sort.key}:${sort.dir}`}
+                    onChange={(e) => {
+                      const [key, dir] = e.target.value.split(':');
+                      setSort({ key, dir: Number(dir) });
+                    }}
+                  >
+                    {MOBILE_SORT_OPTIONS.map((o) => (
+                      <option key={`${o.key}:${o.dir}`} value={`${o.key}:${o.dir}`}>{o.label}</option>
+                    ))}
+                  </select>
+                }
+              />
+            )}
             {loading ? (
               [...Array(4)].map((_, i) => (
                 <div key={i} className="sk" style={{ height: 62, borderRadius: 10, marginBottom: 8 }} />
               ))
-            ) : users.map(u => (
+            ) : visibleUsers.length === 0 ? (
+              <div className="src-text" style={{ padding: '16px 0' }}>No clients match "{search}".</div>
+            ) : visibleUsers.map(u => (
               <button key={u.id} className="admin-user-card" onClick={() => selectUserCard(u)}>
                 <div className="admin-user-card-avatar">
                   {u.image ? <img src={u.image} alt="" referrerPolicy="no-referrer" /> : (u.name || u.email || '?')[0].toUpperCase()}
@@ -596,6 +734,12 @@ export default function UsersTab({ session }) {
                 <RoleBadge role={u.role} />
               </button>
             ))}
+            {!loading && (
+              <AdminPager
+                curPage={curPage} pageCount={pageCount} pageSize={pageSize}
+                setPageSize={setPageSize} setPage={setPage} total={filteredUsers.length}
+              />
+            )}
             <div className="src-text">Tap a user to view their CAS uploads and manage their role</div>
           </div>
         )}
@@ -604,16 +748,24 @@ export default function UsersTab({ session }) {
       {/* ══ DESKTOP (≥768px) ══ */}
       <div className="admin-desktop-only" style={{ display: 'grid', gridTemplateColumns: selectedUser ? '1fr 340px' : '1fr', gap: 20 }}>
         <div className="table-card">
+          {!loading && (
+            <div style={{ padding: '14px 16px 0' }}>
+              <AdminSearchBar
+                search={search} setSearch={setSearch}
+                resultCount={filteredUsers.length} totalCount={users.length}
+              />
+            </div>
+          )}
           <div className="table-wrap">
             <table className="idx-table" style={{ minWidth: 520 }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', paddingLeft: 16 }}>User</th>
-                  <th>Role</th>
-                  <th>Portfolios</th>
-                  <th>Last Upload</th>
-                  <th>Last Active</th>
-                  <th>Joined</th>
+                  <SortTh label="User" sortKey="name" sort={sort} onSort={setSortKey} align="left" />
+                  <SortTh label="Role" sortKey="role" sort={sort} onSort={setSortKey} />
+                  <SortTh label="Portfolios" sortKey="portfolio_count" sort={sort} onSort={setSortKey} />
+                  <SortTh label="Last Upload" sortKey="last_upload" sort={sort} onSort={setSortKey} />
+                  <SortTh label="Last Active" sortKey="last_active_at" sort={sort} onSort={setSortKey} />
+                  <SortTh label="Joined" sortKey="created_at" sort={sort} onSort={setSortKey} />
                 </tr>
               </thead>
               <tbody>
@@ -625,7 +777,9 @@ export default function UsersTab({ session }) {
                       ))}
                     </tr>
                   ))
-                ) : users.map(u => (
+                ) : visibleUsers.length === 0 ? (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--muted)', fontSize: '.75rem' }}>No clients match "{search}".</td></tr>
+                ) : visibleUsers.map(u => (
                   <tr
                     key={u.id}
                     onClick={() => selectUser(u)}
@@ -675,6 +829,14 @@ export default function UsersTab({ session }) {
               </tbody>
             </table>
           </div>
+          {!loading && (
+            <div style={{ padding: '0 16px' }}>
+              <AdminPager
+                curPage={curPage} pageCount={pageCount} pageSize={pageSize}
+                setPageSize={setPageSize} setPage={setPage} total={filteredUsers.length}
+              />
+            </div>
+          )}
           <div className="src-text">Click a row to view that user's CAS uploads and manage their role</div>
         </div>
 
