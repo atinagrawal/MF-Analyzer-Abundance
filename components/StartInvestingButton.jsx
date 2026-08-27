@@ -31,7 +31,7 @@ const SI_CSS = `
 .si-btn[aria-expanded="true"] .si-caret{ transform:rotate(180deg); }
 .si-btn-short{ display:none; }
 .si-menu{
-  position:absolute; top:calc(100% + 8px); right:0; min-width:250px;
+  position:fixed; min-width:250px; max-width:calc(100vw - 16px);
   background:var(--surface); border:1.5px solid var(--border); border-radius:12px;
   box-shadow:0 8px 24px rgba(0,0,0,.18); overflow:hidden; z-index:9999;
   animation:siMenuIn .16s ease-out both;
@@ -52,7 +52,23 @@ const SI_CSS = `
 
 export default function StartInvestingButton({ style, className }) {
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState(null);
   const wrapRef = useRef(null);
+  const btnRef = useRef(null);
+
+  function toggleOpen() {
+    setOpen((o) => {
+      const next = !o;
+      if (next && btnRef.current) {
+        const rect = btnRef.current.getBoundingClientRect();
+        setMenuPos({
+          top: rect.bottom + 8,
+          right: Math.max(8, window.innerWidth - rect.right),
+        });
+      }
+      return next;
+    });
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -60,11 +76,16 @@ export default function StartInvestingButton({ style, className }) {
       if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
     }
     function onKey(e) { if (e.key === 'Escape') setOpen(false); }
+    function onDismiss() { setOpen(false); }
     document.addEventListener('mousedown', onOutside);
     document.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', onDismiss, true);
+    window.addEventListener('resize', onDismiss);
     return () => {
       document.removeEventListener('mousedown', onOutside);
       document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onDismiss, true);
+      window.removeEventListener('resize', onDismiss);
     };
   }, [open]);
 
@@ -72,11 +93,12 @@ export default function StartInvestingButton({ style, className }) {
     <div className={`si-wrap${className ? ` ${className}` : ''}`} ref={wrapRef} style={style}>
       <style dangerouslySetInnerHTML={{ __html: SI_CSS }} />
       <button
+        ref={btnRef}
         type="button"
         className="si-btn"
         aria-haspopup="true"
         aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggleOpen}
       >
         <span className="si-btn-full">Start Investing</span>
         <span className="si-btn-short">Invest</span>
@@ -84,8 +106,8 @@ export default function StartInvestingButton({ style, className }) {
           <path d="M1 1L4.5 4.5L8 1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
-      {open && (
-        <div className="si-menu" role="menu">
+      {open && menuPos && (
+        <div className="si-menu" role="menu" style={{ top: menuPos.top, right: menuPos.right }}>
           {INVEST_PLATFORMS.map((p) => (
             <a
               key={p.key}
