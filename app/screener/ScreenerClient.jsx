@@ -4,6 +4,7 @@ import { Fragment, useState, useEffect, useMemo, useRef, useCallback } from 'rea
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
+import StartInvestingButton from '@/components/StartInvestingButton';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
 import { MFCompareBar, MFCompareModal } from './MFCompare';
 import { FundDetailPanel, SifDetailPanel } from '@/components/HoldingDetailDrawer';
@@ -482,13 +483,18 @@ export default function ScreenerClient({ initialCategory }) {
       <div className="container">
         <div className="page-header">
           <div className="page-eyebrow"><span className="live-dot" /><span className="page-eyebrow-text">Live · rebuilt daily from AMFI NAVs</span></div>
-          <h1 className="page-title">{isSIF ? <><span>SIF</span> Screener</> : 'Mutual Fund Screener'}</h1>
-          <p className="page-subtitle">
-            {isSIF
-              ? <>Discover all SEBI-regulated <b>Specialised Investment Funds</b> — {sifData ? sifSchemes.length : '…'} schemes across Equity Long-Short, Hybrid Long-Short and Active Asset Allocator strategies.</>
-              : <>Filter and rank {data ? data.count.toLocaleString('en-IN') : '1,800+'} mutual funds by category, returns and risk — on real historical NAVs.{curatedCat?.subtitleSuffix}</>
-            }
-          </p>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <div>
+              <h1 className="page-title">{isSIF ? <><span>SIF</span> Screener</> : 'Mutual Fund Screener'}</h1>
+              <p className="page-subtitle">
+                {isSIF
+                  ? <>Discover all SEBI-regulated <b>Specialised Investment Funds</b> — {sifData ? sifSchemes.length : '…'} schemes across Equity Long-Short, Hybrid Long-Short and Active Asset Allocator strategies.</>
+                  : <>Filter and rank {data ? data.count.toLocaleString('en-IN') : '1,800+'} mutual funds by category, returns and risk — on real historical NAVs.{curatedCat?.subtitleSuffix}</>
+                }
+              </p>
+            </div>
+            <StartInvestingButton style={{ flexShrink: 0, marginTop: 4 }} />
+          </div>
         </div>
 
         {/* controls */}

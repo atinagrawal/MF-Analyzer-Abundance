@@ -16,6 +16,7 @@
 
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useRef, useEffect } from 'react';
+import StartInvestingButton from './StartInvestingButton';
 
 // ── Direct links: shown flat on the desktop nav row ─────────────────────────
 const NAV_DIRECT = [
@@ -586,8 +587,10 @@ export default function Navbar({ activePage, variant = 'default' }) {
           </div>
         </div>
 
-        {/* ── Right side: hamburger (mobile) + auth ── */}
+        {/* ── Right side: Start Investing + hamburger (mobile) + auth ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 4 }}>
+          <StartInvestingButton />
+
           {/* Hamburger — mobile only */}
           <button
             className={`nav-hamburger${menuOpen ? ' open' : ''}`}
