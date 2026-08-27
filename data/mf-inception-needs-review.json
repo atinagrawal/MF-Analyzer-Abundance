@@ -1,26 +1,20 @@
 [
   {
-    "code": "154537",
-    "name": "Invesco India BSE Sensex ETF",
-    "oldest_amfi_date": "2026-08-20",
-    "oldest_amfi_nav": 77.5691
+    "code": "145896",
+    "name": "ICICI Prudential India Opportunities Fund",
+    "oldest_amfi_date": "2019-01-16",
+    "oldest_amfi_nav": 10.09
   },
   {
-    "code": "154536",
-    "name": "Invesco India Nifty Bank ETF",
-    "oldest_amfi_date": "2026-08-20",
-    "oldest_amfi_nav": 57.4494
+    "code": "141839",
+    "name": "ICICI Prudential BSE Sensex Index Fund",
+    "oldest_amfi_date": "2018-07-03",
+    "oldest_amfi_nav": 10.96
   },
   {
-    "code": "111954",
-    "name": "SBI Gold ETF",
-    "oldest_amfi_date": "2009-05-27",
-    "oldest_amfi_nav": 1487.5429
-  },
-  {
-    "code": "152725",
-    "name": "SBI Silver ETF",
-    "oldest_amfi_date": "2024-07-08",
-    "oldest_amfi_nav": 91.547
+    "code": "101349",
+    "name": "ICICI Prudential Nifty 50 Index Fund",
+    "oldest_amfi_date": "2006-04-02",
+    "oldest_amfi_nav": 30.53
   }
 ]
