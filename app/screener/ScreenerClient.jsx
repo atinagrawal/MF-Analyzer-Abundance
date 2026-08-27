@@ -425,14 +425,22 @@ export default function ScreenerClient({ initialCategory }) {
   const router = useRouter();
   const changeCat = useCallback((newCat) => {
     if (!newCat) return;
-    setCat(newCat);
-    const grp = assetClass(newCat);
+    // Callers like jumpTo() and defaultCatFor() hand us one specific fund's
+    // raw category string, which can differ slightly (spacing/wording across
+    // AMCs) from the <select>'s <option value> for that same normalized
+    // category (cats picks one representative fund per group, not
+    // necessarily this one) -- resolving to that exact option value here
+    // keeps the dropdown's visual selection in sync with the (already
+    // correct, since matchCategory normalizes) filtered results.
+    const canonical = newCat === 'All' ? 'All' : (cats.find(([c]) => normalizeCategory(c) === normalizeCategory(newCat))?.[0] ?? newCat);
+    setCat(canonical);
+    const grp = assetClass(canonical);
     if (grp && grp !== 'Other') setGroup(grp);
-    const slug = categoryToSlug(newCat);
+    const slug = categoryToSlug(canonical);
     if (slug) {
       router.replace(`/screener?category=${slug}`, { scroll: false });
     }
-  }, [router]);
+  }, [router, cats]);
   const jumpTo = (f) => {
     const targetCat = typeof f === 'string' ? f : f?.category;
     if (targetCat) {
