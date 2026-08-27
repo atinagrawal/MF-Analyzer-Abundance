@@ -5,7 +5,6 @@ import { useSession, signIn } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
-import StartInvestingButton from '@/components/StartInvestingButton';
 import CompareGrowthChart from '@/app/screener/CompareGrowthChart';
 import HoldingsSection from '@/app/screener/HoldingsSection';
 import { getMFLogo } from '@/lib/providerLogos';
@@ -483,7 +482,6 @@ export default function FundDetailClient({ code }) {
                 {f.isin && <span className="fd-tag mono">{f.isin}</span>}
               </div>
             </div>
-            <StartInvestingButton style={{ flexShrink: 0 }} />
           </div>
 
           {/* NAV stats strip */}
