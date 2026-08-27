@@ -497,7 +497,7 @@ export default function UsersTab({ session }) {
   const [search,   setSearch]   = useState('');
   const [sort,     setSort]     = useState({ key: 'created_at', dir: -1 }); // matches the API's default order (newest first)
   const [page,     setPage]     = useState(0);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     fetch('/api/admin/users')
