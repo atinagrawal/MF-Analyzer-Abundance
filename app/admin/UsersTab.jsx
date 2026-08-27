@@ -513,6 +513,18 @@ export default function UsersTab({ session }) {
 
   const filteredUsers = useMemo(() => sortUsers(searchUsers(users, search), sort), [users, search, sort]);
   useEffect(() => { setPage(0); }, [search, sort, pageSize]);
+  // Sorting/pagination only reorder or re-slice filteredUsers, so a selected
+  // client stays a member either way (still fine to leave the side panel /
+  // mobile drill-down open while paging past them). Search is different: it
+  // can genuinely remove them from the result set, and showing a detail
+  // panel for someone no longer in the filtered list the admin can see is
+  // confusing -- so close it the moment that happens, on both breakpoints.
+  useEffect(() => {
+    if (selectedUser && !filteredUsers.some((u) => u.id === selectedUser.id)) {
+      setSelectedUser(null);
+      setMobileDetailOpen(false);
+    }
+  }, [filteredUsers, selectedUser]);
   const pageCount = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
   const curPage = Math.min(page, pageCount - 1);
   const visibleUsers = filteredUsers.slice(curPage * pageSize, curPage * pageSize + pageSize);
