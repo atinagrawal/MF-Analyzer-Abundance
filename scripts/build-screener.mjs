@@ -111,7 +111,12 @@ function parseUniverse(txt) {
     const plan = (p[H.Plan] || "").trim();
     const option = (p[H.Option] || "").trim();
     if (!/regular/i.test(plan)) continue;
-    if (!/growth/i.test(option)) continue;
+    // ICICI Prudential labels its accumulation option "Cumulative" instead of
+    // "Growth" (confirmed live Aug 2026) -- without this, every ICICI Pru
+    // scheme using that label (Healthcare, Manufacturing, Nifty 50 Index,
+    // BSE Sensex Index, Bharat 22 FOF, etc.) silently vanishes from the
+    // universe entirely.
+    if (!/growth|cumulative/i.test(option)) continue;
 
     const nav = +p[H["Net Asset Value"]]; if (!isFinite(nav) || nav <= 0) continue;
     const code = p[H["Scheme Code"]];
