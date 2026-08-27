@@ -3560,7 +3560,7 @@ body{font-family:"Raleway",sans-serif;background:var(--bg);color:var(--text);min
 .page{max-width:1160px;margin:0 auto;padding:0 24px 0}
 
 /* NAVBAR */
-.navbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0 18px;margin-bottom:32px;border-bottom:1.5px solid var(--border);gap:16px;flex-wrap:wrap;animation:fadeDown .5s ease both}
+.navbar{display:flex;align-items:center;justify-content:space-between;padding:20px 0 18px;margin-bottom:32px;border-bottom:1.5px solid var(--border);gap:16px;flex-wrap:nowrap;animation:fadeDown .5s ease both}
 .logo-wrap{display:flex;align-items:center;gap:13px;text-decoration:none}
 .logo-img{height:56px;width:auto;max-width:140px;object-fit:contain;mix-blend-mode:multiply}
 .logo-icon{width:50px;height:50px;border-radius:10px;background:linear-gradient(135deg,var(--g1),var(--g3));display:none;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:#fff;flex-shrink:0}
