@@ -92,5 +92,7 @@
   "133814": { "pred": 108168, "from": "PineBridge World Gold Fund - Standard Plan - Dividend Option" },
   "133815": { "pred": 108169, "from": "PineBridge World Gold Fund - Standard Plan - Growth Option" },
   "133817": { "pred": 119345, "from": "PineBridge World Gold Fund- Direct Plan- Dividend Option" },
-  "133816": { "pred": 119344, "from": "PineBridge World Gold Fund- Direct Plan- Growth Option" }
+  "133816": { "pred": 119344, "from": "PineBridge World Gold Fund- Direct Plan- Growth Option" },
+  "146007": { "pred": 101906, "from": "Tata Equity Savings Fund -Regular Plan-Growth Option" },
+  "146010": { "pred": 119960, "from": "Tata Equity Savings Fund- Direct Plan- Growth Option" }
 }
