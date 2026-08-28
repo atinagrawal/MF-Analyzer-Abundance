@@ -1,0 +1,225 @@
+/* app/pms/[id]/pms-detail.css — PMS Detail page styles.
+   Reuses design tokens from app/globals.css (--g1/--g2/--g3, --text, --muted,
+   --border, --s2/--s3, --surface, --neg, etc.) — never redefine those here.
+   Responsive breakpoints mirror app/fund/[code]/fund-detail.css's existing
+   conventions (hero row collapses to column at <=768px). */
+
+.pmsd-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px 48px;
+  font-family: 'Raleway', sans-serif;
+}
+
+.pmsd-loading {
+  padding: 80px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────── */
+.pmsd-hero {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 28px 24px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.pmsd-hero-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.pmsd-hero-logo {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--s2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.pmsd-hero-info { flex: 1; min-width: 0; }
+
+.pmsd-name {
+  font-size: 1.22rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+
+.pmsd-hero-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.pmsd-tag {
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+}
+.pmsd-tag.green { background: var(--g-xlight); border-color: var(--g-light); color: var(--g1); }
+
+.pmsd-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.pmsd-stat-label {
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.pmsd-stat-val { font-size: .92rem; font-weight: 800; color: var(--text); margin-top: 2px; }
+.pmsd-stat-sub { font-size: .68rem; color: var(--muted); margin-top: 2px; }
+
+/* ── Generic section ──────────────────────────────────────────────────── */
+.pmsd-section {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
+}
+
+.pmsd-section-head { margin-bottom: 14px; }
+.pmsd-section-title { font-size: 1rem; font-weight: 800; color: var(--text); }
+.pmsd-section-sub { font-size: .72rem; color: var(--muted); margin-left: 8px; }
+
+/* ── Facts / fee grid ─────────────────────────────────────────────────── */
+.pmsd-facts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.pmsd-fact-card {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.pmsd-fact-label {
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 4px;
+}
+.pmsd-fact-val { font-size: .82rem; font-weight: 700; color: var(--text); white-space: pre-line; }
+
+/* ── Returns bar (Pro) ────────────────────────────────────────────────── */
+.pmsd-ret-bars { display: flex; flex-direction: column; gap: 8px; }
+.pmsd-ret-row { display: flex; align-items: center; gap: 10px; }
+.pmsd-ret-lbl { width: 90px; flex-shrink: 0; font-size: .72rem; font-weight: 700; color: var(--muted); }
+.pmsd-ret-bar-wrap { flex: 1; height: 8px; background: var(--s2); border-radius: 4px; overflow: hidden; }
+.pmsd-ret-bar-fill { height: 100%; background: var(--g2); border-radius: 4px; }
+.pmsd-ret-bar-fill.neg { background: var(--neg); }
+.pmsd-ret-val { width: 70px; flex-shrink: 0; text-align: right; font-size: .78rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+
+/* ── Quartile table (Pro) ─────────────────────────────────────────────── */
+.pmsd-quartile-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.pmsd-quartile-table th, .pmsd-quartile-table td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border); }
+.pmsd-quartile-table th:first-child, .pmsd-quartile-table td:first-child { text-align: left; }
+.pmsd-quartile-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: .68rem;
+  font-weight: 800;
+  background: var(--g-xlight);
+  color: var(--g1);
+}
+
+/* ── FAQ ───────────────────────────────────────────────────────────────── */
+.pmsd-faq-item { border-bottom: 1px solid var(--border); }
+.pmsd-faq-item:last-child { border-bottom: none; }
+.pmsd-faq-q {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .84rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: left;
+}
+.pmsd-faq-caret { font-size: 1.1rem; color: var(--g2); flex-shrink: 0; }
+.pmsd-faq-a { padding: 0 0 14px; font-size: .8rem; color: var(--text2); line-height: 1.6; }
+
+.pmsd-disclosure {
+  font-size: .68rem;
+  color: var(--muted);
+  line-height: 1.6;
+  padding: 16px 4px;
+  text-align: center;
+}
+
+/* ── Upgrade gate (Non-Pro) — reuses fund-detail.css's visual language,
+   own class prefix since this is a separate page-scoped stylesheet ── */
+.pmsd-gate-panel {
+  background: linear-gradient(145deg, #f1f8f1 0%, var(--s2) 40%, #e8f5e9 100%);
+  border: 1.5px solid var(--g-light);
+  border-radius: 18px;
+  padding: 40px 32px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.pmsd-gate-crown {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  color: var(--g1);
+  background: var(--g-xlight);
+  border: 1px solid var(--g-light);
+  border-radius: 20px;
+  padding: 4px 12px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+.pmsd-gate-title { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.pmsd-gate-subtitle { font-size: .83rem; color: var(--muted); margin-bottom: 24px; }
+.pmsd-gate-features { list-style: none; padding: 0; margin: 0 auto 28px; display: inline-flex; flex-direction: column; gap: 8px; text-align: left; }
+.pmsd-gate-features li { font-size: .83rem; color: var(--text2); font-weight: 600; }
+.pmsd-gate-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+.pmsd-gate-btn { display: inline-flex; align-items: center; gap: 6px; padding: 12px 26px; border-radius: 10px; font-size: .84rem; font-weight: 800; cursor: pointer; border: none; }
+.pmsd-gate-btn.primary { background: linear-gradient(135deg, var(--g1) 0%, var(--g2) 100%); color: #fff; }
+.pmsd-gate-btn.primary:disabled { opacity: .7; cursor: wait; }
+.pmsd-gate-btn.secondary { background: var(--surface); color: var(--text); border: 1.5px solid var(--border2); }
+.pmsd-gate-link { font-size: .75rem; color: var(--muted); }
+.pmsd-gate-link a { color: var(--g1); text-decoration: none; font-weight: 700; }
+.pmsd-gate-err { color: var(--neg); font-size: .78rem; margin-top: 10px; font-weight: 600; }
+
+/* ── Mobile ────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .pmsd-hero-row { flex-direction: column; gap: 14px; }
+  .pmsd-hero { padding: 20px 18px 18px; border-radius: 16px; }
+  .pmsd-section { padding: 16px; }
+  .pmsd-gate-panel { padding: 28px 18px; }
+  .pmsd-gate-title { font-size: 1.1rem; }
+}
