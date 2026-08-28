@@ -1,0 +1,51 @@
+name: Monthly PMS Detail Pages Backfill
+
+on:
+  schedule:
+    # 20th of every month at 04:00 UTC -- after APMI's own monthly release
+    # window (matches the "reporting window" timing already assumed by
+    # app/api/pms-data/route.js's isReportingWindow flag).
+    - cron: '0 4 20 * *'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Limit number of strategies to process (leave empty for full curated set)'
+        required: false
+        default: ''
+        type: string
+      dry_run:
+        description: 'Dry run (no writes)'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: pms-detail-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install deps
+        run: npm install cheerio aws4fetch --no-save
+
+      - name: Run backfill script
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.limit }}" ]; then ARGS="$ARGS --limit=${{ inputs.limit }}"; fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          node scripts/backfill-pms-detail-pages.mjs $ARGS
