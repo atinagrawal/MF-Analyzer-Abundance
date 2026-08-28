@@ -1096,6 +1096,21 @@ function PMSScreenerInner() {
                                 </>
                             )}
 
+                            {selected.apmiLink && (() => {
+                                let iaid;
+                                try { iaid = new URL(selected.apmiLink).searchParams.get('IAID'); }
+                                catch { iaid = null; }
+                                if (!iaid) return null;
+                                return (
+                                    <>
+                                        <div className="pd-section-head">Full Strategy Report</div>
+                                        <a href={`/pms/${iaid}`} target="_blank" rel="noreferrer" className="apmi-link-btn">
+                                            📄 View Fees, History &amp; Quartile Ranking →
+                                        </a>
+                                    </>
+                                );
+                            })()}
+
                             {selected.apmiLink && (
                                 <>
                                     <div className="pd-section-head">Official Source</div>

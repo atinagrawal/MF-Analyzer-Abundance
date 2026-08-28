@@ -11,6 +11,7 @@ export default function robots() {
           '/',
           '/api/fund-detail/',
           '/api/sif-detail/',
+          '/api/pms-detail/',
           '/api/scheme-master-facts',
           '/api/nifty-tri',
           '/api/bse-index',
@@ -39,6 +40,7 @@ export default function robots() {
     sitemap: [
       'https://mfcalc.getabundance.in/sitemap.xml',
       'https://mfcalc.getabundance.in/sitemap-funds.xml',
+      'https://mfcalc.getabundance.in/sitemap-pms.xml',
     ],
     host: 'https://mfcalc.getabundance.in',
   };
