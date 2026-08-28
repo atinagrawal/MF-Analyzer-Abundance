@@ -209,35 +209,66 @@ export default function PMSDetailClient({ iaid }) {
         </div>
 
         {/* ── ⑤ CURRENT PERIOD-WISE PERFORMANCE (Pro) ─────────────────── */}
-        {isPro && performance && (
-          <div className="pmsd-section">
-            <div className="pmsd-section-head">
-              <span className="pmsd-section-title">Performance vs Benchmark</span>
-              <span className="pmsd-section-sub">as of {performance.asOnMonth}</span>
+        {isPro && performance && (() => {
+          const rows = [
+            ['1M', performance.ia.month1, performance.benchmark?.month1],
+            ['3M', performance.ia.month3, performance.benchmark?.month3],
+            ['6M', performance.ia.month6, performance.benchmark?.month6],
+            ['1Y', performance.ia.year1, performance.benchmark?.year1],
+            ['2Y', performance.ia.year2, performance.benchmark?.year2],
+            ['3Y', performance.ia.year3, performance.benchmark?.year3],
+            ['5Y', performance.ia.year5, performance.benchmark?.year5],
+            ['Since Inception', performance.ia.sinceInception, performance.benchmark?.sinceInception],
+          ];
+          // Shared scale across every bar in the table (fund + benchmark, every
+          // period) so a 1M return isn't invisible next to a Since-Inception one.
+          const maxAbs = Math.max(1, ...rows.flatMap(([, ia, bm]) => [ia, bm].filter((v) => v != null).map(Math.abs)));
+          return (
+            <div className="pmsd-section">
+              <div className="pmsd-section-head">
+                <span className="pmsd-section-title">Performance vs Benchmark</span>
+                <span className="pmsd-section-sub">as of {performance.asOnMonth}</span>
+              </div>
+              <div className="pmsd-ret-legend">
+                <span className="pmsd-ret-legend-item"><span className="pmsd-ret-swatch ia" />{displayName}</span>
+                <span className="pmsd-ret-legend-item"><span className="pmsd-ret-swatch bm" />{d.benchmark || 'Benchmark'}</span>
+              </div>
+              <div className="pmsd-ret-bars">
+                {rows.map(([label, iaVal, benchVal]) => {
+                  const alpha = iaVal != null && benchVal != null ? iaVal - benchVal : null;
+                  return (
+                    <div key={label} className="pmsd-ret-row">
+                      <span className="pmsd-ret-lbl">{label}</span>
+                      <div className="pmsd-ret-bar-group">
+                        <div className="pmsd-ret-bar-wrap">
+                          <div
+                            className={`pmsd-ret-bar-fill ia${iaVal < 0 ? ' neg' : ''}`}
+                            style={{ width: `${Math.min(100, (Math.abs(iaVal ?? 0) / maxAbs) * 100)}%` }}
+                          />
+                        </div>
+                        <div className="pmsd-ret-bar-wrap">
+                          <div
+                            className="pmsd-ret-bar-fill bm"
+                            style={{ width: `${benchVal != null ? Math.min(100, (Math.abs(benchVal) / maxAbs) * 100) : 0}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="pmsd-ret-figures">
+                        <span className="pmsd-ret-val">{pctTxt(iaVal)}</span>
+                        <span className="pmsd-ret-val bm">{benchVal != null ? pctTxt(benchVal) : '—'}</span>
+                      </div>
+                      {alpha != null ? (
+                        <span className={`pmsd-ret-alpha${alpha >= 0 ? ' pos' : ' neg'}`}>
+                          {alpha >= 0 ? '+' : ''}{alpha.toFixed(2)}pp
+                        </span>
+                      ) : <span />}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <div className="pmsd-ret-bars">
-              {[
-                ['1M', performance.ia.month1, performance.benchmark?.month1],
-                ['3M', performance.ia.month3, performance.benchmark?.month3],
-                ['6M', performance.ia.month6, performance.benchmark?.month6],
-                ['1Y', performance.ia.year1, performance.benchmark?.year1],
-                ['2Y', performance.ia.year2, performance.benchmark?.year2],
-                ['3Y', performance.ia.year3, performance.benchmark?.year3],
-                ['5Y', performance.ia.year5, performance.benchmark?.year5],
-                ['Since Inception', performance.ia.sinceInception, performance.benchmark?.sinceInception],
-              ].map(([label, iaVal, benchVal]) => (
-                <div key={label} className="pmsd-ret-row">
-                  <span className="pmsd-ret-lbl">{label}</span>
-                  <div className="pmsd-ret-bar-wrap">
-                    <div className={`pmsd-ret-bar-fill${iaVal < 0 ? ' neg' : ''}`} style={{ width: `${Math.min(100, Math.abs(iaVal ?? 0) * 2)}%` }} />
-                  </div>
-                  <span className="pmsd-ret-val">{pctTxt(iaVal)}</span>
-                  {benchVal != null && <span className="pmsd-ret-val" style={{ color: 'var(--muted)' }}>bm {pctTxt(benchVal)}</span>}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── ⑥ HISTORICAL GROWTH CHART (Pro) ──────────────────────────── */}
         {isPro && history && (() => {
