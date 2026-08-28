@@ -11,15 +11,30 @@
  * internal links -- they're just not proactively pushed into the sitemap.
  */
 
+import * as cheerio from 'cheerio';
+
 const STRATEGIES = ['Equity', 'Debt', 'Multi Asset', 'Hybrid'];
 const AUM_THRESHOLD = { Equity: 50, Debt: 10, 'Multi Asset': 10, Hybrid: 10 };
 
 export const revalidate = 86400; // 24 hours
 
+function parseVal(str) {
+  if (!str || str.trim() === '-' || str.trim() === '') return 0;
+  return parseFloat(str.trim().replace(/[₹,]/g, '')) || 0;
+}
+
 async function fetchLeaderboard(strategy) {
   const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
+  // Use previous month's data (same logic as app/pms-screener/page.jsx's getPmsDataMonths)
+  let month = now.getMonth(); // 0-indexed (0=Jan, 7=Aug)
+  let year = now.getFullYear();
+  if (month === 0) {
+    month = 12;
+    year--;
+  }
+  // month is now 1-indexed (1=Jan, 12=Dec) for APMI submission
+  const asOnDate = `${year}-${month}-${new Date(year, month, 0).getDate()}`;
+
   const params = new URLSearchParams();
   params.append('strategyname', strategy);
   params.append('servicetype', 'D');
@@ -27,7 +42,7 @@ async function fetchLeaderboard(strategy) {
   params.append('', '');
   params.append('fromMonth', String(month));
   params.append('fromYears', String(year));
-  params.append('asOnDate', `${year}-${month}-${new Date(year, month, 0).getDate()}`);
+  params.append('asOnDate', asOnDate);
 
   const res = await fetch('https://www.apmiindia.org/apmi/welcomeiaperformance.htm?action=loadIAReport', {
     method: 'POST',
@@ -35,23 +50,37 @@ async function fetchLeaderboard(strategy) {
     body: params.toString(),
     cache: 'no-store',
   });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    console.error(`[sitemap-pms] ${strategy}: APMI fetch failed ${res.status}`);
+    return [];
+  }
   const html = await res.text();
 
-  // Lightweight extraction -- only need portfolioManager, aum, and IAID per
-  // row (full field parsing already lives in app/api/pms-data/route.js;
-  // duplicating cheerio here isn't worth it for a sitemap that only needs
-  // three fields and tolerates missing rows silently).
+  // Use cheerio for reliable field extraction, matching app/api/pms-data/route.js's scrapeAPMI pattern.
+  // Field indices: tds[0]=portfolioManager, tds[1]=strategyName+apmiLink, tds[2]=aum
+  const $ = cheerio.load(html);
   const rows = [];
-  const rowRe = /<tr>([\s\S]*?)<\/tr>/g;
-  let m;
-  while ((m = rowRe.exec(html))) {
-    const row = m[1];
-    const hrefMatch = row.match(/IaInsight\.htm\?IAID=(\d+)/);
-    const aumMatch = row.match(/<td[^>]*>\s*([\d,.]+)\s*<\/td>\s*<td/); // best-effort; AUM is the 3rd <td>
-    if (!hrefMatch) continue;
-    rows.push({ iaid: hrefMatch[1], aum: aumMatch ? parseFloat(aumMatch[1].replace(/,/g, '')) : 0 });
-  }
+
+  // Parse rows, skipping header (which has only th elements)
+  $('table tr').each((index, element) => {
+    const tds = $(element).find('td');
+    if (tds.length < 12) {
+      return; // Skip header and malformed rows
+    }
+
+    const href = $(tds[1]).find('a').attr('href');
+    const iaidMatch = href ? href.match(/IAID=(\d+)/) : null;
+    if (!iaidMatch) {
+      return;
+    }
+
+    const aum = parseVal($(tds[2]).text());
+    rows.push({
+      iaid: iaidMatch[1],
+      aum: aum,
+    });
+  });
+
   return rows;
 }
 
