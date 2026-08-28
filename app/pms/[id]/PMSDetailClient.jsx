@@ -23,20 +23,34 @@ function monthLabelToTimestamp(label) {
 }
 
 /**
- * Reconstructs a "grew ₹100 to ₹X" cumulative series from a monthly
- * period-history array's MONTH1 (1-month return) figures -- the same shape
- * CompareGrowthChart already renders elsewhere in this app.
+ * Reconstructs "grew ₹100 to ₹X" cumulative series for both the IA and its
+ * benchmark in a single pass over history -- the same shape
+ * CompareGrowthChart already renders elsewhere in this app. Built together
+ * (rather than as two independent per-series calls) so a month missing on
+ * either side is skipped from BOTH series, keeping them the same
+ * length/x-axis as CompareGrowthChart's documented invariant requires.
  */
-function buildGrowthSeries(history, key, name, color) {
-  let value = 100;
-  const data = [];
+function buildGrowthSeries(history, iaName, iaColor, benchName, benchColor) {
+  let iaValue = 100;
+  let benchValue = 100;
+  const iaData = [];
+  const benchData = [];
   for (const snap of history) {
-    const monthRet = snap[key]?.month1;
-    if (monthRet == null) continue;
-    value = value * (1 + monthRet / 100);
-    data.push({ t: monthLabelToTimestamp(snap.asOnMonth), v: value });
+    const iaRet = snap.ia?.month1;
+    const benchRet = snap.benchmark?.month1;
+    if (iaRet == null || benchRet == null) continue; // keep both series aligned to the same months
+    iaValue = iaValue * (1 + iaRet / 100);
+    benchValue = benchValue * (1 + benchRet / 100);
+    const t = monthLabelToTimestamp(snap.asOnMonth);
+    iaData.push({ t, v: iaValue });
+    benchData.push({ t, v: benchValue });
   }
-  return data.length >= 2 ? { name, color, data } : null;
+  const series = [];
+  if (iaData.length >= 2 && benchData.length >= 2) {
+    series.push({ name: iaName, color: iaColor, data: iaData });
+    series.push({ name: benchName, color: benchColor, data: benchData });
+  }
+  return series;
 }
 
 function pctTxt(v) {
@@ -226,10 +240,8 @@ export default function PMSDetailClient({ iaid }) {
         )}
 
         {/* ── ⑥ HISTORICAL GROWTH CHART (Pro) ──────────────────────────── */}
-        {isPro && history && history.length >= 2 && (() => {
-          const iaSeries = buildGrowthSeries(history, 'ia', displayName, '#1b5e20');
-          const benchSeries = buildGrowthSeries(history, 'benchmark', d.benchmark || 'Benchmark', '#78909c');
-          const chartSeries = [iaSeries, benchSeries].filter(Boolean);
+        {isPro && history && (() => {
+          const chartSeries = buildGrowthSeries(history, displayName, '#1b5e20', d.benchmark || 'Benchmark', '#78909c');
           if (chartSeries.length < 1) return null;
           return (
             <div className="pmsd-section">

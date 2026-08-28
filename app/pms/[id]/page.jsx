@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getPmsDetailsCached } from '@/lib/pmsDetailsCache';
+import { getPmsDetailsCached, getStalePmsDetails } from '@/lib/pmsDetailsCache';
 import { buildPmsDetailFaq } from '@/lib/pmsDetailFaq';
 import PMSDetailClient from './PMSDetailClient';
 
@@ -11,7 +11,12 @@ export async function generateMetadata({ params }) {
     return { title: 'Strategy Not Found | Abundance', robots: { index: false, follow: false } };
   }
 
-  const d = await getPmsDetailsCached(id);
+  let d;
+  try {
+    d = await getPmsDetailsCached(id);
+  } catch (err) {
+    d = await getStalePmsDetails(id).catch(() => null);
+  }
   if (!d) {
     return { title: 'Strategy Not Found | Abundance', robots: { index: false, follow: false } };
   }
@@ -67,7 +72,12 @@ export default async function PMSDetailPage({ params }) {
   const { id } = await params;
   if (!id || isNaN(Number(id))) notFound();
 
-  const d = await getPmsDetailsCached(id);
+  let d;
+  try {
+    d = await getPmsDetailsCached(id);
+  } catch (err) {
+    d = await getStalePmsDetails(id).catch(() => null);
+  }
   if (!d) notFound();
 
   return <PMSDetailClient iaid={id} />;

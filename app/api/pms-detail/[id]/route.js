@@ -18,6 +18,7 @@ import { getPmsDetailsCached } from '@/lib/pmsDetailsCache';
 import { getPmsPeriodHistoryCached } from '@/lib/pmsPeriodHistoryCache';
 import { getPmsQuartileCached } from '@/lib/pmsQuartileCache';
 import { MONTH_ABBR } from '@/lib/pmsScrapers';
+import { checkRateLimitSafe, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,6 +74,14 @@ export async function GET(request, { params }) {
         quartile: null,
         isPro: false,
       });
+    }
+
+    // Same pattern as app/api/fund-detail/[code]/route.js: only the Pro
+    // branch below does the expensive ~40-request APMI period-history walk,
+    // so only it needs rate limiting. Staff accounts are exempt.
+    if (isPro && session?.user?.id && session.user.role !== 'admin' && session.user.role !== 'distributor') {
+      const rl = await checkRateLimitSafe(`user:${session.user.id}`, 'pms-detail-history');
+      if (rl.limited) return rateLimitResponse(rl);
     }
 
     const history = await getPmsPeriodHistoryCached(id);
