@@ -112,9 +112,15 @@ async function backfillOneStrategy(iaid, r2Put, r2Get) {
   await sleep(FETCH_DELAY_MS);
 
   // -- Period history: extend existing cache, or full backfill if none --
+  // existingData/newSnapshots are declared outside the try so the catch
+  // block below can still see whatever was successfully fetched before a
+  // mid-walk failure (a `let`/`const` declared inside a try block is not
+  // visible in its catch block).
+  let existingData = [];
+  let newSnapshots = [];
   try {
     const existing = await r2Get(`pms-period-history-cache/${iaid}.json`).catch(() => null);
-    const existingData = existing?.data || [];
+    existingData = existing?.data || [];
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
@@ -136,7 +142,6 @@ async function backfillOneStrategy(iaid, r2Put, r2Get) {
     }
 
     if (months.length) {
-      const newSnapshots = [];
       for (const { year, month } of months) {
         const snap = await fetchPmsMonthSnapshot(iaid, year, month);
         if (snap) newSnapshots.push(snap);
@@ -149,6 +154,23 @@ async function backfillOneStrategy(iaid, r2Put, r2Get) {
     }
   } catch (e) {
     console.warn(`[backfill] period-history failed for IAID ${iaid}: ${e.message}`);
+    // Checkpoint whatever new months were successfully fetched before the
+    // error -- same reasoning as lib/pmsPeriodHistoryCache.js's
+    // fetchMonthsSequentially checkpoint (Task 3 fix, commit 1709281): a
+    // transient failure partway through a ~40-month walk shouldn't waste
+    // all the requests that already succeeded and force a full re-walk on
+    // the next run. Unlike that route (which must rethrow so its caller's
+    // stale-on-error fallback can react), this script already logs and
+    // moves on to the next strategy, so the write can simply be awaited
+    // here instead of fired-and-forgotten before a rethrow.
+    if (newSnapshots.length > 0) {
+      const partial = [...existingData, ...newSnapshots];
+      try {
+        await r2Put(`pms-period-history-cache/${iaid}.json`, JSON.stringify({ data: partial, ts: Date.now() }));
+      } catch (writeErr) {
+        console.warn(`[backfill] failed to checkpoint partial period-history for IAID ${iaid}: ${writeErr.message}`);
+      }
+    }
   }
 }
 
