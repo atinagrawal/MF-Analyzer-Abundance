@@ -1520,20 +1520,6 @@ function PortfolioInner() {
                 <span className="pf-action-arrow">→</span>
               </button>
             </div>
-
-            {/* Abundance advisory banner */}
-            <div className="pf-advisor-card">
-              <div className="pf-advisor-icon">✦</div>
-              <div className="pf-advisor-body">
-                <div className="pf-advisor-title">Want a professional review of your portfolio?</div>
-                <div className="pf-advisor-sub">
-                  Abundance Advisors analyzes your scheme overlap, risk-adjusted returns, and tax efficiency to recommend an optimized portfolio.
-                </div>
-              </div>
-              <a href="/book-consultation" className="pf-advisor-btn">
-                Book a Call →
-              </a>
-            </div>
           </div>
         )}
 
@@ -1751,6 +1737,26 @@ function PortfolioInner() {
         initialFromPan={mergeFromPan}
         onMerged={() => { setMergeOpen(false); setRefreshKey(k => k + 1); }}
       />
+
+      {/* Moved out of the Overview tab so it's visible regardless of which
+          tab is active -- Holdings and Statements are just as likely a
+          moment to book a consultation as Overview, and it was easy to
+          never see this at all if a visitor's first click landed on
+          another tab. */}
+      <div className="container">
+        <div className="pf-advisor-card">
+          <div className="pf-advisor-icon">✦</div>
+          <div className="pf-advisor-body">
+            <div className="pf-advisor-title">Want a professional review of your portfolio?</div>
+            <div className="pf-advisor-sub">
+              Abundance Advisors analyzes your scheme overlap, risk-adjusted returns, and tax efficiency to recommend an optimized portfolio.
+            </div>
+          </div>
+          <a href="/book-consultation" className="pf-advisor-btn">
+            Book a Call →
+          </a>
+        </div>
+      </div>
 
       {/* Shown here too (not just the logged-out gate and empty state above)
           so signed-in users viewing their actual dashboard see the same
