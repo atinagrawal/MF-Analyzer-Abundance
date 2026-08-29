@@ -6108,6 +6108,37 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 }
 .pf-upload-btn:hover { background: var(--g2); }
 
+/* ── Uploads tab: header + "upload another" CTA ── */
+.pf-uploads-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.pf-uploads-head-title {
+  font-size: .8rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.pf-upload-new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 9px 16px;
+  background: var(--g1);
+  color: #fff;
+  border-radius: 9px;
+  font-size: .72rem;
+  font-weight: 800;
+  text-decoration: none;
+  font-family: 'Raleway', sans-serif;
+  transition: background .15s, transform .15s;
+}
+.pf-upload-new-btn:hover { background: var(--g2); transform: translateY(-1px); }
+
 /* ── Empty uploads ── */
 .pf-empty-uploads {
   text-align: center;

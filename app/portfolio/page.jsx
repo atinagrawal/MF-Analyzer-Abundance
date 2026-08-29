@@ -1672,7 +1672,12 @@ function PortfolioInner() {
                 <a href="/cas-tracker" className="pf-cta-btn" style={{ marginTop: 16 }}>Upload your first CAS</a>
               </div>
             ) : (
-              <div className="pf-uploads-list">
+              <>
+                <div className="pf-uploads-head">
+                  <div className="pf-uploads-head-title">Your Statements</div>
+                  <a href="/cas-tracker" className="pf-upload-new-btn">+ Upload New CAS</a>
+                </div>
+                <div className="pf-uploads-list">
                 {portfolios.map((p, i) => (
                   <div key={p.id} className="pf-upload-item">
                     <div className="pf-upload-num">{String(i + 1).padStart(2, '0')}</div>
@@ -1712,7 +1717,8 @@ function PortfolioInner() {
                     )}
                   </div>
                 ))}
-              </div>
+                </div>
+              </>
             )}
           </div>
         )}
