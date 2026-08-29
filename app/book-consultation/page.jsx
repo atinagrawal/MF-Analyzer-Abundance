@@ -13,6 +13,7 @@ import { useState } from 'react';
 import Cal from '@calcom/embed-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { BOOK_CONSULTATION_FAQ } from './faqData';
 
 const S = {
   input: {
@@ -43,6 +44,55 @@ const ERROR_MESSAGES = {
 
 function errorMessage(code) {
   return ERROR_MESSAGES[code] || 'Something went wrong. Please try again.';
+}
+
+const TRUST_STATS = [
+  { val: '15+', label: 'Years Experience' },
+  { val: '350+', label: 'Clients' },
+  { val: '₹250Cr+', label: 'AUM' },
+  { val: 'ARN-251838', label: 'AMFI Registered' },
+];
+
+const TOPICS = [
+  { icon: '📈', title: 'Mutual Funds & SIP', desc: 'Fund selection, SIP/SWP planning, and portfolio review' },
+  { icon: '🧾', title: 'Tax-Efficient Investing', desc: 'ELSS, capital gains planning, and holding-period strategy' },
+  { icon: '🎯', title: 'Goal-Based Planning', desc: 'Retirement, a home, education, or any specific target' },
+  { icon: '💼', title: 'SIF & PMS', desc: 'Specialised Investment Funds and Portfolio Management Services for larger portfolios' },
+];
+
+function BookConsultationFaqSection() {
+  return (
+    <section style={{ padding: '64px 0 0', borderTop: '1px solid var(--border)', marginTop: 64 }}>
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 20px' }}>
+        <div className="page-eyebrow" style={{ marginBottom: 10 }}>
+          <span className="eyebrow-text">Before You Book</span>
+        </div>
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-.4px', marginBottom: 28 }}>
+          Frequently Asked Questions
+        </h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {BOOK_CONSULTATION_FAQ.map(({ q, a }, i, arr) => (
+            <details key={i} style={{
+              borderTop: '1px solid var(--border)',
+              borderBottom: i === arr.length - 1 ? '1px solid var(--border)' : 'none',
+            }}>
+              <summary style={{
+                padding: '16px 4px', cursor: 'pointer', listStyle: 'none',
+                fontSize: '.82rem', fontWeight: 800, color: 'var(--text)',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                {q}
+                <span style={{ fontSize: '1rem', color: 'var(--muted)', flexShrink: 0, marginLeft: 12 }}>+</span>
+              </summary>
+              <div style={{ padding: '0 4px 16px', fontSize: '.78rem', color: 'var(--text2)', lineHeight: 1.7 }}>
+                {a}
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export default function BookConsultationPage() {
@@ -122,6 +172,21 @@ export default function BookConsultationPage() {
                 30 minutes, no obligation. We'll walk through your goals and how mutual funds, SIPs, SWPs, SIF or PMS can fit your plan.
               </p>
             </div>
+
+            {step === 'form' && (
+              <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 24 }}>
+                {TRUST_STATS.map(({ val, label }) => (
+                  <div key={label} style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                    padding: '8px 16px', borderRadius: 10,
+                    background: 'var(--s2)', border: '1px solid var(--border)',
+                  }}>
+                    <span style={{ fontSize: '.85rem', fontWeight: 900, color: 'var(--g1)', fontFamily: "'JetBrains Mono', monospace" }}>{val}</span>
+                    <span style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted)', letterSpacing: '.3px' }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {step !== 'booking' && (
               <div style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderTop: '4px solid var(--g1)', borderRadius: 'var(--r)', padding: '32px', boxShadow: 'var(--shadow)' }}>
@@ -210,8 +275,34 @@ export default function BookConsultationPage() {
               </>
             )}
           </div>
+
+          {step === 'form' && (
+            <section style={{ width: '100%', maxWidth: 800, marginTop: 56 }}>
+              <div className="page-eyebrow" style={{ marginBottom: 10, justifyContent: 'center', display: 'flex' }}>
+                <span className="eyebrow-text">On The Call</span>
+              </div>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-.4px', marginBottom: 24, textAlign: 'center' }}>
+                What We'll Cover
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+                {TOPICS.map(({ icon, title, desc }) => (
+                  <div key={title} style={{
+                    background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 'var(--r)',
+                    padding: '18px 20px',
+                  }}>
+                    <div style={{ fontSize: '1.4rem', marginBottom: 8 }}>{icon}</div>
+                    <div style={{ fontSize: '.85rem', fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{title}</div>
+                    <div style={{ fontSize: '.72rem', color: 'var(--muted)', lineHeight: 1.5 }}>{desc}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </main>
       </div>
+
+      {step === 'form' && <BookConsultationFaqSection />}
+
       <Footer />
     </>
   );
