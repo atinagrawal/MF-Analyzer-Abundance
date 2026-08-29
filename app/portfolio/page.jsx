@@ -1530,8 +1530,8 @@ function PortfolioInner() {
                   Abundance Advisors analyzes your scheme overlap, risk-adjusted returns, and tax efficiency to recommend an optimized portfolio.
                 </div>
               </div>
-              <a href="https://www.getabundance.in" target="_blank" rel="noopener noreferrer" className="pf-advisor-btn">
-                Visit →
+              <a href="/book-consultation" className="pf-advisor-btn">
+                Book a Call →
               </a>
             </div>
           </div>

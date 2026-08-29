@@ -54,7 +54,7 @@ const NAV_GROUPS = [
       { key: 'rolling',          label: '📉 Rolling Returns',  href: '/rolling',          desc: 'Consistency across time windows' },
       { key: 'backtest',         label: '🧪 Backtester',       href: '/backtest',         desc: 'Simulate historical SIP/lumpsum' },
       { key: 'proposal-studio',  label: '🧩 Proposal Studio',  href: '/proposal-studio',  desc: 'Build client-ready proposals' },
-      { key: 'contact',          label: '📞 Contact',          href: 'https://www.getabundance.in/contact-us', external: true, desc: 'Reach Abundance Financial Services' },
+      { key: 'contact',          label: '📞 Contact',          href: '/book-consultation', desc: 'Reach Abundance Financial Services' },
     ],
   },
 ];

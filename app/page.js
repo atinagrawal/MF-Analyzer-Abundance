@@ -1557,7 +1557,7 @@ const FAQ_HTML = `<section class="faq-section" aria-label="Frequently Asked Ques
       </details>
       <details class="faq-item">
         <summary class="faq-q">Who can invest in SIF and what is the minimum amount?</summary>
-        <div class="faq-a">Any resident Indian, HUF, NRI, or institution with completed KYC can invest in a SIF. The minimum ticket is <strong>₹10 lakh</strong> per investor. This threshold is designed to ensure investors have the financial sophistication and risk capacity for SIF strategies. <a href="https://www.getabundance.in/contact-us" target="_blank" rel="noopener">Contact Abundance Financial Services</a> to explore which SIF is right for you.</div>
+        <div class="faq-a">Any resident Indian, HUF, NRI, or institution with completed KYC can invest in a SIF. The minimum ticket is <strong>₹10 lakh</strong> per investor. This threshold is designed to ensure investors have the financial sophistication and risk capacity for SIF strategies. <a href="/book-consultation">Contact Abundance Financial Services</a> to explore which SIF is right for you.</div>
       </details>
       <details class="faq-item">
         <summary class="faq-q">How is SIF taxed — LTCG or slab rate?</summary>
@@ -1565,7 +1565,7 @@ const FAQ_HTML = `<section class="faq-section" aria-label="Frequently Asked Ques
       </details>
       <details class="faq-item">
         <summary class="faq-q">Can I invest in SIF through Abundance Financial Services, Haldwani?</summary>
-        <div class="faq-a">Yes. <strong>Abundance Financial Services®</strong> (ARN-251838) is an <strong>AMFI-registered SIF Distributor serving investors across India</strong>. Call us on <a href="tel:+919808105923">+91 98081 05923</a> or visit <a href="https://www.getabundance.in/contact-us" target="_blank" rel="noopener">getabundance.in</a> to book a free consultation and explore SIF options matching your goals.</div>
+        <div class="faq-a">Yes. <strong>Abundance Financial Services®</strong> (ARN-251838) is an <strong>AMFI-registered SIF Distributor serving investors across India</strong>. Call us on <a href="tel:+919808105923">+91 98081 05923</a> or use our <a href="/book-consultation">booking page</a> to book a free consultation and explore SIF options matching your goals.</div>
       </details>
       <details class="faq-item">
         <summary class="faq-q">What is the SIP NAV Backtester and how is it different from the SIP Calculator?</summary>
