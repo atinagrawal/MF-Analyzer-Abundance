@@ -5,7 +5,7 @@
  *
  * Slim, server-side projection of isin-scheme-master.json's operational-facts
  * fields (RTA, cutoffs, settlement, min lumpsum, SIP/SWP eligibility,
- * exit-load/ELSS-lock fields) & data/groww-exit-loads.json, for the screener
+ * exit-load/ELSS-lock fields) & R2's groww-exit-loads.json, for the screener
  * page's fund detail drawer and app/cas-tracker/page.js's exit-load
  * estimation (both consumers of this one route rather than each carrying
  * their own copy of the underlying data).
@@ -19,8 +19,6 @@
  * the raw file; every consumer gets only the slim per-ISIN projection below.
  */
 
-import fs from 'fs';
-import path from 'path';
 import { r2Get } from '@/lib/r2';
 import { normalizeSchemeName as normalizeName } from '@/lib/normalizeSchemeName';
 
@@ -28,6 +26,7 @@ const FACT_FIELDS = ['name', 'rta', 'settlement', 'purchaseCutoff', 'redeemCutof
 const AMFI_NAV_URL = 'https://portal.amfiindia.com/spages/NAVAll.txt';
 const AMFI_TTL_MS = 6 * 60 * 60 * 1000; // 6h -- code-to-ISIN mapping barely changes day to day
 const ISIN_MASTER_TTL_MS = 60 * 60 * 1000; // 1h -- isin-scheme-master.json itself only refreshes monthly
+const GROWW_TTL_MS = 60 * 60 * 1000; // 1h -- groww-exit-loads.json also only refreshes monthly
 
 function pickFacts(entry) {
   const out = {};
@@ -37,24 +36,36 @@ function pickFacts(entry) {
   return out;
 }
 
-// Load decoupled Groww exit loads data
-const { growwByAmfiCode, growwByIsin } = (() => {
+// Groww exit-load data, R2-backed (scripts/sync_groww_exit_loads.js writes
+// it there) rather than a git-committed data/*.json -- same reasoning as
+// isin-scheme-master.json below: a monthly-changing data file shouldn't
+// need a git commit + redeploy to refresh, and shouldn't ship to every
+// visitor's browser via a static import.
+let _growwCache = null; // { growwByAmfiCode, growwByIsin }
+let _growwCacheTime = 0;
+
+async function buildGrowwMaps() {
+  const now = Date.now();
+  if (_growwCache && (now - _growwCacheTime) < GROWW_TTL_MS) return _growwCache;
+
+  let data = null;
+  try {
+    data = await r2Get('groww-exit-loads.json');
+  } catch (e) {
+    console.warn('[scheme-master-facts] Warning fetching groww-exit-loads.json from R2:', e.message);
+  }
+  if (!data) return _growwCache || { growwByAmfiCode: {}, growwByIsin: {} };
+
   const growwByAmfiCode = {};
   const growwByIsin = {};
-  try {
-    const filePath = path.join(process.cwd(), 'data', 'groww-exit-loads.json');
-    if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      for (const [code, rec] of Object.entries(data)) {
-        growwByAmfiCode[code] = rec;
-        if (rec.isin) growwByIsin[rec.isin] = rec;
-      }
-    }
-  } catch (e) {
-    console.warn('[scheme-master-facts] Warning loading groww-exit-loads.json:', e.message);
+  for (const [code, rec] of Object.entries(data)) {
+    growwByAmfiCode[code] = rec;
+    if (rec.isin) growwByIsin[rec.isin] = rec;
   }
-  return { growwByAmfiCode, growwByIsin };
-})();
+  _growwCache = { growwByAmfiCode, growwByIsin };
+  _growwCacheTime = now;
+  return _growwCache;
+}
 
 let _factsCache = null; // { byIsin, byNormName }
 let _factsCacheTime = 0;
@@ -77,6 +88,8 @@ async function buildFacts() {
   if (!isinSchemeMaster) {
     return _factsCache || { byIsin: {}, byNormName: {} };
   }
+
+  const { growwByIsin } = await buildGrowwMaps();
 
   const byIsin = {};
   const byNormName = {};
@@ -108,6 +121,7 @@ async function buildByAmfiCode(byIsin) {
   const now = Date.now();
   if (_amfiCodeCache && (now - _amfiCodeCacheTime) < AMFI_TTL_MS) return _amfiCodeCache;
 
+  const { growwByAmfiCode } = await buildGrowwMaps();
   const byAmfiCode = {};
   try {
     const r = await fetch(AMFI_NAV_URL, {

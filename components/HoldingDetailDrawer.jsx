@@ -203,7 +203,7 @@ export function FundDetailPanel({ f, stress, holdings, holdingsLoading = false, 
               <div><div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>💰 Min Lumpsum</div><div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text)' }}>{masterRec.minPurchase != null ? `₹${masterRec.minPurchase.toLocaleString('en-IN')}` : '—'}</div></div>
               <div><div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🏢 RTA Servicer</div><div style={{ fontSize: '.78rem', fontWeight: 700, color: masterRec.rta === 'CAMS' ? '#1565c0' : masterRec.rta === 'KFINTECH' ? '#6a1b9a' : 'var(--text)' }}>{masterRec.rta || '—'}</div></div>
             </div>
-            {masterRec.exitLoadText && (
+            {masterRec.exitLoadText ? (
               <div style={{ marginBottom: '10px' }}>
                 <div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🚪 Exit Load {masterRec.exitLoadConfidence === 'low' && '(needs review)'}</div>
                 {masterRec.exitLoadConfidence === 'high' && Array.isArray(masterRec.exitLoadTiers) ? (
@@ -215,7 +215,18 @@ export function FundDetailPanel({ f, stress, holdings, holdingsLoading = false, 
                   <div style={{ fontSize: '.72rem', fontWeight: 600, color: 'var(--muted)', fontStyle: 'italic' }}>{masterRec.exitLoadText}</div>
                 )}
               </div>
-            )}
+            ) : masterRec.hasExitLoad != null ? (
+              // BSE StAR gives a plain yes/no exit-load flag for every fund;
+              // the detailed tier breakdown above only exists once Groww's
+              // scrape has covered this specific fund -- show the simple
+              // flag rather than nothing while that coverage backfills.
+              <div style={{ marginBottom: '10px' }}>
+                <div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>🚪 Exit Load</div>
+                <div style={{ fontSize: '.72rem', fontWeight: 600, color: 'var(--muted)', fontStyle: 'italic' }}>
+                  {masterRec.hasExitLoad ? 'Applies — exact tiers not yet available, check the scheme document' : 'No exit load (per BSE StAR)'}
+                </div>
+              </div>
+            ) : null}
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {masterRec.swp === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>SWP Eligible</span>}
               {masterRec.sip === true && <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: 'var(--g-xlight)', color: 'var(--g1)', border: '1px solid var(--g-light)' }}>SIP Available</span>}

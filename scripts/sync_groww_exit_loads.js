@@ -8,7 +8,16 @@
  * 4. Validates returned Groww scheme_code / isin matches the target representative.
  * 5. Parses raw exit load text into structured tiers using lib/exitLoadParser.js.
  * 6. Propagates verified results across all family sibling ISINs.
- * 7. Writes data/groww-exit-loads.json and logs unverified/unmatched families to data/groww-exit-loads-needs-review.json.
+ * 7. Writes the result to R2 (groww-exit-loads.json, read via
+ *    app/api/scheme-master-facts) and logs unverified/unmatched families to
+ *    the local data/groww-exit-loads-needs-review.json for operator review
+ *    (uploaded as a workflow artifact, same pattern as
+ *    data/mf-inception-needs-review.json in scripts/build-screener.mjs).
+ *
+ * Previously wrote data/groww-exit-loads.json locally and committed it to
+ * git -- moved to R2 (matching scripts/sync_bse_scheme_master.js) so a
+ * routine data refresh doesn't need a git commit + redeploy, and can run
+ * unattended on a schedule.
  *
  * Usage:
  *   node scripts/sync_groww_exit_loads.js [--dry-run] [--limit=50]
@@ -17,6 +26,9 @@
 const fs = require('fs');
 const path = require('path');
 const { parseExitLoadText } = require('../lib/exitLoadParser');
+const { backupThenPut } = require('./lib/r2SyncSafety');
+
+const R2_KEY = 'groww-exit-loads.json';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const LIMIT_ARG = process.argv.find(a => a.startsWith('--limit='));
@@ -162,8 +174,15 @@ async function run() {
     targetEntries = targetEntries.slice(0, LIMIT);
   }
 
-  const existingFile = path.join(process.cwd(), 'data', 'groww-exit-loads.json');
-  const growwExitLoads = fs.existsSync(existingFile) ? JSON.parse(fs.readFileSync(existingFile, 'utf8')) : {};
+  const { r2Put, r2Get } = await import('../lib/r2.js');
+  let existing = null;
+  try {
+    existing = await r2Get(R2_KEY);
+  } catch (e) {
+    console.warn(`[Groww Sync] Could not read existing R2 copy: ${e.message}`);
+  }
+  const existingCount = existing ? Object.keys(existing).length : 0;
+  const growwExitLoads = existing ? { ...existing } : {};
 
   const unverified = [];
   let updatedCount = 0;
@@ -231,13 +250,29 @@ async function run() {
   console.log(`Total ISIN/AMFI Scheme Records Populated: ${updatedCount}`);
   console.log(`Unverified Families Logged: ${unverified.length}`);
 
+  const newCount = Object.keys(growwExitLoads).length;
+
+  // Partial-failure guard, same reasoning as this project's other R2 sync
+  // scripts: this script only ever ADDS/overwrites keys (never deletes), so
+  // the one way a bad run could destroy good data is a mostly-empty result
+  // (e.g. Groww blocking every request this run) still getting written.
+  // Refuse to overwrite good data with a suspiciously smaller one. Skipped
+  // for --limit runs, which are expected to add far fewer records than a
+  // full run has accumulated.
+  if (!DRY_RUN && LIMIT === 0 && existingCount > 0 && newCount < existingCount * 0.9) {
+    console.error(`[Groww Sync] Error: new record count (${newCount}) is suspiciously smaller than existing R2 copy's (${existingCount}) -- likely a Groww fetch failure this run.`);
+    console.log('[Groww Sync] Preserving existing R2 copy.');
+    process.exit(1);
+  }
+
   if (!DRY_RUN) {
+    await backupThenPut(r2Put, R2_KEY, existing, JSON.stringify(growwExitLoads));
+    console.log(`Successfully wrote ${newCount} records to R2 (${R2_KEY})`);
+
     const dataDir = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-
-    fs.writeFileSync(path.join(dataDir, 'groww-exit-loads.json'), JSON.stringify(growwExitLoads, null, 2), 'utf8');
     fs.writeFileSync(path.join(dataDir, 'groww-exit-loads-needs-review.json'), JSON.stringify(unverified, null, 2), 'utf8');
-    console.log(`Successfully wrote records to data/groww-exit-loads.json & data/groww-exit-loads-needs-review.json`);
+    console.log(`Logged ${unverified.length} unverified families to data/groww-exit-loads-needs-review.json`);
   }
 }
 

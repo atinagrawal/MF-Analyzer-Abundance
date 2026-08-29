@@ -1,0 +1,45 @@
+name: Monthly Groww Exit Load Sync
+
+on:
+  schedule:
+    # Run on the 1st of every month at 03:00 UTC (an hour after the BSE
+    # scheme master sync, so both refresh around the same time)
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+
+jobs:
+  sync-groww-exit-loads:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install deps
+        run: npm install aws4fetch --no-save
+
+      - name: Fetch live AMFI NAVAll.txt
+        run: curl -sf "https://portal.amfiindia.com/spages/NAVAll.txt" -o NAVAll.txt
+
+      - name: Run Groww Exit Load Sync
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        run: node scripts/sync_groww_exit_loads.js
+
+      - name: Upload needs-review artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: groww-exit-loads-needs-review
+          path: data/groww-exit-loads-needs-review.json
+          retention-days: 30
+          if-no-files-found: ignore

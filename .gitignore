@@ -44,6 +44,7 @@ data/isin-scheme-master.json
 data/amfi-aum.json
 data/amfi-scheme-risk.json
 data/sif-aum.json
+data/groww-exit-loads.json
 
 .superpowers/
 

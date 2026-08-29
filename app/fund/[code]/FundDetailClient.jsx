@@ -613,7 +613,7 @@ export default function FundDetailClient({ code }) {
               </div>
             </div>
 
-            {masterRec.exitLoadText && (
+            {masterRec.exitLoadText ? (
               <div className="fd-exit-load-box">
                 <div className="fd-ops-label">Exit Load Structure</div>
                 <div className="fd-exit-load-val">
@@ -629,7 +629,20 @@ export default function FundDetailClient({ code }) {
                     : masterRec.exitLoadText}
                 </div>
               </div>
-            )}
+            ) : masterRec.hasExitLoad != null ? (
+              // BSE StAR gives a plain yes/no exit-load flag for every fund;
+              // the detailed tier breakdown above only exists once Groww's
+              // scrape has covered this specific fund -- show the simple
+              // flag rather than nothing while that coverage backfills.
+              <div className="fd-exit-load-box">
+                <div className="fd-ops-label">Exit Load Structure</div>
+                <div className="fd-exit-load-val">
+                  {masterRec.hasExitLoad
+                    ? 'Applies — exact tiers not yet available, check the scheme document'
+                    : 'No exit load (per BSE StAR)'}
+                </div>
+              </div>
+            ) : null}
 
             <div className="fd-badge-row">
               {masterRec.sip === true && <span className="fd-badge green">✓ SIP Available</span>}
