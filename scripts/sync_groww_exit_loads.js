@@ -205,25 +205,40 @@ async function run() {
       continue;
     }
 
+    // Groww's search results never carry a usable ISIN (always null) and
+    // their scheme_code is Groww's own internal id, not the AMFI code --
+    // confirmed live: searching "Quant Flexi Cap Fund" returns
+    // scheme_code "120843" with isin: null, which can never match an AMFI
+    // code or a real ISIN. The DETAIL endpoint (fetched per candidate
+    // below) does carry a real isin field, so that's what validation has
+    // to run against -- checked against every sibling ISIN in the family
+    // (not just the representative's), since the matched candidate may
+    // resolve to a different plan/option variant than the one this family
+    // picked as its representative.
     const candidates = searchRes.data.content;
-    // AMFI-code / ISIN validation step
-    const match = candidates.find(c => c.scheme_code === representative.code || (c.isin && c.isin === representative.isin));
+    const memberIsins = new Set(members.map((m) => m.isin).filter(Boolean));
 
-    if (!match) {
-      unverified.push({ familyKey: key, representative: representative.name, reason: 'AMFI Code / ISIN validation failed' });
-      continue;
+    let rawExitLoad = null;
+    let isinMatchFound = false;
+    for (const candidate of candidates) {
+      const detailRes = await fetchJsonWithRetry(`https://groww.in/v1/api/data/mf/web/v1/scheme/search/${candidate.search_id}`);
+      await sleep(pacingDelay());
+      const detail = detailRes.data;
+      if (!detail || !detail.isin || !memberIsins.has(detail.isin)) continue;
+      isinMatchFound = true;
+      if (detail.exit_load != null) rawExitLoad = detail.exit_load;
+      break; // found the right fund by ISIN -- stop regardless of whether exit_load was present
     }
 
-    const detailUrl = `https://groww.in/v1/api/data/mf/web/v1/scheme/search/${match.search_id}`;
-    const detailRes = await fetchJsonWithRetry(detailUrl);
-    await sleep(pacingDelay());
-
-    if (!detailRes.data || detailRes.data.exit_load == null) {
+    if (!isinMatchFound) {
+      unverified.push({ familyKey: key, representative: representative.name, reason: 'No candidate ISIN matched any family member' });
+      continue;
+    }
+    if (rawExitLoad == null) {
       unverified.push({ familyKey: key, representative: representative.name, reason: 'Missing exit_load in Groww detail payload' });
       continue;
     }
 
-    const rawExitLoad = detailRes.data.exit_load;
     const parsed = parseExitLoadText(rawExitLoad);
     const timestamp = new Date().toISOString();
 
