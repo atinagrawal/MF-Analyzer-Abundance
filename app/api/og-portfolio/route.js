@@ -128,7 +128,7 @@ export async function GET() {
               fontSize: 14, fontWeight: 700,
               display: 'flex',
             }}>
-              ✓ {f}
+              {f}
             </div>
           ))}
         </div>
