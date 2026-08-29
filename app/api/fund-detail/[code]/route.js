@@ -23,14 +23,49 @@ export async function GET(req, { params }) {
       (session?.user?.id && (await getUserPlan(session.user.id)) === 'pro')
     );
 
-    const { rows: fundRows } = await pool.query(
-      `SELECT code, name, amc, category, structure, isin, nav, nav_date,
+    const SELECT_FUND_COLS = `code, name, amc, category, structure, isin, nav, nav_date,
               inception_date, age_years, flag, asof,
               ret_1m, ret_3m, ret_6m, ret_1y, ret_3y, ret_5y, ret_7y, ret_10y,
-              ret_inception, vol, max_dd, ret_per_risk
-       FROM mf_screener WHERE code = $1`,
+              ret_inception, vol, max_dd, ret_per_risk`;
+
+    const { rows: fundRows } = await pool.query(
+      `SELECT ${SELECT_FUND_COLS} FROM mf_screener WHERE code = $1`,
       [Number(code)]
     );
+
+    let siblingResolved = false;
+    if (!fundRows.length) {
+      // mf_screener only carries Regular Plan + Growth Option rows
+      // (scripts/build-screener.mjs). A code that misses here is almost
+      // always a Direct-plan (or non-Growth-option) holding from a user's
+      // CAS -- resolve it to the same fund's Regular Growth Plan sibling
+      // via mf_code_index (built from the full, unfiltered AMFI universe),
+      // since AMFI's current feed gives both variants the identical
+      // (name, amc) pair. The client labels this clearly rather than
+      // presenting it as the holding's own plan.
+      try {
+        const { rows: idxRows } = await pool.query(
+          `SELECT name, amc FROM mf_code_index WHERE code = $1`,
+          [String(code)]
+        );
+        if (idxRows.length) {
+          const { name, amc } = idxRows[0];
+          const { rows: siblingRows } = await pool.query(
+            `SELECT ${SELECT_FUND_COLS} FROM mf_screener WHERE name = $1 AND amc = $2 LIMIT 1`,
+            [name, amc]
+          );
+          if (siblingRows.length) {
+            fundRows.push(siblingRows[0]);
+            siblingResolved = true;
+          }
+        }
+      } catch (err) {
+        // mf_code_index may not exist yet on a deploy that lands before the
+        // next nightly build-screener.mjs run -- degrade to today's 404
+        // rather than a 500.
+        console.error('[api/fund-detail] sibling-plan lookup failed:', err.message);
+      }
+    }
 
     if (!fundRows.length) {
       return Response.json({ error: 'Fund not found' }, { status: 404 });
@@ -74,6 +109,7 @@ export async function GET(req, { params }) {
       asof: fund.asof || null,
       aumCr: aumInfo.aumCr,
       aumAsOf: aumInfo.aumAsOf,
+      siblingResolved,
     };
 
     if (!isPro) {

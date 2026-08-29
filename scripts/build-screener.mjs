@@ -92,6 +92,13 @@ function parseUniverse(txt) {
   const H = headerIndex(lines[0].replace(/\r$/, ""), ["Scheme Code", "Name", "Plan", "Option", "ISIN", "Net Asset Value", "Date"]);
   const maxIdx = Math.max(...Object.values(H));
   const out = new Map(); let cat = null, structure = null, amc = null;
+  // Every parsed code -> {name, amc}, regardless of Plan/Option -- covers
+  // Direct plans and non-Growth options that `out` deliberately excludes.
+  // Since AMFI dropped the "- Regular Plan-Growth" name suffix (see below),
+  // a Direct-plan row and its Regular-Growth sibling now share the exact
+  // same (name, amc) pair, so this index lets app/api/fund-detail resolve
+  // a Direct-plan holding's code to its mf_screener sibling row.
+  const allCodes = new Map();
   for (const raw of lines) {
     const line = raw.replace(/\r$/, "").trim();
     if (!line || line.startsWith("Scheme Code;")) continue;
@@ -110,6 +117,8 @@ function parseUniverse(txt) {
     const name = (p[H.Name] || "").replace(/\s+/g, " ").trim();
     const plan = (p[H.Plan] || "").trim();
     const option = (p[H.Option] || "").trim();
+    const code = p[H["Scheme Code"]];
+    if (code && name) allCodes.set(code, { name, amc });
     if (!/regular/i.test(plan)) continue;
     // ICICI Prudential labels its accumulation option "Cumulative" instead of
     // "Growth" (confirmed live Aug 2026) -- without this, every ICICI Pru
@@ -119,10 +128,9 @@ function parseUniverse(txt) {
     if (!/growth|cumulative/i.test(option)) continue;
 
     const nav = +p[H["Net Asset Value"]]; if (!isFinite(nav) || nav <= 0) continue;
-    const code = p[H["Scheme Code"]];
     out.set(code, { code, name, amc, cat, structure, nav, navDate: pd(p[H.Date]), isin: (p[H.ISIN] || "").trim() });
   }
-  return out;
+  return { out, allCodes };
 }
 
 /* ---- 2. all-fund NAV as-of a date (last NAV <= anchor within a small window) ---- */
@@ -245,7 +253,7 @@ async function main() {
 
   // ---- 1. universe ----
   console.log("[screener] fetching universe…");
-  const uni = parseUniverse(await fetchText("https://portal.amfiindia.com/spages/NAVAll.txt"));
+  const { out: uni, allCodes } = parseUniverse(await fetchText("https://portal.amfiindia.com/spages/NAVAll.txt"));
   const now = Math.max(...[...uni.values()].map((f) => f.navDate || 0));
 
   let removed = 0;
@@ -506,8 +514,31 @@ async function main() {
       await c.query(`INSERT INTO mf_screener (${COLS.join(",")}) VALUES ${ph.join(",")}`, vals);
     }
     await c.query("COMMIT");
-    await c.end();
     console.log(`[screener] upserted ${rows.length} rows into Postgres`);
+
+    // ---- full-universe code index (all plans/options, not just Regular+Growth) ----
+    // Lets app/api/fund-detail/[code] resolve a Direct-plan (or other
+    // non-Regular-Growth) holding's code to its mf_screener sibling by
+    // (name, amc), since mf_screener itself only stores Regular+Growth rows.
+    await c.query(`CREATE TABLE IF NOT EXISTS mf_code_index (
+      code TEXT PRIMARY KEY, name TEXT NOT NULL, amc TEXT
+    )`);
+    const idxEntries = [...allCodes.entries()];
+    await c.query("BEGIN");
+    await c.query("DELETE FROM mf_code_index");
+    for (let i = 0; i < idxEntries.length; i += 400) {
+      const chunk = idxEntries.slice(i, i + 400);
+      const vals = [], ph = [];
+      chunk.forEach(([code, { name, amc }], j) => {
+        ph.push(`($${j * 3 + 1},$${j * 3 + 2},$${j * 3 + 3})`);
+        vals.push(code, name, amc ?? null);
+      });
+      await c.query(`INSERT INTO mf_code_index (code,name,amc) VALUES ${ph.join(",")}`, vals);
+    }
+    await c.query("COMMIT");
+    console.log(`[screener] upserted ${idxEntries.length} rows into mf_code_index`);
+
+    await c.end();
   }
 }
 main().catch((e) => { console.error(e); process.exit(1); });
