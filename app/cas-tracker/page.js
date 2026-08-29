@@ -8,7 +8,6 @@ import Footer from '@/components/Footer';
 import { schemeXirr, manualHoldingXirr, schemeCashFlows, manualHoldingCashFlows, combinedXirr } from '@/lib/xirr';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getSIFLogo, getMFLogoFromSchemeName } from '@/lib/providerLogos';
-import growwByAmfiCode from '@/data/groww-exit-loads.json';
 import { CAS_FAQ } from './faqData';
 import { FundDetailDrawer, SifDetailDrawer } from '@/components/HoldingDetailDrawer';
 import { TAX, inferCategory, applyLossOffset } from '@/lib/taxCalc';
@@ -44,17 +43,6 @@ function buildNameToSchemeEntry(byIsin) {
   }
   return map;
 }
-
-// data/groww-exit-loads.json is keyed by AMFI code only -- derive a
-// secondary ISIN index once, mirroring app/api/scheme-master-facts/route.js's
-// own dual-indexing so both lookup paths in getExitLoadInfo resolve.
-const growwByIsin = (() => {
-  const map = {};
-  for (const rec of Object.values(growwByAmfiCode)) {
-    if (rec.isin) map[rec.isin] = rec;
-  }
-  return map;
-})();
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const CACHE_PREFIX = 'cas_parse_v2_';
@@ -310,27 +298,32 @@ function formatTierPeriod(days) {
 }
 
 function getExitLoadInfo(fundName, isin, masterFacts) {
-  // 1. Verified Groww Exit Loads (Decoupled, high-confidence dataset)
-  const growwRec = (isin && growwByIsin[isin]) || (() => {
+  // Groww exit-load data is merged onto the same masterEntry object by
+  // app/api/scheme-master-facts/route.js (facts.exitLoadText/exitLoadTiers/
+  // exitLoadConfidence/exitLoadFreePercent, alongside the BSE-native fields
+  // below) -- no separate lookup needed here.
+  let masterEntry = isin && masterFacts?.byIsin?.[isin];
+  if (!masterEntry && fundName) {
+    // Name fallback if ISIN is not passed or empty
     const norm = (fundName || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (!norm) return null;
-    return Object.values(growwByAmfiCode).find(r => r.schemeName && r.schemeName.toUpperCase().replace(/[^A-Z0-9]/g, '') === norm);
-  })();
+    if (norm) masterEntry = masterFacts?.byNormName?.[norm];
+  }
 
-  if (growwRec && growwRec.rawText && growwRec.confidence === 'high' && Array.isArray(growwRec.tiers)) {
-    const sortedTiers = [...growwRec.tiers].sort((a, b) => a.days - b.days);
+  // 1. Verified Groww Exit Loads (high-confidence dataset)
+  if (masterEntry?.exitLoadText && masterEntry.exitLoadConfidence === 'high' && Array.isArray(masterEntry.exitLoadTiers)) {
+    const sortedTiers = [...masterEntry.exitLoadTiers].sort((a, b) => a.days - b.days);
     const tierStr = sortedTiers.length === 0
       ? '0% (No Load)'
       : sortedTiers.map(t => `${(t.rate * 100).toFixed(2).replace(/\.00$/, '')}% (<${formatTierPeriod(t.days)})`).join(' / ');
-    const freeStr = growwRec.freePercent ? ` (${growwRec.freePercent}% free)` : '';
+    const freeStr = masterEntry.exitLoadFreePercent ? ` (${masterEntry.exitLoadFreePercent}% free)` : '';
     const label = `Verified: ${tierStr}${freeStr}`;
     return {
       isLocked: false,
       hasExitLoad: sortedTiers.length > 0,
       schedule: sortedTiers,
-      freePercent: growwRec.freePercent || 0,
+      freePercent: masterEntry.exitLoadFreePercent || 0,
       label,
-      rawText: growwRec.rawText
+      rawText: masterEntry.exitLoadText
     };
   }
 
@@ -341,19 +334,12 @@ function getExitLoadInfo(fundName, isin, masterFacts) {
   // BSE-flag/category-guess logic below for the actual number, and tag
   // whatever it returns with the real clause text so the UI can flag it
   // for manual review instead of trusting the guess unquestioningly.
-  const needsReview = !!(growwRec && growwRec.rawText && growwRec.confidence === 'low');
+  const needsReview = !!(masterEntry?.exitLoadText && masterEntry.exitLoadConfidence === 'low');
   const withReview = (result) => needsReview
-    ? { ...result, label: `${result.label} — Review: "${growwRec.rawText}"`, rawText: growwRec.rawText, needsReview: true }
+    ? { ...result, label: `${result.label} — Review: "${masterEntry.exitLoadText}"`, rawText: masterEntry.exitLoadText, needsReview: true }
     : result;
 
   // 2. Fallback to existing BSE flag logic
-  let masterEntry = isin && masterFacts?.byIsin?.[isin];
-  if (!masterEntry && fundName) {
-    // Name fallback if ISIN is not passed or empty
-    const norm = (fundName || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (norm) masterEntry = masterFacts?.byNormName?.[norm];
-  }
-
   if (masterEntry) {
     if (masterEntry.isLocked) {
       return withReview({ isLocked: true, hasExitLoad: false, schedule: [], label: 'BSE: ELSS Locked' });
