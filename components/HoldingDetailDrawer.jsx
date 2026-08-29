@@ -101,11 +101,6 @@ export function FundDetailPanel({ f, stress, holdings, holdingsLoading = false, 
         </div>
         <button className="scr-x" onClick={onClose} aria-label="Close">×</button>
       </div>
-      {f.siblingResolved && (
-        <div className="scr-warn" style={{ backgroundColor: 'var(--g-xlight)', border: '1px solid var(--g-light)', color: 'var(--g1)' }}>
-          ℹ️ You hold a different plan/option of this fund (e.g. Direct Plan) — the facts and returns below are for its <b>Regular Growth Plan</b> variant. Your own returns are typically a little higher, since Direct plans carry a lower expense ratio. The chart below still reflects your actual holding's own NAV history.
-        </div>
-      )}
       {f.flag === 'check' && <div className="scr-warn">⚠ One or more returns look unusual for this fund — we're reviewing the source NAV. Treat with caution.</div>}
       {stress && stress.days_50pct > 20 && (
         <div className="scr-warn" style={{ backgroundColor: 'rgba(211, 47, 47, 0.08)', border: '1px solid rgba(211, 47, 47, 0.2)', color: '#d32f2f' }}>
