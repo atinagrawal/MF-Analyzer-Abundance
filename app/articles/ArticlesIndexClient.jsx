@@ -35,7 +35,7 @@ export default function ArticlesIndexClient({ articles, pillars }) {
           <a key={a.slug} href={`/articles/${a.slug}`} className="art-card">
             <img
               className="art-card-image"
-              src={`/api/og-article?title=${encodeURIComponent(a.title)}&pillar=${encodeURIComponent(pillars[a.pillar])}`}
+              src={a.image || `/api/og-article?title=${encodeURIComponent(a.title)}&pillar=${encodeURIComponent(pillars[a.pillar])}`}
               alt=""
               loading="lazy"
             />

@@ -22,7 +22,7 @@ export async function generateMetadata({ params }) {
   }
 
   const url = `${SITE}/articles/${article.slug}`;
-  const ogImage = `${SITE}/api/og-article?title=${encodeURIComponent(article.title)}&pillar=${encodeURIComponent(PILLARS[article.pillar])}`;
+  const ogImage = article.image ? `${SITE}${article.image}` : `${SITE}/api/og-article?title=${encodeURIComponent(article.title)}&pillar=${encodeURIComponent(PILLARS[article.pillar])}`;
   const title = `${article.title} | Abundance`;
 
   return {
@@ -117,7 +117,7 @@ export default async function ArticlePage({ params }) {
         </div>
         <img
           className="art-hero-image"
-          src={`/api/og-article?title=${encodeURIComponent(article.title)}&pillar=${encodeURIComponent(PILLARS[article.pillar])}`}
+          src={article.image || `/api/og-article?title=${encodeURIComponent(article.title)}&pillar=${encodeURIComponent(PILLARS[article.pillar])}`}
           width={1200}
           height={630}
           alt={article.title}
