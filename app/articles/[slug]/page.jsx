@@ -115,6 +115,13 @@ export default async function ArticlePage({ params }) {
           <span className="art-byline-dot">·</span>
           <span>ARN-251838</span>
         </div>
+        <img
+          className="art-hero-image"
+          src={`/api/og-article?title=${encodeURIComponent(article.title)}&pillar=${encodeURIComponent(PILLARS[article.pillar])}`}
+          width={1200}
+          height={630}
+          alt={article.title}
+        />
       </div>
 
       <div className="container">

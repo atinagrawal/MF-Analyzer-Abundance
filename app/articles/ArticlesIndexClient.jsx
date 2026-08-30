@@ -33,10 +33,18 @@ export default function ArticlesIndexClient({ articles, pillars }) {
       <div className="art-grid">
         {visible.map((a) => (
           <a key={a.slug} href={`/articles/${a.slug}`} className="art-card">
-            <span className="art-card-pillar">{pillars[a.pillar]}</span>
-            <h3>{a.title}</h3>
-            <p>{a.description}</p>
-            <span className="art-card-read">Read the article →</span>
+            <img
+              className="art-card-image"
+              src={`/api/og-article?title=${encodeURIComponent(a.title)}&pillar=${encodeURIComponent(pillars[a.pillar])}`}
+              alt=""
+              loading="lazy"
+            />
+            <div className="art-card-body">
+              <span className="art-card-pillar">{pillars[a.pillar]}</span>
+              <h3>{a.title}</h3>
+              <p>{a.description}</p>
+              <span className="art-card-read">Read the article →</span>
+            </div>
           </a>
         ))}
       </div>
