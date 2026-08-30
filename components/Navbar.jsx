@@ -23,6 +23,7 @@ const NAV_DIRECT = [
   { key: 'home',       label: '🏠 Home',          href: 'https://www.getabundance.in', external: true },
   { key: 'calculator', label: '📊 MF Calculator', href: '/' },
   { key: 'portfolio',  label: '💼 My Portfolio',  href: '/portfolio' },
+  { key: 'articles',   label: '✍️ Articles',      href: '/articles' },
 ];
 
 // ── Grouped links: shown as mega-menu dropdowns on desktop ──────────────────
