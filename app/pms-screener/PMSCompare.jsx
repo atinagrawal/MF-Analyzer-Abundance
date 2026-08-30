@@ -600,7 +600,7 @@ export function PMSCompareModal({ funds, dataLabel, dataMonths, strategy, onClos
             <strong>Important Disclosure:</strong> This comparison is for informational and educational purposes only and does not constitute investment advice.
             Data sourced from APMI India — Discretionary strategies — {dataLabel} — TWRR methodology, net of all fees.
             Past performance is not indicative of future returns. Minimum PMS investment is ₹50 Lakhs as per SEBI regulations.
-            Abundance Financial Services. Atin Kumar Agrawal · ARN-251838 · APRN04279 · APMI Registered Portfolio Manager Distributor.
+            Abundance Financial Services. Atin Kumar Agrawal · ARN-251838 · APRN04279 · APMI Registered PMS Distributor.
           </div>
         </div>
       </div>

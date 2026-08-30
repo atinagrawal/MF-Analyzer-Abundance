@@ -962,7 +962,7 @@ function PMSScreenerInner() {
                             Source: APMI India · Discretionary {strategy} strategies · {dataMonths.latest.shortLabel} / {dataMonths.prev.shortLabel} · TWRR methodology · Per strategy latest available
                         </div>
                         <div className="src-line-reg">
-                            Abundance Financial Services. Atin Kumar Agrawal · ARN-251838 · APRN04279 · APMI Registered Portfolio Manager Distributor.
+                            Abundance Financial Services. Atin Kumar Agrawal · ARN-251838 · APRN04279 · APMI Registered PMS Distributor.
                         </div>
                     </div>
                 )}
@@ -1133,7 +1133,7 @@ function PMSScreenerInner() {
                             <div className="pd-source" style={{ marginTop: '28px' }}>
                                 <strong>Disclosure:</strong> Data from APMI India · Discretionary {strategy} strategies · Returns as of {selected.dataMonth === 'prev' ? dataMonths.prev.label : dataMonths.latest.label} · TWRR, net of all fees. Past performance is not indicative of future results. Min PMS investment ₹50L per SEBI.
                                 <br /><br />
-                                Abundance Financial Services. Atin Kumar Agrawal · ARN-251838 · APRN04279 · APMI Registered Portfolio Manager Distributor.
+                                Abundance Financial Services. Atin Kumar Agrawal · ARN-251838 · APRN04279 · APMI Registered PMS Distributor.
                             </div>
                         </div>
                     </>
