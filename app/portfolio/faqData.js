@@ -44,6 +44,6 @@ export const PORTFOLIO_FAQ = [
   },
   {
     q: 'Can I plan a redemption or see my past transactions from My Portfolio?',
-    a: "Yes. Every CAS-derived holding card has a Redemption button that opens a FIFO lot-level planner — it shows exactly which purchase lots a redemption would consume, the STCG/LTCG split with Jan 31 2018 grandfathering, and estimated tax, the same planner CAS Tracker uses. Any holding with recorded transactions also has a Transactions button showing your full buy/sell history, a rate-journey comparison against today's NAV, and an optional chart overlaying the fund's full NAV history.",
+    a: "Yes. Every CAS-derived holding card has a Redemption button that opens a FIFO lot-level planner — it shows exactly which purchase lots a redemption would consume, any exit load each lot would incur based on how long it was held, the STCG/LTCG split with Jan 31 2018 grandfathering, and estimated tax, the same planner CAS Tracker uses. Any holding with recorded transactions also has a Transactions button showing your full buy/sell history, a rate-journey comparison against today's NAV, and an optional chart overlaying the fund's full NAV history.",
   },
 ];

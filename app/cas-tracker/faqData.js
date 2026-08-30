@@ -45,6 +45,10 @@ export const CAS_FAQ = [
     a: 'Yes. Click "Transactions" on any fund card to open a chart of the NAV at every purchase, SIP instalment, switch, or redemption — alongside your average entry NAV versus today\'s NAV, and an option to overlay the fund\'s own NAV history since your first purchase.',
   },
   {
+    q: 'Does the redemption planner account for exit load?',
+    a: 'Yes. Click "Redeem" on any fund and the planner checks its actual exit-load structure — verified scheme-level data where available, with a clear BSE-sourced fallback otherwise — and shows the exact amount deducted for each purchase lot based on how long it was held, alongside the FIFO capital-gains and tax breakdown, before you redeem.',
+  },
+  {
     q: 'Can I export my portfolio to PDF or Excel?',
     a: 'Yes. Use the PDF and Excel buttons above your holdings to download a printable summary or a spreadsheet of everything currently shown — respecting the Mutual Fund/SIF filter and, in combined family view, tagging each row with its owning family member.',
   },
