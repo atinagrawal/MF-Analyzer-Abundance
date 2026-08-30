@@ -14,9 +14,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { TAX, inferCategory, applyLossOffset } from '@/lib/taxCalc';
+import { calcLotExitLoad } from '@/lib/exitLoad';
 import LossAdjustmentPanel from './LossAdjustmentPanel';
 
-export default function RedemptionPlanner({ fund, onClose }) {
+export default function RedemptionPlanner({ fund, masterFacts, onClose }) {
   const maxUnits = fund.units;
   const currentNav = fund.liveNav;
   const today = new Date();
@@ -74,6 +75,9 @@ export default function RedemptionPlanner({ fund, onClose }) {
     let stcgGain   = 0;
     let ltcgGain   = 0;
     let proceeds   = 0;
+    let totalExitLoad = 0;
+    let cumUnitsRedeemed = 0;
+    const totalFundUnits = fund.units;
     const lotRows  = [];
     let granApplied = false;
 
@@ -86,6 +90,15 @@ export default function RedemptionPlanner({ fund, onClose }) {
       const isLTCG  = heldMs >= cutoffMs;
       const saleVal = take * currentNav;
       proceeds     += saleVal;
+
+      const { exitLoadAmt, effectiveRate } = calcLotExitLoad({
+        lot, take, currentNav, redeemDate: today,
+        fundName: fund.name, isin: fund.isin,
+        overrideRate: null, totalFundUnits, cumUnitsRedeemed,
+        masterFacts,
+      });
+      totalExitLoad += exitLoadAmt;
+      cumUnitsRedeemed += take;
 
       // Grandfathering: for equity LTCG units purchased before Jan 31 2018,
       // effective cost = max(purchase nav, jan31_2018 nav) per Section 112A
@@ -113,6 +126,8 @@ export default function RedemptionPlanner({ fund, onClose }) {
         heldDays,
         isGrandfathered,
         isTransmission: !!lot.isTransmission,
+        exitLoadAmt,
+        exitLoadRate: effectiveRate,
       });
     }
 
@@ -121,13 +136,13 @@ export default function RedemptionPlanner({ fund, onClose }) {
       : { stcgRate: slabPct / 100, ltcgRate: slabPct / 100, exemption: 0 };
     const offset = applyLossOffset({ stcg: stcgGain, ltcg: ltcgGain }, rateConfig);
     const { stcgTax, ltcgTax, tax: totalTax } = offset;
-    const postTax = proceeds - totalTax;
+    const postTax = proceeds - totalExitLoad - totalTax;
     const lossNote = (offset.offsetIntoLTCG || offset.stcgLossCarryForward || offset.ltcgLossCarryForward)
       ? offset
       : null;
 
-    return { lotRows, stcgGain, ltcgGain, stcgTax, ltcgTax, totalTax, proceeds, postTax, granApplied, lossNote };
-  }, [unitsToRedeem, category, slabPct, fund, currentNav, today, gran18Nav]);
+    return { lotRows, stcgGain, ltcgGain, stcgTax, ltcgTax, totalTax, proceeds, totalExitLoad, postTax, granApplied, lossNote };
+  }, [unitsToRedeem, category, slabPct, fund, currentNav, today, gran18Nav, masterFacts]);
 
   const fmt = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
   const fmtD = (n) => n.toFixed(4);
@@ -283,8 +298,8 @@ export default function RedemptionPlanner({ fund, onClose }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.65rem', minWidth: 380 }}>
                   <thead>
                     <tr style={{ background: 'var(--s2)' }}>
-                      {['Purchase Date','Units','Buy NAV','Gain / Loss','Holding','Type'].map(h => (
-                        <th key={h} style={{ padding: '8px 10px', textAlign: h === 'Units' || h === 'Gain / Loss' ? 'right' : 'left', fontWeight: 800, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", fontSize: '.55rem', letterSpacing: '.5px', textTransform: 'uppercase', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' }}>{h}</th>
+                      {['Purchase Date','Units','Buy NAV','Gain / Loss','Holding','Exit Load','Type'].map(h => (
+                        <th key={h} style={{ padding: '8px 10px', textAlign: h === 'Units' || h === 'Gain / Loss' || h === 'Exit Load' ? 'right' : 'left', fontWeight: 800, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", fontSize: '.55rem', letterSpacing: '.5px', textTransform: 'uppercase', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -312,6 +327,9 @@ export default function RedemptionPlanner({ fund, onClose }) {
                           {row.gain >= 0 ? '+' : ''}{fmt(row.gain)}
                         </td>
                         <td style={{ padding: '8px 10px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{row.heldDays}d</td>
+                        <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace", textAlign: 'right', whiteSpace: 'nowrap', color: row.exitLoadAmt > 0 ? '#e65100' : 'var(--muted)' }}>
+                          {row.exitLoadAmt > 0 ? `−${fmt(row.exitLoadAmt)}` : '—'}
+                        </td>
                         <td style={{ padding: '8px 10px' }}>
                           <span style={{ fontSize: '.52rem', fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: row.isLTCG ? 'var(--g-xlight)' : '#fff3e0', color: row.isLTCG ? 'var(--g1)' : '#e65100', border: `1px solid ${row.isLTCG ? 'var(--g-light)' : '#ffe0b2'}`, fontFamily: "'JetBrains Mono', monospace" }}>
                             {row.isLTCG ? 'LTCG' : 'STCG'}
@@ -349,6 +367,7 @@ export default function RedemptionPlanner({ fund, onClose }) {
               <div style={{ fontSize: '.58rem', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 12 }}>Tax Summary</div>
               {[
                 ['Gross Proceeds', result.proceeds, 'var(--text)'],
+                ...(result.totalExitLoad > 0 ? [['Exit Load', -result.totalExitLoad, '#e65100']] : []),
                 // Debt has no rate difference between STCG/LTCG (both taxed at slab) — an
                 // "STCG Gains"-only line used to silently hide long-held debt gains from
                 // view entirely. Show one honest combined figure instead of a fake split.
@@ -361,11 +380,11 @@ export default function RedemptionPlanner({ fund, onClose }) {
                       ['LTCG Tax (12.5%)', -result.ltcgTax, 'var(--neg)'],
                     ]),
                 ['Total Tax', -result.totalTax, 'var(--neg)'],
-                ['Post-Tax Proceeds', result.postTax, 'var(--g1)'],
+                ['Net Proceeds', result.postTax, 'var(--g1)'],
               ].map(([label, val, color]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: label === 'Total Tax' ? '1px solid var(--border)' : 'none', marginBottom: label === 'Total Tax' ? 4 : 0 }}>
-                  <span style={{ fontSize: '.72rem', color: 'var(--muted)', fontWeight: label === 'Post-Tax Proceeds' ? 800 : 600, paddingLeft: label.includes('Tax (') ? 10 : 0 }}>{label}</span>
-                  <span style={{ fontSize: label === 'Post-Tax Proceeds' ? '.85rem' : '.75rem', fontWeight: label.includes('Tax (') ? 700 : 800, color, fontFamily: "'JetBrains Mono', monospace" }}>
+                  <span style={{ fontSize: '.72rem', color: 'var(--muted)', fontWeight: label === 'Net Proceeds' ? 800 : 600, paddingLeft: label.includes('Tax (') ? 10 : 0 }}>{label}</span>
+                  <span style={{ fontSize: label === 'Net Proceeds' ? '.85rem' : '.75rem', fontWeight: label.includes('Tax (') ? 700 : 800, color, fontFamily: "'JetBrains Mono', monospace" }}>
                     {val >= 0 ? '' : '−'}{fmt(Math.abs(val))}
                   </span>
                 </div>

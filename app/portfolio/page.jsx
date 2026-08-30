@@ -320,6 +320,7 @@ function PortfolioInner() {
   const [errMsg, setErrMsg]        = useState('');
   const [detailHolding, setDetailHolding] = useState(null); // holding object for the fund/SIF details drawer
   const [planFund,      setPlanFund]      = useState(null); // holding object for the Redemption Planner
+  const [masterFactsState, setMasterFactsState] = useState({ byIsin: {}, byNormName: {} }); // scheme-master-facts, for RedemptionPlanner's exit-load calc
   const [txnDrawerFund, setTxnDrawerFund] = useState(null); // holding object for the Transaction History drawer
   const [navHistoryCache, setNavHistoryCache] = useState({}); // navHistoryCacheKey(fund) → { loading, points, error }
   const [refreshKey, setRefreshKey] = useState(0); // bump to re-run the main data fetch (e.g. after deleting a statement)
@@ -370,6 +371,7 @@ function PortfolioInner() {
           fetch(`/api/holdings${userIdQS}`),
           getSchemeMasterFacts(),
         ]);
+        setMasterFactsState(masterFacts);
 
         const listData     = await listRes.json();
         const holdingsData = await holdingsRes.json();
@@ -1718,7 +1720,7 @@ function PortfolioInner() {
           : <FundDetailDrawer code={detailHolding.code} onClose={() => setDetailHolding(null)} />
       )}
 
-      {planFund && <RedemptionPlanner fund={planFund} onClose={() => setPlanFund(null)} />}
+      {planFund && <RedemptionPlanner fund={planFund} masterFacts={masterFactsState} onClose={() => setPlanFund(null)} />}
       {txnDrawerFund && (
         <TransactionHistoryDrawer
           fund={txnDrawerFund}
