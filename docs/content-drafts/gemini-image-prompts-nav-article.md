@@ -1,11 +1,14 @@
 # Image Prompts for "Why Looking at a Fund's NAV Is a Terrible Way to Judge It"
 
-Two prompts: the hero/card image, plus one supporting image placed mid-article
-(already wired into the markdown at `content/articles/pillar1-nav-tells-you-nothing.md`,
-right after the ₹500-vs-₹10 worked example — it just needs the file to exist).
+**Status:** Mid-article inline image ✅ approved and live
+(`public/articles/nav-tells-you-nothing-inline.jpg`). Hero image needs a
+regeneration — the first attempt filled the two canisters to visibly
+different heights (left ~⅔ full, right nearly to the brim), which
+accidentally suggests the opposite of the article's point. Only the hero
+prompt below needs to run again.
 
-**Target output:** 1200×630 px (or closest available ratio, e.g. 16:9 — crop to fit).
-Same style and constraints as the rest of the series.
+**Target output:** 1200×630 px (or closest available ratio, e.g. 16:9 —
+crop to fit). Same style and constraints as the rest of the series.
 
 ---
 
@@ -30,35 +33,24 @@ Same style and constraints as the rest of the series.
 
 ---
 
-## 1. Hero / card image — save as `public/articles/nav-tells-you-nothing.jpg`
+## Hero / card image (regenerate) — save as `public/articles/nav-tells-you-nothing.jpg`
 
 [fixed style block above] +
 
-Two transparent glass display canisters standing side by side on a marble
-pedestal, lit from above. The left canister holds a handful of large gold
-coins, stacked loosely, filling it to a certain height. The right
-canister holds hundreds of tiny gold coins, filling it to the exact same
-height. Different coin count, identical fill level — the visual point is
-that both canisters hold the same amount, just divided differently. No
+Two transparent glass display canisters, identical in size and shape,
+standing side by side on a marble pedestal, lit evenly from above. The
+left canister holds a handful of large gold coins. The right canister
+holds hundreds of tiny gold coins. **Both canisters must be filled to
+exactly the same height, measured against the glass — draw a level
+horizontal line where the coins in both canisters stop, and match it
+precisely.** This equal fill line is the entire point of the image: two
+completely different-looking piles that top out at the identical level.
+Do not let one canister read as fuller or emptier than the other. No
 text, no numbers, no scale markings on the glass.
-
----
-
-## 2. Mid-article image — save as `public/articles/nav-tells-you-nothing-inline.jpg`
-
-[fixed style block above] +
-
-A jeweller's brass balance scale on a marble counter, perfectly level. One
-pan holds a small handful of large gold coins. The other pan holds a much
-larger pile of small gold coins. The beam sits dead level between them —
-the visual point is that the two very different-looking piles weigh
-exactly the same. Close, slightly low camera angle so the level beam
-reads clearly at a glance. No text or numbers anywhere.
 
 ---
 
 ## After generating
 
-Same as before — send both over for a look (style consistency, no
-rendered text, crop, file size under ~250KB) before anything gets wired
-into `lib/articles.js` or committed.
+Send the new hero over for a look (matching fill height especially, plus
+the usual style/text/size checks) before it gets wired in.
