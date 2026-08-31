@@ -1,6 +1,6 @@
 import { getSitemapEntries, getHomeSitemapEntries, getScreenerCategorySitemapEntries, getArticlesSitemapEntries } from '@/lib/metadata';
 import { CURATED_CATEGORIES } from './screener/screenerContent';
-import { ARTICLES, getPublishedDate } from '@/lib/articles';
+import { ARTICLES } from '@/lib/articles';
 
 /**
  * app/sitemap.js — Dynamic sitemap generation
@@ -14,6 +14,6 @@ export default function sitemap() {
     ...getSitemapEntries(),
     ...getHomeSitemapEntries(),
     ...getScreenerCategorySitemapEntries(CURATED_CATEGORIES),
-    ...getArticlesSitemapEntries(ARTICLES, getPublishedDate()),
+    ...getArticlesSitemapEntries(ARTICLES),
   ];
 }

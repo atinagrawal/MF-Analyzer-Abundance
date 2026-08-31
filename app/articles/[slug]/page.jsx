@@ -2,13 +2,17 @@ import { notFound } from 'next/navigation';
 import Markdown from 'react-markdown';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { ARTICLES, PILLARS, getArticleBySlug, getPublishedDate } from '@/lib/articles';
+import { ARTICLES, PILLARS, getArticleBySlug } from '@/lib/articles';
 import { getArticleBody } from '@/lib/articlesContent';
 import '../articles.css';
 
 export const dynamic = 'force-static';
 
 const SITE = 'https://mfcalc.getabundance.in';
+
+function formatDate(iso) {
+  return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
 
 export function generateStaticParams() {
   return ARTICLES.map((a) => ({ slug: a.slug }));
@@ -62,7 +66,7 @@ export default async function ArticlePage({ params }) {
   if (!article) notFound();
 
   const body = getArticleBody(article);
-  const publishedDate = getPublishedDate();
+  const publishedDate = article.publishedDate;
   const url = `${SITE}/articles/${article.slug}`;
 
   const articleSchema = {
@@ -114,6 +118,8 @@ export default async function ArticlePage({ params }) {
           <span>Abundance Financial Services</span>
           <span className="art-byline-dot">·</span>
           <span>ARN-251838</span>
+          <span className="art-byline-dot">·</span>
+          <time dateTime={publishedDate}>{formatDate(publishedDate)}</time>
         </div>
         <img
           className="art-hero-image"

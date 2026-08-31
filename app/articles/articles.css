@@ -30,12 +30,32 @@
   margin: 0;
 }
 
+/* ── Index: search bar ── */
+.art-search {
+  padding: 28px 0 0;
+}
+.art-search input {
+  width: 100%;
+  max-width: 420px;
+  padding: 12px 16px;
+  font-family: 'Raleway', sans-serif;
+  font-size: .92rem;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s ease;
+}
+.art-search input:focus { border-color: var(--g-light); }
+.art-search input::placeholder { color: var(--muted); }
+
 /* ── Index: pillar filter chips ── */
 .art-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 28px 0 8px;
+  padding: 16px 0 8px;
 }
 .art-filter-chip {
   font-family: 'JetBrains Mono', monospace;
@@ -92,6 +112,13 @@
   flex: 1;
   padding: 22px;
 }
+.art-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
 .art-card-pillar {
   font-family: 'JetBrains Mono', monospace;
   font-size: .66rem;
@@ -104,7 +131,13 @@
   border-radius: 100px;
   padding: 4px 10px;
   width: fit-content;
-  margin-bottom: 14px;
+}
+.art-card-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .66rem;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
 }
 .art-card h3 {
   font-size: 1.14rem;
@@ -126,6 +159,46 @@
   font-size: .8rem;
   font-weight: 700;
   color: var(--g1);
+}
+
+.art-empty {
+  padding: 48px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: .92rem;
+}
+
+/* ── Index: pagination ── */
+.art-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 4px 0 56px;
+}
+.art-page-btn {
+  font-family: 'Raleway', sans-serif;
+  font-size: .82rem;
+  font-weight: 700;
+  padding: 9px 18px;
+  border-radius: 100px;
+  border: 1.5px solid var(--border);
+  background: var(--surface, #fff);
+  color: var(--g1);
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.art-page-btn:hover:not(:disabled) { border-color: var(--g-light); background: var(--g-xlight); }
+.art-page-btn:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: .5;
+}
+.art-page-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .74rem;
+  font-weight: 700;
+  color: var(--muted);
 }
 
 /* ── Detail page ── */
