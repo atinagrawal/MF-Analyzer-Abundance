@@ -26,6 +26,10 @@ Picture two funds, both tracking the same index, both genuinely identical in eve
 
 In Fund A, ₹50,000 buys you 100 units. In Fund B, the same ₹50,000 buys you 5,000 units. If the index rises 10% tomorrow, Fund A's NAV becomes ₹550 — your 100 units are now worth ₹55,000. Fund B's NAV becomes ₹11 — your 5,000 units are now worth ₹55,000. **Identical outcome.** You didn't get more for your money by "buying more units." The unit count is just a different way of slicing the exact same pie, and a bigger slice count doesn't mean a bigger pie.
 
+![A jeweller's brass scale balanced perfectly level, one pan holding a few large gold coins and the other holding many small gold coins](/articles/nav-tells-you-nothing-inline.jpg)
+
+*Different unit counts. Identical value. That's the whole trick.*
+
 This is precisely the same illusion an [NFO's "still just ₹10!" marketing](/articles/the-nfo-trap) leans on — a low starting number that feels like a bargain and isn't one, because there was never a "regular price" it was discounted from in the first place.
 
 ## What to actually look at instead

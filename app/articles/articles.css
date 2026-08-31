@@ -303,6 +303,13 @@
   overflow-x: auto;
   margin: 0 0 24px;
 }
+.art-body img {
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  margin: 8px 0 28px;
+  box-shadow: 0 10px 26px rgba(27,94,32,.14);
+}
 .art-body code {
   font-family: 'JetBrains Mono', monospace;
   font-size: .82rem;
