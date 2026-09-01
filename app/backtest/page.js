@@ -561,6 +561,14 @@ function Results({ r, sipDay, onShare, shareUrl }) {
   const [detail, setDetail] = useState(null);
   const rows = r.port.map((h, i) => ({ ...h, ...r.perFund[h.key], color: PALETTE[i % PALETTE.length], share: r.finalVal ? (r.perFund[h.key].value / r.finalVal) * 100 : 0 })).sort((a, b) => b.value - a.value);
   const clampedAny = rows.filter((h) => h.clamped);
+  // One growth line per fund, each starting at its OWN start date (not a
+  // shared/clipped common start) -- see buildGrowthSeries. Holdings that
+  // never actually got invested (requested start after the backtest end)
+  // have nothing to plot and are skipped.
+  const compareSeries = rows
+    .filter((h) => !h.noInvest && h.series && h.series.length > 1)
+    .map((h) => ({ key: h.key, name: h.name, color: h.color, data: buildGrowthSeries(h.series, h.start, r.end) }))
+    .filter((s) => s.data.length > 1);
   const risk = useMemo(() => riskMetrics(blendedIndex(r.port.map((h) => ({ series: h.series, weight: r.perFund[h.key].invested })), r.gridStart, r.end)), [r]);
 
   const exportPDF = () => doExport(r, rows, sipDay);
@@ -591,6 +599,13 @@ function Results({ r, sipDay, onShare, shareUrl }) {
       </div>
 
       <Chart curve={r.curve} splices={r.splices} />
+
+      {compareSeries.length > 1 && (
+        <div className="bt-cmpsection">
+          <div className="bt-cmpsection-h">Fund-by-fund growth</div>
+          <CompareChart series={compareSeries} />
+        </div>
+      )}
 
       {risk && <RiskPanel m={risk} />}
 
@@ -762,6 +777,81 @@ function Chart({ curve, splices = [], height = 260, gid = "p", valueLabel = "Por
   );
 }
 
+/* ===================== FUND-BY-FUND COMPARISON CHART ===================== */
+// Multi-line growth chart, one line per fund, all sharing ONE real-calendar-
+// time x-axis -- unlike app/screener/CompareGrowthChart.jsx (index-based
+// x-axis, requires equal-length series), each line here starts wherever its
+// own data begins, so a fund held since 2018 and one added in 2023 both
+// begin at v=100 but at different x-positions, directly comparable in time.
+function CompareChart({ series, height = 240 }) {
+  const [hover, setHover] = useState(null); // { t }
+  const wrapRef = useRef(null);
+  const W = 720, H = height, padX = 8, padT = 16, padB = 26;
+
+  const usable = series.filter((s) => s.data && s.data.length > 1);
+  if (usable.length === 0) return null;
+
+  const minX = Math.min(...usable.map((s) => s.data[0].t));
+  const maxX = Math.max(...usable.map((s) => s.data[s.data.length - 1].t));
+  const maxV = Math.max(...usable.flatMap((s) => s.data.map((p) => p.v)), 100);
+  const minV = Math.min(...usable.flatMap((s) => s.data.map((p) => p.v)), 100);
+  const X = (t) => padX + ((t - minX) / (maxX - minX || 1)) * (W - padX * 2);
+  const Y = (v) => padT + (1 - (v - minV) / (maxV - minV || 1)) * (H - padT - padB);
+  const line = (s) => s.data.map((p, i) => `${i ? "L" : "M"}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join(" ");
+
+  // Nearest point per-series to a hovered timestamp (asof -- last point at/before t;
+  // a series that hasn't started yet at t has no point to show, correctly omitted).
+  const nearest = (s, t) => { let best = null; for (const p of s.data) { if (p.t <= t) best = p; else break; } return best; };
+
+  const locate = (clientX) => {
+    const svg = wrapRef.current?.querySelector("svg"); if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const px = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width)) * W;
+    const t = minX + ((px - padX) / (W - padX * 2)) * (maxX - minX);
+    setHover({ t: Math.min(maxX, Math.max(minX, t)) });
+  };
+  const onMove = (e) => locate(e.clientX);
+
+  let tip = null;
+  if (hover) {
+    const rows = usable.map((s) => ({ name: s.name, color: s.color, pt: nearest(s, hover.t) })).filter((r) => r.pt);
+    if (rows.length) {
+      const leftPct = Math.min(78, Math.max(4, (X(hover.t) / W) * 100));
+      tip = { leftPct, rows };
+    }
+  }
+
+  return (
+    <div className="bt-chart bt-cmpchart" ref={wrapRef}>
+      <div className="bt-legend bt-legend-wrap">
+        {usable.map((s) => (<span key={s.key}><i className="lg" style={{ background: s.color }} /> {s.name}</span>))}
+      </div>
+      <div className="bt-plot">
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"
+          onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setHover(null)} onPointerCancel={() => setHover(null)}>
+          <line x1={padX} x2={W - padX} y1={Y(100)} y2={Y(100)} stroke="var(--border)" strokeWidth="1" strokeDasharray="3 3" />
+          {usable.map((s) => (<path key={s.key} d={line(s)} fill="none" stroke={s.color} strokeWidth="2" strokeLinejoin="round" />))}
+          {hover && tip && (
+            <g>
+              <line x1={X(hover.t)} x2={X(hover.t)} y1={padT} y2={H - padB} stroke="var(--muted)" strokeWidth="1" strokeDasharray="3 3" />
+              {tip.rows.map((r) => (<circle key={r.name} cx={X(hover.t)} cy={Y(r.pt.v)} r="3.5" fill={r.color} stroke="#fff" strokeWidth="1" />))}
+            </g>
+          )}
+        </svg>
+        {hover && tip && (
+          <div className="bt-flytip bt-cmptip" style={{ left: tip.leftPct + "%", top: "4%" }}>
+            <b className="bt-flytip-d">{fmtDate(hover.t)}</b>
+            {tip.rows.map((r) => (
+              <span key={r.name}><i className="lg" style={{ background: r.color }} />{r.name} <b style={{ color: r.color }}>{r.pt.v >= 100 ? "+" : ""}{(r.pt.v - 100).toFixed(1)}%</b></span>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="bt-axis"><span>{fmtMon(minX)}</span><span className="bt-axis-hint">₹100 invested on each fund's own start date</span><span>{fmtMon(maxX)}</span></div>
+    </div>
+  );
+}
+
 // Per-fund invested-vs-value curve (for the fund detail view), from its own buys + NAV series
 function buildFundCurve(buys, series, start, end) {
   if (!series || !series.length) return [];
@@ -771,6 +861,23 @@ function buildFundCurve(buys, series, start, end) {
     const px = asof(series, g);
     return { t: g, value: px ? units * px.nav : 0, invested: inv };
   });
+}
+
+// Normalized "₹100 invested on this fund's own start date" NAV growth curve,
+// for the fund-by-fund comparison chart -- deliberately independent of buy
+// timing/amounts (unlike buildFundCurve above), since this compares each
+// fund's own performance, not the portfolio's ₹ value. `start` is that
+// holding's own effective start (r.perFund[key].start), so two funds added
+// to the portfolio at different real dates each begin their line at 100
+// on their own real start date, not a shared/clipped common start.
+function buildGrowthSeries(series, start, end) {
+  if (!series || !series.length) return [];
+  const base = fwd(series, start);
+  if (!base || base.nav <= 0) return [];
+  return monthlyGrid(base.t, end).map((g) => {
+    const px = asof(series, g);
+    return { t: g, v: px ? (px.nav / base.nav) * 100 : null };
+  }).filter((p) => p.v != null);
 }
 
 // Responsive fund detail: right-side drawer on desktop, bottom sheet on mobile.
@@ -1103,6 +1210,12 @@ const CSS = `
 .bt-axis{display:flex;justify-content:space-between;font:600 11px JetBrains Mono,monospace;color:var(--muted);margin-top:6px;padding:0 2px}
 .bt-tip{display:inline-flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin-top:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font:600 12px JetBrains Mono,monospace;color:var(--text2)}
 .bt-tip b{color:var(--g1)}
+
+.bt-cmpsection{margin-bottom:20px}
+.bt-cmpsection-h{font:600 11px JetBrains Mono,monospace;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.bt-legend-wrap{flex-wrap:wrap;row-gap:6px}
+.bt-cmptip{transform:translateX(-50%);max-width:220px;white-space:normal}
+.bt-cmptip span{justify-content:space-between;gap:8px}
 
 .bt-compare{border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-bottom:20px}
 .bt-cmp-row{display:grid;grid-template-columns:1fr auto auto;gap:14px;padding:11px 14px;font-size:13.5px;align-items:center;border-top:1px solid var(--border)}
