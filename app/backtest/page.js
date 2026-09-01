@@ -279,28 +279,72 @@ export default function BacktestPage() {
 
   useEffect(() => { fetch("/api/sif-nav").then((r) => r.json()).then((d) => setSifList(d.schemes || [])).catch(() => {}); }, []);
 
-  // Restore a shared portfolio from the URL (?p=)
+  // Restore a shared portfolio from the URL (?p=). Names aren't in the URL
+  // (see buildShareState) -- holdings start with a blank name, filled in
+  // just below: MF names via one /api/mf?code= request per distinct code
+  // (the same endpoint loadSeries() calls, so this trusts the exact same
+  // "NAV endpoint's own metadata" source loadSeries already does), SIF
+  // names from sifList once that's loaded (a separate effect, since
+  // sifList is fetched in its own useEffect and may not be ready yet).
   useEffect(() => {
     if (typeof window === "undefined") return;
     const p = new URLSearchParams(window.location.search).get("p");
     if (!p) return;
     const s = decodeState(p);
     if (!s || !Array.isArray(s.h)) return;
-    setHoldings(s.h.map((x) => ({ key: uid(), kind: x.k, id: x.i, name: x.n, cat: x.c, mode: x.m || "sip", monthly: x.mo ?? 10000, lumpsum: x.l ?? 100000, startMode: x.sm || "default", customStart: x.cs || "" })));
+    const restored = s.h.map((x) => ({ key: uid(), kind: x.k, id: x.i, name: "", cat: "", mode: x.m || "sip", monthly: x.mo ?? 10000, lumpsum: x.l ?? 100000, startMode: x.sm || "default", customStart: x.cs || "" }));
+    setHoldings(restored);
     if (s.sd != null) setSipDay(s.sd);
     if (s.smo) setStartMode(s.smo);
     if (s.lb != null) setLookback(String(s.lb));
     if (s.sdt) setStartDate(s.sdt);
     if (s.su != null) setStepUpPct(s.su);
     if (s.st != null) setStitch(!!s.st);
-    if (s.bo && s.b) { setBenchOn(true); setBench({ key: "bench", kind: s.b.k, id: s.b.i, name: s.b.n }); }
+    if (s.bo && s.b) { setBenchOn(true); setBench({ key: "bench", kind: s.b.k, id: s.b.i, name: "" }); }
+
+    const mfCodes = [...new Set([
+      ...restored.filter((h) => h.kind === "mf").map((h) => h.id),
+      ...(s.bo && s.b?.k === "mf" ? [s.b.i] : []),
+    ])];
+    mfCodes.forEach((code) => {
+      fetchJSON(`/api/mf?code=${code}`).then((d) => {
+        const name = d?.meta?.scheme_name;
+        if (!name) return;
+        setHoldings((prev) => prev.map((h) => (h.kind === "mf" && h.id === code ? { ...h, name } : h)));
+        setBench((prev) => (prev && prev.kind === "mf" && prev.id === code ? { ...prev, name } : prev));
+      }).catch(() => {});
+    });
   }, []);
 
+  // Backfills SIF names/categories for a restored share link once sifList
+  // has actually loaded -- see the comment on the restore effect above.
+  useEffect(() => {
+    if (!sifList.length) return;
+    setHoldings((prev) => prev.map((h) => {
+      if (h.kind !== "sif" || h.name) return h;
+      const found = sifList.find((x) => x.scheme_id === h.id);
+      return found ? { ...h, name: found.nav_name, cat: shortCat(found.category) } : h;
+    }));
+    setBench((prev) => {
+      if (!prev || prev.kind !== "sif" || prev.name) return prev;
+      const found = sifList.find((x) => x.scheme_id === prev.id);
+      return found ? { ...prev, name: found.nav_name } : prev;
+    });
+  }, [sifList]);
+
+  // Fund/SIF names are deliberately NOT stored here -- `i` (AMFI code /
+  // SIF scheme id) already uniquely identifies the holding, and the full
+  // name (~40-50 chars, duplicated per holding) was by far the biggest
+  // contributor to the URL's length. Names are re-resolved on restore
+  // instead (see the two useEffects below) -- same lookups the page
+  // already does, so this costs nothing extra beyond an already-shared
+  // portfolio's normal load, and as a bonus a share link never goes stale
+  // if a scheme's official name changes later.
   const buildShareState = () => ({
     v: 1,
-    h: holdings.map((h) => ({ k: h.kind, i: h.id, n: h.name, c: h.cat, m: h.mode, mo: h.monthly, l: h.lumpsum, sm: h.startMode, cs: h.customStart })),
+    h: holdings.map((h) => ({ k: h.kind, i: h.id, m: h.mode, mo: h.monthly, l: h.lumpsum, sm: h.startMode, cs: h.customStart })),
     sd: sipDay, smo: startMode, lb: lookback, sdt: startDate, su: stepUpPct, st: stitch ? 1 : 0,
-    bo: benchOn ? 1 : 0, b: bench ? { k: bench.kind, i: bench.id, n: bench.name } : null,
+    bo: benchOn ? 1 : 0, b: bench ? { k: bench.kind, i: bench.id } : null,
   });
   const shareUrl = () => (typeof window === "undefined" ? "" : `${window.location.origin}/backtest?p=${encodeState(buildShareState())}`);
   const flashToast = (m) => { setToast(m); setTimeout(() => setToast(""), 2400); };
