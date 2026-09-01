@@ -166,6 +166,29 @@ CREATE TABLE IF NOT EXISTS folio_pan_overrides (
   PRIMARY KEY (user_id, folio_no)
 );
 
+-- Admin correction of a folio's real ARN, for national/umbrella distributors
+-- (NJ IndiaInvest, Centricity, etc.) whose CAS-reported ARN identifies only
+-- the shared parent entity, not which of its many affiliated sub-advisors
+-- actually services a given folio. CAS carries no EUIN/sub-broker field
+-- that could answer this on its own -- casparser's Scheme.advisor is a
+-- single free-text field -- so it's an explicit admin correction, keyed by
+-- (pan, folio_no) since that's the most granular identity CAS gives us.
+-- Unlike folio_pan_overrides above, this does NOT need to be scoped by
+-- user_id: pan is already a real, globally-unique identity (unlike a bare
+-- folio number on its own), so (pan, folio_no) alone can't collide across
+-- different accounts' uploads. The corrected ARN then flows through the
+-- exact same AMFI-lookup pipeline any other ARN uses
+-- (lib/distributorResolution.js's resolveDistributors) -- no separate
+-- display logic needed. See the PRADEEP GOYAL/NJ bug report this fixed.
+CREATE TABLE IF NOT EXISTS arn_overrides (
+  pan         TEXT        NOT NULL,
+  folio_no    TEXT        NOT NULL,
+  real_arn    TEXT        NOT NULL,
+  updated_by  TEXT        NOT NULL REFERENCES users(id),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (pan, folio_no)
+);
+
 -- Saved Proposal Studio proposals — same shape as cas_portfolios: this row
 -- is just the searchable/listable metadata, the full proposal payload
 -- (selected funds, amounts, client details) lives in Vercel Blob at

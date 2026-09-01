@@ -11,7 +11,7 @@
 const assert = require('assert');
 
 (async () => {
-  const { extractArnDigits, isArnBlocked, arnBlockedReason } = await import('../lib/amfiDistributor.js');
+  const { extractArnDigits, isArnBlocked, arnBlockedReason, normalizeArn } = await import('../lib/amfiDistributor.js');
 
   console.log('=== Running amfiDistributor Unit Tests ===\n');
 
@@ -93,6 +93,38 @@ const assert = require('assert');
 
   test('leaves an already-unpadded ARN unchanged', () => {
     assert.strictEqual(extractArnDigits('ARN-251838'), '251838');
+  });
+
+  // ── normalizeArn (direct admin entry, e.g. an arn_overrides correction --
+  //    no 4-7 digit disambiguation window, since a human is asserting a
+  //    specific known ARN rather than this being parsed out of free text) ──
+  test('normalizeArn strips an "ARN-" prefix and leading zeros', () => {
+    assert.strictEqual(normalizeArn('ARN-0155'), '155');
+  });
+
+  test('normalizeArn accepts a bare digit string shorter than 4 digits (NJ IndiaInvest\'s real ARN)', () => {
+    assert.strictEqual(normalizeArn('155'), '155');
+  });
+
+  test('normalizeArn accepts a digit run longer than 7 digits', () => {
+    assert.strictEqual(normalizeArn('12345678'), '12345678');
+  });
+
+  test('normalizeArn strips whitespace and non-digit separators', () => {
+    assert.strictEqual(normalizeArn(' ARN 251838 '), '251838');
+  });
+
+  test('normalizeArn returns null for blank input', () => {
+    assert.strictEqual(normalizeArn(''), null);
+  });
+
+  test('normalizeArn returns null for null/undefined input', () => {
+    assert.strictEqual(normalizeArn(null), null);
+    assert.strictEqual(normalizeArn(undefined), null);
+  });
+
+  test('normalizeArn returns null for text with no digits at all', () => {
+    assert.strictEqual(normalizeArn('Direct'), null);
   });
 
   // ── isArnBlocked / arnBlockedReason ──────────────────────────────────

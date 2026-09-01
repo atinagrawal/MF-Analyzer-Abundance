@@ -11,7 +11,7 @@
 const assert = require('assert');
 
 (async () => {
-  const { resolveDistributors, formatDistributorName } = await import('../lib/distributorResolution.js');
+  const { resolveDistributors, resolveArns, formatDistributorName, overrideKey, resolveHoldingArn } = await import('../lib/distributorResolution.js');
 
   console.log('=== Running distributorResolution Unit Tests ===\n');
 
@@ -138,6 +138,68 @@ const assert = require('assert');
     assert.strictEqual(formatDistributorName(''), 'Registered Distributor');
     assert.strictEqual(formatDistributorName('   '), 'Registered Distributor');
     assert.strictEqual(formatDistributorName(undefined), 'Registered Distributor');
+  });
+
+  await test('resolveHoldingArn falls back to extractArnDigits when no override exists', async () => {
+    const arn = resolveHoldingArn('ABCDE1234F', '1234567/89', 'ARN-251838', {});
+    assert.strictEqual(arn, '251838');
+  });
+
+  await test('resolveHoldingArn prefers an admin override over the raw CAS advisor string', async () => {
+    const overrides = { [overrideKey('ABCDE1234F', '1234567/89')]: '251838' };
+    const arn = resolveHoldingArn('ABCDE1234F', '1234567/89', 'ARN-0155 NJ INDIA INVEST PVT LTD', overrides);
+    assert.strictEqual(arn, '251838');
+  });
+
+  await test('resolveHoldingArn only applies an override to the exact (pan, folio) it was set for', async () => {
+    const overrides = { [overrideKey('ABCDE1234F', '1234567/89')]: '251838' };
+    // Same PAN, different folio -- NJ's raw ARN should still resolve as normal.
+    const arn = resolveHoldingArn('ABCDE1234F', '9999999/11', 'ARN-0155 NJ INDIA INVEST PVT LTD', overrides);
+    assert.strictEqual(arn, '155');
+  });
+
+  // ── resolveArns -- takes ARNs that are ALREADY bare digits, no extraction.
+  //    This is what app/cas-tracker/page.js's resolution effect calls
+  //    directly (resolveHoldingArn's output -> resolveArns), specifically
+  //    to avoid the double-extraction bug that used to make NJ IndiaInvest's
+  //    "155" vanish when it was re-run through extractArnDigits a second
+  //    time (155 is only 3 digits -- too short for extractArnDigits's 4-7
+  //    digit free-text disambiguation window). ──
+  await test('resolveArns resolves an already-bare short ARN like NJ IndiaInvest\'s "155" (the exact double-extraction regression)', async () => {
+    await withMockFetch(
+      () => ({ found: true, distributor: { arn: '155', name: 'NJ INDIA INVEST PVT LTD' } }),
+      async (calls) => {
+        // Simulates the real pipeline: extract once via resolveHoldingArn,
+        // then hand the already-bare result straight to resolveArns.
+        const arn = resolveHoldingArn('ABCDE1234F', '1234567/89', 'ARN-0155 NJ INDIA INVEST PVT LTD', {});
+        const map = await resolveArns([arn]);
+        assert.strictEqual(calls.length, 1);
+        assert.strictEqual(calls[0], '/api/distributor?arn=155');
+        assert.strictEqual(map['155'].name, 'NJ INDIA INVEST PVT LTD');
+      }
+    );
+  });
+
+  await test('resolveArns dedupes repeated ARNs into one network call each', async () => {
+    await withMockFetch(
+      () => ({ found: true, distributor: { arn: '251838', name: 'ATIN KUMAR AGRAWAL' } }),
+      async (calls) => {
+        const map = await resolveArns(['251838', '251838']);
+        assert.strictEqual(calls.length, 1);
+        assert.strictEqual(Object.keys(map).length, 1);
+      }
+    );
+  });
+
+  await test('resolveArns filters out falsy entries with zero network calls', async () => {
+    await withMockFetch(
+      () => ({ found: true, distributor: {} }),
+      async (calls) => {
+        const map = await resolveArns([null, undefined, '']);
+        assert.strictEqual(calls.length, 0);
+        assert.deepStrictEqual(map, {});
+      }
+    );
   });
 
   console.log(`\n${passed} passed, ${failed} failed`);

@@ -15,7 +15,7 @@ import { getExitLoadInfo, calcLotExitLoad } from '@/lib/exitLoad';
 import LossAdjustmentPanel from '@/components/LossAdjustmentPanel';
 import RedemptionPlanner from '@/components/RedemptionPlanner';
 import TransactionHistoryDrawer, { isTransmissionTxn, earliestTxnDate, navHistoryCacheKey } from '@/components/TransactionHistoryDrawer';
-import { resolveDistributors, extractArnDigits, formatDistributorName } from '@/lib/distributorResolution';
+import { resolveArns, formatDistributorName, resolveHoldingArn, overrideKey } from '@/lib/distributorResolution';
 import CasMemberMerge from '@/components/CasMemberMerge';
 
 // isin-scheme-master.json (~8.4MB, ~26k entries) used to be statically
@@ -1239,6 +1239,10 @@ function CasTrackerInner() {
   const [navHistoryCache, setNavHistoryCache] = useState({});  // navHistoryCacheKey(fund) → { loading, points, error } -- only populated on demand (see fetchNavHistory)
   const [detailFund,     setDetailFund]     = useState(null);  // holding object for the fund/SIF details drawer (same one screener uses)
   const [distributorCache, setDistributorCache] = useState({}); // ARN (bare digits) → DistributorRecord|null -- see lib/distributorResolution.js
+  const [arnOverrides, setArnOverrides] = useState({}); // overrideKey(pan, folio) → corrected ARN (bare digits) -- see lib/distributorResolution.js + app/api/arn-overrides
+  const [arnOverrideEditing, setArnOverrideEditing] = useState(null); // overrideKey(pan, folio) of the folio currently being edited, or null
+  const [arnOverrideDraft, setArnOverrideDraft] = useState('');       // the edit box's current text
+  const [arnOverrideSaving, setArnOverrideSaving] = useState(false);
 
   // Auto-load via ?load=blobKey (admin CAS view) or ?userId= (manual-only client)
   useEffect(() => {
@@ -1889,23 +1893,79 @@ function CasTrackerInner() {
     }
   }
 
-  // Resolves every CAS-derived holding's raw `advisor` string to a real
-  // distributor profile, once per portfolioDataByPan change (i.e. whenever
-  // new CAS data actually loads) rather than per-render or per-hover.
-  // Already-resolved ARNs are skipped on subsequent firings (e.g. loading a
-  // second family member's PAN after the first) so re-loading doesn't
-  // re-fetch ARNs this page already knows about.
+  // Admin-set ARN corrections for national/umbrella distributors (NJ
+  // IndiaInvest, Centricity, etc.) whose CAS-reported ARN doesn't identify
+  // which specific sub-advisor actually services a folio -- see
+  // lib/distributorResolution.js's resolveHoldingArn and the arn_overrides
+  // table. Fetched once per portfolioDataByPan change; a plain
+  // authenticated GET, no admin gate -- every viewer of a PAN needs to see
+  // the correction, not just the admin who set it.
   useEffect(() => {
-    const allAdvisorStrings = Object.values(portfolioDataByPan)
-      .flatMap(info => (info.holdings || []).map(h => h.advisor));
-    const newArns = [...new Set(allAdvisorStrings.map(extractArnDigits).filter(Boolean))]
+    const pans = Object.keys(portfolioDataByPan);
+    if (pans.length === 0) return;
+    fetch(`/api/arn-overrides?pans=${pans.map(encodeURIComponent).join(',')}`)
+      .then(r => r.json())
+      .then(({ overrides }) => setArnOverrides(overrides || {}))
+      .catch(() => {});
+  }, [portfolioDataByPan]);
+
+  // Resolves every CAS-derived holding's raw `advisor` string (or its
+  // admin-corrected ARN override, see resolveHoldingArn) to a real
+  // distributor profile, once per portfolioDataByPan/arnOverrides change
+  // (i.e. whenever new CAS data or a fresh correction actually loads)
+  // rather than per-render or per-hover. Already-resolved ARNs are skipped
+  // on subsequent firings (e.g. loading a second family member's PAN after
+  // the first) so re-loading doesn't re-fetch ARNs this page already knows
+  // about.
+  useEffect(() => {
+    const allArns = Object.entries(portfolioDataByPan)
+      .flatMap(([pan, info]) => (info.holdings || []).map(h => resolveHoldingArn(pan, h.folio, h.advisor, arnOverrides)));
+    const newArns = [...new Set(allArns.filter(Boolean))]
       .filter(arn => !(arn in distributorCache));
     if (newArns.length === 0) return;
-    resolveDistributors(newArns).then(map => {
+    resolveArns(newArns).then(map => {
       setDistributorCache(prev => ({ ...prev, ...map }));
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [portfolioDataByPan]);
+  }, [portfolioDataByPan, arnOverrides]);
+
+  // Saves (or, given a blank draft, clears) an admin ARN correction for one
+  // folio, then updates local state immediately so the fund card and rollup
+  // banner re-resolve without a page reload. Admin-gated server-side too
+  // (app/api/arn-overrides) -- this is just the client-side save path for
+  // the inline edit control on each CAS fund card.
+  async function saveArnOverride(pan, folio) {
+    const draft = arnOverrideDraft.trim();
+    setArnOverrideSaving(true);
+    try {
+      if (!draft) {
+        await fetch('/api/arn-overrides', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pan, folio }),
+        });
+        setArnOverrides(prev => {
+          const next = { ...prev };
+          delete next[overrideKey(pan, folio)];
+          return next;
+        });
+      } else {
+        const res = await fetch('/api/arn-overrides', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pan, folio, real_arn: draft }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Save failed');
+        setArnOverrides(prev => ({ ...prev, [overrideKey(pan, folio)]: data.real_arn }));
+      }
+      setArnOverrideEditing(null);
+    } catch (err) {
+      alert(`Couldn't save the ARN correction: ${err.message}`);
+    } finally {
+      setArnOverrideSaving(false);
+    }
+  }
 
   // xlsx is only ever needed here, on an explicit user click -- dynamic
   // import keeps SheetJS's full parser (large; already a dependency for
@@ -2660,7 +2720,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 
               const buckets = {}; // key: resolved ARN or 'DIRECT' → { count, label }
               casHoldings.forEach(h => {
-                const arn = extractArnDigits(h.advisor);
+                const arn = resolveHoldingArn(h.__ownerPan || activePan, h.folio, h.advisor, arnOverrides);
                 if (!arn) {
                   buckets.DIRECT = buckets.DIRECT || { count: 0, label: 'Direct' };
                   buckets.DIRECT.count++;
@@ -2738,8 +2798,11 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                     const fProfit  = fGain >= 0;
                     const avgNavDisplay = fund.avgPurchaseNav > 0 ? `₹${fmtDec(fund.avgPurchaseNav, 2)}` : '—';
                     const isManual = fund.source === 'manual';
-                    const advisorArn = !isManual ? extractArnDigits(fund.advisor) : null;
+                    const fundPan  = fund.__ownerPan || activePan;
+                    const advisorArn = !isManual ? resolveHoldingArn(fundPan, fund.folio, fund.advisor, arnOverrides) : null;
                     const resolvedDistributor = advisorArn ? distributorCache[advisorArn] : null;
+                    const fundOverrideKey = !isManual && fund.folio ? overrideKey(fundPan, fund.folio) : null;
+                    const isEditingArn = fundOverrideKey && arnOverrideEditing === fundOverrideKey;
 
                     return (
                       <div key={fund.id || idx} className="fund-card">
@@ -2827,7 +2890,67 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                                 fontFamily: "'JetBrains Mono', monospace", letterSpacing: '.5px',
                               }}>Admin Added</span>
                             )}
+                            {/* Admin-only: correct a national/umbrella distributor's
+                                shared ARN (NJ IndiaInvest, Centricity, etc.) to the
+                                real sub-advisor's ARN -- see arn_overrides table and
+                                lib/distributorResolution.js's resolveHoldingArn. */}
+                            {isAdmin && fundOverrideKey && !isEditingArn && (
+                              <button
+                                onClick={() => {
+                                  setArnOverrideDraft(arnOverrides[fundOverrideKey] || '');
+                                  setArnOverrideEditing(fundOverrideKey);
+                                }}
+                                title="Correct this folio's ARN -- e.g. when CAS shows a national distributor's shared ARN (NJ, Centricity) instead of the real servicing advisor"
+                                style={{
+                                  fontSize: '.52rem', fontWeight: 800, padding: '2px 7px', borderRadius: 4,
+                                  background: '#fff', color: 'var(--muted)', border: '1px dashed var(--border)',
+                                  fontFamily: "'JetBrains Mono', monospace", letterSpacing: '.5px', cursor: 'pointer',
+                                }}
+                              >
+                                ✎ {arnOverrides[fundOverrideKey] ? 'Edit ARN Fix' : 'Fix ARN'}
+                              </button>
+                            )}
                           </div>
+
+                          {isEditingArn && (
+                            <div style={{
+                              display: 'flex', alignItems: 'center', gap: 6, margin: '2px 0 8px',
+                              padding: '8px 10px', borderRadius: 8, background: 'var(--s2)', border: '1.5px solid var(--border)',
+                            }}>
+                              <input
+                                type="text"
+                                value={arnOverrideDraft}
+                                onChange={e => setArnOverrideDraft(e.target.value)}
+                                placeholder="Real ARN, e.g. 251838 (blank clears the correction)"
+                                autoFocus
+                                style={{
+                                  flex: 1, fontSize: '.74rem', padding: '6px 8px', borderRadius: 6,
+                                  border: '1.5px solid var(--border)', fontFamily: "'JetBrains Mono', monospace",
+                                }}
+                              />
+                              <button
+                                onClick={() => saveArnOverride(fundPan, fund.folio)}
+                                disabled={arnOverrideSaving}
+                                style={{
+                                  fontSize: '.72rem', fontWeight: 700, padding: '6px 12px', borderRadius: 6,
+                                  border: 'none', background: 'var(--g1)', color: '#fff',
+                                  cursor: arnOverrideSaving ? 'not-allowed' : 'pointer', opacity: arnOverrideSaving ? 0.6 : 1,
+                                }}
+                              >
+                                {arnOverrideSaving ? 'Saving…' : 'Save'}
+                              </button>
+                              <button
+                                onClick={() => setArnOverrideEditing(null)}
+                                disabled={arnOverrideSaving}
+                                style={{
+                                  fontSize: '.72rem', fontWeight: 700, padding: '6px 12px', borderRadius: 6,
+                                  border: '1.5px solid var(--border)', background: '#fff', color: 'var(--muted)', cursor: 'pointer',
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          )}
 
                           {/* CAS-only metadata */}
                           {!isManual && (
