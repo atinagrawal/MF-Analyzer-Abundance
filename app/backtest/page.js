@@ -142,6 +142,11 @@ const fmtMon = (t) => new Date(t).toLocaleDateString("en-IN", { month: "short", 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const strategyLabel = (h) => h.mode === "sip" ? `SIP ${inrShort(h.monthly)}/mo` : h.mode === "lumpsum" ? `Lumpsum ${inrShort(h.lumpsum)}` : `${inrShort(h.lumpsum)} + ${inrShort(h.monthly)}/mo`;
 const PALETTE = ["#2e7d32", "#43a047", "#1b5e20", "#66bb6a", "#7cb342", "#9ccc65", "#558b2f", "#33691e"];
+// Distinct-hue palette for the fund-by-fund comparison chart, where several
+// lines overlap on one plot at once -- PALETTE above is all-green shades,
+// fine for a single dot next to a name (table rows) but not enough contrast
+// once 3+ lines cross each other on the same chart.
+const CMP_PALETTE = ["#1b5e20", "#1565c0", "#e65100", "#6a1b9a", "#00838f", "#ad1457", "#f9a825", "#37474f"];
 
 /* ---------------- chart SVG string (for PDF) ---------------- */
 function chartSVG(curve, w = 680, h = 230) {
@@ -567,7 +572,7 @@ function Results({ r, sipDay, onShare, shareUrl }) {
   // have nothing to plot and are skipped.
   const compareSeries = rows
     .filter((h) => !h.noInvest && h.series && h.series.length > 1)
-    .map((h) => ({ key: h.key, name: h.name, color: h.color, data: buildGrowthSeries(h.series, h.start, r.end) }))
+    .map((h, i) => ({ key: h.key, name: h.name, color: CMP_PALETTE[i % CMP_PALETTE.length], data: buildGrowthSeries(h.series, h.start, r.end) }))
     .filter((s) => s.data.length > 1);
   const risk = useMemo(() => riskMetrics(blendedIndex(r.port.map((h) => ({ series: h.series, weight: r.perFund[h.key].invested })), r.gridStart, r.end)), [r]);
 
@@ -816,8 +821,13 @@ function CompareChart({ series, height = 240 }) {
   if (hover) {
     const rows = usable.map((s) => ({ name: s.name, color: s.color, pt: nearest(s, hover.t) })).filter((r) => r.pt);
     if (rows.length) {
-      const leftPct = Math.min(78, Math.max(4, (X(hover.t) / W) * 100));
-      tip = { leftPct, rows };
+      // Flip to the left of the cursor once past 60% of the chart width, same
+      // pattern as app/screener/CompareGrowthChart.jsx's .cmp-tip -- a fixed
+      // centered position runs the box off the right (or left) edge for a
+      // hover near either side, especially with a wide multi-row box.
+      const xPct = X(hover.t) / W;
+      const left = xPct > 0.6 ? `calc(${(xPct * 100).toFixed(1)}% - 280px)` : `calc(${(xPct * 100).toFixed(1)}% + 14px)`;
+      tip = { left, rows };
     }
   }
 
@@ -839,10 +849,14 @@ function CompareChart({ series, height = 240 }) {
           )}
         </svg>
         {hover && tip && (
-          <div className="bt-flytip bt-cmptip" style={{ left: tip.leftPct + "%", top: "4%" }}>
+          <div className="bt-flytip bt-cmptip" style={{ left: tip.left, top: "4%" }}>
             <b className="bt-flytip-d">{fmtDate(hover.t)}</b>
             {tip.rows.map((r) => (
-              <span key={r.name}><i className="lg" style={{ background: r.color }} />{r.name} <b style={{ color: r.color }}>{r.pt.v >= 100 ? "+" : ""}{(r.pt.v - 100).toFixed(1)}%</b></span>
+              <span key={r.name}>
+                <i className="lg" style={{ background: r.color }} />
+                <span className="bt-cmptip-name">{r.name}</span>
+                <b style={{ color: r.color }}>{r.pt.v >= 100 ? "+" : ""}{(r.pt.v - 100).toFixed(1)}%</b>
+              </span>
             ))}
           </div>
         )}
@@ -1214,8 +1228,10 @@ const CSS = `
 .bt-cmpsection{margin-bottom:20px}
 .bt-cmpsection-h{font:600 11px JetBrains Mono,monospace;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
 .bt-legend-wrap{flex-wrap:wrap;row-gap:6px}
-.bt-cmptip{transform:translateX(-50%);max-width:220px;white-space:normal}
-.bt-cmptip span{justify-content:space-between;gap:8px}
+.bt-cmptip{transform:none;width:266px;max-width:calc(100vw - 40px)}
+.bt-cmptip span{justify-content:space-between;gap:8px;white-space:nowrap}
+.bt-cmptip-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.bt-cmptip b{flex-shrink:0}
 
 .bt-compare{border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-bottom:20px}
 .bt-cmp-row{display:grid;grid-template-columns:1fr auto auto;gap:14px;padding:11px 14px;font-size:13.5px;align-items:center;border-top:1px solid var(--border)}
