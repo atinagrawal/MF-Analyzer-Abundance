@@ -16,11 +16,9 @@ The trade-off for that convenience shows up in the exit-load structure, which SE
 
 ![Three diminishing architectural archways along the road receding into the open misty valley, representing tapering exit loads](/articles/life-cycle-funds-explained-inline-gates.jpg)
 
-## Who's actually launched one — and why that detail matters more than usual
+## Who's actually launched one
 
-Zerodha Fund House moved first, launching two Life Cycle Funds — 2036 and 2041 maturities — with the NFO closing July 7, 2026. ICICI Prudential followed with three: 2031, 2036, and 2041, running an NFO from August 26 to September 9, 2026.
-
-Here's the part that's easy to miss and directly relevant if you're working with a distributor rather than investing on your own: Zerodha Fund House, by design, only issues Direct Plans — there's no Regular Plan variant of its Life Cycle Funds at all. Checking AMFI's own scheme data confirms this directly. That means Zerodha's version simply isn't something a distributor can transact for you, regardless of how good the fund itself turns out to be. ICICI Prudential, as a traditional full-service AMC, is the one actually accessible through an advisor relationship. As more AMCs launch their own Life Cycle Funds over the next year, which distribution channel each one uses will matter just as much as the glide path itself.
+Zerodha Fund House moved first, launching two Life Cycle Funds — 2036 and 2041 maturities — with the NFO closing July 7, 2026. ICICI Prudential followed with three: 2031, 2036, and 2041, running an NFO from August 26 to September 9, 2026. More AMCs are expected to launch their own versions over the next year, each with its own specific glide path and tenure lineup.
 
 ## What to actually check before using one
 
@@ -32,7 +30,7 @@ Here's the part that's easy to miss and directly relevant if you're working with
 
 ## The honest bottom line
 
-A fund that automatically de-risks itself on a schedule solves a real problem — the annual rebalancing that a lot of investors either forget to do or do at the wrong moment. That's a genuine improvement, not just new packaging on an old idea. But it only works if the target year, the glide path, and the plan you're actually able to access all line up with what you need — and right now, in this category's first year, that alignment takes more checking than the category label alone gives you.
+A fund that automatically de-risks itself on a schedule solves a real problem — the annual rebalancing that a lot of investors either forget to do or do at the wrong moment. That's a genuine improvement, not just new packaging on an old idea. But it only works if the target year and the specific glide path actually line up with what you need — and right now, in this category's first year, that alignment takes more checking than the category label alone gives you.
 
 ---
 
