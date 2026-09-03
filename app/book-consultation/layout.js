@@ -21,7 +21,7 @@ export default function BookConsultationLayout({ children }) {
       "name": "Abundance Financial Services",
       "url": "https://www.getabundance.in",
       "areaServed": "IN",
-      "description": "AMFI Registered Mutual Fund Distributor — ARN-251838, Haldwani, Uttarakhand",
+      "description": "AMFI Registered Mutual Fund Distributor — ARN-251838, APMI Registered PMS Distributor — APRN04279, Haldwani, Uttarakhand",
       "telephone": "+91-98081-05923",
     },
   };

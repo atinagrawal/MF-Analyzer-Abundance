@@ -51,6 +51,7 @@ const TRUST_STATS = [
   { val: '350+', label: 'Clients' },
   { val: '₹250Cr+', label: 'AUM' },
   { val: 'ARN-251838', label: 'AMFI Registered' },
+  { val: 'APRN04279', label: 'APMI Registered' },
 ];
 
 const TOPICS = [
