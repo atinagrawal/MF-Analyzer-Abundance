@@ -3,7 +3,7 @@ import Link from 'next/link';
 import pool from '@/lib/db';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { CURATED_CATEGORIES } from '@/app/screener/screenerContent';
+import { CURATED_CATEGORIES, matchCategory } from '@/app/screener/screenerContent';
 
 export const revalidate = 86400; // 24 hours
 
@@ -37,35 +37,29 @@ export default async function CategoryIndexPage({ params }) {
     notFound();
   }
 
-  // Two curated categories need something other than a plain exact match:
-  // - Life Cycle Funds has no single literal AMFI category string -- every
-  //   real row carries its own maturity-bucket suffix ("Life Cycle Funds -
-  //   Life Cycle Fund with Maturity of 10 Years", etc), so it needs a
-  //   prefix match to cover every tenure an AMC has launched.
-  // - Value/Contra covers two genuinely distinct AMFI categories (Value
-  //   Fund, Contra Fund) that the page's own copy already claims to cover
-  //   -- an exact match against just one of them was silently dropping
-  //   every Contra fund (confirmed live: zero Contra funds ever showed on
-  //   this page despite well-known ones like SBI Contra Fund existing).
-  // Every other curated category keeps the plain exact match it's always used.
-  const isLifeCycle = entry.slug === 'life-cycle';
-  const { rows } = isLifeCycle
-    ? await pool.query(
-        `SELECT code, name, amc, nav, nav_date, inception_date, structure
-         FROM mf_screener WHERE category ILIKE $1 ORDER BY name ASC`,
-        [`${entry.category} -%`]
-      ).catch(() => ({ rows: [] }))
-    : entry.categories
-    ? await pool.query(
-        `SELECT code, name, amc, nav, nav_date, inception_date, structure
-         FROM mf_screener WHERE category = ANY($1::text[]) ORDER BY name ASC`,
-        [entry.categories]
-      ).catch(() => ({ rows: [] }))
-    : await pool.query(
-        `SELECT code, name, amc, nav, nav_date, inception_date, structure
-         FROM mf_screener WHERE category = $1 ORDER BY name ASC`,
-        [entry.category]
-      ).catch(() => ({ rows: [] }));
+  // AMFI's own category strings for the SAME conceptual category drift
+  // between an older singular "Equity Scheme - X" form and a newer plural
+  // "Equity Schemes - X" form (confirmed live, Sep 2026) -- a plain exact
+  // match against one literal string was silently dropping every fund
+  // filed under the other. Verified this was hiding real, well-known
+  // funds on nearly every curated page: 13 Mid Cap funds (ICICI
+  // Prudential, Kotak, Canara Robeco, Mirae Asset, HSBC...), 10 Small Cap
+  // funds (Axis, UTI, ICICI Prudential, Mirae Asset...), plus Flexi Cap,
+  // Multi Asset Allocation, and Value/Contra (where the "other" category
+  // was Contra entirely -- zero Contra funds ever showed). Life Cycle
+  // Funds has the same problem in a different shape: every row carries
+  // its own maturity-bucket suffix, no shared literal string at all.
+  //
+  // Fix: reuse matchCategory/normalizeCategory -- the exact same
+  // normalization the screener's own filter dropdown already relies on
+  // (which is why the screener itself never had this bug) -- instead of
+  // a raw SQL string match, so this page can never drift out of sync
+  // with how the rest of the site already groups categories.
+  const { rows: allRows } = await pool.query(
+    `SELECT code, name, amc, nav, nav_date, inception_date, structure, category
+     FROM mf_screener ORDER BY name ASC`
+  ).catch(() => ({ rows: [] }));
+  const rows = allRows.filter((f) => matchCategory(f.category, entry.category));
 
   return (
     <>

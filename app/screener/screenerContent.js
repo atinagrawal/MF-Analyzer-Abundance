@@ -110,15 +110,13 @@ export const CURATED_CATEGORIES = [
   {
     slug: 'value-contra',
     label: 'Value / Contra',
+    // AMFI files "Value Fund" and "Contra Fund" as two genuinely distinct
+    // categories, both live today (e.g. SBI Contra Fund, Kotak Contra
+    // Fund). This single representative string is enough -- Contra funds
+    // still show up on app/funds/[category]/page.js, because that page
+    // matches via matchCategory/normalizeCategory (see that function's
+    // dedicated 'value / contra' collapse), not a raw exact string match.
     category: 'Equity Scheme - Value Fund',
-    // AMFI files these as two genuinely distinct categories -- confirmed
-    // live, both currently populated (e.g. SBI Contra Fund, Kotak India EQ
-    // Contra Fund). `category` above stays the representative single value
-    // slugToCategory/categoryToSlug use; `categories` is what
-    // app/funds/[category]/page.js actually queries by, so the page
-    // doesn't silently show only Value funds despite its own "Value &
-    // Contra" copy.
-    categories: ['Equity Scheme - Value Fund', 'Equity Scheme - Contra Fund'],
     subtitleSuffix: ' Value & Contra funds invest in undervalued or temporarily out-of-favour stocks.',
     metaBlurb: 'Value & Contra funds follow a value-investing strategy, buying stocks trading below their intrinsic worth.',
     explainer: 'Value funds follow a value-investing strategy by holding stocks trading below their intrinsic value, while Contra funds take contrarian bets against prevailing market trends. Both require patience, as undervalued stocks can take time to re-rate.',
@@ -134,12 +132,11 @@ export const CURATED_CATEGORIES = [
   {
     // Symbolic `category` — no raw AMFI string equals this exactly (every
     // real row carries its own maturity-bucket suffix, e.g. "Life Cycle
-    // Funds - Life Cycle Fund with Maturity of 10 Years"). This entry is
-    // matched via normalizeCategory's dedicated 'life cycle' collapse
-    // above, not the exact-match branch in categoryToSlug -- and
-    // app/funds/[category]/page.js queries this one category by prefix
-    // (ILIKE 'Life Cycle Funds -%') instead of the usual exact match, so
-    // every tenure bucket an AMC has launched shows up on one page. See
+    // Funds - Life Cycle Fund with Maturity of 10 Years"). Matched via
+    // normalizeCategory's dedicated 'life cycle' collapse above, same as
+    // every other curated category on app/funds/[category]/page.js
+    // (matchCategory, not a raw exact string match) -- so every tenure
+    // bucket an AMC has launched shows up on one page automatically. See
     // content/articles/pillar5-life-cycle-funds-explained.md for the full
     // writeup -- added ahead of live Regular-Plan data (SEBI created the
     // category Feb 2026; Zerodha's launches are Direct-Plan-only so never
