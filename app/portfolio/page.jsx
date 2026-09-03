@@ -344,6 +344,18 @@ function PortfolioInner() {
   const [investorName, setInvestorName]   = useState('');
   const [navDate, setNavDate]             = useState(null);
 
+  // Portfolio Overlap — deliberately on-demand only (button click), never
+  // auto-fetched on load or tab switch: it triggers one Groww fetch per
+  // fund server-side, which is real cost worth spending only when actually
+  // asked for. Pro-gated; a free user's click shows the paywall inline
+  // instead of calling the API at all.
+  const [overlapResult, setOverlapResult] = useState(null);
+  const [overlapLoading, setOverlapLoading] = useState(false);
+  const [overlapError, setOverlapError]   = useState('');
+  const [showOverlapGate, setShowOverlapGate] = useState(false);
+  const [overlapCheckoutLoading, setOverlapCheckoutLoading] = useState(false);
+  const [overlapCheckoutErr, setOverlapCheckoutErr] = useState('');
+
   // CAS member merge — "Manage members" panel state
   const [mergeOpen, setMergeOpen]             = useState(false);
   const [mergeFromPan, setMergeFromPan]       = useState('');
@@ -1143,6 +1155,60 @@ function PortfolioInner() {
   const isProfit   = gain >= 0;
   const { g, first } = greeting(displayName);
 
+  const isProUser = Boolean(
+    session?.user?.role === 'admin' ||
+    session?.user?.plan === 'pro' ||
+    session?.user?.plan === 'pro_lifetime' ||
+    session?.user?.plan === 'lifetime' ||
+    session?.user?.isPro
+  );
+
+  // On-demand only — never called from a useEffect. Free users never reach
+  // the fetch: clicking the button when !isProUser just reveals the inline
+  // paywall (see the Holdings tab render below).
+  function handleOverlapClick() {
+    if (!isProUser) { setShowOverlapGate(true); return; }
+    runOverlapAnalysis();
+  }
+  async function handleOverlapUpgrade() {
+    setOverlapCheckoutLoading(true);
+    setOverlapCheckoutErr('');
+    try {
+      await startCheckout({
+        plan: 'annual',
+        session,
+        onSuccess() { window.location.reload(); },
+        onDismiss() { setOverlapCheckoutLoading(false); },
+      });
+    } catch (err) {
+      setOverlapCheckoutErr(err.message);
+      setOverlapCheckoutLoading(false);
+    }
+  }
+  async function runOverlapAnalysis() {
+    setOverlapLoading(true);
+    setOverlapError('');
+    try {
+      const funds = displayHoldings
+        .filter((h) => h.code && !h.isSIF)
+        .sort((a, b) => b.value - a.value)
+        .map((h) => ({ code: h.code, name: h.name }));
+      const res = await fetch('/api/portfolio-overlap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ funds }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not analyze overlap');
+      setOverlapResult(data);
+      if (data.error) setOverlapError(data.error);
+    } catch (err) {
+      setOverlapError(err.message);
+    } finally {
+      setOverlapLoading(false);
+    }
+  }
+
   // Delete a saved statement — /api/cas/delete already allows this for the
   // statement's own owner (usually whoever uploaded it) or an admin, so no
   // extra permission check is needed client-side; it 403s cleanly if not.
@@ -1646,6 +1712,88 @@ function PortfolioInner() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Portfolio Overlap — visible to everyone (the feature itself is
+                never hidden), the actual analysis is Pro-gated and always
+                on-demand (see runOverlapAnalysis's own comment for why). */}
+            <div className="pf-overlap-section">
+              <div className="pf-overlap-head">
+                <div className="pf-overlap-title">🔀 Portfolio Overlap</div>
+                <div className="pf-overlap-sub">
+                  See how much your equity/hybrid funds duplicate each other's stock holdings — real diversification vs. hidden concentration in the same names.
+                </div>
+              </div>
+
+              {!overlapResult && !overlapLoading && !showOverlapGate && (
+                <button className="pf-cta-btn" onClick={handleOverlapClick}>
+                  🔍 Analyze Overlap
+                </button>
+              )}
+
+              {overlapLoading && (
+                <div className="pf-overlap-loading">Fetching live holdings for each fund and comparing… this can take a few seconds.</div>
+              )}
+
+              {showOverlapGate && !isProUser && (
+                <div className="brd-gate" style={{ marginTop: 4 }}>
+                  <div className="brd-gate-lock">⭐</div>
+                  <h2 className="brd-gate-title">Portfolio Overlap is a Pro feature</h2>
+                  <p className="brd-gate-desc">
+                    See exactly which stocks show up across multiple funds in your portfolio and how much — so you know if you're really diversified or just holding the same large-caps five times over.
+                  </p>
+                  <div className="brd-gate-pricing">
+                    <span className="brd-gate-amount">₹499</span>
+                    <span className="brd-gate-period">/yr + 18% GST</span>
+                    <span className="brd-gate-total">· Total ₹588.82</span>
+                  </div>
+                  <div className="brd-gate-actions">
+                    <button className="brd-gate-btn brd-gate-btn-pro" onClick={handleOverlapUpgrade} disabled={overlapCheckoutLoading}>
+                      {overlapCheckoutLoading ? 'Opening checkout…' : 'Upgrade to Pro →'}
+                    </button>
+                    <a className="brd-gate-faq" href="/pricing">See all Pro features · Lifetime plan available</a>
+                  </div>
+                  {overlapCheckoutErr && <p className="brd-gate-error">{overlapCheckoutErr}</p>}
+                </div>
+              )}
+
+              {overlapError && (!overlapResult || overlapResult.pairs?.length === 0) && (
+                <div className="pf-overlap-error">{overlapError}</div>
+              )}
+
+              {overlapResult && overlapResult.pairs?.length > 0 && (
+                <div className="pf-overlap-results">
+                  {overlapResult.pairs.map((p, i) => (
+                    <div key={i} className="pf-overlap-pair">
+                      <div className="pf-overlap-pair-head">
+                        <div className="pf-overlap-pair-names">{p.fundA} <span>×</span> {p.fundB}</div>
+                        <div className={`pf-overlap-pct ${p.overlapPct >= 40 ? 'high' : p.overlapPct >= 20 ? 'med' : 'low'}`}>
+                          {p.overlapPct}% overlap
+                        </div>
+                      </div>
+                      {p.topShared?.length > 0 && (
+                        <div className="pf-overlap-shared">
+                          {p.topShared.map((s, j) => (
+                            <span key={j} className="pf-overlap-stock">{s.name}</span>
+                          ))}
+                          {p.sharedCount > p.topShared.length && (
+                            <span className="pf-overlap-stock-more">+{p.sharedCount - p.topShared.length} more</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {overlapResult.fundsSkipped > 0 && (
+                    <div className="pf-overlap-note">
+                      {overlapResult.fundsSkipped} holding(s) skipped (SIF, manual entries without a matched fund code, or beyond the {overlapResult.fundsAnalyzed + overlapResult.fundsSkipped > 15 ? 15 : overlapResult.fundsAnalyzed}-fund comparison limit).
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {overlapResult && overlapResult.pairs?.length === 0 && !overlapError && (
+                <div className="pf-overlap-clean">✓ No meaningful stock overlap found across your funds — nicely diversified.</div>
+              )}
             </div>
           </div>
         )}

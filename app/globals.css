@@ -5983,6 +5983,55 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   line-height: 1.5;
 }
 
+/* ── Portfolio Overlap ── */
+.pf-overlap-section {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1.5px solid var(--border);
+}
+.pf-overlap-head { margin-bottom: 14px; }
+.pf-overlap-title { font-size: .95rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.pf-overlap-sub { font-size: .78rem; color: var(--muted); line-height: 1.5; max-width: 620px; }
+.pf-overlap-loading {
+  font-size: .78rem; color: var(--muted); font-style: italic;
+  padding: 14px 0;
+}
+.pf-overlap-error {
+  font-size: .78rem; color: var(--neg); background: var(--neg-bg);
+  border: 1.5px solid var(--neg); border-radius: 10px; padding: 12px 14px; margin-top: 10px;
+}
+.pf-overlap-clean {
+  font-size: .8rem; font-weight: 700; color: var(--g1);
+  background: var(--g-xlight); border: 1.5px solid var(--g-light);
+  border-radius: 10px; padding: 14px 16px; margin-top: 10px;
+}
+.pf-overlap-results { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.pf-overlap-pair {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 14px 16px;
+}
+.pf-overlap-pair-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.pf-overlap-pair-names { font-size: .82rem; font-weight: 700; color: var(--text); }
+.pf-overlap-pair-names span { color: var(--muted); font-weight: 400; margin: 0 4px; }
+.pf-overlap-pct {
+  font-family: 'JetBrains Mono', monospace; font-size: .76rem; font-weight: 800;
+  padding: 4px 10px; border-radius: 20px; flex-shrink: 0;
+}
+.pf-overlap-pct.high { background: rgba(183,28,28,.1); color: #b71c1c; }
+.pf-overlap-pct.med  { background: rgba(230,81,0,.1);  color: #e65100; }
+.pf-overlap-pct.low  { background: var(--g-xlight);    color: var(--g1); }
+.pf-overlap-shared { display: flex; flex-wrap: wrap; gap: 6px; }
+.pf-overlap-stock {
+  font-size: .68rem; font-weight: 600; color: var(--muted);
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 3px 8px;
+}
+.pf-overlap-stock-more { font-size: .68rem; color: var(--muted); align-self: center; }
+.pf-overlap-note { font-size: .68rem; color: var(--muted); padding: 4px 2px; }
+
 /* ── Holdings full grid ── */
 .pf-holdings-full {
   display: grid;
