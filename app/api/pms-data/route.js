@@ -10,21 +10,23 @@ import { r2Get, r2Put } from '@/lib/r2';
 //           │ Lifetime: until serverless function goes cold (~10 min idle)
 //           │ Shared: NO — each Vercel instance has its own memory
 //
-//  Layer 2 │ Vercel Blob (JSON file per strategy)
-//           │ Fast: ~50–150ms, one HTTP GET to Vercel's CDN
+//  Layer 2 │ Cloudflare R2 (lib/r2.js — JSON file per strategy)
+//           │ Fast: ~50–150ms, one signed HTTP GET
 //           │ Lifetime: PERMANENT until explicitly overwritten
-//           │ Shared: YES — one Blob store, all instances read the same data
+//           │ Shared: YES — one R2 bucket, all instances read the same data
 //
 //  Layer 3 │ APMI India scrape
 //           │ Slow: ~8–12s, external dependency
 //           │ Triggered: only when both layers miss or are stale
 //
 //  TTL Strategy:
-//    Memory cache → 6 hours  (safety, in case blob write fails)
-//    Blob cache   → 30 days  (APMI only publishes monthly; 30d = 1 release cycle)
+//    Memory cache → 6 hours  (safety, in case the R2 write fails)
+//    R2 cache     → 30 days  (APMI only publishes monthly; 30d = 1 release cycle)
 //
-//  On Vercel (production): BLOB_READ_WRITE_TOKEN must be set in environment.
-//  In local dev: blob layer is skipped gracefully; memory layer only.
+//  Requires R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY /
+//  R2_BUCKET_NAME (see lib/r2.js). Missing/misconfigured credentials don't
+//  fail the request — readFromBlob/writeToBlob below catch and no-op, so
+//  a broken R2 layer just falls through to memory + live scrape.
 // ══════════════════════════════════════════════════════════════════════════
 
 const MEM_TTL_MS          = 6  * 60 * 60 * 1000;   // 6 hours  — in-memory TTL (settled data)

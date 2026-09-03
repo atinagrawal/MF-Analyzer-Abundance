@@ -90,7 +90,7 @@ A free, full-stack mutual fund analytics platform for Indian investors and distr
 | Framework | Next.js 16 (App Router) |
 | Runtime | Node.js 24.x + Python 3.x (serverless) |
 | Database | Vercel Postgres (PostgreSQL) |
-| Blob storage | Vercel Blob (private) |
+| Blob storage | Cloudflare R2 (private, via `lib/r2.js`) |
 | Auth | NextAuth v5 (Auth.js) with Postgres adapter |
 | CSS | Vanilla CSS with design tokens (no Tailwind) |
 | Hosting | Vercel (auto-deploy on `main` push) |
@@ -102,7 +102,7 @@ A free, full-stack mutual fund analytics platform for Indian investors and distr
 | mfapi.in | MF NAV history (10,000+ schemes) |
 | NSE India (`nseindia.com`) | Live indices, sector constituents, FII/DII, holidays |
 | casparser (Python) | CAS PDF parsing for portfolio import |
-| Vercel Blob | API response caching (market-watch 5min, SIF 4h, historical immutable) |
+| Cloudflare R2 | API response caching (market-watch 5min, SIF 4h, historical immutable) |
 
 ### API Routes
 ```
@@ -142,7 +142,10 @@ Create `.env.local`:
 NEXTAUTH_SECRET=...
 NEXTAUTH_URL=http://localhost:3000
 DATABASE_URL=...
-BLOB_READ_WRITE_TOKEN=...
+R2_ACCOUNT_ID=...
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET_NAME=...
 ```
 
 ```bash

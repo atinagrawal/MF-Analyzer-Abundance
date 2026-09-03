@@ -16,7 +16,6 @@
     "@auth/pg-adapter": "^1.11.2",
     "@calcom/embed-react": "^1.5.3",
     "@tursodatabase/serverless": "^1.4.0",
-    "@vercel/blob": "^2.3.3",
     "@vercel/og": "^0.6.3",
     "@vercel/speed-insights": "^2.0.0",
     "aws4fetch": "^1.0.20",
