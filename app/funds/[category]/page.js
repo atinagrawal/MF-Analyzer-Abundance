@@ -37,10 +37,20 @@ export default async function CategoryIndexPage({ params }) {
     notFound();
   }
 
+  // Life Cycle Funds is the one curated category without a single literal
+  // AMFI category string -- every real row carries its own maturity-bucket
+  // suffix ("Life Cycle Funds - Life Cycle Fund with Maturity of 10
+  // Years", etc, see screenerContent.js's CURATED_CATEGORIES comment), so
+  // it needs a prefix match to cover every tenure an AMC has launched.
+  // Every other curated category keeps the exact match it's always used.
+  const isLifeCycle = entry.slug === 'life-cycle';
   const { rows } = await pool.query(
-    `SELECT code, name, amc, nav, nav_date, inception_date, structure
-     FROM mf_screener WHERE category = $1 ORDER BY name ASC`,
-    [entry.category]
+    isLifeCycle
+      ? `SELECT code, name, amc, nav, nav_date, inception_date, structure
+         FROM mf_screener WHERE category ILIKE $1 ORDER BY name ASC`
+      : `SELECT code, name, amc, nav, nav_date, inception_date, structure
+         FROM mf_screener WHERE category = $1 ORDER BY name ASC`,
+    [isLifeCycle ? `${entry.category} -%` : entry.category]
   ).catch(() => ({ rows: [] }));
 
   return (
@@ -93,7 +103,14 @@ export default async function CategoryIndexPage({ params }) {
         </div>
 
         <div style={{ marginTop: 28, padding: '16px 20px', background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 12, fontSize: '.78rem', color: 'var(--muted)', lineHeight: 1.5 }}>
-          Showing <strong>{rows.length}</strong> {entry.label} schemes registered with SEBI &amp; AMFI. Click any fund to view its minimum investment, exit load, RTA, portfolio holdings, stress test, and complete analytics on Abundance Pro.
+          {/* Adjacent {expr} text {expr2} JSX children were silently dropping
+              the space between them -- confirmed live across every curated
+              category page (e.g. "Mid Capschemes", not just this one).
+              One template-literal expression for the vulnerable phrase
+              sidesteps it entirely instead of relying on more {' '} tokens. */}
+          Showing <strong>{rows.length}</strong>{' '}
+          {`${entry.label} schemes registered with SEBI & AMFI. `}
+          Click any fund to view its minimum investment, exit load, RTA, portfolio holdings, stress test, and complete analytics on Abundance Pro.
         </div>
 
         <div className="pf-advisor-card" style={{ marginTop: 20, marginBottom: 0 }}>

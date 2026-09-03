@@ -47,6 +47,18 @@ export function normalizeCategory(c = '') {
     return 'retirement';
   }
 
+  // AMFI files Life Cycle Funds as one self-contained category string per
+  // maturity bucket ("Life Cycle Funds - Life Cycle Fund with Maturity of
+  // 10 Years", "...15 Years", etc. -- confirmed live in NAVAll.txt Sep
+  // 2026), unlike other categories where the tenure/variant is a genuinely
+  // separate sub-category. Collapsing every bucket to one normalized value
+  // is deliberate here so a single curated category page can cover all of
+  // an AMC's tenures at once instead of fragmenting into near-empty pages
+  // per maturity year.
+  if (/^life cycle/i.test(cat)) {
+    return 'life cycle';
+  }
+
   if (/fund of funds|fof/i.test(cat)) {
     return 'fof';
   }
@@ -110,6 +122,28 @@ export const CURATED_CATEGORIES = [
     subtitleSuffix: ' Multi Asset Allocation funds diversify across equity, debt and gold.',
     metaBlurb: 'Multi Asset Allocation funds invest across equity, debt and gold/commodities, with a minimum 10% in each asset class.',
     explainer: 'Multi Asset Allocation funds must invest in at least three asset classes — typically equity, debt and gold/commodities — with a minimum 10% allocation to each. That built-in diversification across asset classes (not just across stocks) is designed to smooth returns across market cycles, since equity, debt and gold rarely fall together, at the cost of capping the upside compared to a pure-equity fund in a strong bull run.',
+  },
+  {
+    // Symbolic `category` — no raw AMFI string equals this exactly (every
+    // real row carries its own maturity-bucket suffix, e.g. "Life Cycle
+    // Funds - Life Cycle Fund with Maturity of 10 Years"). This entry is
+    // matched via normalizeCategory's dedicated 'life cycle' collapse
+    // above, not the exact-match branch in categoryToSlug -- and
+    // app/funds/[category]/page.js queries this one category by prefix
+    // (ILIKE 'Life Cycle Funds -%') instead of the usual exact match, so
+    // every tenure bucket an AMC has launched shows up on one page. See
+    // content/articles/pillar5-life-cycle-funds-explained.md for the full
+    // writeup -- added ahead of live Regular-Plan data (SEBI created the
+    // category Feb 2026; Zerodha's launches are Direct-Plan-only so never
+    // reach mf_screener; ICICI Prudential's three tenures were mid-NFO as
+    // of Sep 2026 and will populate automatically via the nightly ingest
+    // once NAVs start publishing -- no further code change needed then).
+    slug: 'life-cycle',
+    label: 'Life Cycle',
+    category: 'Life Cycle Funds',
+    subtitleSuffix: ' Life Cycle Funds automatically shift from equity to debt as a fixed target year approaches.',
+    metaBlurb: "Life Cycle Funds are SEBI's newest mutual fund category — an open-ended scheme with a fixed maturity year whose equity/debt mix de-risks itself on a pre-declared glide path.",
+    explainer: "Life Cycle Funds are open-ended schemes built around a fixed target maturity year (5 to 30 years out), with the equity/debt allocation shifting automatically toward debt as that year approaches — no manual rebalancing needed. SEBI created the category in February 2026 as the replacement for new Retirement/Children's Fund launches (existing Retirement and Children's Funds remain open to new investment; this only affects new scheme launches). Redeeming early carries a tapering exit load — 3% in year one, 2% in year two, 1% in year three, nothing after — so the product is built for investors who pick a target year and hold to it.",
   },
 ];
 
