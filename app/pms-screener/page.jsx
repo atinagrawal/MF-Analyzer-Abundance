@@ -79,9 +79,34 @@ function fmtRet(v) {
     return (v > 0 ? '+' : '') + v + '%';
 }
 function fmtAum(v) {
-    if (v === null || v === undefined) return '—';
+    // Undisclosed AUM is a different fact than "no data for this period"
+    // (fmtRet's '—') -- worth its own label so a null-AUM row next to real
+    // AUM peers doesn't just look like broken data.
+    if (v === null || v === undefined) return 'AUM N/D';
     if (v >= 10000) return '₹' + (v / 1000).toFixed(1) + 'K Cr';
     return '₹' + v.toLocaleString('en-IN') + ' Cr';
+}
+
+// All return periods (1M..Inception) null-or-zero, AND no disclosed AUM --
+// APMI's own placeholder shape for a listing that's stopped reporting or
+// never went live (a real strategy cannot compound to exactly 0.00% from
+// inception). Verified live against real APMI data before writing this --
+// see docs/superpowers/specs -- this is not a guess.
+const RETURN_KEYS = ['ret1M', 'ret3M', 'ret6M', 'ret1Y', 'ret2Y', 'ret3Y', 'ret4Y', 'ret5Y', 'retInception'];
+function isZombie(d) {
+    if (d.aum != null) return false;
+    return RETURN_KEYS.every(k => d[k] === null || d[k] === undefined || d[k] === 0);
+}
+
+// Strips a trailing version-ish marker ("V2", "Series II", a lone trailing
+// number, "2.0"...) so near-duplicate strategy names from the same manager
+// (e.g. "India Opportunity Portfolio Strategy" / "...Strategy - V2") group
+// together. Used only to FLAG possible superseded/duplicate listings for a
+// human to judge -- never to auto-hide (some "clusters" are genuinely
+// distinct bespoke portfolios that happen to share a numbering convention,
+// e.g. a manager's "Customised Portfolio Approach 12/13/14/15/16").
+function stripVersionSuffix(name) {
+    return (name || '').replace(/\s*-?\s*(V\d+|Series\s*[IVX0-9]+|II|III|IV|V\d|2\.0|\d+)\s*$/i, '').trim();
 }
 // `ret` is an ANNUALIZED (CAGR) rate — APMI's TWRR for periods beyond 1 year
 // is per-year, not a one-time total — so growth must compound over `years`,
@@ -196,6 +221,58 @@ function PMSScreenerInner() {
     const [benchmarks, setBenchmarks] = useState(null);
     const [drawerBenchmark, setDrawerBenchmark] = useState({ loading: false, value: null });
     const [drawerQuartile, setDrawerQuartile] = useState({ loading: false, ret7Y: null, ret10Y: null });
+    const [toast, setToast] = useState('');
+
+    function flashToast(msg) {
+        setToast(msg);
+        setTimeout(() => setToast(''), 2400);
+    }
+
+    /** Copies the current filtered view's URL (strategy + search already sync to it). */
+    async function handleCopyLink() {
+        const url = window.location.href;
+        // navigator.clipboard.writeText can hang indefinitely rather than
+        // reject -- e.g. a permission prompt that never resolves, or some
+        // browser/extension policies -- which would otherwise leave the
+        // button looking completely unresponsive forever. Race it against a
+        // timeout so the user always gets feedback either way.
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+        try {
+            await Promise.race([navigator.clipboard.writeText(url), timeout]);
+            flashToast('Link copied to clipboard');
+        } catch {
+            flashToast('Copy failed — select the address bar manually');
+        }
+    }
+
+    /** Exports the currently filtered (not just the current page) rows as CSV. */
+    function handleExportCsv() {
+        if (!filtered.length) return;
+        const cols = [
+            { key: 'strategyName', label: 'Strategy' },
+            { key: 'portfolioManager', label: 'Manager' },
+            { key: 'aum', label: 'AUM (Cr)' },
+            ...RETURN_COLUMNS.map(c => ({ key: c.key, label: c.label })),
+        ];
+        const esc = v => {
+            const s = v === null || v === undefined ? '' : String(v);
+            return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+        };
+        const lines = [
+            cols.map(c => esc(c.label)).join(','),
+            ...filtered.map(d => cols.map(c => esc(d[c.key])).join(',')),
+        ];
+        const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pms-screener-${strategy.toLowerCase().replace(/\s+/g, '-')}-${dataMonths.latest.isoYearMonth}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        flashToast(`Exported ${filtered.length} strategies`);
+    }
 
     function toggleExtraCol(key) {
         setExtraCols(prev => {
@@ -406,15 +483,60 @@ function PMSScreenerInner() {
     }, [data, strategy]);
 
     const providers = useMemo(() => {
-        const visible = showSmallAum ? data : data.filter(d => !smallAumProviders.has(d.portfolioManager));
+        const visible = showSmallAum ? data : data.filter(d => !smallAumProviders.has(d.portfolioManager) && !isZombie(d));
         return [...new Set(visible.map(d => d.portfolioManager))].sort();
     }, [data, smallAumProviders, showSmallAum]);
+
+    // ── Near-duplicate / versioned strategy names from the same manager ────
+    // Informational only -- NEVER used to hide anything (see stripVersionSuffix's
+    // comment: some clusters are genuinely distinct bespoke portfolios, not
+    // superseded versions of one strategy, and we can't always tell which).
+    // Computed from the full raw `data` (not `filtered`) so a hidden zombie
+    // sibling still counts toward flagging its visible sibling as the
+    // probable current version.
+    const versionClusters = useMemo(() => {
+        const groups = new Map(); // "manager|||strippedBase" -> rows
+        data.forEach(d => {
+            const key = d.portfolioManager + '|||' + stripVersionSuffix(d.strategyName);
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(d);
+        });
+        const byKey = new Map(); // "manager|||strategyName" -> { siblings, possiblySuperseded }
+        groups.forEach(rows => {
+            if (rows.length < 2) return;
+            const maxNonNullPeriods = Math.max(...rows.map(r => RETURN_KEYS.filter(k => r[k] != null).length));
+            const hasLatestSibling = rows.some(r => r.dataMonth === 'latest');
+            rows.forEach(r => {
+                const ownNonNullPeriods = RETURN_KEYS.filter(k => r[k] != null).length;
+                // A cluster member reads as probably-superseded when it's a
+                // zombie itself, stuck on last month's data while a sibling
+                // already has this month's, or reports fewer horizons than
+                // its most-complete sibling -- all signs of a listing that
+                // stopped updating once a successor took over.
+                const possiblySuperseded = isZombie(r)
+                    || (hasLatestSibling && r.dataMonth === 'prev')
+                    || ownNonNullPeriods < maxNonNullPeriods;
+                byKey.set(r.portfolioManager + '|||' + r.strategyName, {
+                    siblings: rows.filter(x => x !== r),
+                    possiblySuperseded,
+                });
+            });
+        });
+        return byKey;
+    }, [data]);
+    const clusterFor = fund => versionClusters.get(fund.portfolioManager + '|||' + fund.strategyName) || null;
 
     // ── Filtered + sorted data ────────────────────────────────────────────
     const filtered = useMemo(() => {
         let arr = [...data];
 
-        if (!showSmallAum) arr = arr.filter(d => !smallAumProviders.has(d.portfolioManager));
+        // "Filtered" (default) view hides two different kinds of noise under
+        // one toggle, same as before: whole providers too small to matter
+        // (smallAumProviders), and individual zombie listings -- a strategy
+        // with no real performance data at all, regardless of how big its
+        // provider is (see isZombie's comment for why this is a data-shape
+        // fact, not a threshold guess).
+        if (!showSmallAum) arr = arr.filter(d => !smallAumProviders.has(d.portfolioManager) && !isZombie(d));
         if (providerFilter) arr = arr.filter(d => d.portfolioManager === providerFilter);
 
         if (search.trim()) {
@@ -426,7 +548,13 @@ function PMSScreenerInner() {
         }
 
         if (aumTier !== 'all') {
-            const aum = d => d.aum ?? 0;
+            // Undisclosed AUM (null) is "unknown", not "confirmed zero" -- a
+            // ?? 0 fallback here used to silently pull every undisclosed-AUM
+            // row into whichever tier includes 0 (e.g. "<100Cr"), regardless
+            // of whether that's actually true. Exclude them from AUM-tier
+            // filtering entirely instead of guessing.
+            arr = arr.filter(d => d.aum != null);
+            const aum = d => d.aum;
             if (aumTier === '<100') arr = arr.filter(d => aum(d) < 100);
             else if (aumTier === '100-500') arr = arr.filter(d => aum(d) >= 100 && aum(d) < 500);
             else if (aumTier === '500-2000') arr = arr.filter(d => aum(d) >= 500 && aum(d) < 2000);
@@ -466,7 +594,7 @@ function PMSScreenerInner() {
     // ── Stats strip ───────────────────────────────────────────────────────
     const stats = useMemo(() => {
         if (!data.length) return null;
-        const visible = showSmallAum ? data : data.filter(d => !smallAumProviders.has(d.portfolioManager));
+        const visible = showSmallAum ? data : data.filter(d => !smallAumProviders.has(d.portfolioManager) && !isZombie(d));
         const valid1Y = visible.filter(d => d.ret1Y !== null);
         const avg1Y = valid1Y.length ? (valid1Y.reduce((s, d) => s + d.ret1Y, 0) / valid1Y.length).toFixed(1) : null;
         const totalAum = visible.reduce((s, d) => s + (d.aum ?? 0), 0);
@@ -588,6 +716,13 @@ function PMSScreenerInner() {
                     </div>
                 )}
 
+                {/* ── Mixed reporting-month note ── */}
+                {!loading && !error && stats?.prevCount > 0 && (
+                    <div className="pms-month-note">
+                        ⓘ {stats.prevCount} of {stats.count} visible strategies haven't reported {dataMonths.latest.shortLabel} yet and are shown with their {dataMonths.prev.shortLabel} figures instead (marked <span className="pms-month-badge" style={{ position: 'static', display: 'inline-flex' }}>{dataMonths.prev.shortLabel}</span>) — comparisons across a mixed month aren't fully apples-to-apples until reporting catches up.
+                    </div>
+                )}
+
                 {/* ── Benchmark reference panel — live TRI data, no pass/fail framing ── */}
                 {!loading && !error && benchmarks && (
                     <div style={{ marginBottom: '20px' }}>
@@ -675,6 +810,12 @@ function PMSScreenerInner() {
                         style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
                         <span>{showAdvanced ? '✕' : '⚙'} Filters</span>
+                    </button>
+                    <button className="view-btn" onClick={handleCopyLink} title="Copy a link to this filtered view" aria-label="Copy link to this view">
+                        🔗 Copy Link
+                    </button>
+                    <button className="view-btn" onClick={handleExportCsv} title="Export the currently filtered strategies as CSV" aria-label="Export filtered strategies as CSV">
+                        ⤓ Export CSV
                     </button>
                     <span className="pms-count-badge">{filtered.length} strategies</span>
                 </section>
@@ -822,7 +963,9 @@ function PMSScreenerInner() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {paginated.map(fund => (
+                                    {paginated.map(fund => {
+                                    const cluster = clusterFor(fund);
+                                    return (
                                         <tr
                                             key={fund.id}
                                             onClick={() => setSelected(fund)}
@@ -855,6 +998,15 @@ function PMSScreenerInner() {
                                                             )}
                                                         </span>
                                                         <span className="pms-strat-mgr">{fund.portfolioManager}</span>
+                                                        {cluster && (
+                                                            <a
+                                                                className={`pms-cluster-badge${cluster.possiblySuperseded ? ' superseded' : ''}`}
+                                                                onClick={e => { e.stopPropagation(); setProviderFilter(fund.portfolioManager); }}
+                                                                title={`${cluster.siblings.length} similar strategies from ${fund.portfolioManager} — may include a superseded version. Click to compare.`}
+                                                            >
+                                                                🔗 {cluster.siblings.length} similar{cluster.possiblySuperseded ? ' · older?' : ''}
+                                                            </a>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </td>
@@ -870,7 +1022,8 @@ function PMSScreenerInner() {
                                                 <td key={c.key}><span className={`ret-chip ${getReturnClass(fund[c.key])}`}>{fmtRet(fund[c.key])}</span></td>
                                             ))}
                                         </tr>
-                                    ))}
+                                    );
+                                    })}
                                     {paginated.length === 0 && (
                                         <tr>
                                             <td colSpan={3 + visibleReturnCols.length} style={{ textAlign: 'center', padding: '56px', color: 'var(--pms-muted)', fontFamily: 'Arial, sans-serif' }}>
@@ -906,7 +1059,9 @@ function PMSScreenerInner() {
                 {!loading && !error && viewMode === 'grid' && (
                     <>
                         <div className="pms-grid-view">
-                            {paginated.map(fund => (
+                            {paginated.map(fund => {
+                            const cluster = clusterFor(fund);
+                            return (
                                 <div key={fund.id} className="pms-grid-card" onClick={() => setSelected(fund)}>
                                     <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '14px' }}>
                                         <ProviderAvatar
@@ -923,8 +1078,18 @@ function PMSScreenerInner() {
                                                 )}
                                             </div>
                                             <div className="gc-mgr">{fund.portfolioManager}</div>
+                                            {cluster && (
+                                                <a
+                                                    className={`pms-cluster-badge${cluster.possiblySuperseded ? ' superseded' : ''}`}
+                                                    onClick={e => { e.stopPropagation(); setProviderFilter(fund.portfolioManager); }}
+                                                    title={`${cluster.siblings.length} similar strategies from ${fund.portfolioManager} — may include a superseded version. Click to compare.`}
+                                                >
+                                                    🔗 {cluster.siblings.length} similar{cluster.possiblySuperseded ? ' · older?' : ''}
+                                                </a>
+                                            )}
                                         </div>
                                     </div>
+                                    <div className="gc-aum"><span>AUM</span><b>{fmtAum(fund.aum)}</b></div>
                                     <div className="gc-divider"></div>
                                     <div className="gc-metrics">
                                         <div className="gc-metric"><div className="gc-m-label">3M</div><div className={`gc-m-val ${(fund.ret3M ?? 0) >= 0 ? 'cagr-pos' : 'cagr-neg'}`}>{fmtRet(fund.ret3M)}</div></div>
@@ -932,7 +1097,8 @@ function PMSScreenerInner() {
                                         <div className="gc-metric"><div className="gc-m-label">5Y</div><div className={`gc-m-val ${(fund.ret5Y ?? 0) >= 0 ? 'cagr-pos' : 'cagr-neg'}`}>{fmtRet(fund.ret5Y)}</div></div>
                                     </div>
                                 </div>
-                            ))}
+                            );
+                            })}
                             {paginated.length === 0 && (
                                 <div className="empty-state" style={{ gridColumn: '1/-1' }}>
                                     <div className="empty-icon">🔍</div>
@@ -1130,7 +1296,36 @@ function PMSScreenerInner() {
                                 </>
                             )}
 
-                            <div className="pd-source" style={{ marginTop: '28px' }}>
+                            {(() => {
+                                const cluster = clusterFor(selected);
+                                if (!cluster) return null;
+                                return (
+                                    <>
+                                        <div className="pd-section-head">Related Strategies From This Manager</div>
+                                        <div className="pd-related-list">
+                                            {cluster.siblings.map(s => (
+                                                <div key={s.portfolioManager + '|||' + s.strategyName} className="pd-related-item" onClick={() => setSelected(s)}>
+                                                    <span className="pd-related-name">
+                                                        {s.strategyName}
+                                                        {clusterFor(s)?.possiblySuperseded && <span className="pd-related-flag"> · older?</span>}
+                                                    </span>
+                                                    <span className="pd-related-ret" style={{ color: (s.ret1Y ?? 0) >= 0 ? 'var(--g2)' : 'var(--neg)' }}>{fmtRet(s.ret1Y)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="pd-source" style={{ marginTop: 0, marginBottom: '20px' }}>
+                                            These names look similar and share this manager — some may be older/superseded versions, others genuinely distinct portfolios. Compare before assuming either.
+                                        </div>
+                                    </>
+                                );
+                            })()}
+
+                            <div className="pd-cta">
+                                <div className="pd-cta-text">Considering this strategy? Talk to an APMI-registered advisor before committing ₹50L+.</div>
+                                <a href="/book-consultation" className="pd-cta-btn">Book a Call →</a>
+                            </div>
+
+                            <div className="pd-source" style={{ marginTop: '20px' }}>
                                 <strong>Disclosure:</strong> Data from APMI India · Discretionary {strategy} strategies · Returns as of {selected.dataMonth === 'prev' ? dataMonths.prev.label : dataMonths.latest.label} · TWRR, net of all fees. Past performance is not indicative of future results. Min PMS investment ₹50L per SEBI.
                                 <br /><br />
                                 Abundance Financial Services. Atin Kumar Agrawal · ARN-251838 · APRN04279 · APMI Registered PMS Distributor.
@@ -1139,6 +1334,8 @@ function PMSScreenerInner() {
                     </>
                 )}
             </div>
+
+            {toast && <div className="pms-toast">{toast}</div>}
 
             <Footer />
         </>
