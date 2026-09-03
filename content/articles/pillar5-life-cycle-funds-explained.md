@@ -10,7 +10,11 @@ It replaces Solution Oriented Schemes — Retirement Funds and Children's Funds 
 
 A Life Cycle Fund is built around a fixed target maturity year — SEBI allows tenures of 5, 10, 15, 20, 25, or 30 years, and each AMC can run up to six of these at once (one per tenure bucket, in practice). SEBI's own rules set the allowed equity/debt band at each stage: further from maturity, more room for equity; as the target date nears, the mandate shifts progressively toward debt. That shift is automatic and rules-based, not a call the fund manager makes on market conditions.
 
+![A single bird gliding calmly from warm golden sunlight into the cool misty valley toward a precise target](/articles/life-cycle-funds-explained-inline-glide.jpg)
+
 The trade-off for that convenience shows up in the exit-load structure, which SEBI has standardised across the category: 3% if you redeem within the first year, 2% within the second, 1% within the third, and nothing after that. It's steeper and more front-loaded than what most mutual fund categories charge — the product is built for someone who picks a target year and stays, not someone testing the water.
+
+![Three diminishing architectural archways along the road receding into the open misty valley, representing tapering exit loads](/articles/life-cycle-funds-explained-inline-gates.jpg)
 
 ## Who's actually launched one — and why that detail matters more than usual
 
