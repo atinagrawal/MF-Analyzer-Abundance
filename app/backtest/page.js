@@ -351,7 +351,13 @@ export default function BacktestPage() {
   const onShare = async () => {
     const url = shareUrl();
     try { window.history.replaceState(null, "", `/backtest?p=${encodeState(buildShareState())}`); } catch (e) {}
-    try { await navigator.clipboard.writeText(url); flashToast("Shareable link copied to clipboard"); }
+    // navigator.clipboard.writeText can hang indefinitely rather than reject
+    // (confirmed live -- a permission prompt or browser policy that never
+    // settles either way), which would otherwise leave this stuck with no
+    // toast ever appearing. Race it against a timeout so the catch below
+    // always fires either way.
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000));
+    try { await Promise.race([navigator.clipboard.writeText(url), timeout]); flashToast("Shareable link copied to clipboard"); }
     catch (e) { flashToast("Link ready in the address bar"); }
   };
 

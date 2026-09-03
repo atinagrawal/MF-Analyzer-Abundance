@@ -288,6 +288,18 @@ export default function RollingPage() {
   const [dtSort, setDtSort]         = useState({ key:'cagrPct', dir:-1 });
   // Share
   const [shareCopied, setShareCopied] = useState(false);
+  const [shareFailed, setShareFailed] = useState(false);
+  // navigator.clipboard.writeText can hang indefinitely rather than reject
+  // (confirmed live -- a permission prompt or browser policy that never
+  // settles either way), which would otherwise leave this button looking
+  // permanently unresponsive with zero feedback. Race it against a timeout
+  // so the user always sees SOME result.
+  function handleShareLink() {
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+    Promise.race([navigator.clipboard.writeText(location.href), timeout])
+      .then(() => { setShareCopied(true); setTimeout(() => setShareCopied(false), 2000); })
+      .catch(() => { setShareFailed(true); setTimeout(() => setShareFailed(false), 2400); });
+  }
   // Ref for chart instances
   const charts = useRef({});
   const histRef = useRef(null);
@@ -835,9 +847,9 @@ export default function RollingPage() {
               <div className="src-dot"></div>
               <span>Data: AMFI · {result.rrA.length.toLocaleString()} NAV records · {win}Y rolling · {statsA?.n.toLocaleString()} windows{result.isIndex?` vs ${result.nameB} TRI`:result.rrB?` vs Fund B`:''}</span>
             </div>
-            <button onClick={()=>{navigator.clipboard.writeText(location.href).then(()=>{setShareCopied(true);setTimeout(()=>setShareCopied(false),2000);});}}
+            <button onClick={handleShareLink}
               style={{padding:'4px 12px',borderRadius:6,fontSize:'.62rem',fontWeight:700,cursor:'pointer',border:'1px solid var(--border2)',background:'var(--s2)',color:'var(--g2)',fontFamily:'Raleway,sans-serif',transition:'.15s'}}>
-              {shareCopied?'✓ Copied!':'🔗 Share link'}
+              {shareCopied?'✓ Copied!':shareFailed?'Copy failed':'🔗 Share link'}
             </button>
           </div>
         )}
