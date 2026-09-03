@@ -13,6 +13,13 @@ const AMFI_TO_GEO = {
   'Jammu and Kashmir': 'Jammu & Kashmir',
   'Pondicherry': 'Puducherry',
   'Orissa': 'Odisha',
+  // AMFI still reports these two pre-2020-merger UTs separately (not as
+  // 'Dadra and Nagar Haveli and Daman and Diu') — verified live, so this is
+  // a name-spelling mismatch, not an actual UT merge. Without these, both
+  // silently fail to color on the choropleth map (~₹1,900 Cr + ₹1,380 Cr
+  // AUM combined) even though they still show correctly in the table below.
+  'Dadra and Nagar Haveli': 'Dadara & Nagar Havelli',
+  'Daman and Diu': 'Daman & Diu',
 };
 
 // GeoJSON ST_NM → AMFI state name (reverse lookup for click events)
@@ -62,6 +69,45 @@ export default function GeographyPage() {
   const [sortDir, setSortDir] = useState(-1);
   const [aumByGeo, setAumByGeo] = useState({});
   const [maxAum, setMaxAum] = useState(1);
+  const [toast, setToast] = useState('');
+
+  function flashToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2400);
+  }
+
+  function handleCopyLink() {
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+    Promise.race([navigator.clipboard.writeText(window.location.href), timeout])
+      .then(() => flashToast('Link copied to clipboard'))
+      .catch(() => flashToast('Copy failed — select the address bar manually'));
+  }
+
+  function handleExportCsv() {
+    if (!data?.states?.length) return;
+    const rows = data.states.filter(s => s.state !== 'Others');
+    const cols = [
+      { key: 'rank', label: 'Rank' }, { key: 'state', label: 'State' },
+      { key: 'total', label: 'Total AUM (Cr)' }, { key: 'equity', label: 'Equity AUM (Cr)' },
+      { key: 'otherDebt', label: 'Debt AUM (Cr)' }, { key: 'liquid', label: 'Liquid AUM (Cr)' },
+      { key: 'equityPct', label: 'Equity %' }, { key: 'sharePct', label: 'Share %' },
+    ];
+    const esc = (v) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const lines = [cols.map(c => esc(c.label)).join(','), ...rows.map(r => cols.map(c => esc(r[c.key])).join(','))];
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mf-geography-${data.date || 'latest'}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    flashToast(`Exported ${rows.length} states`);
+  }
 
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
@@ -321,6 +367,10 @@ export default function GeographyPage() {
               </select>
             </div>
           )}
+          <div className="pf-toolbar">
+            <button className="export-btn" onClick={handleCopyLink} title="Copy a link to this page" aria-label="Copy link">🔗 Copy Link</button>
+            <button className="export-btn" onClick={handleExportCsv} title="Export the state rankings as CSV" aria-label="Export as CSV">⤓ Export CSV</button>
+          </div>
         </div>
 
         {/* Summary stat chips */}
@@ -516,7 +566,21 @@ export default function GeographyPage() {
             </div>
           </div>
         </div>
+
+        <div className="pf-advisor-card">
+          <div className="pf-advisor-icon">✦</div>
+          <div className="pf-advisor-body">
+            <div className="pf-advisor-title">Curious where your own state ranks — or what it means for you?</div>
+            <div className="pf-advisor-sub">
+              State-wise AUM is industry context, not personal advice — talk to an AMFI-registered advisor about your own portfolio.
+            </div>
+          </div>
+          <a href="/book-consultation" className="pf-advisor-btn">
+            Book a Call →
+          </a>
+        </div>
       </div>
+      {toast && <div className="pf-toast">{toast}</div>}
       <Footer />
     </>
   );
