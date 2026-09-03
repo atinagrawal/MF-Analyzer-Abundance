@@ -37,21 +37,35 @@ export default async function CategoryIndexPage({ params }) {
     notFound();
   }
 
-  // Life Cycle Funds is the one curated category without a single literal
-  // AMFI category string -- every real row carries its own maturity-bucket
-  // suffix ("Life Cycle Funds - Life Cycle Fund with Maturity of 10
-  // Years", etc, see screenerContent.js's CURATED_CATEGORIES comment), so
-  // it needs a prefix match to cover every tenure an AMC has launched.
-  // Every other curated category keeps the exact match it's always used.
+  // Two curated categories need something other than a plain exact match:
+  // - Life Cycle Funds has no single literal AMFI category string -- every
+  //   real row carries its own maturity-bucket suffix ("Life Cycle Funds -
+  //   Life Cycle Fund with Maturity of 10 Years", etc), so it needs a
+  //   prefix match to cover every tenure an AMC has launched.
+  // - Value/Contra covers two genuinely distinct AMFI categories (Value
+  //   Fund, Contra Fund) that the page's own copy already claims to cover
+  //   -- an exact match against just one of them was silently dropping
+  //   every Contra fund (confirmed live: zero Contra funds ever showed on
+  //   this page despite well-known ones like SBI Contra Fund existing).
+  // Every other curated category keeps the plain exact match it's always used.
   const isLifeCycle = entry.slug === 'life-cycle';
-  const { rows } = await pool.query(
-    isLifeCycle
-      ? `SELECT code, name, amc, nav, nav_date, inception_date, structure
-         FROM mf_screener WHERE category ILIKE $1 ORDER BY name ASC`
-      : `SELECT code, name, amc, nav, nav_date, inception_date, structure
+  const { rows } = isLifeCycle
+    ? await pool.query(
+        `SELECT code, name, amc, nav, nav_date, inception_date, structure
+         FROM mf_screener WHERE category ILIKE $1 ORDER BY name ASC`,
+        [`${entry.category} -%`]
+      ).catch(() => ({ rows: [] }))
+    : entry.categories
+    ? await pool.query(
+        `SELECT code, name, amc, nav, nav_date, inception_date, structure
+         FROM mf_screener WHERE category = ANY($1::text[]) ORDER BY name ASC`,
+        [entry.categories]
+      ).catch(() => ({ rows: [] }))
+    : await pool.query(
+        `SELECT code, name, amc, nav, nav_date, inception_date, structure
          FROM mf_screener WHERE category = $1 ORDER BY name ASC`,
-    [isLifeCycle ? `${entry.category} -%` : entry.category]
-  ).catch(() => ({ rows: [] }));
+        [entry.category]
+      ).catch(() => ({ rows: [] }));
 
   return (
     <>

@@ -111,6 +111,14 @@ export const CURATED_CATEGORIES = [
     slug: 'value-contra',
     label: 'Value / Contra',
     category: 'Equity Scheme - Value Fund',
+    // AMFI files these as two genuinely distinct categories -- confirmed
+    // live, both currently populated (e.g. SBI Contra Fund, Kotak India EQ
+    // Contra Fund). `category` above stays the representative single value
+    // slugToCategory/categoryToSlug use; `categories` is what
+    // app/funds/[category]/page.js actually queries by, so the page
+    // doesn't silently show only Value funds despite its own "Value &
+    // Contra" copy.
+    categories: ['Equity Scheme - Value Fund', 'Equity Scheme - Contra Fund'],
     subtitleSuffix: ' Value & Contra funds invest in undervalued or temporarily out-of-favour stocks.',
     metaBlurb: 'Value & Contra funds follow a value-investing strategy, buying stocks trading below their intrinsic worth.',
     explainer: 'Value funds follow a value-investing strategy by holding stocks trading below their intrinsic value, while Contra funds take contrarian bets against prevailing market trends. Both require patience, as undervalued stocks can take time to re-rate.',
