@@ -41,6 +41,55 @@ export default function IndicesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [metadata, setMetadata] = useState({ month: '', year: '', count: 0, asOf: '', bseCount: 0 });
+  const [toast, setToast] = useState('');
+
+  function flashToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2400);
+  }
+
+  function handleCopyLink() {
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+    Promise.race([navigator.clipboard.writeText(window.location.href), timeout])
+      .then(() => flashToast('Link copied to clipboard'))
+      .catch(() => flashToast('Copy failed — select the address bar manually'));
+  }
+
+  // Exports the currently filtered/sorted `rows` (not just allData) — defined
+  // below in render scope, captured by closure; only ever invoked after this
+  // render's `rows` assignment has run, so it's always populated on click.
+  function handleExportCsv() {
+    if (!rows.length) return;
+    const cols = [
+      { key: 'name', label: 'Index' }, { key: 'exchange', label: 'Exchange' }, { key: 'cat', label: 'Category' },
+      { key: 'r1m', label: '1M %' }, { key: 'r3m', label: '3M %' }, { key: 'r1y', label: '1Y %' },
+      { key: 'r3y', label: '3Y %' }, { key: 'r5y', label: '5Y %' },
+      { key: 'vol', label: 'Volatility' }, { key: 'beta', label: 'Beta' },
+      { key: 'pe', label: 'P/E' }, { key: 'pb', label: 'P/B' }, { key: 'dy', label: 'Div Yield %' },
+      { key: 'riskLabel', label: 'Riskometer' },
+    ];
+    const get = (r, key) => {
+      if (key.startsWith('r') && r.returns && key in r.returns) return r.returns[key];
+      if (['pe', 'pb', 'dy'].includes(key)) return r.val?.[key];
+      if (['vol', 'beta'].includes(key)) return r.risk?.[key];
+      return r[key];
+    };
+    const esc = (v) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const lines = [cols.map(c => esc(c.label)).join(','), ...rows.map(r => cols.map(c => esc(get(r, c.key))).join(','))];
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mf-indices-${metadata.month || 'latest'}-${metadata.year || ''}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    flashToast(`Exported ${rows.length} indices`);
+  }
 
   useEffect(() => {
     async function loadData() {
@@ -258,6 +307,9 @@ export default function IndicesPage() {
           <div className="data-badge">
             {rows.length} of {allData.length} indices
           </div>
+          <span className="controls-divider" />
+          <button className="export-btn" onClick={handleCopyLink} title="Copy a link to this page" aria-label="Copy link">🔗 Copy Link</button>
+          <button className="export-btn" onClick={handleExportCsv} title="Export the currently filtered table as CSV" aria-label="Export as CSV">⤓ Export CSV</button>
         </div>
 
         {loading && (
@@ -393,8 +445,24 @@ export default function IndicesPage() {
             </div>
           </div>
         )}
+
+        {!loading && !error && (
+          <div className="pf-advisor-card">
+            <div className="pf-advisor-icon">✦</div>
+            <div className="pf-advisor-body">
+              <div className="pf-advisor-title">Not sure which index or fund fits your goals?</div>
+              <div className="pf-advisor-sub">
+                Index valuation is market context, not a buy signal — talk to an AMFI-registered advisor about your own allocation.
+              </div>
+            </div>
+            <a href="/book-consultation" className="pf-advisor-btn">
+              Book a Call →
+            </a>
+          </div>
+        )}
       </div>
 
+      {toast && <div className="pf-toast">{toast}</div>}
       <Footer />
     </>
   );

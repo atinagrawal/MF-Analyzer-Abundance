@@ -95,6 +95,19 @@ export default async function CategoryIndexPage({ params }) {
         <div style={{ marginTop: 28, padding: '16px 20px', background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 12, fontSize: '.78rem', color: 'var(--muted)', lineHeight: 1.5 }}>
           Showing <strong>{rows.length}</strong> {entry.label} schemes registered with SEBI &amp; AMFI. Click any fund to view its minimum investment, exit load, RTA, portfolio holdings, stress test, and complete analytics on Abundance Pro.
         </div>
+
+        <div className="pf-advisor-card" style={{ marginTop: 20, marginBottom: 0 }}>
+          <div className="pf-advisor-icon">✦</div>
+          <div className="pf-advisor-body">
+            <div className="pf-advisor-title">Not sure which {entry.label.toLowerCase()} fund fits your goals?</div>
+            <div className="pf-advisor-sub">
+              This directory is informational, not a recommendation — talk to an AMFI-registered advisor about what fits your portfolio.
+            </div>
+          </div>
+          <a href="/book-consultation" className="pf-advisor-btn">
+            Book a Call →
+          </a>
+        </div>
       </main>
       <Footer />
     </>

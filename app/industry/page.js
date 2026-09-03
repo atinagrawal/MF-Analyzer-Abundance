@@ -91,6 +91,48 @@ export default function IndustryPage() {
   const [error,    setError]    = useState(null);
   const [sourceNote, setSourceNote] = useState('Source: AMFI Monthly Report');
   const [parseWarn, setParseWarn]   = useState(false);
+  const [toast, setToast] = useState('');
+
+  function flashToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2400);
+  }
+
+  function handleCopyLink() {
+    // navigator.clipboard.writeText can hang indefinitely rather than
+    // reject, so a hard timeout is required for honest feedback either way.
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+    Promise.race([navigator.clipboard.writeText(window.location.href), timeout])
+      .then(() => flashToast('Link copied to clipboard'))
+      .catch(() => flashToast('Copy failed — select the address bar manually'));
+  }
+
+  function handleExportCsv() {
+    if (!data?.categories) return;
+    const rows = Object.values(data.categories);
+    const cols = [
+      { key: 'label', label: 'Category' }, { key: 'type', label: 'Type' },
+      { key: 'schemes', label: 'Schemes' }, { key: 'folios', label: 'Folios' },
+      { key: 'inflow', label: 'Inflow (Cr)' }, { key: 'redemption', label: 'Redemption (Cr)' },
+      { key: 'netFlow', label: 'Net Flow (Cr)' }, { key: 'aum', label: 'AUM (Cr)' },
+      { key: 'avgAum', label: 'AAUM (Cr)' },
+    ];
+    const esc = (v) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const lines = [cols.map(c => esc(c.label)).join(','), ...rows.map(r => cols.map(c => esc(r[c.key])).join(','))];
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mf-industry-${selMon}-${selYear}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    flashToast(`Exported ${rows.length} categories`);
+  }
 
   /* table state */
   const [sortCol, setSortCol] = useState('aum');
@@ -772,6 +814,12 @@ export default function IndustryPage() {
             <button className="load-btn" onClick={() => loadData(selMon, selYear)}>Load Report</button>
             <span className="data-source-note">{sourceNote}</span>
           </div>
+          {data && (
+            <div className="pf-toolbar">
+              <button className="export-btn" onClick={handleCopyLink} title="Copy a link to this page" aria-label="Copy link">🔗 Copy Link</button>
+              <button className="export-btn" onClick={handleExportCsv} title="Export this month's category data as CSV" aria-label="Export as CSV">⤓ Export CSV</button>
+            </div>
+          )}
         </div>
 
         {parseWarn && <div className="parse-warn show">⚠️ Some category data could not be parsed from this month&apos;s report. Showing partial data.</div>}
@@ -987,9 +1035,23 @@ export default function IndustryPage() {
               </div>
             )}
             {trendsData && renderTrendsSection(trendsData)}
+
+            <div className="pf-advisor-card">
+              <div className="pf-advisor-icon">✦</div>
+              <div className="pf-advisor-body">
+                <div className="pf-advisor-title">Want help reading what these industry flows mean for your own portfolio?</div>
+                <div className="pf-advisor-sub">
+                  Category rotation is industry-wide context, not a personal recommendation — talk to an AMFI-registered advisor about your specific holdings.
+                </div>
+              </div>
+              <a href="/book-consultation" className="pf-advisor-btn">
+                Book a Call →
+              </a>
+            </div>
           </>
         )}
       </div>
+      {toast && <div className="pf-toast">{toast}</div>}
       <Footer />
     </>
   );

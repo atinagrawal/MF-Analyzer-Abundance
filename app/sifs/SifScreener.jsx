@@ -615,6 +615,19 @@ export default function SifScreener({ initialData }) {
   const [showWatchOnly, setShowWatchOnly] = useState(false);
   const [growthOnly, setGrowthOnly] = useState(true); // default ON — hides IDCW/dividend plans
   const [historyScheme, setHistoryScheme] = useState(null); // scheme for history modal
+  const [toast, setToast] = useState('');
+
+  function flashToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2400);
+  }
+
+  function handleCopyLink() {
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+    Promise.race([navigator.clipboard.writeText(window.location.href), timeout])
+      .then(() => flashToast('Link copied to clipboard'))
+      .catch(() => flashToast('Copy failed — select the address bar manually'));
+  }
 
   // Back button: push a hash when modal opens so browser back closes it, not navigates away
   function openHistory(scheme) {
@@ -715,6 +728,31 @@ export default function SifScreener({ initialData }) {
       return 0;
     });
   }, [schemes, query, filterType, filterFam, filterSif, filterCat, sortBy, watchlist, showWatchOnly, growthOnly]);
+
+  function handleExportCsv() {
+    if (!filtered.length) return;
+    const cols = [
+      { key: 'nav_name', label: 'Scheme' }, { key: 'sif_name', label: 'SIF House' },
+      { key: 'category', label: 'Strategy' }, { key: 'type', label: 'Type' },
+      { key: 'scheme_id', label: 'Scheme ID' }, { key: 'isin_po', label: 'ISIN' },
+      { key: 'nav', label: 'NAV' }, { key: 'aumCr', label: 'AUM (Cr)' }, { key: 'nav_date', label: 'NAV Date' },
+    ];
+    const esc = (v) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const lines = [cols.map(c => esc(c.label)).join(','), ...filtered.map(r => cols.map(c => esc(r[c.key])).join(','))];
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sif-screener-${navDate || 'latest'}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    flashToast(`Exported ${filtered.length} schemes`);
+  }
 
   return (
     <>
@@ -860,6 +898,12 @@ export default function SifScreener({ initialData }) {
                 onClick={() => { setQuery(''); setFilterType('all'); setFilterFam('all'); setFilterSif('all'); setFilterCat('all'); setShowWatchOnly(false); setGrowthOnly(true); }}>
                 Clear filters
               </button>
+            )}
+            {!loading && (
+              <div className="pf-toolbar" style={{ marginBottom: 0, marginLeft: 'auto' }}>
+                <button className="export-btn" onClick={handleCopyLink} title="Copy a link to this page" aria-label="Copy link">🔗 Copy Link</button>
+                <button className="export-btn" onClick={handleExportCsv} title="Export the currently filtered table as CSV" aria-label="Export as CSV">⤓ Export CSV</button>
+              </div>
             )}
           </div>
         </div>
@@ -1061,6 +1105,19 @@ export default function SifScreener({ initialData }) {
           </div>
         </section>
 
+        <div className="pf-advisor-card">
+          <div className="pf-advisor-icon">✦</div>
+          <div className="pf-advisor-body">
+            <div className="pf-advisor-title">Not sure if a SIF fits your portfolio?</div>
+            <div className="pf-advisor-sub">
+              SIFs carry a ₹10 lakh minimum and long-short/derivative exposure most mutual funds don't — talk to an AMFI-registered advisor before committing.
+            </div>
+          </div>
+          <a href="/book-consultation" className="pf-advisor-btn">
+            Book a Call →
+          </a>
+        </div>
+
         {/* ── AMFI Regulatory Disclaimer ─────────────────────────────────── */}
         <div className="sif-disclaimer">
           <div className="sif-disclaimer-badge">AMFI Registered · ARN-251838</div>
@@ -1087,6 +1144,7 @@ export default function SifScreener({ initialData }) {
         />
       )}
 
+      {toast && <div className="pf-toast">{toast}</div>}
       <Footer />
     </>
   );
