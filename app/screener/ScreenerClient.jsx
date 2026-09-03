@@ -213,6 +213,52 @@ export default function ScreenerClient({ initialCategory }) {
   const MAX_COMPARE = 3;
   const [compareList, setCompareList] = useState([]);
   const [showCompare, setShowCompare] = useState(false);
+  const [toast, setToast] = useState('');
+
+  function flashToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2400);
+  }
+
+  /** Copies the current URL (category/search state isn't reflected in the
+   * URL on this page yet, so this is a plain page-link share for now). */
+  function handleCopyLink() {
+    // navigator.clipboard.writeText can hang indefinitely rather than
+    // reject (confirmed live -- a permission prompt or browser policy
+    // that never settles either way), which would otherwise leave this
+    // button looking permanently unresponsive with zero feedback.
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+    Promise.race([navigator.clipboard.writeText(window.location.href), timeout])
+      .then(() => flashToast('Link copied to clipboard'))
+      .catch(() => flashToast('Copy failed — select the address bar manually'));
+  }
+
+  /** Exports the currently filtered table (MF or SIF, whichever is active) as CSV. */
+  function handleExportCsv() {
+    const source = isSIF ? sifRows : rows;
+    if (!source.length) return;
+    const cols = isSIF
+      ? [{ key: 'nav_name', label: 'Scheme' }, { key: 'sif_name', label: 'SIF House' }, { key: 'category', label: 'Category' }, ...METRICS.filter((m) => sifAvailableKeys.has(m.key))]
+      : [{ key: 'name', label: 'Fund' }, { key: 'amc', label: 'AMC' }, { key: 'category', label: 'Category' }, ...METRICS];
+    const esc = (v) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const lines = [
+      cols.map((c) => esc(c.label)).join(','),
+      ...source.map((row) => cols.map((c) => esc(row[c.key])).join(',')),
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mf-screener-${isSIF ? 'sif' : group.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    flashToast(`Exported ${source.length} ${isSIF ? 'schemes' : 'funds'}`);
+  }
 
   // Every entry stores its own `.id` up front (same 'mf-'+code / 'sif-'+
   // scheme_id format normalizeFund uses later) so nothing downstream needs
@@ -524,6 +570,8 @@ export default function ScreenerClient({ initialCategory }) {
             </>
           )}
           {!isSIF && <label className="scr-toggle"><input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} /><span>Open-ended only</span></label>}
+          <button className="scr-chip" onClick={handleCopyLink} title="Copy a link to this page" aria-label="Copy link">🔗 Copy Link</button>
+          <button className="scr-chip" onClick={handleExportCsv} title="Export the currently filtered table as CSV" aria-label="Export as CSV">⤓ Export CSV</button>
         </div>
 
         <div className="scr-colbar">
@@ -843,10 +891,25 @@ export default function ScreenerClient({ initialCategory }) {
           ))}
         </section>
 
+        <div className="pf-advisor-card">
+          <div className="pf-advisor-icon">✦</div>
+          <div className="pf-advisor-body">
+            <div className="pf-advisor-title">Found a few funds worth a closer look?</div>
+            <div className="pf-advisor-sub">
+              Talk to an AMFI-registered advisor before you commit — we'll factor in your goals, existing portfolio, and taxes.
+            </div>
+          </div>
+          <a href="/book-consultation" className="pf-advisor-btn">
+            Book a Call →
+          </a>
+        </div>
+
         <div className="scr-disc">
           <b>Disclaimer.</b> Educational tool by <b>Atin Kumar Agrawal | Abundance Financial Services</b> · AMFI Registered Mutual Funds &amp; SIF Distributor (ARN-251838). Returns are point-to-point CAGR from AMFI NAVs; volatility and drawdown are month-end approximations. Mutual fund investments are subject to market risks; read all scheme-related documents carefully. Past performance is not indicative of future results. This is not investment advice.
         </div>
       </div>
+
+      {toast && <div className="scr-toast">{toast}</div>}
 
       <MFCompareBar
         selected={compareList}
@@ -988,6 +1051,8 @@ function SifDetail({ s, onClose }) {
 
 const CSS = `
 .scr-body{font-family:Raleway,sans-serif;color:var(--text);padding-bottom:48px}
+.scr-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--g1);color:#fff;font:600 13px Raleway,sans-serif;padding:11px 18px;border-radius:10px;box-shadow:var(--shadow-lg);z-index:10000;animation:scr-toastin .25s ease}
+@keyframes scr-toastin{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
 /* SIF chip styling */
 .scr-chip-sif{border-color:#5e35b133;color:#7c4dff!important}
 .scr-chip-sif:hover{border-color:#7c4dff!important}

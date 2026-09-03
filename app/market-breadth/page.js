@@ -76,6 +76,61 @@ export default function BreadthPage() {
   const [ssRaw, setSsRaw]     = useState(null);
   const [ssErr, setSsErr]     = useState('');
   const [ssLoaded, setSsLoaded] = useState(false);
+  const [toast, setToast] = useState('');
+
+  function flashToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2400);
+  }
+
+  function handleCopyLink() {
+    // navigator.clipboard.writeText can hang indefinitely rather than
+    // reject (confirmed live -- a permission prompt or browser policy
+    // that never settles either way), which would otherwise leave this
+    // button looking permanently unresponsive with zero feedback.
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+    Promise.race([navigator.clipboard.writeText(window.location.href), timeout])
+      .then(() => flashToast('Link copied to clipboard'))
+      .catch(() => flashToast('Copy failed — select the address bar manually'));
+  }
+
+  /** Exports the full breadth time series (not just today's snapshot) as CSV. */
+  function handleExportCsv() {
+    if (!snaps.length) return;
+    const cols = [
+      { key: 'date', label: 'Date' },
+      { key: 'universe', label: 'Universe' },
+      ...DMAS.flatMap((n) => [{ key: `a${n}`, label: `Above ${n}DMA` }, { key: `t${n}`, label: `Total ${n}DMA` }]),
+      { key: 'advancing', label: 'Advancing' },
+      { key: 'declining', label: 'Declining' },
+      { key: 'unchanged', label: 'Unchanged' },
+      { key: 'new_high', label: 'New High' },
+      { key: 'new_low', label: 'New Low' },
+      { key: 'regime_pct', label: 'Regime %' },
+      { key: 'golden_cross', label: 'Golden Cross' },
+      { key: 'death_cross', label: 'Death Cross' },
+      { key: 'bull_stacked', label: 'Bull Stacked' },
+      { key: 'bear_stacked', label: 'Bear Stacked' },
+    ];
+    const esc = (v) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const lines = [
+      cols.map((c) => esc(c.label)).join(','),
+      ...snaps.map((row) => cols.map((c) => esc(row[c.key])).join(',')),
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `market-breadth-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    flashToast(`Exported ${snaps.length} day(s) of breadth history`);
+  }
 
   useEffect(() => {
     if (!isAuthed || !isPro) return;
@@ -325,7 +380,34 @@ export default function BreadthPage() {
           !isPro    ? <ProGate /> :
           <StockScreenerSection raw={ssRaw} err={ssErr} />
         )}
+
+        {/* Shown regardless of tab/auth/pro status -- a visitor blocked by
+            BreadthGate/ProGate might still want a human conversation rather
+            than self-serve upgrading, same as portfolio/page.jsx's own
+            always-visible advisor card. */}
+        <div className="pf-advisor-card">
+          <div className="pf-advisor-icon">✦</div>
+          <div className="pf-advisor-body">
+            <div className="pf-advisor-title">Want help acting on what breadth is telling you?</div>
+            <div className="pf-advisor-sub">
+              Regime shifts and rotation are context, not a trade plan — talk to an AMFI-registered advisor about what it means for your portfolio.
+            </div>
+          </div>
+          <a href="/book-consultation" className="pf-advisor-btn">
+            Book a Call →
+          </a>
+        </div>
+
+        {isAuthed && isPro && cur && (
+          <div className="brd-toolbar">
+            <button className="brd-mode" onClick={handleCopyLink} title="Copy a link to this page" aria-label="Copy link">🔗 Copy Link</button>
+            <button className="brd-mode" onClick={handleExportCsv} title="Export today's breadth snapshot as CSV" aria-label="Export as CSV">⤓ Export CSV</button>
+          </div>
+        )}
       </div>
+
+      {toast && <div className="brd-toast">{toast}</div>}
+
       <Footer activePage="breadth" />
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
     </div>
@@ -950,6 +1032,9 @@ function BreadthFAQ() {
 
 const CSS = `
 .brd-body{font-family:Raleway,sans-serif;color:var(--text);padding-bottom:48px}
+.brd-toolbar{display:flex;gap:10px;margin:8px 0 20px}
+.brd-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--g1);color:#fff;font:600 13px Raleway,sans-serif;padding:11px 18px;border-radius:10px;box-shadow:var(--shadow-lg);z-index:10000;animation:brd-toastin .25s ease}
+@keyframes brd-toastin{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
 .brd-prem{font:800 10px JetBrains Mono,monospace;background:linear-gradient(90deg,var(--g1),var(--g3));color:#fff;padding:3px 8px;border-radius:6px;vertical-align:middle;letter-spacing:.08em;margin-left:8px}
 .brd-up{color:var(--g2)}.brd-down{color:var(--neg)}.brd-neutral{color:var(--muted)}.brd-warn{color:var(--warn)}
 
