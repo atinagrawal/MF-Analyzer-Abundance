@@ -17,6 +17,21 @@ const TYPE_COLORS = {
 const YEARS = [];
 for (let y = new Date().getFullYear(); y >= 2020; y--) YEARS.push(y);
 
+// Category keys must match KNOWN_CATS in pages/api/amfi-industry.js
+const STICKY_CATS = [
+  ['retirementFund', 'Retirement Fund'], ['childrensFund', "Children's Fund"],
+  ['elss', 'ELSS'], ['multiAsset', 'Multi Asset'], ['flexiCap', 'Flexi Cap'],
+  ['midCap', 'Mid Cap'], ['smallCap', 'Small Cap'], ['moneyMarket', 'Money Market'],
+  ['liquidFund', 'Liquid Fund'], ['overnightFund', 'Overnight'],
+];
+const REDEMPTION_CATS = [
+  ['sectoralThematic', 'Sectoral/Thematic'], ['smallCap', 'Small Cap'],
+  ['balancedAdvantage', 'Balanced Adv.'], ['focusedFund', 'Focused Fund'],
+  ['multiAsset', 'Multi Asset'], ['midCap', 'Mid Cap'],
+  ['aggressiveHybrid', 'Aggr. Hybrid'], ['largeMidCap', 'Lg & Mid Cap'],
+  ['elss', 'ELSS'], ['flexiCap', 'Flexi Cap'],
+];
+
 /* ── helpers ── */
 function getDefaultDate() {
   const now = new Date();
@@ -491,18 +506,28 @@ export default function IndustryPage() {
       .sort((a,b) => b.v - a.v)
       .slice(0, 8);
 
-    const stickyData = [
-      {n:'Retirement Fund',v:84},{n:"Children's Fund",v:77},{n:'ELSS',v:67},
-      {n:'Multi Asset',v:70},{n:'Flexi Cap',v:51},{n:'Mid Cap',v:48},
-      {n:'Small Cap',v:45},{n:'Money Market',v:9},{n:'Liquid Fund',v:10},{n:'Overnight',v:3},
-    ];
-    const redmData = [
-      {n:'Sectoral/Thematic',v:1.91,c:'#e65100'},{n:'Small Cap',v:1.02,c:'#f57c00'},
-      {n:'Balanced Adv.',v:1.00,c:'#f57c00'},{n:'Focused Fund',v:0.91,c:'#ffa726'},
-      {n:'Multi Asset',v:0.91,c:'#ffa726'},{n:'Mid Cap',v:0.83,c:'#66bb6a'},
-      {n:'Aggr. Hybrid',v:0.81,c:'#66bb6a'},{n:'Lg & Mid Cap',v:0.81,c:'#66bb6a'},
-      {n:'ELSS',v:0.79,c:'#43a047'},{n:'Flexi Cap',v:0.74,c:'#2e7d32'},
-    ];
+    // Both computed live from the same 12-month `months` data as every other
+    // chart on this page — net÷gross and redemption÷AUM, per category, from
+    // the AMFI PDF's own inflow/redemption/netFlow/aum fields.
+    const stickyData = STICKY_CATS.map(([key, label]) => {
+      let netSum = 0, grossSum = 0;
+      months.forEach(m => {
+        const c = m.categories?.[key];
+        if (c) { netSum += (c.netFlow || 0); grossSum += (c.inflow || 0); }
+      });
+      const v = grossSum > 0 ? Math.round((netSum / grossSum) * 100) : 0;
+      return { n: label, v: Math.max(0, v) };
+    });
+    const REDM_COLORS = ['#e65100','#f57c00','#f57c00','#ffa726','#ffa726','#66bb6a','#66bb6a','#66bb6a','#43a047','#2e7d32'];
+    const redmData = REDEMPTION_CATS.map(([key, label]) => {
+      const ratios = [];
+      months.forEach(m => {
+        const c = m.categories?.[key];
+        if (c && c.aum > 0) ratios.push((c.redemption || 0) / c.aum * 100);
+      });
+      const avg = ratios.length ? ratios.reduce((s, x) => s + x, 0) / ratios.length : 0;
+      return { n: label, v: +avg.toFixed(2) };
+    }).sort((a, b) => b.v - a.v).map((d, i) => ({ ...d, c: REDM_COLORS[i] }));
 
     return (
       <div ref={trendSecRef}>
