@@ -69,6 +69,7 @@ export default function SifDetailClient({ id }) {
   const [holdingsData,  setHoldingsData]  = useState(null);
   const [holdingsLoad,  setHoldingsLoad]  = useState(true);
   const [copied,        setCopied]        = useState(false);
+  const [copyFailed,    setCopyFailed]    = useState(false);
   const [openFaq,       setOpenFaq]       = useState(null);
   const [benchIdx,      setBenchIdx]      = useState('BSE 250 LargeMidCap 65:35 Index');
   const [chartPeriod,   setChartPeriod]   = useState('All');
@@ -137,9 +138,16 @@ export default function SifDetailClient({ id }) {
   }, [sif, benchIdx]);
 
   const copyLink = () => {
-    navigator.clipboard?.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    // Previously fired setCopied(true) unconditionally, without even
+    // waiting for the write to finish -- showed "Copied!" every time
+    // regardless of whether it actually worked. navigator.clipboard.
+    // writeText can also hang indefinitely rather than reject (confirmed
+    // live -- a permission prompt or browser policy that never settles
+    // either way), so this races against a timeout too.
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+    Promise.race([navigator.clipboard.writeText(window.location.href), timeout])
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); })
+      .catch(() => { setCopyFailed(true); setTimeout(() => setCopyFailed(false), 2500); });
   };
 
   // Derived: clean name
@@ -224,7 +232,7 @@ export default function SifDetailClient({ id }) {
               <div className="sif-hero-actions">
                 <a href={backtestLink(sif)} className="sif-btn primary">⚗ Backtest Strategy</a>
                 <button onClick={copyLink} className="sif-btn">
-                  {copied ? '✓ Copied!' : '🔗 Share'}
+                  {copied ? '✓ Copied!' : copyFailed ? 'Copy failed' : '🔗 Share'}
                 </button>
                 <a href="/sifs" className="sif-btn">📋 SIF Screener</a>
               </div>
@@ -347,6 +355,20 @@ export default function SifDetailClient({ id }) {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Consultation CTA */}
+        <div className="pf-advisor-card">
+          <div className="pf-advisor-icon">✦</div>
+          <div className="pf-advisor-body">
+            <div className="pf-advisor-title">Considering {cleanName}?</div>
+            <div className="pf-advisor-sub">
+              SIFs carry a ₹10L minimum and different risk/liquidity terms than a mutual fund — talk to an AMFI-registered advisor before you commit.
+            </div>
+          </div>
+          <a href="/book-consultation" className="pf-advisor-btn">
+            Book a Call →
+          </a>
         </div>
 
         {/* Compliance */}

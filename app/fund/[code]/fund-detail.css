@@ -103,6 +103,29 @@
   min-width: 0;
 }
 
+.fd-share-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: Raleway, sans-serif;
+  transition: all 0.16s ease;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  line-height: 1;
+  white-space: nowrap;
+}
+.fd-share-btn:hover {
+  background: var(--s2);
+  transform: translateY(-1px);
+}
+
 .fd-fund-name {
   font-size: 1.22rem;
   font-weight: 800;

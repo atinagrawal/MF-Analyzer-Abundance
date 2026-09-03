@@ -195,6 +195,20 @@ export default function FundDetailClient({ code }) {
   const [schemeFacts, setSchemeFacts] = useState(null);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [upgradeErr, setUpgradeErr] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+
+  // navigator.clipboard.writeText can hang indefinitely rather than reject
+  // (confirmed live -- a permission prompt or browser policy that never
+  // settles either way), so this races against a timeout rather than a
+  // bare await/then, which would otherwise leave the button showing no
+  // feedback at all if the write never settles.
+  const copyLink = () => {
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+    Promise.race([navigator.clipboard.writeText(window.location.href), timeout])
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); })
+      .catch(() => { setCopyFailed(true); setTimeout(() => setCopyFailed(false), 2500); });
+  };
 
   const isPaidOrAdmin = Boolean(
     session?.user?.role === 'admin' ||
@@ -482,6 +496,9 @@ export default function FundDetailClient({ code }) {
                 {f.isin && <span className="fd-tag mono">{f.isin}</span>}
               </div>
             </div>
+            <button onClick={copyLink} className="fd-share-btn" aria-label="Copy link to this fund">
+              {copied ? '✓ Copied!' : copyFailed ? 'Copy failed' : '🔗 Share'}
+            </button>
           </div>
 
           {/* NAV stats strip */}
@@ -1016,6 +1033,9 @@ export default function FundDetailClient({ code }) {
               🔍 Back to Screener
             </a>
           )}
+          <a className="fd-action-btn" href="/book-consultation">
+            📞 Talk to an Advisor
+          </a>
         </div>
 
       </main>
