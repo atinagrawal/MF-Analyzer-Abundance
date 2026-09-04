@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import RiskGauge from '@/components/RiskGauge';
@@ -32,6 +33,14 @@ function ordinal(n) {
 }
 
 export default function IndicesPage() {
+  const { data: session } = useSession();
+  const isProUser = Boolean(
+    session?.user?.role === 'admin' ||
+    session?.user?.plan === 'pro' ||
+    session?.user?.plan === 'pro_lifetime' ||
+    session?.user?.plan === 'lifetime' ||
+    session?.user?.isPro
+  );
   const [allData, setAllData] = useState([]);
   const [sortKey, setSortKey] = useState('r1y');
   const [sortDir, setSortDir] = useState(-1);
@@ -59,6 +68,7 @@ export default function IndicesPage() {
   // below in render scope, captured by closure; only ever invoked after this
   // render's `rows` assignment has run, so it's always populated on click.
   function handleExportCsv() {
+    if (!isProUser) { flashToast('Export CSV is a Pro feature — upgrade at /pricing'); return; }
     if (!rows.length) return;
     const cols = [
       { key: 'name', label: 'Index' }, { key: 'exchange', label: 'Exchange' }, { key: 'cat', label: 'Category' },
@@ -309,7 +319,7 @@ export default function IndicesPage() {
           </div>
           <span className="controls-divider" />
           <button className="export-btn" onClick={handleCopyLink} title="Copy a link to this page" aria-label="Copy link">🔗 Copy Link</button>
-          <button className="export-btn" onClick={handleExportCsv} title="Export the currently filtered table as CSV" aria-label="Export as CSV">⤓ Export CSV</button>
+          <button className="export-btn" onClick={handleExportCsv} title={isProUser ? 'Export the currently filtered table as CSV' : 'Export CSV is a Pro feature'} aria-label="Export as CSV">⤓ Export CSV{!isProUser && ' 🔒'}</button>
         </div>
 
         {loading && (

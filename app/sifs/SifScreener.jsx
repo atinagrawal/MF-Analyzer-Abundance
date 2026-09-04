@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
@@ -599,6 +600,14 @@ function NavHistoryModal({ scheme, onClose }) {
 
 
 export default function SifScreener({ initialData }) {
+  const { data: session } = useSession();
+  const isProUser = Boolean(
+    session?.user?.role === 'admin' ||
+    session?.user?.plan === 'pro' ||
+    session?.user?.plan === 'pro_lifetime' ||
+    session?.user?.plan === 'lifetime' ||
+    session?.user?.isPro
+  );
   const [schemes,    setSchemes]    = useState(initialData?.schemes || []);
   const [navDate,    setNavDate]    = useState(initialData?.nav_date || '');
   const [loading,    setLoading]    = useState(!initialData);
@@ -730,6 +739,7 @@ export default function SifScreener({ initialData }) {
   }, [schemes, query, filterType, filterFam, filterSif, filterCat, sortBy, watchlist, showWatchOnly, growthOnly]);
 
   function handleExportCsv() {
+    if (!isProUser) { flashToast('Export CSV is a Pro feature — upgrade at /pricing'); return; }
     if (!filtered.length) return;
     const cols = [
       { key: 'nav_name', label: 'Scheme' }, { key: 'sif_name', label: 'SIF House' },
@@ -902,7 +912,7 @@ export default function SifScreener({ initialData }) {
             {!loading && (
               <div className="pf-toolbar" style={{ marginBottom: 0, marginLeft: 'auto' }}>
                 <button className="export-btn" onClick={handleCopyLink} title="Copy a link to this page" aria-label="Copy link">🔗 Copy Link</button>
-                <button className="export-btn" onClick={handleExportCsv} title="Export the currently filtered table as CSV" aria-label="Export as CSV">⤓ Export CSV</button>
+                <button className="export-btn" onClick={handleExportCsv} title={isProUser ? 'Export the currently filtered table as CSV' : 'Export CSV is a Pro feature'} aria-label="Export as CSV">⤓ Export CSV{!isProUser && ' 🔒'}</button>
               </div>
             )}
           </div>

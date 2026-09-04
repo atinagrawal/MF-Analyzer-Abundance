@@ -170,6 +170,14 @@ const EQUITY_FEATURED = [
 ];
 
 export default function ScreenerClient({ initialCategory }) {
+  const { data: session } = useSession();
+  const isProUser = Boolean(
+    session?.user?.role === 'admin' ||
+    session?.user?.plan === 'pro' ||
+    session?.user?.plan === 'pro_lifetime' ||
+    session?.user?.plan === 'lifetime' ||
+    session?.user?.isPro
+  );
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
   const [q, setQ] = useState('');
@@ -239,6 +247,7 @@ export default function ScreenerClient({ initialCategory }) {
 
   /** Exports the currently filtered table (MF or SIF, whichever is active) as CSV. */
   function handleExportCsv() {
+    if (!isProUser) { flashToast('Export CSV is a Pro feature — upgrade at /pricing'); return; }
     const source = isSIF ? sifRows : rows;
     if (!source.length) return;
     const cols = isSIF
@@ -593,7 +602,7 @@ export default function ScreenerClient({ initialCategory }) {
           )}
           {!isSIF && <label className="scr-toggle"><input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} /><span>Open-ended only</span></label>}
           <button className="scr-chip" onClick={handleCopyLink} title="Copy a link to this page" aria-label="Copy link">🔗 Copy Link</button>
-          <button className="scr-chip" onClick={handleExportCsv} title="Export the currently filtered table as CSV" aria-label="Export as CSV">⤓ Export CSV</button>
+          <button className="scr-chip" onClick={handleExportCsv} title={isProUser ? 'Export the currently filtered table as CSV' : 'Export CSV is a Pro feature'} aria-label="Export as CSV">⤓ Export CSV{!isProUser && ' 🔒'}</button>
         </div>
 
         <div className="scr-colbar">

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
@@ -83,6 +84,14 @@ let gCharts = {};
 let gTrendCharts = {};
 
 export default function IndustryPage() {
+  const { data: session } = useSession();
+  const isProUser = Boolean(
+    session?.user?.role === 'admin' ||
+    session?.user?.plan === 'pro' ||
+    session?.user?.plan === 'pro_lifetime' ||
+    session?.user?.plan === 'lifetime' ||
+    session?.user?.isPro
+  );
   const def = getDefaultDate();
   const [selMon,   setSelMon]   = useState(def.mon);
   const [selYear,  setSelYear]  = useState(def.year);
@@ -108,6 +117,7 @@ export default function IndustryPage() {
   }
 
   function handleExportCsv() {
+    if (!isProUser) { flashToast('Export CSV is a Pro feature — upgrade at /pricing'); return; }
     if (!data?.categories) return;
     const rows = Object.values(data.categories);
     const cols = [
@@ -817,7 +827,7 @@ export default function IndustryPage() {
           {data && (
             <div className="pf-toolbar">
               <button className="export-btn" onClick={handleCopyLink} title="Copy a link to this page" aria-label="Copy link">🔗 Copy Link</button>
-              <button className="export-btn" onClick={handleExportCsv} title="Export this month's category data as CSV" aria-label="Export as CSV">⤓ Export CSV</button>
+              <button className="export-btn" onClick={handleExportCsv} title={isProUser ? "Export this month's category data as CSV" : 'Export CSV is a Pro feature'} aria-label="Export as CSV">⤓ Export CSV{!isProUser && ' 🔒'}</button>
             </div>
           )}
         </div>

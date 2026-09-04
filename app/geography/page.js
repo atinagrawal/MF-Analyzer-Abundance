@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
@@ -58,6 +59,14 @@ const SORT_KEYS = [
 ];
 
 export default function GeographyPage() {
+  const { data: session } = useSession();
+  const isProUser = Boolean(
+    session?.user?.role === 'admin' ||
+    session?.user?.plan === 'pro' ||
+    session?.user?.plan === 'pro_lifetime' ||
+    session?.user?.plan === 'lifetime' ||
+    session?.user?.isPro
+  );
   const [data, setData] = useState(null);
   const [geoJson, setGeoJson] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -84,6 +93,7 @@ export default function GeographyPage() {
   }
 
   function handleExportCsv() {
+    if (!isProUser) { flashToast('Export CSV is a Pro feature — upgrade at /pricing'); return; }
     if (!data?.states?.length) return;
     const rows = data.states.filter(s => s.state !== 'Others');
     const cols = [
@@ -369,7 +379,7 @@ export default function GeographyPage() {
           )}
           <div className="pf-toolbar">
             <button className="export-btn" onClick={handleCopyLink} title="Copy a link to this page" aria-label="Copy link">🔗 Copy Link</button>
-            <button className="export-btn" onClick={handleExportCsv} title="Export the state rankings as CSV" aria-label="Export as CSV">⤓ Export CSV</button>
+            <button className="export-btn" onClick={handleExportCsv} title={isProUser ? 'Export the state rankings as CSV' : 'Export CSV is a Pro feature'} aria-label="Export as CSV">⤓ Export CSV{!isProUser && ' 🔒'}</button>
           </div>
         </div>
 
