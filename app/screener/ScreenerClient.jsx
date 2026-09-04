@@ -9,7 +9,7 @@ import { MFCompareBar, MFCompareModal } from './MFCompare';
 import { FundDetailPanel, SifDetailPanel } from '@/components/HoldingDetailDrawer';
 import { useRouter } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
-import { shortCat, FAQ_ITEMS, GLOSSARY_ITEMS, CURATED_CATEGORIES, categoryToSlug, matchCategory, normalizeCategory, resolveCategoryBenchmark, FALLBACK_BENCHMARKS } from './screenerContent';
+import { shortCat, FAQ_ITEMS, GLOSSARY_ITEMS, CURATED_CATEGORIES, categoryToSlug, matchCategory, normalizeCategory, resolveCategoryBenchmark, FALLBACK_BENCHMARKS, classifySectoralTheme, isSectoralThematic } from './screenerContent';
 
 // Slim, server-fetched projection of data/isin-scheme-master.json (see
 // app/api/scheme-master-facts/route.js) — fetched once and cached across
@@ -175,6 +175,10 @@ export default function ScreenerClient({ initialCategory }) {
   const [q, setQ] = useState('');
   const [group, setGroup] = useState(initialCategory ? assetClass(initialCategory) : 'Equity');
   const [cat, setCat] = useState(initialCategory || 'Equity Scheme - Flexi Cap Fund');
+  // Sub-theme filter, only meaningful (and only shown) when `cat` is the
+  // Sectoral/Thematic bucket -- AMFI files every sectoral/thematic fund
+  // under one category regardless of sector, see classifySectoralTheme.
+  const [theme, setTheme] = useState('All');
   const [openOnly, setOpenOnly] = useState(true);
   const [sort, setSort] = useState({ key: 'ret_3y', dir: -1 });
   const [sel, setSel] = useState(null);
@@ -430,11 +434,22 @@ export default function ScreenerClient({ initialCategory }) {
     return [...map.values()].sort((a, b) => b.count - a.count).map((item) => [item.cat, item.count]);
   }, [funds, group]);
 
+  const themes = useMemo(() => {
+    if (!isSectoralThematic(cat)) return [];
+    const map = new Map();
+    funds.filter((f) => matchCategory(f.category, cat)).forEach((f) => {
+      const t = classifySectoralTheme(f.name);
+      map.set(t, (map.get(t) || 0) + 1);
+    });
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [funds, cat]);
+
   const rows = useMemo(() => {
     let r = funds;
     if (openOnly) r = r.filter((f) => /open/i.test(f.structure || ''));
     if (group !== 'All') r = r.filter((f) => assetClass(f.category) === group);
     if (cat !== 'All') r = r.filter((f) => matchCategory(f.category, cat));
+    if (theme !== 'All' && isSectoralThematic(cat)) r = r.filter((f) => classifySectoralTheme(f.name) === theme);
     if (q.trim()) { const t = q.toLowerCase().split(/\s+/); r = r.filter((f) => { const s = (f.name + ' ' + f.amc).toLowerCase(); return t.every((w) => s.includes(w)); }); }
     const { key, dir } = sort;
     r = [...r].sort((a, b) => {
@@ -444,7 +459,7 @@ export default function ScreenerClient({ initialCategory }) {
       return (av - bv) * dir;
     });
     return r;
-  }, [funds, openOnly, group, cat, q, sort]);
+  }, [funds, openOnly, group, cat, theme, q, sort]);
 
   const setSortKey = (key) => setSort((s) => (s.key === key ? { key, dir: -s.dir } : { key, dir: key === 'vol' || key === 'max_dd' ? 1 : -1 }));
 
@@ -480,6 +495,7 @@ export default function ScreenerClient({ initialCategory }) {
     // correct, since matchCategory normalizes) filtered results.
     const canonical = newCat === 'All' ? 'All' : (cats.find(([c]) => normalizeCategory(c) === normalizeCategory(newCat))?.[0] ?? newCat);
     setCat(canonical);
+    if (!isSectoralThematic(canonical)) setTheme('All');
     const grp = assetClass(canonical);
     if (grp && grp !== 'Other') setGroup(grp);
     const slug = categoryToSlug(canonical);
@@ -550,6 +566,12 @@ export default function ScreenerClient({ initialCategory }) {
             <select className="scr-select" value={cat} onChange={(e) => changeCat(e.target.value)}>
               <option value="All">All categories</option>
               {cats.map(([c, n]) => <option key={c} value={c}>{shortCat(c)} ({n})</option>)}
+            </select>
+          )}
+          {!isSIF && themes.length > 0 && (
+            <select className="scr-select" value={theme} onChange={(e) => setTheme(e.target.value)} title="A Banking fund and a Pharma fund are both 'Sectoral/Thematic' to AMFI -- narrow to a comparable sector">
+              <option value="All">All sectors/themes</option>
+              {themes.map(([t, n]) => <option key={t} value={t}>{t} ({n})</option>)}
             </select>
           )}
           {isSIF && (

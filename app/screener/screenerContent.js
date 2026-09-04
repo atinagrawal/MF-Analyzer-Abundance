@@ -254,6 +254,54 @@ export function matchCategory(fundCategory, selectedCategory) {
   return nFund === nSel;
 }
 
+// ── Sectoral/Thematic sub-classification ──────────────────────────────────
+// AMFI files every sectoral/thematic fund under one bucket ("Equity
+// Scheme(s) - Sectoral/ Thematic") regardless of sector -- a Banking fund
+// and a Pharma fund are otherwise incomparable but end up in the same
+// filter/peer group. Ordered, first-match-wins keyword rules, validated
+// against all 252 live sectoral/thematic fund names (Sep 2026): only ~5%
+// fall into the honest "Other" catch-all (genuinely vague names like
+// "Special Opportunities" that don't describe a real sector). Order
+// matters -- more specific rules (ESG, Business Cycle) run before broader
+// ones (Banking) so an AMC's own name never hijacks the match (e.g. "Bank
+// of India Consumption Fund" must not be classified as Banking just
+// because the AMC is named "Bank of India" -- this uses "banking", never
+// bare "bank", for exactly that reason).
+const SECTORAL_THEME_RULES = [
+  ['ESG / Ethical', /\besg\b|ethical/i],
+  ['Business Cycle', /business cycle|sector rotation/i],
+  ['Banking & Financial Services', /banking|financial services|\bbfsi\b/i],
+  ['Healthcare & Pharma', /pharma|health/i],
+  ['Technology & Digital', /technology|digital|\bteck\b/i],
+  ['Infrastructure', /infra|build india|t\W?i\W?g\W?e\W?r/i],
+  ['Manufacturing', /manufactur|automotive/i],
+  ['Consumption & FMCG', /consum|fmcg|\brural\b/i],
+  ['PSU', /\bpsu\b/i],
+  ['MNC', /\bmnc\b/i],
+  ['Energy & Resources', /energy|natural resources|commodit/i],
+  ['Transportation & Logistics', /transportation|logistic/i],
+  ['Quant / Momentum / Factor', /quant|momentum|multi-?factor|minimum variance|\bquality\b/i],
+  ['International Equity', /asian equity|japan equity|taiwan equity|us equity|us bluechip|international equity/i],
+  ['Innovation', /innovat/i],
+  ['Defence', /defenc|defense/i],
+  ['Housing & Real Estate', /housing/i],
+  ['Services & Exports', /\bservices\b|\bexport/i],
+];
+export const SECTORAL_THEMES = SECTORAL_THEME_RULES.map(([label]) => label);
+
+export function classifySectoralTheme(fundName) {
+  const n = fundName || '';
+  for (const [label, re] of SECTORAL_THEME_RULES) {
+    if (re.test(n)) return label;
+  }
+  return 'Other / Diversified Themes';
+}
+
+/** True if a raw AMFI category string is the Sectoral/Thematic bucket. */
+export function isSectoralThematic(category) {
+  return normalizeCategory(category) === 'sectoral / thematic';
+}
+
 export const GLOSSARY_ITEMS = [
   { q: 'CAGR (Compound Annual Growth Rate)', a: 'The annualised rate at which an investment would have grown, assuming steady compounding, to get from its starting value to its ending value. It\'s the standard way to compare returns across different time periods on a like-for-like basis — a fund\'s 3-year and 5-year CAGR can be directly compared even though the underlying periods differ.' },
   { q: 'Volatility (Standard Deviation)', a: 'The annualised standard deviation of a fund\'s monthly returns — a measure of how much the fund\'s value swings up and down, not the direction of those swings. A higher volatility number means a bumpier ride, even if the long-term destination (the CAGR) ends up the same. Two funds with identical 5-year returns can have very different volatility, and the smoother one is almost always preferable for most investors.' },
