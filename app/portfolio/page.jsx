@@ -356,6 +356,13 @@ function PortfolioInner() {
   const [overlapCheckoutLoading, setOverlapCheckoutLoading] = useState(false);
   const [overlapCheckoutErr, setOverlapCheckoutErr] = useState('');
 
+  // Peer Rank (Health Score's 4th component) — unlike Overlap, this is a
+  // plain Postgres query with no external vendor fetch, so it's fetched
+  // automatically once holdings are ready rather than gated behind a
+  // button or Pro plan (see app/api/portfolio-peer-rank/route.js).
+  const [peerRankResult, setPeerRankResult] = useState(null);
+  const peerRankFetchedFor = useRef(null);
+
   // CAS member merge — "Manage members" panel state
   const [mergeOpen, setMergeOpen]             = useState(false);
   const [mergeFromPan, setMergeFromPan]       = useState('');
@@ -1209,16 +1216,20 @@ function PortfolioInner() {
     }
   }
 
-  // Portfolio Health Score — a structural diversification/concentration
-  // signal, deliberately NOT a judgment on returns or fund quality (this
-  // site never rates funds as good/bad, see PMS screener's neutral
-  // "possibly superseded" flag for the same principle). Standard
-  // Herfindahl-Hirschman concentration index (well-established, not an
-  // invented weighting) on two dimensions that need zero new data --
-  // asset-class mix and fund-house spread, both already on every holding
-  // -- plus a third, more precise dimension (stock-level overlap) that
-  // only factors in once the user has actually run Overlap Analysis
-  // above, reusing that result rather than triggering a second fetch.
+  // Portfolio Health Score — a diversification/concentration + peer-
+  // performance signal, deliberately NOT a subjective "good/bad fund"
+  // opinion (this site never rates funds that way, see PMS screener's
+  // neutral "possibly superseded" flag for the same principle) -- the
+  // peer-rank component is a factual historical percentile, same kind of
+  // fact as the CAGR numbers already shown everywhere on the site, not a
+  // prediction. Standard Herfindahl-Hirschman concentration index
+  // (well-established, not an invented weighting) on two dimensions that
+  // need zero new data -- asset-class mix and fund-house spread, both
+  // already on every holding -- plus peer-rank (auto-fetched, free,
+  // instant -- see the effect below) and, once the user actually runs
+  // Overlap Analysis above (reusing that result, no second fetch), a
+  // fourth, more precise diversification input. Missing components
+  // redistribute their weight proportionally rather than branching.
   const healthScore = useMemo(() => {
     if (!displayHoldings.length) return null;
     const totalValue = displayHoldings.reduce((s, h) => s + (h.value || 0), 0);
@@ -1250,9 +1261,32 @@ function PortfolioInner() {
       overlapScore = Math.max(0, Math.min(100, Math.round(100 - avgOverlap * 2)));
     }
 
-    const overall = hasOverlap
-      ? Math.round(assetMixScore * 0.30 + fundHouseScore * 0.25 + overlapScore * 0.45)
-      : Math.round(assetMixScore * 0.55 + fundHouseScore * 0.45);
+    let peerRankScore = null;
+    let peerRankFundCount = 0;
+    if (peerRankResult?.funds?.length) {
+      const byCode = new Map(peerRankResult.funds.map((f) => [f.code, f]));
+      let weightedSum = 0, weightTotal = 0;
+      displayHoldings.forEach((h) => {
+        const r = h.code && byCode.get(String(h.code));
+        if (r?.ranked) {
+          weightedSum += r.percentile * (h.value || 0);
+          weightTotal += (h.value || 0);
+          peerRankFundCount += 1;
+        }
+      });
+      if (weightTotal > 0) peerRankScore = Math.round(weightedSum / weightTotal);
+    }
+
+    const WEIGHTS = { assetMix: 25, fundHouse: 20, peerRank: 25, overlap: 30 };
+    const available = {
+      assetMix: assetMixScore, fundHouse: fundHouseScore,
+      ...(peerRankScore != null ? { peerRank: peerRankScore } : {}),
+      ...(hasOverlap ? { overlap: overlapScore } : {}),
+    };
+    const weightSum = Object.keys(available).reduce((s, k) => s + WEIGHTS[k], 0);
+    const overall = Math.round(
+      Object.entries(available).reduce((s, [k, v]) => s + v * (WEIGHTS[k] / weightSum), 0)
+    );
 
     const band =
       overall >= 80 ? { label: 'Well Diversified', color: 'var(--g1)', bg: 'var(--g-xlight)' } :
@@ -1260,8 +1294,31 @@ function PortfolioInner() {
       overall >= 40 ? { label: 'Some Concentration', color: '#e65100', bg: 'rgba(230,81,0,.08)' } :
                        { label: 'Highly Concentrated', color: '#b71c1c', bg: 'rgba(183,28,28,.08)' };
 
-    return { overall, band, assetMixScore, fundHouseScore, overlapScore, hasOverlap, fundHouseCount: byFundHouse.size, assetClassCount: byAssetClass.size };
-  }, [displayHoldings, overlapResult]);
+    return {
+      overall, band, assetMixScore, fundHouseScore, overlapScore, hasOverlap,
+      peerRankScore, peerRankFundCount,
+      fundHouseCount: byFundHouse.size, assetClassCount: byAssetClass.size,
+    };
+  }, [displayHoldings, overlapResult, peerRankResult]);
+
+  // Auto-fetch peer rank once real holdings exist -- signature-guarded so
+  // it re-fetches only when the actual set of held funds changes (e.g.
+  // switching the PAN filter), not on every unrelated re-render.
+  useEffect(() => {
+    const funds = displayHoldings.filter((h) => h.code && !h.isSIF).map((h) => ({ code: h.code, name: h.name, value: h.value }));
+    if (!funds.length) return;
+    const signature = funds.map((f) => f.code).sort().join(',');
+    if (peerRankFetchedFor.current === signature) return;
+    peerRankFetchedFor.current = signature;
+    fetch('/api/portfolio-peer-rank', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ funds }),
+    })
+      .then((r) => r.json())
+      .then((data) => setPeerRankResult(data))
+      .catch(() => {}); // best-effort -- Health Score just skips this component on failure
+  }, [displayHoldings]);
 
   // Delete a saved statement — /api/cas/delete already allows this for the
   // statement's own owner (usually whoever uploaded it) or an admin, so no
@@ -1561,7 +1618,7 @@ function PortfolioInner() {
                     <div className="pf-health-title">Portfolio Health Score</div>
                     <div className="pf-health-band" style={{ color: healthScore.band.color }}>{healthScore.band.label}</div>
                     <div className="pf-health-sub">
-                      A structural diversification signal — spread across asset classes, fund houses{healthScore.hasOverlap ? ' and underlying stocks' : ''}. Not a judgment on returns or fund quality.
+                      Diversification across asset classes, fund houses{healthScore.hasOverlap ? ', underlying stocks' : ''}{healthScore.peerRankScore != null ? ', plus how your funds’ historical returns rank against category peers' : ''}. Peer rank is a factual percentile on published returns, not a prediction or investment advice.
                     </div>
                   </div>
                 </div>
@@ -1577,6 +1634,13 @@ function PortfolioInner() {
                     <div className="pf-health-bar-track"><div className="pf-health-bar-fill" style={{ width: `${healthScore.fundHouseScore}%`, background: healthScore.band.color }} /></div>
                     <span className="pf-health-bar-val">{healthScore.fundHouseScore}</span>
                   </div>
+                  {healthScore.peerRankScore != null && (
+                    <div className="pf-health-bar-row">
+                      <span className="pf-health-bar-label">Peer Rank <span className="pf-health-bar-note">({healthScore.peerRankFundCount} of {displayHoldings.filter(h => !h.isSIF).length} funds)</span></span>
+                      <div className="pf-health-bar-track"><div className="pf-health-bar-fill" style={{ width: `${healthScore.peerRankScore}%`, background: healthScore.band.color }} /></div>
+                      <span className="pf-health-bar-val">{healthScore.peerRankScore}</span>
+                    </div>
+                  )}
                   {healthScore.hasOverlap ? (
                     <div className="pf-health-bar-row">
                       <span className="pf-health-bar-label">Stock Overlap</span>
