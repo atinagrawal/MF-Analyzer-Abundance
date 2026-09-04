@@ -18,7 +18,7 @@
  *   5. GET /api/sif-nav             → SIF live NAVs
  */
 
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
@@ -1209,6 +1209,60 @@ function PortfolioInner() {
     }
   }
 
+  // Portfolio Health Score — a structural diversification/concentration
+  // signal, deliberately NOT a judgment on returns or fund quality (this
+  // site never rates funds as good/bad, see PMS screener's neutral
+  // "possibly superseded" flag for the same principle). Standard
+  // Herfindahl-Hirschman concentration index (well-established, not an
+  // invented weighting) on two dimensions that need zero new data --
+  // asset-class mix and fund-house spread, both already on every holding
+  // -- plus a third, more precise dimension (stock-level overlap) that
+  // only factors in once the user has actually run Overlap Analysis
+  // above, reusing that result rather than triggering a second fetch.
+  const healthScore = useMemo(() => {
+    if (!displayHoldings.length) return null;
+    const totalValue = displayHoldings.reduce((s, h) => s + (h.value || 0), 0);
+    if (totalValue <= 0) return null;
+
+    function herfindahlScore(groupValues) {
+      const total = groupValues.reduce((s, v) => s + v, 0);
+      if (total <= 0) return null;
+      const hhi = groupValues.reduce((s, v) => s + Math.pow(v / total, 2), 0);
+      return Math.round((1 - hhi) * 100);
+    }
+
+    const byAssetClass = new Map();
+    const byFundHouse = new Map();
+    displayHoldings.forEach((h) => {
+      const v = h.value || 0;
+      byAssetClass.set(h.category, (byAssetClass.get(h.category) || 0) + v);
+      const house = h.isSIF ? (h.sifName || h.name.split(' ')[0]) : h.name.split(' ')[0];
+      byFundHouse.set(house, (byFundHouse.get(house) || 0) + v);
+    });
+
+    const assetMixScore = herfindahlScore([...byAssetClass.values()]);
+    const fundHouseScore = herfindahlScore([...byFundHouse.values()]);
+
+    const hasOverlap = overlapResult?.pairs?.length > 0;
+    let overlapScore = null;
+    if (hasOverlap) {
+      const avgOverlap = overlapResult.pairs.reduce((s, p) => s + p.overlapPct, 0) / overlapResult.pairs.length;
+      overlapScore = Math.max(0, Math.min(100, Math.round(100 - avgOverlap * 2)));
+    }
+
+    const overall = hasOverlap
+      ? Math.round(assetMixScore * 0.30 + fundHouseScore * 0.25 + overlapScore * 0.45)
+      : Math.round(assetMixScore * 0.55 + fundHouseScore * 0.45);
+
+    const band =
+      overall >= 80 ? { label: 'Well Diversified', color: 'var(--g1)', bg: 'var(--g-xlight)' } :
+      overall >= 60 ? { label: 'Reasonably Spread', color: '#2e7d32', bg: 'rgba(46,125,50,.08)' } :
+      overall >= 40 ? { label: 'Some Concentration', color: '#e65100', bg: 'rgba(230,81,0,.08)' } :
+                       { label: 'Highly Concentrated', color: '#b71c1c', bg: 'rgba(183,28,28,.08)' };
+
+    return { overall, band, assetMixScore, fundHouseScore, overlapScore, hasOverlap, fundHouseCount: byFundHouse.size, assetClassCount: byAssetClass.size };
+  }, [displayHoldings, overlapResult]);
+
   // Delete a saved statement — /api/cas/delete already allows this for the
   // statement's own owner (usually whoever uploaded it) or an admin, so no
   // extra permission check is needed client-side; it 403s cleanly if not.
@@ -1496,6 +1550,47 @@ function PortfolioInner() {
         {/* ── Overview tab ── */}
         {activeTab === 'overview' && (
           <div className="pf-overview">
+
+            {healthScore && (
+              <div className="pf-health-card">
+                <div className="pf-health-top">
+                  <div className="pf-health-score" style={{ color: healthScore.band.color, background: healthScore.band.bg }}>
+                    {healthScore.overall}
+                  </div>
+                  <div className="pf-health-head">
+                    <div className="pf-health-title">Portfolio Health Score</div>
+                    <div className="pf-health-band" style={{ color: healthScore.band.color }}>{healthScore.band.label}</div>
+                    <div className="pf-health-sub">
+                      A structural diversification signal — spread across asset classes, fund houses{healthScore.hasOverlap ? ' and underlying stocks' : ''}. Not a judgment on returns or fund quality.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pf-health-bars">
+                  <div className="pf-health-bar-row">
+                    <span className="pf-health-bar-label">Asset Mix <span className="pf-health-bar-note">({healthScore.assetClassCount} class{healthScore.assetClassCount === 1 ? '' : 'es'})</span></span>
+                    <div className="pf-health-bar-track"><div className="pf-health-bar-fill" style={{ width: `${healthScore.assetMixScore}%`, background: healthScore.band.color }} /></div>
+                    <span className="pf-health-bar-val">{healthScore.assetMixScore}</span>
+                  </div>
+                  <div className="pf-health-bar-row">
+                    <span className="pf-health-bar-label">Fund Houses <span className="pf-health-bar-note">({healthScore.fundHouseCount})</span></span>
+                    <div className="pf-health-bar-track"><div className="pf-health-bar-fill" style={{ width: `${healthScore.fundHouseScore}%`, background: healthScore.band.color }} /></div>
+                    <span className="pf-health-bar-val">{healthScore.fundHouseScore}</span>
+                  </div>
+                  {healthScore.hasOverlap ? (
+                    <div className="pf-health-bar-row">
+                      <span className="pf-health-bar-label">Stock Overlap</span>
+                      <div className="pf-health-bar-track"><div className="pf-health-bar-fill" style={{ width: `${healthScore.overlapScore}%`, background: healthScore.band.color }} /></div>
+                      <span className="pf-health-bar-val">{healthScore.overlapScore}</span>
+                    </div>
+                  ) : (
+                    <button className="pf-health-nudge" onClick={() => setActiveTab('holdings')}>
+                      Run Overlap Analysis on the Holdings tab to sharpen this score with underlying stock data →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Top holdings preview */}
             <div className="pf-section">
