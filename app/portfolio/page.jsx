@@ -18,7 +18,7 @@
  *   5. GET /api/sif-nav             → SIF live NAVs
  */
 
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
@@ -377,6 +377,13 @@ function PortfolioInner() {
   const [allHoldings, setAllHoldings]     = useState([]);
   const [investorName, setInvestorName]   = useState('');
   const [navDate, setNavDate]             = useState(null);
+
+  // Peer Rank (Health Score's 4th component) — a plain Postgres query with
+  // no external vendor fetch, so it's fetched automatically once holdings
+  // are ready. See app/api/portfolio-peer-rank/route.js's own header for
+  // why this is the second attempt at this feature and what changed.
+  const [peerRankResult, setPeerRankResult] = useState(null);
+  const peerRankFetchedFor = useRef(null);
 
   // CAS member merge — "Manage members" panel state
   const [mergeOpen, setMergeOpen]             = useState(false);
@@ -1195,6 +1202,101 @@ function PortfolioInner() {
   const isProfit   = gain >= 0;
   const { g, first } = greeting(displayName);
 
+  // Portfolio Health Score — a diversification/concentration + peer-
+  // performance signal, deliberately NOT a subjective "good/bad fund"
+  // opinion (this site never rates funds that way, see PMS screener's
+  // neutral "possibly superseded" flag for the same principle) -- the
+  // peer-rank component is a factual historical percentile, same kind of
+  // fact as the CAGR numbers already shown everywhere on the site, not a
+  // prediction. Standard Herfindahl-Hirschman concentration index
+  // (well-established, not an invented weighting) on two dimensions that
+  // need zero new data -- asset-class mix and fund-house spread, both
+  // already on every holding -- plus peer-rank (auto-fetched, free,
+  // instant -- see the effect below). Missing components redistribute
+  // their weight proportionally rather than branching.
+  const healthScore = useMemo(() => {
+    if (!displayHoldings.length) return null;
+    const totalValue = displayHoldings.reduce((s, h) => s + (h.value || 0), 0);
+    if (totalValue <= 0) return null;
+
+    function herfindahlScore(groupValues) {
+      const total = groupValues.reduce((s, v) => s + v, 0);
+      if (total <= 0) return null;
+      const hhi = groupValues.reduce((s, v) => s + Math.pow(v / total, 2), 0);
+      return Math.round((1 - hhi) * 100);
+    }
+
+    const byAssetClass = new Map();
+    const byFundHouse = new Map();
+    displayHoldings.forEach((h) => {
+      const v = h.value || 0;
+      byAssetClass.set(h.category, (byAssetClass.get(h.category) || 0) + v);
+      const house = h.isSIF ? (h.sifName || h.name.split(' ')[0]) : h.name.split(' ')[0];
+      byFundHouse.set(house, (byFundHouse.get(house) || 0) + v);
+    });
+
+    const assetMixScore = herfindahlScore([...byAssetClass.values()]);
+    const fundHouseScore = herfindahlScore([...byFundHouse.values()]);
+
+    let peerRankScore = null;
+    let peerRankFundCount = 0;
+    if (peerRankResult?.funds?.length) {
+      const byCode = new Map(peerRankResult.funds.map((f) => [f.code, f]));
+      let weightedSum = 0, weightTotal = 0;
+      displayHoldings.forEach((h) => {
+        const r = h.code && byCode.get(String(h.code));
+        if (r?.ranked) {
+          weightedSum += r.percentile * (h.value || 0);
+          weightTotal += (h.value || 0);
+          peerRankFundCount += 1;
+        }
+      });
+      if (weightTotal > 0) peerRankScore = Math.round(weightedSum / weightTotal);
+    }
+
+    const WEIGHTS = { assetMix: 25, fundHouse: 20, peerRank: 25 };
+    const available = {
+      assetMix: assetMixScore, fundHouse: fundHouseScore,
+      ...(peerRankScore != null ? { peerRank: peerRankScore } : {}),
+    };
+    const weightSum = Object.keys(available).reduce((s, k) => s + WEIGHTS[k], 0);
+    const overall = Math.round(
+      Object.entries(available).reduce((s, [k, v]) => s + v * (WEIGHTS[k] / weightSum), 0)
+    );
+
+    const band =
+      overall >= 80 ? { label: 'Well Diversified', color: 'var(--g1)', bg: 'var(--g-xlight)' } :
+      overall >= 60 ? { label: 'Reasonably Spread', color: '#2e7d32', bg: 'rgba(46,125,50,.08)' } :
+      overall >= 40 ? { label: 'Some Concentration', color: '#e65100', bg: 'rgba(230,81,0,.08)' } :
+                       { label: 'Highly Concentrated', color: '#b71c1c', bg: 'rgba(183,28,28,.08)' };
+
+    return {
+      overall, band, assetMixScore, fundHouseScore,
+      peerRankScore, peerRankFundCount,
+      fundHouseCount: byFundHouse.size, assetClassCount: byAssetClass.size,
+    };
+  }, [displayHoldings, peerRankResult]);
+
+  // Auto-fetch peer rank once real holdings exist -- signature-guarded so
+  // it re-fetches only when the actual set of held funds changes (e.g.
+  // switching the PAN filter), not on every unrelated re-render. SIF
+  // holdings are excluded (mf_screener, the peer universe, is MF-only).
+  useEffect(() => {
+    const funds = displayHoldings.filter((h) => h.code && !h.isSIF).map((h) => ({ code: h.code, name: h.name, value: h.value }));
+    if (!funds.length) return;
+    const signature = funds.map((f) => f.code).sort().join(',');
+    if (peerRankFetchedFor.current === signature) return;
+    peerRankFetchedFor.current = signature;
+    fetch('/api/portfolio-peer-rank', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ funds }),
+    })
+      .then((r) => r.json())
+      .then((data) => setPeerRankResult(data))
+      .catch(() => {}); // best-effort -- Health Score just skips this component on failure
+  }, [displayHoldings]);
+
   // Delete a saved statement — /api/cas/delete already allows this for the
   // statement's own owner (usually whoever uploaded it) or an admin, so no
   // extra permission check is needed client-side; it 403s cleanly if not.
@@ -1482,6 +1584,43 @@ function PortfolioInner() {
         {/* ── Overview tab ── */}
         {activeTab === 'overview' && (
           <div className="pf-overview">
+
+            {healthScore && (
+              <div className="pf-health-card">
+                <div className="pf-health-top">
+                  <div className="pf-health-score" style={{ color: healthScore.band.color, background: healthScore.band.bg }}>
+                    {healthScore.overall}
+                  </div>
+                  <div className="pf-health-head">
+                    <div className="pf-health-title">Portfolio Health Score</div>
+                    <div className="pf-health-band" style={{ color: healthScore.band.color }}>{healthScore.band.label}</div>
+                    <div className="pf-health-sub">
+                      Diversification across asset classes and fund houses{healthScore.peerRankScore != null ? ", plus how your funds' historical returns rank against category peers" : ''}. Peer rank is a factual percentile on published returns, not a prediction or investment advice.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pf-health-bars">
+                  <div className="pf-health-bar-row">
+                    <span className="pf-health-bar-label">Asset Mix <span className="pf-health-bar-note">({healthScore.assetClassCount} class{healthScore.assetClassCount === 1 ? '' : 'es'})</span></span>
+                    <div className="pf-health-bar-track"><div className="pf-health-bar-fill" style={{ width: `${healthScore.assetMixScore}%`, background: healthScore.band.color }} /></div>
+                    <span className="pf-health-bar-val">{healthScore.assetMixScore}</span>
+                  </div>
+                  <div className="pf-health-bar-row">
+                    <span className="pf-health-bar-label">Fund Houses <span className="pf-health-bar-note">({healthScore.fundHouseCount})</span></span>
+                    <div className="pf-health-bar-track"><div className="pf-health-bar-fill" style={{ width: `${healthScore.fundHouseScore}%`, background: healthScore.band.color }} /></div>
+                    <span className="pf-health-bar-val">{healthScore.fundHouseScore}</span>
+                  </div>
+                  {healthScore.peerRankScore != null && (
+                    <div className="pf-health-bar-row">
+                      <span className="pf-health-bar-label">Peer Rank <span className="pf-health-bar-note">({healthScore.peerRankFundCount} of {displayHoldings.filter(h => !h.isSIF).length} funds)</span></span>
+                      <div className="pf-health-bar-track"><div className="pf-health-bar-fill" style={{ width: `${healthScore.peerRankScore}%`, background: healthScore.band.color }} /></div>
+                      <span className="pf-health-bar-val">{healthScore.peerRankScore}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Top holdings preview */}
             <div className="pf-section">
