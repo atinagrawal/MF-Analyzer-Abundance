@@ -18,7 +18,7 @@
  *   5. GET /api/sif-nav             → SIF live NAVs
  */
 
-import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
@@ -343,25 +343,6 @@ function PortfolioInner() {
   const [allHoldings, setAllHoldings]     = useState([]);
   const [investorName, setInvestorName]   = useState('');
   const [navDate, setNavDate]             = useState(null);
-
-  // Portfolio Overlap — deliberately on-demand only (button click), never
-  // auto-fetched on load or tab switch: it triggers one Groww fetch per
-  // fund server-side, which is real cost worth spending only when actually
-  // asked for. Pro-gated; a free user's click shows the paywall inline
-  // instead of calling the API at all.
-  const [overlapResult, setOverlapResult] = useState(null);
-  const [overlapLoading, setOverlapLoading] = useState(false);
-  const [overlapError, setOverlapError]   = useState('');
-  const [showOverlapGate, setShowOverlapGate] = useState(false);
-  const [overlapCheckoutLoading, setOverlapCheckoutLoading] = useState(false);
-  const [overlapCheckoutErr, setOverlapCheckoutErr] = useState('');
-
-  // Peer Rank (Health Score's 4th component) — unlike Overlap, this is a
-  // plain Postgres query with no external vendor fetch, so it's fetched
-  // automatically once holdings are ready rather than gated behind a
-  // button or Pro plan (see app/api/portfolio-peer-rank/route.js).
-  const [peerRankResult, setPeerRankResult] = useState(null);
-  const peerRankFetchedFor = useRef(null);
 
   // CAS member merge — "Manage members" panel state
   const [mergeOpen, setMergeOpen]             = useState(false);
@@ -1162,164 +1143,6 @@ function PortfolioInner() {
   const isProfit   = gain >= 0;
   const { g, first } = greeting(displayName);
 
-  const isProUser = Boolean(
-    session?.user?.role === 'admin' ||
-    session?.user?.plan === 'pro' ||
-    session?.user?.plan === 'pro_lifetime' ||
-    session?.user?.plan === 'lifetime' ||
-    session?.user?.isPro
-  );
-
-  // On-demand only — never called from a useEffect. Free users never reach
-  // the fetch: clicking the button when !isProUser just reveals the inline
-  // paywall (see the Holdings tab render below).
-  function handleOverlapClick() {
-    if (!isProUser) { setShowOverlapGate(true); return; }
-    runOverlapAnalysis();
-  }
-  async function handleOverlapUpgrade() {
-    setOverlapCheckoutLoading(true);
-    setOverlapCheckoutErr('');
-    try {
-      await startCheckout({
-        plan: 'annual',
-        session,
-        onSuccess() { window.location.reload(); },
-        onDismiss() { setOverlapCheckoutLoading(false); },
-      });
-    } catch (err) {
-      setOverlapCheckoutErr(err.message);
-      setOverlapCheckoutLoading(false);
-    }
-  }
-  async function runOverlapAnalysis() {
-    setOverlapLoading(true);
-    setOverlapError('');
-    try {
-      const funds = displayHoldings
-        .filter((h) => h.code && !h.isSIF)
-        .sort((a, b) => b.value - a.value)
-        .map((h) => ({ code: h.code, name: h.name }));
-      const res = await fetch('/api/portfolio-overlap', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ funds }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not analyze overlap');
-      setOverlapResult(data);
-      if (data.error) setOverlapError(data.error);
-    } catch (err) {
-      setOverlapError(err.message);
-    } finally {
-      setOverlapLoading(false);
-    }
-  }
-
-  // Portfolio Health Score — a diversification/concentration + peer-
-  // performance signal, deliberately NOT a subjective "good/bad fund"
-  // opinion (this site never rates funds that way, see PMS screener's
-  // neutral "possibly superseded" flag for the same principle) -- the
-  // peer-rank component is a factual historical percentile, same kind of
-  // fact as the CAGR numbers already shown everywhere on the site, not a
-  // prediction. Standard Herfindahl-Hirschman concentration index
-  // (well-established, not an invented weighting) on two dimensions that
-  // need zero new data -- asset-class mix and fund-house spread, both
-  // already on every holding -- plus peer-rank (auto-fetched, free,
-  // instant -- see the effect below) and, once the user actually runs
-  // Overlap Analysis above (reusing that result, no second fetch), a
-  // fourth, more precise diversification input. Missing components
-  // redistribute their weight proportionally rather than branching.
-  const healthScore = useMemo(() => {
-    if (!displayHoldings.length) return null;
-    const totalValue = displayHoldings.reduce((s, h) => s + (h.value || 0), 0);
-    if (totalValue <= 0) return null;
-
-    function herfindahlScore(groupValues) {
-      const total = groupValues.reduce((s, v) => s + v, 0);
-      if (total <= 0) return null;
-      const hhi = groupValues.reduce((s, v) => s + Math.pow(v / total, 2), 0);
-      return Math.round((1 - hhi) * 100);
-    }
-
-    const byAssetClass = new Map();
-    const byFundHouse = new Map();
-    displayHoldings.forEach((h) => {
-      const v = h.value || 0;
-      byAssetClass.set(h.category, (byAssetClass.get(h.category) || 0) + v);
-      const house = h.isSIF ? (h.sifName || h.name.split(' ')[0]) : h.name.split(' ')[0];
-      byFundHouse.set(house, (byFundHouse.get(house) || 0) + v);
-    });
-
-    const assetMixScore = herfindahlScore([...byAssetClass.values()]);
-    const fundHouseScore = herfindahlScore([...byFundHouse.values()]);
-
-    const hasOverlap = overlapResult?.pairs?.length > 0;
-    let overlapScore = null;
-    if (hasOverlap) {
-      const avgOverlap = overlapResult.pairs.reduce((s, p) => s + p.overlapPct, 0) / overlapResult.pairs.length;
-      overlapScore = Math.max(0, Math.min(100, Math.round(100 - avgOverlap * 2)));
-    }
-
-    let peerRankScore = null;
-    let peerRankFundCount = 0;
-    if (peerRankResult?.funds?.length) {
-      const byCode = new Map(peerRankResult.funds.map((f) => [f.code, f]));
-      let weightedSum = 0, weightTotal = 0;
-      displayHoldings.forEach((h) => {
-        const r = h.code && byCode.get(String(h.code));
-        if (r?.ranked) {
-          weightedSum += r.percentile * (h.value || 0);
-          weightTotal += (h.value || 0);
-          peerRankFundCount += 1;
-        }
-      });
-      if (weightTotal > 0) peerRankScore = Math.round(weightedSum / weightTotal);
-    }
-
-    const WEIGHTS = { assetMix: 25, fundHouse: 20, peerRank: 25, overlap: 30 };
-    const available = {
-      assetMix: assetMixScore, fundHouse: fundHouseScore,
-      ...(peerRankScore != null ? { peerRank: peerRankScore } : {}),
-      ...(hasOverlap ? { overlap: overlapScore } : {}),
-    };
-    const weightSum = Object.keys(available).reduce((s, k) => s + WEIGHTS[k], 0);
-    const overall = Math.round(
-      Object.entries(available).reduce((s, [k, v]) => s + v * (WEIGHTS[k] / weightSum), 0)
-    );
-
-    const band =
-      overall >= 80 ? { label: 'Well Diversified', color: 'var(--g1)', bg: 'var(--g-xlight)' } :
-      overall >= 60 ? { label: 'Reasonably Spread', color: '#2e7d32', bg: 'rgba(46,125,50,.08)' } :
-      overall >= 40 ? { label: 'Some Concentration', color: '#e65100', bg: 'rgba(230,81,0,.08)' } :
-                       { label: 'Highly Concentrated', color: '#b71c1c', bg: 'rgba(183,28,28,.08)' };
-
-    return {
-      overall, band, assetMixScore, fundHouseScore, overlapScore, hasOverlap,
-      peerRankScore, peerRankFundCount,
-      fundHouseCount: byFundHouse.size, assetClassCount: byAssetClass.size,
-    };
-  }, [displayHoldings, overlapResult, peerRankResult]);
-
-  // Auto-fetch peer rank once real holdings exist -- signature-guarded so
-  // it re-fetches only when the actual set of held funds changes (e.g.
-  // switching the PAN filter), not on every unrelated re-render.
-  useEffect(() => {
-    const funds = displayHoldings.filter((h) => h.code && !h.isSIF).map((h) => ({ code: h.code, name: h.name, value: h.value }));
-    if (!funds.length) return;
-    const signature = funds.map((f) => f.code).sort().join(',');
-    if (peerRankFetchedFor.current === signature) return;
-    peerRankFetchedFor.current = signature;
-    fetch('/api/portfolio-peer-rank', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ funds }),
-    })
-      .then((r) => r.json())
-      .then((data) => setPeerRankResult(data))
-      .catch(() => {}); // best-effort -- Health Score just skips this component on failure
-  }, [displayHoldings]);
-
   // Delete a saved statement — /api/cas/delete already allows this for the
   // statement's own owner (usually whoever uploaded it) or an admin, so no
   // extra permission check is needed client-side; it 403s cleanly if not.
@@ -1608,54 +1431,6 @@ function PortfolioInner() {
         {activeTab === 'overview' && (
           <div className="pf-overview">
 
-            {healthScore && (
-              <div className="pf-health-card">
-                <div className="pf-health-top">
-                  <div className="pf-health-score" style={{ color: healthScore.band.color, background: healthScore.band.bg }}>
-                    {healthScore.overall}
-                  </div>
-                  <div className="pf-health-head">
-                    <div className="pf-health-title">Portfolio Health Score</div>
-                    <div className="pf-health-band" style={{ color: healthScore.band.color }}>{healthScore.band.label}</div>
-                    <div className="pf-health-sub">
-                      Diversification across asset classes, fund houses{healthScore.hasOverlap ? ', underlying stocks' : ''}{healthScore.peerRankScore != null ? ', plus how your funds’ historical returns rank against category peers' : ''}. Peer rank is a factual percentile on published returns, not a prediction or investment advice.
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pf-health-bars">
-                  <div className="pf-health-bar-row">
-                    <span className="pf-health-bar-label">Asset Mix <span className="pf-health-bar-note">({healthScore.assetClassCount} class{healthScore.assetClassCount === 1 ? '' : 'es'})</span></span>
-                    <div className="pf-health-bar-track"><div className="pf-health-bar-fill" style={{ width: `${healthScore.assetMixScore}%`, background: healthScore.band.color }} /></div>
-                    <span className="pf-health-bar-val">{healthScore.assetMixScore}</span>
-                  </div>
-                  <div className="pf-health-bar-row">
-                    <span className="pf-health-bar-label">Fund Houses <span className="pf-health-bar-note">({healthScore.fundHouseCount})</span></span>
-                    <div className="pf-health-bar-track"><div className="pf-health-bar-fill" style={{ width: `${healthScore.fundHouseScore}%`, background: healthScore.band.color }} /></div>
-                    <span className="pf-health-bar-val">{healthScore.fundHouseScore}</span>
-                  </div>
-                  {healthScore.peerRankScore != null && (
-                    <div className="pf-health-bar-row">
-                      <span className="pf-health-bar-label">Peer Rank <span className="pf-health-bar-note">({healthScore.peerRankFundCount} of {displayHoldings.filter(h => !h.isSIF).length} funds)</span></span>
-                      <div className="pf-health-bar-track"><div className="pf-health-bar-fill" style={{ width: `${healthScore.peerRankScore}%`, background: healthScore.band.color }} /></div>
-                      <span className="pf-health-bar-val">{healthScore.peerRankScore}</span>
-                    </div>
-                  )}
-                  {healthScore.hasOverlap ? (
-                    <div className="pf-health-bar-row">
-                      <span className="pf-health-bar-label">Stock Overlap</span>
-                      <div className="pf-health-bar-track"><div className="pf-health-bar-fill" style={{ width: `${healthScore.overlapScore}%`, background: healthScore.band.color }} /></div>
-                      <span className="pf-health-bar-val">{healthScore.overlapScore}</span>
-                    </div>
-                  ) : (
-                    <button className="pf-health-nudge" onClick={() => setActiveTab('holdings')}>
-                      Run Overlap Analysis on the Holdings tab to sharpen this score with underlying stock data →
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* Top holdings preview */}
             <div className="pf-section">
               <div className="pf-section-head">
@@ -1871,88 +1646,6 @@ function PortfolioInner() {
                   </div>
                 );
               })}
-            </div>
-
-            {/* Portfolio Overlap — visible to everyone (the feature itself is
-                never hidden), the actual analysis is Pro-gated and always
-                on-demand (see runOverlapAnalysis's own comment for why). */}
-            <div className="pf-overlap-section">
-              <div className="pf-overlap-head">
-                <div className="pf-overlap-title">🔀 Portfolio Overlap</div>
-                <div className="pf-overlap-sub">
-                  See how much your equity/hybrid funds duplicate each other's stock holdings — real diversification vs. hidden concentration in the same names.
-                </div>
-              </div>
-
-              {!overlapResult && !overlapLoading && !showOverlapGate && (
-                <button className="pf-cta-btn" onClick={handleOverlapClick}>
-                  🔍 Analyze Overlap
-                </button>
-              )}
-
-              {overlapLoading && (
-                <div className="pf-overlap-loading">Fetching live holdings for each fund and comparing… this can take a few seconds.</div>
-              )}
-
-              {showOverlapGate && !isProUser && (
-                <div className="brd-gate" style={{ marginTop: 4 }}>
-                  <div className="brd-gate-lock">⭐</div>
-                  <h2 className="brd-gate-title">Portfolio Overlap is a Pro feature</h2>
-                  <p className="brd-gate-desc">
-                    See exactly which stocks show up across multiple funds in your portfolio and how much — so you know if you're really diversified or just holding the same large-caps five times over.
-                  </p>
-                  <div className="brd-gate-pricing">
-                    <span className="brd-gate-amount">₹499</span>
-                    <span className="brd-gate-period">/yr + 18% GST</span>
-                    <span className="brd-gate-total">· Total ₹588.82</span>
-                  </div>
-                  <div className="brd-gate-actions">
-                    <button className="brd-gate-btn brd-gate-btn-pro" onClick={handleOverlapUpgrade} disabled={overlapCheckoutLoading}>
-                      {overlapCheckoutLoading ? 'Opening checkout…' : 'Upgrade to Pro →'}
-                    </button>
-                    <a className="brd-gate-faq" href="/pricing">See all Pro features · Lifetime plan available</a>
-                  </div>
-                  {overlapCheckoutErr && <p className="brd-gate-error">{overlapCheckoutErr}</p>}
-                </div>
-              )}
-
-              {overlapError && (!overlapResult || overlapResult.pairs?.length === 0) && (
-                <div className="pf-overlap-error">{overlapError}</div>
-              )}
-
-              {overlapResult && overlapResult.pairs?.length > 0 && (
-                <div className="pf-overlap-results">
-                  {overlapResult.pairs.map((p, i) => (
-                    <div key={i} className="pf-overlap-pair">
-                      <div className="pf-overlap-pair-head">
-                        <div className="pf-overlap-pair-names">{p.fundA} <span>×</span> {p.fundB}</div>
-                        <div className={`pf-overlap-pct ${p.overlapPct >= 40 ? 'high' : p.overlapPct >= 20 ? 'med' : 'low'}`}>
-                          {p.overlapPct}% overlap
-                        </div>
-                      </div>
-                      {p.topShared?.length > 0 && (
-                        <div className="pf-overlap-shared">
-                          {p.topShared.map((s, j) => (
-                            <span key={j} className="pf-overlap-stock">{s.name}</span>
-                          ))}
-                          {p.sharedCount > p.topShared.length && (
-                            <span className="pf-overlap-stock-more">+{p.sharedCount - p.topShared.length} more</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {overlapResult.fundsSkipped > 0 && (
-                    <div className="pf-overlap-note">
-                      {overlapResult.fundsSkipped} holding(s) skipped (SIF, manual entries without a matched fund code, or beyond the {overlapResult.fundsAnalyzed + overlapResult.fundsSkipped > 15 ? 15 : overlapResult.fundsAnalyzed}-fund comparison limit).
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {overlapResult && overlapResult.pairs?.length === 0 && !overlapError && (
-                <div className="pf-overlap-clean">✓ No meaningful stock overlap found across your funds — nicely diversified.</div>
-              )}
             </div>
           </div>
         )}
