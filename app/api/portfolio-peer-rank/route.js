@@ -19,6 +19,18 @@
  * matching via the same matchCategory/normalizeCategory the screener's
  * own filter already uses.
  *
+ * The universe query is cached in-memory (module scope, warm-instance
+ * only) -- this route fires automatically on every portfolio page view
+ * for every user, unlike every other pool.query() call on this page
+ * which is either one-time-per-session or on-demand. Without this, it's
+ * an unconditional full-table query added to an already-documented,
+ * fragile connection pool (lib/db.js's Pool is `max: 10`, and its
+ * globalThis reuse is dev-only -- see lib/rateLimit.js's own comment on
+ * why its rate limiter is currently disabled for the same reason). This
+ * turns "N portfolio views = N full-table queries" into "N portfolio
+ * views per cache window = at most 1", the same mitigation pattern
+ * lib/holdingsLookup.js's memCache already uses elsewhere on this site.
+ *
  * POST body: { funds: [{ code, name, value }] }
  */
 
@@ -28,6 +40,25 @@ import { matchCategory, isSectoralThematic, classifySectoralTheme } from '@/app/
 export const dynamic = 'force-dynamic';
 
 const MIN_PEER_GROUP = 5; // below this, a percentile is noise, not signal
+const UNIVERSE_TTL_MS = 20 * 60 * 1000; // mf_screener only changes via the nightly build
+
+let universeCache = null; // { data, ts }
+let universeInflight = null; // in-flight promise, dedupes concurrent cold requests
+
+async function getUniverse() {
+  if (universeCache && Date.now() - universeCache.ts < UNIVERSE_TTL_MS) {
+    return universeCache.data;
+  }
+  if (universeInflight) return universeInflight;
+  universeInflight = pool.query(`SELECT code, name, category, ret_1y, ret_3y FROM mf_screener`)
+    .then(({ rows }) => {
+      universeCache = { data: rows, ts: Date.now() };
+      return rows;
+    })
+    .catch(() => (universeCache?.data || []))
+    .finally(() => { universeInflight = null; });
+  return universeInflight;
+}
 
 export async function POST(req) {
   try {
@@ -37,9 +68,7 @@ export async function POST(req) {
       return Response.json({ funds: [] });
     }
 
-    const { rows: universe } = await pool.query(
-      `SELECT code, name, category, ret_1y, ret_3y FROM mf_screener`
-    ).catch(() => ({ rows: [] }));
+    const universe = await getUniverse();
     if (!universe.length) {
       return Response.json({ funds: [] });
     }
