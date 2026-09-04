@@ -294,6 +294,40 @@ function bestEffortXirr(holdingsForGroup, totalValue) {
   return { xirr: partial, partial: true, included: validHoldings.length, total };
 }
 
+// AMFI's live SIF NAV feed (/api/sif-nav, used to build localSifMap) only
+// ever returns the latest NAV -- never a previous figure -- so every SIF
+// holding's day-change was silently hardcoded to 0% everywhere in this file
+// (three call sites). /api/sif-history is the only source with real
+// history, so this pulls the last 7 calendar days (safely spans a long
+// weekend/holiday) for each DISTINCT SIF scheme_id the caller actually
+// holds -- never the full SIF universe, and never more than a handful of
+// external calls per user, matching the existing allAmfi/navMap pattern
+// this mirrors. Best-effort: Promise.allSettled, one failed/slow lookup
+// never blocks the rest of the portfolio from loading, and an unresolved
+// scheme just falls back to the existing "day change unavailable" state
+// rather than throwing.
+async function buildPrevSifNavMap(schemeIds) {
+  const uniq = [...new Set(schemeIds.filter(Boolean))];
+  if (!uniq.length) return {};
+  const to = new Date();
+  const from = new Date(to);
+  from.setDate(from.getDate() - 7);
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  const results = await Promise.allSettled(
+    uniq.map((sdId) =>
+      fetch(`/api/sif-history?sd_id=${encodeURIComponent(sdId)}&from=${fmt(from)}&to=${fmt(to)}`)
+        .then((r) => (r.ok ? r.json() : null))
+    )
+  );
+  const map = {};
+  results.forEach((res, i) => {
+    if (res.status !== 'fulfilled' || !res.value?.records?.length) return;
+    const records = res.value.records; // oldest → newest, per the route's own contract
+    if (records.length >= 2) map[uniq[i]] = records[records.length - 2].nav;
+  });
+  return map;
+}
+
 // ── Main portfolio inner ──────────────────────────────────────────────────────
 function PortfolioInner() {
   const { data: session, status } = useSession();
@@ -538,43 +572,55 @@ function PortfolioInner() {
 
             // Collect holdings with concurrent NAV fetch
             const allAmfi = new Set();
+            const allSifIds = new Set();
             mergedFolios.forEach(folio => {
               (folio.schemes || []).forEach(scheme => {
                 const units = parseFloat(scheme.close) || 0;
-                if (units > 0 && scheme.amfi) allAmfi.add(scheme.amfi);
+                if (units <= 0) return;
+                if (scheme.amfi) allAmfi.add(scheme.amfi);
+                const sifMatch = resolveSif(scheme);
+                if (sifMatch?.scheme_id) allSifIds.add(sifMatch.scheme_id);
               });
             });
             manual.forEach(h => {
               if (h.amfi_code && h.fund_type !== 'SIF') allAmfi.add(h.amfi_code);
+              if (h.amfi_code && h.fund_type === 'SIF') allSifIds.add(h.amfi_code);
             });
 
-            // Fetch NAVs via batch endpoint
+            // Fetch NAVs via batch endpoint, and each held SIF's previous-day
+            // NAV, concurrently — the SIF fetch never blocks or delays the
+            // main NAV fetch, and a slow/failed one of either never blocks
+            // the other (see buildPrevSifNavMap's own comment for why).
             const navMap = {};
             const prevNavMap = {};
             const ret1dMap = {};
             let maxDateStr = null;
             const amfiList = [...allAmfi];
-            if (amfiList.length > 0) {
-              try {
-                const r = await fetch(`/api/mf?codes=${encodeURIComponent(amfiList.join(','))}&latest=1`);
-                if (r.ok) {
-                  const d = await r.json();
-                  if (d.status === 'SUCCESS') {
-                    for (const [c, n] of Object.entries(d.navs || {})) {
-                      navMap[c] = parseFloat(n);
+            const [, prevSifNavMap] = await Promise.all([
+              (async () => {
+                if (amfiList.length === 0) return;
+                try {
+                  const r = await fetch(`/api/mf?codes=${encodeURIComponent(amfiList.join(','))}&latest=1`);
+                  if (r.ok) {
+                    const d = await r.json();
+                    if (d.status === 'SUCCESS') {
+                      for (const [c, n] of Object.entries(d.navs || {})) {
+                        navMap[c] = parseFloat(n);
+                      }
+                      for (const [c, pn] of Object.entries(d.prev_navs || {})) {
+                        prevNavMap[c] = parseFloat(pn);
+                      }
+                      for (const [c, r1d] of Object.entries(d.ret_1d || {})) {
+                        ret1dMap[c] = parseFloat(r1d);
+                      }
+                      const dateEntries = Object.values(d.dates || {});
+                      if (dateEntries.length > 0 && dateEntries[0]) maxDateStr = dateEntries[0];
                     }
-                    for (const [c, pn] of Object.entries(d.prev_navs || {})) {
-                      prevNavMap[c] = parseFloat(pn);
-                    }
-                    for (const [c, r1d] of Object.entries(d.ret_1d || {})) {
-                      ret1dMap[c] = parseFloat(r1d);
-                    }
-                    const dateEntries = Object.values(d.dates || {});
-                    if (dateEntries.length > 0 && dateEntries[0]) maxDateStr = dateEntries[0];
                   }
-                }
-              } catch (_) {}
-            }
+                } catch (_) {}
+              })(),
+              buildPrevSifNavMap([...allSifIds]).catch(() => ({})),
+            ]);
 
             // Fallback for any unresolved codes
             const missingCodes = amfiList.filter(c => !navMap[c]);
@@ -721,7 +767,7 @@ function PortfolioInner() {
                 // against the AMFI SIF scheme master instead (see comment above).
                 const sifMatch = resolveSif(scheme);
                 const liveNav = sifMatch ? sifMatch.nav : (navMap[scheme.amfi] || parseFloat(scheme.valuation?.nav || 0));
-                const prevNav = sifMatch ? null : (prevNavMap[scheme.amfi] ?? null);
+                const prevNav = sifMatch ? (prevSifNavMap[sifMatch.scheme_id] ?? null) : (prevNavMap[scheme.amfi] ?? null);
                 const value   = units * liveNav;
                 // 1-Day gain/loss for this holding
                 const change1d = prevNav && prevNav > 0 ? (liveNav - prevNav) : 0;
@@ -801,7 +847,7 @@ function PortfolioInner() {
               const pu  = parseFloat(h.purchase_nav);
               const u   = parseFloat(h.units);
               const ln  = h.fund_type === 'SIF' ? (localSifMap[h.amfi_code] ?? null) : (navMap[h.amfi_code] ?? null);
-              const pn  = h.fund_type === 'SIF' ? null : (prevNavMap[h.amfi_code] ?? null);
+              const pn  = h.fund_type === 'SIF' ? (prevSifNavMap[h.amfi_code] ?? null) : (prevNavMap[h.amfi_code] ?? null);
               const liveNav = ln ?? pu;
               const prevNav = pn ?? null;
               const val = liveNav * u;
@@ -897,35 +943,41 @@ function PortfolioInner() {
           let manualDayGain = 0;
           const mhList = [];
           const allAmfi = new Set();
+          const allSifIds = new Set();
           manual.forEach(h => {
             if (h.amfi_code && h.fund_type !== 'SIF') allAmfi.add(h.amfi_code);
+            if (h.amfi_code && h.fund_type === 'SIF') allSifIds.add(h.amfi_code);
           });
           const navMap = {};
           const prevNavMap = {};
           const ret1dMap = {};
           let maxDateStr = null;
           const amfiList = [...allAmfi];
-          if (amfiList.length > 0) {
-            try {
-              const r = await fetch(`/api/mf?codes=${encodeURIComponent(amfiList.join(','))}&latest=1`);
-              if (r.ok) {
-                const d = await r.json();
-                if (d.status === 'SUCCESS') {
-                  for (const [c, n] of Object.entries(d.navs || {})) {
-                    navMap[c] = parseFloat(n);
+          const [, prevSifNavMap] = await Promise.all([
+            (async () => {
+              if (amfiList.length === 0) return;
+              try {
+                const r = await fetch(`/api/mf?codes=${encodeURIComponent(amfiList.join(','))}&latest=1`);
+                if (r.ok) {
+                  const d = await r.json();
+                  if (d.status === 'SUCCESS') {
+                    for (const [c, n] of Object.entries(d.navs || {})) {
+                      navMap[c] = parseFloat(n);
+                    }
+                    for (const [c, pn] of Object.entries(d.prev_navs || {})) {
+                      prevNavMap[c] = parseFloat(pn);
+                    }
+                    for (const [c, r1d] of Object.entries(d.ret_1d || {})) {
+                      ret1dMap[c] = parseFloat(r1d);
+                    }
+                    const dateEntries = Object.values(d.dates || {});
+                    if (dateEntries.length > 0 && dateEntries[0]) maxDateStr = dateEntries[0];
                   }
-                  for (const [c, pn] of Object.entries(d.prev_navs || {})) {
-                    prevNavMap[c] = parseFloat(pn);
-                  }
-                  for (const [c, r1d] of Object.entries(d.ret_1d || {})) {
-                    ret1dMap[c] = parseFloat(r1d);
-                  }
-                  const dateEntries = Object.values(d.dates || {});
-                  if (dateEntries.length > 0 && dateEntries[0]) maxDateStr = dateEntries[0];
                 }
-              }
-            } catch (_) {}
-          }
+              } catch (_) {}
+            })(),
+            buildPrevSifNavMap([...allSifIds]).catch(() => ({})),
+          ]);
 
           // Fallback for unresolved
           const missingCodes = amfiList.filter(c => !navMap[c]);
@@ -958,7 +1010,7 @@ function PortfolioInner() {
             const pu = parseFloat(h.purchase_nav);
             const u  = parseFloat(h.units);
             const ln = h.fund_type === 'SIF' ? (localSifMap[h.amfi_code] ?? null) : (navMap[h.amfi_code] ?? null);
-            const pn = h.fund_type === 'SIF' ? null : (prevNavMap[h.amfi_code] ?? null);
+            const pn = h.fund_type === 'SIF' ? (prevSifNavMap[h.amfi_code] ?? null) : (prevNavMap[h.amfi_code] ?? null);
             const liveNav = ln ?? pu;
             const prevNav = pn ?? null;
             const val = liveNav * u;
