@@ -10583,3 +10583,53 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .cmp-tip, .cmp-onchart-summary { font-size: 10px; padding: 6px 9px; }
   .cmp-drag-date { font-size: 9px; padding: 2px 6px; }
 }
+
+/* ── NFO Tracker — Listing ── */
+.nfo-hero { margin-bottom: 24px; }
+.nfo-hero h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; }
+.nfo-hero-sub { font-size: .85rem; color: var(--muted); line-height: 1.6; max-width: 640px; }
+
+.nfo-tabs-wrap { display: flex; flex-direction: column; gap: 20px; }
+.nfo-tabs { display: flex; gap: 8px; border-bottom: 1.5px solid var(--border); }
+.nfo-tab {
+  padding: 8px 16px; border: none; background: none; cursor: pointer;
+  font-family: 'Raleway', sans-serif; font-size: .82rem; font-weight: 700;
+  color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1.5px;
+  transition: color .15s, border-color .15s;
+}
+.nfo-tab.active { color: var(--g1); border-bottom-color: var(--g1); }
+
+.nfo-empty-state {
+  padding: 32px 20px; text-align: center; background: var(--s2);
+  border: 1.5px dashed var(--border); border-radius: 12px;
+}
+.nfo-empty-state p { font-size: .88rem; color: var(--muted); margin-bottom: 10px; }
+.nfo-empty-state a { font-size: .85rem; font-weight: 700; color: var(--g1); text-decoration: none; }
+
+.nfo-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.nfo-card {
+  display: block; background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 14px; padding: 16px; text-decoration: none; color: var(--text);
+  transition: border-color .15s, transform .15s;
+}
+.nfo-card:hover { border-color: var(--g1); transform: translateY(-2px); }
+.nfo-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.nfo-card-logo { width: 32px; height: 32px; border-radius: 8px; object-fit: contain; background: #fff; }
+.nfo-card-logo-fallback {
+  width: 32px; height: 32px; border-radius: 8px; background: var(--s2);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: .85rem; color: var(--muted);
+}
+.nfo-card-category {
+  font-size: .62rem; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+  color: var(--muted); background: var(--s2); border-radius: 6px; padding: 3px 8px;
+}
+.nfo-card-name { font-size: .95rem; font-weight: 800; margin-bottom: 3px; line-height: 1.3; }
+.nfo-card-amc { font-size: .74rem; color: var(--muted); margin-bottom: 10px; }
+.nfo-card-facts { display: flex; flex-direction: column; gap: 2px; font-size: .72rem; color: var(--muted); margin-bottom: 10px; }
+.nfo-card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.nfo-card-min { font-family: 'JetBrains Mono', monospace; font-size: .72rem; font-weight: 700; color: var(--text); }
+.nfo-chip {
+  font-size: .68rem; font-weight: 800; padding: 3px 9px; border-radius: 20px;
+  background: var(--g-xlight); color: var(--g1); white-space: nowrap;
+}
