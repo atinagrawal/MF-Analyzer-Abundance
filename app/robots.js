@@ -41,6 +41,7 @@ export default function robots() {
       'https://mfcalc.getabundance.in/sitemap.xml',
       'https://mfcalc.getabundance.in/sitemap-funds.xml',
       'https://mfcalc.getabundance.in/sitemap-pms.xml',
+      'https://mfcalc.getabundance.in/sitemap-nfo.xml',
     ],
     host: 'https://mfcalc.getabundance.in',
   };
