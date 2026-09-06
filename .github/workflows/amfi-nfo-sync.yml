@@ -1,0 +1,33 @@
+name: Daily AMFI NFO Sync
+
+on:
+  schedule:
+    # NFO windows are short (typically ~2 weeks) and open/close dates are
+    # time-sensitive, unlike AUM's quarterly cadence -- this runs daily,
+    # not monthly.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync-amfi-nfo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install deps
+        run: npm install aws4fetch --no-save
+
+      - name: Run AMFI NFO Sync
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        run: node scripts/sync_amfi_nfo.js
