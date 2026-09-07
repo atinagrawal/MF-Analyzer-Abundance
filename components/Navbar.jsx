@@ -44,6 +44,7 @@ const NAV_GROUPS = [
       { key: 'breadth',      label: '📊 Market Breadth',  href: '/market-breadth', desc: 'Advance/decline and highs-lows' },
       { key: 'indices',      label: '📊 Index Dashboard', href: '/indices',        desc: 'Nifty and benchmark indices' },
       { key: 'industry',     label: '📈 Industry Pulse',  href: '/industry',       desc: 'Sector-wise fund flows' },
+      { key: 'nfo',          label: '🆕 New Fund Offers', href: '/nfo',            desc: 'Live MF & SIF NFOs open for subscription' },
       { key: 'report',       label: '📋 Report Card',     href: '/report',         desc: 'Shareable monthly AUM report card' },
       { key: 'geography',    label: '🗺 Geography',       href: '/geography',      desc: 'State-wise AUM distribution' },
     ],
