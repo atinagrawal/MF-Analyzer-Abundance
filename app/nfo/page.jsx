@@ -10,6 +10,13 @@ export const revalidate = 3600;
 export default async function NfoPage() {
   const data = await getNfoData();
 
+  // Computed once, server-side, and threaded down as a plain prop so both
+  // server-render and client-hydration read the exact same value -- avoids
+  // a hydration mismatch on the "Closes in Nd" chips (see Fix 5, final
+  // review) that would otherwise recur around the UTC/IST date-rollover
+  // window whenever this 1h-cached HTML is served across midnight.
+  const today = new Date().toISOString().split('T')[0];
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -21,7 +28,7 @@ export default async function NfoPage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <Navbar />
+      <Navbar activePage="nfo" />
       <main className="nfo-page container">
         <header className="nfo-hero">
           <h1>New Fund Offers (NFO)</h1>
@@ -35,6 +42,7 @@ export default async function NfoPage() {
         <NfoFilterTabs
           mf={(data.mf || []).filter((e) => e.status === 'open')}
           sif={(data.sif || []).filter((e) => e.status === 'open')}
+          today={today}
         />
       </main>
       <Footer />

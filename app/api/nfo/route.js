@@ -18,7 +18,7 @@ export async function GET() {
     });
   } catch (e) {
     return Response.json(
-      { error: 'NFO data unavailable', detail: String(e.message || e), syncedAt: null, mf: [], sif: [] },
+      { error: 'NFO data unavailable', syncedAt: null, mf: [], sif: [] },
       { status: 503 }
     );
   }

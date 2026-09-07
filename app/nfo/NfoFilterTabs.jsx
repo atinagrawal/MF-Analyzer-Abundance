@@ -3,10 +3,14 @@
 import { useState } from 'react';
 import { getProviderLogo } from '@/lib/providerLogos';
 
-function closesInDays(closeDate) {
-  if (!closeDate) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+// `todayStr` is computed ONCE, server-side, by app/nfo/page.jsx and threaded
+// down as a prop -- never call `new Date()` directly in this client
+// component, since it server-renders into HTML cached for up to 1h and a
+// client-computed "today" can disagree with the server's (a real hydration
+// mismatch around the UTC/IST date-rollover window).
+function closesInDays(closeDate, todayStr) {
+  if (!closeDate || !todayStr) return null;
+  const today = new Date(todayStr + 'T00:00:00');
   const close = new Date(closeDate + 'T00:00:00');
   return Math.round((close - today) / 86400000);
 }
@@ -21,9 +25,9 @@ function formatRupees(n) {
   return new Intl.NumberFormat('en-IN').format(n);
 }
 
-function NfoCard({ entry }) {
+function NfoCard({ entry, today }) {
   const logo = getProviderLogo(entry.type, entry.amcName);
-  const daysLeft = closesInDays(entry.closeDate);
+  const daysLeft = closesInDays(entry.closeDate, today);
 
   return (
     <a href={`/nfo/${entry.slug}`} className="nfo-card">
@@ -66,7 +70,7 @@ const TABS = [
   { key: 'sif', label: 'SIF' },
 ];
 
-export default function NfoFilterTabs({ mf, sif }) {
+export default function NfoFilterTabs({ mf, sif, today }) {
   const [tab, setTab] = useState('all');
   const entries = tab === 'mf' ? mf : tab === 'sif' ? sif : [...mf, ...sif];
 
@@ -99,7 +103,7 @@ export default function NfoFilterTabs({ mf, sif }) {
       {entries.length > 0 && (
         <div className="nfo-card-grid">
           {entries.map((e) => (
-            <NfoCard key={`${e.type}-${e.schemeId}`} entry={e} />
+            <NfoCard key={`${e.type}-${e.schemeId}`} entry={e} today={today} />
           ))}
         </div>
       )}

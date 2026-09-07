@@ -19,6 +19,7 @@ export default function robots() {
           '/api/sif-screener',
           '/api/proposal-studio/holdings',
           '/api/sif-history',
+          '/api/nfo',
         ],
         disallow: [
           '/admin',

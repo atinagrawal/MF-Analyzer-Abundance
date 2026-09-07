@@ -185,6 +185,19 @@ function archiveClosedEntries(previousEntries, newOpenEntries, todayStr = new Da
   return [...newOpenEntries, ...carried];
 }
 
+// An entry's slug, once assigned for a given schemeId, must never change --
+// even if AMFI edits the scheme name mid-offer (a real occurrence: typo
+// fixes, name clarifications). Matches by schemeId against the PREVIOUS
+// document; a schemeId with no prior entry gets its freshly-derived slug
+// (the normal, first-time case).
+function preserveSlugs(newEntries, previousEntries) {
+  const bySchemeId = new Map((previousEntries || []).map((e) => [e.schemeId, e.slug]));
+  return newEntries.map((e) => {
+    const prevSlug = bySchemeId.get(e.schemeId);
+    return prevSlug && prevSlug !== e.slug ? { ...e, slug: prevSlug } : e;
+  });
+}
+
 function selfTest() {
   const assert = require('assert');
 
@@ -250,6 +263,19 @@ function selfTest() {
   const stillOpen = [{ schemeId: 'X3', schemeName: 'Still Open Fund', closeDate: '2026-09-20', status: 'open' }];
   assert.strictEqual(archiveClosedEntries(stillOpen, stillOpen, today).length, 1);
 
+  // preserveSlugs: a schemeId already seen before keeps its ORIGINAL slug,
+  // even when the freshly-derived slug differs (AMFI edited the scheme name).
+  const previousSlugs = [{ schemeId: 'X1', slug: 'original-name-fund' }];
+  const renamedFresh = [{ schemeId: 'X1', slug: 'renamed-fund' }];
+  const preserved = preserveSlugs(renamedFresh, previousSlugs);
+  assert.strictEqual(preserved[0].slug, 'original-name-fund');
+
+  // A genuinely-new schemeId (absent from previousEntries) keeps its
+  // freshly-derived slug unchanged.
+  const brandNewFresh = [{ schemeId: 'Y1', slug: 'brand-new-fund' }];
+  const preservedNew = preserveSlugs(brandNewFresh, previousSlugs);
+  assert.strictEqual(preservedNew[0].slug, 'brand-new-fund');
+
   console.log('[NFO Sync] Self-test: ALL PASSED');
 }
 
@@ -259,10 +285,19 @@ async function run() {
 
   const { r2Get, r2Put } = await import('../lib/r2.js');
 
-  const existing = await r2Get(R2_KEY).catch((e) => {
-    console.warn(`[NFO Sync] Could not read existing R2 document: ${e.message}`);
-    return null;
-  });
+  // A genuine read ERROR (network blip, auth issue) must be distinguished
+  // from a legitimately-missing key (a real null return from r2Get, per
+  // lib/r2.js) -- both collapsing to `existing = null` would silently drop
+  // the closed-archive carry-forward AND make backupThenPut() skip writing
+  // the .backup rollback file (it only backs up when existingValue != null).
+  let existing = null;
+  let existingReadFailed = false;
+  try {
+    existing = await r2Get(R2_KEY);
+  } catch (e) {
+    console.error(`[NFO Sync] Could not read existing R2 document (real error, not simply a missing key): ${e.message}`);
+    existingReadFailed = true;
+  }
 
   const mfResult = await fetchOpenNfos('mf');
   const sifResult = await fetchOpenNfos('sif');
@@ -272,13 +307,21 @@ async function run() {
     process.exit(1);
   }
 
-  const mf = archiveClosedEntries(existing?.mf, mfResult.entries);
-  const sif = archiveClosedEntries(existing?.sif, sifResult.entries);
+  if (existingReadFailed) {
+    console.error('[NFO Sync] Aborting: could not read the existing R2 document due to a real error -- refusing to write a version that would silently drop the closed-archive carry-forward and skip the .backup rollback write.');
+    process.exit(1);
+  }
+
+  const mfOpen = preserveSlugs(mfResult.entries, existing?.mf);
+  const sifOpen = preserveSlugs(sifResult.entries, existing?.sif);
+
+  const mf = archiveClosedEntries(existing?.mf, mfOpen);
+  const sif = archiveClosedEntries(existing?.sif, sifOpen);
 
   const result = { syncedAt: new Date().toISOString(), mf, sif };
 
-  console.log(`[NFO Sync] MF: ${mfResult.entries.length} open, ${mf.length - mfResult.entries.length} archived-closed.`);
-  console.log(`[NFO Sync] SIF: ${sifResult.entries.length} open, ${sif.length - sifResult.entries.length} archived-closed.`);
+  console.log(`[NFO Sync] MF: ${mfOpen.length} open, ${mf.length - mfOpen.length} archived-closed.`);
+  console.log(`[NFO Sync] SIF: ${sifOpen.length} open, ${sif.length - sifOpen.length} archived-closed.`);
 
   if (!DRY_RUN) {
     await backupThenPut(r2Put, R2_KEY, existing, JSON.stringify(result));
@@ -294,6 +337,7 @@ module.exports = {
   computeStatus,
   mapDetailItem,
   archiveClosedEntries,
+  preserveSlugs,
 };
 
 if (require.main === module) {

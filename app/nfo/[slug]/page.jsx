@@ -5,7 +5,18 @@ import pool from '@/lib/db';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
+
+// Next.js only applies on-demand ISR caching to a dynamic segment when
+// generateStaticParams exists (an empty array is enough -- see Fix 2, final
+// review) -- without it, `revalidate` above is silently ignored and the
+// route renders fully dynamically on every request regardless, defeating
+// the whole point of swapping out force-dynamic. No slugs are known at
+// build time (they come from a daily-synced R2 document, not a DB this
+// build step can query), so every slug is generated + cached on first visit.
+export async function generateStaticParams() {
+  return [];
+}
 
 function formatDate(d) {
   if (!d) return null;
@@ -26,9 +37,11 @@ function cleanSearchTerm(name) {
 
 // Best-effort, read-only cross-link to an existing live fund page -- the
 // ONE place this feature touches Postgres, deliberately scoped: a single
-// indexed name-match SELECT on a low-traffic detail page, same risk class
-// as the lookups lib/holdingsLookup.js already does today (not the
-// personalized/high-concurrency pattern that caused past incidents).
+// sequential-scan name-match SELECT (a leading-wildcard ILIKE pattern can't
+// use a btree index) -- acceptable here because this is a low-traffic
+// detail page with LIMIT 1, a bounded connection pool, and a 5s connection
+// timeout, not the personalized/high-concurrency pattern that caused past
+// incidents.
 // Never fabricates a link -- returns null on any miss or error.
 async function findLiveFundLink(schemeName, type) {
   const term = cleanSearchTerm(schemeName);
@@ -52,6 +65,52 @@ async function findLiveFundLink(schemeName, type) {
   }
 }
 
+// Same shape as buildJsonLd() below produces -- kept here purely to build the
+// meta `description` text (also reused, unchanged, in the page body).
+function buildDescription(entry) {
+  return (
+    `${entry.schemeName} is a ${entry.status === 'open' ? 'currently open' : 'recently closed'} ` +
+    `New Fund Offer from ${entry.amcName || 'the AMC'}${entry.category ? ` (${entry.category})` : ''}. ` +
+    `${entry.openDate ? `Opened ${formatDate(entry.openDate)}. ` : ''}` +
+    `${entry.closeDate ? `Closes ${formatDate(entry.closeDate)}. ` : ''}` +
+    `${entry.offerPrice != null ? `Offer price ₹${entry.offerPrice} per unit. ` : ''}` +
+    `Minimum investment ₹${entry.minInvestment != null ? entry.minInvestment : '—'}.`
+  );
+}
+
+// Builds the FinancialProduct JSON-LD object shared by generateMetadata()
+// (for the description text) and the page body (which renders it as a real
+// <script type="application/ld+json"> tag -- see Fix 1 in the final review:
+// Next's `metadata.other` field only ever emits an inert <meta> tag, never
+// real structured data). Never fabricates a price: `offers.validFrom`/
+// `validThrough` are omitted entirely rather than set to null when the
+// corresponding date is missing.
+function buildJsonLd(entry, canonicalUrl) {
+  const offers = {
+    '@type': 'Offer',
+    price: entry.offerPrice,
+    priceCurrency: 'INR',
+  };
+  if (entry.openDate) offers.validFrom = entry.openDate;
+  if (entry.closeDate) offers.validThrough = entry.closeDate;
+
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'FinancialProduct',
+        name: entry.schemeName,
+        description: buildDescription(entry),
+        provider: { '@type': 'Organization', name: entry.amcName },
+        url: canonicalUrl,
+        category: entry.category || entry.schemeType,
+        identifier: entry.schemeId,
+        offers,
+      },
+    ],
+  };
+}
+
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const entry = await getNfoBySlug(slug);
@@ -60,36 +119,8 @@ export async function generateMetadata({ params }) {
   }
 
   const title = `${entry.schemeName} NFO — Open Date, Price & Minimum Investment | Abundance`;
-  const description =
-    `${entry.schemeName} is a ${entry.status === 'open' ? 'currently open' : 'recently closed'} ` +
-    `New Fund Offer from ${entry.amcName || 'the AMC'}${entry.category ? ` (${entry.category})` : ''}. ` +
-    `${entry.openDate ? `Opened ${formatDate(entry.openDate)}. ` : ''}` +
-    `${entry.closeDate ? `Closes ${formatDate(entry.closeDate)}. ` : ''}` +
-    `Offer price ₹${entry.offerPrice ?? 10} per unit, minimum investment ₹${entry.minInvestment ?? '—'}.`;
-
+  const description = buildDescription(entry);
   const canonicalUrl = `https://mfcalc.getabundance.in/nfo/${entry.slug}`;
-
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'FinancialProduct',
-        name: entry.schemeName,
-        description,
-        provider: { '@type': 'Organization', name: entry.amcName },
-        url: canonicalUrl,
-        category: entry.category || entry.schemeType,
-        identifier: entry.schemeId,
-        offers: {
-          '@type': 'Offer',
-          price: entry.offerPrice,
-          priceCurrency: 'INR',
-          validFrom: entry.openDate,
-          validThrough: entry.closeDate,
-        },
-      },
-    ],
-  };
 
   return {
     title,
@@ -98,7 +129,6 @@ export async function generateMetadata({ params }) {
     openGraph: { title, description, type: 'website', url: canonicalUrl },
     twitter: { card: 'summary', title, description },
     robots: { index: true, follow: true },
-    other: { 'script:ld+json': JSON.stringify(jsonLd) },
   };
 }
 
@@ -109,10 +139,13 @@ export default async function NfoDetailPage({ params }) {
 
   const logo = getProviderLogo(entry.type, entry.amcName);
   const liveLink = await findLiveFundLink(entry.schemeName, entry.type);
+  const canonicalUrl = `https://mfcalc.getabundance.in/nfo/${entry.slug}`;
+  const jsonLd = buildJsonLd(entry, canonicalUrl);
 
   return (
     <>
-      <Navbar />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <Navbar activePage="nfo" />
       <main className="nfo-detail container">
         <a href="/nfo" className="nfo-back-link">← All NFOs</a>
 
