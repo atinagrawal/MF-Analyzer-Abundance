@@ -208,6 +208,40 @@ export default function PMSDetailClient({ iaid }) {
           </div>
         </div>
 
+        {/* ── FACTSHEETS & PRESENTATIONS (always free, curated providers only) ── */}
+        {d.factsheets && d.factsheets.length > 0 && (() => {
+          const byStrategy = new Map();
+          for (const doc of d.factsheets) {
+            if (!byStrategy.has(doc.strategyName)) byStrategy.set(doc.strategyName, []);
+            byStrategy.get(doc.strategyName).push(doc);
+          }
+          return (
+            <div className="pmsd-section">
+              <div className="pmsd-section-head">
+                <span className="pmsd-section-title">Factsheets &amp; Presentations</span>
+                <span className="pmsd-section-sub">Published directly by {d.providerName}</span>
+              </div>
+              <div className="pmsd-factsheet-groups">
+                {[...byStrategy.entries()].map(([strategyName, docs]) => (
+                  <div key={strategyName} className="pmsd-factsheet-group">
+                    <div className="pmsd-factsheet-strategy">{strategyName}</div>
+                    <div className="pmsd-factsheet-list">
+                      {docs.map((doc, i) => (
+                        <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" className="pmsd-factsheet-link">
+                          <span className="pmsd-factsheet-icon">{doc.docType === 'presentation' ? '📊' : '📄'}</span>
+                          <span className="pmsd-factsheet-label">{doc.docType === 'presentation' ? 'Presentation' : 'Factsheet'}</span>
+                          {doc.period && <span className="pmsd-factsheet-period">{doc.period}</span>}
+                          <span className="pmsd-factsheet-arrow">↗</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── ⑤ CURRENT PERIOD-WISE PERFORMANCE (Pro) ─────────────────── */}
         {isPro && performance && (() => {
           const rows = [

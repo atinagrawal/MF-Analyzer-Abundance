@@ -102,6 +102,29 @@
 .pmsd-section-title { font-size: 1rem; font-weight: 800; color: var(--text); }
 .pmsd-section-sub { font-size: .72rem; color: var(--muted); margin-left: 8px; }
 
+/* ── Factsheets & Presentations ───────────────────────────────────────── */
+.pmsd-factsheet-groups { display: flex; flex-direction: column; gap: 14px; }
+.pmsd-factsheet-strategy { font-size: .78rem; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.pmsd-factsheet-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.pmsd-factsheet-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: .74rem;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color .15s, background .15s;
+}
+.pmsd-factsheet-link:hover { border-color: var(--g-light); background: var(--g-xlight); }
+.pmsd-factsheet-icon { font-size: .85rem; }
+.pmsd-factsheet-period { color: var(--muted); font-weight: 600; }
+.pmsd-factsheet-arrow { color: var(--muted); font-size: .68rem; }
+
 /* ── Facts / fee grid ─────────────────────────────────────────────────── */
 .pmsd-facts-grid {
   display: grid;
