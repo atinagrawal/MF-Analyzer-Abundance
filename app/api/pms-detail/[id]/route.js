@@ -17,7 +17,7 @@ import { getUserPlan } from '@/lib/plan';
 import { getPmsDetailsCached } from '@/lib/pmsDetailsCache';
 import { getPmsPeriodHistoryCached } from '@/lib/pmsPeriodHistoryCache';
 import { getPmsQuartileCached } from '@/lib/pmsQuartileCache';
-import { getFactsheetsForProvider } from '@/lib/pmsFactsheetsCache';
+import { getFactsheetsForProvider, getFactsheetDataForStrategy } from '@/lib/pmsFactsheetsCache';
 import { MONTH_ABBR } from '@/lib/pmsScrapers';
 import { checkRateLimitSafe, rateLimitResponse } from '@/lib/rateLimit';
 
@@ -57,6 +57,13 @@ export async function GET(request, { params }) {
     // the small set scripts/sync_pms_factsheets.js currently covers.
     const factsheets = await getFactsheetsForProvider(details.providerName).catch(() => null);
 
+    // The specific strategy's own extracted content (holdings, sector &
+    // market-cap allocation, valuation/quality metrics vs benchmark, what
+    // changed this month) -- matched to THIS strategy specifically, not
+    // just "this provider has some factsheets". null when unmatched or
+    // not yet extracted; the UI section simply doesn't render.
+    const factsheetData = await getFactsheetDataForStrategy(details.providerName, details.iaName).catch(() => null);
+
     const publicFields = {
       iaid: id,
       iaName: details.iaName,
@@ -73,6 +80,7 @@ export async function GET(request, { params }) {
       exitLoad: details.exitLoad,
       purpose: details.purpose,
       factsheets,
+      factsheetData,
     };
 
     if (!isPro) {

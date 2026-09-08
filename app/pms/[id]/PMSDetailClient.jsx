@@ -208,6 +208,157 @@ export default function PMSDetailClient({ iaid }) {
           </div>
         </div>
 
+        {/* ── PORTFOLIO COMPOSITION (from factsheet extraction, always free) ── */}
+        {d.factsheetData && (d.factsheetData.marketCapAllocation || d.factsheetData.sectorAllocation || d.factsheetData.topHoldings) && (() => {
+          const fd = d.factsheetData;
+          const mc = fd.marketCapAllocation;
+          const mcSegments = mc
+            ? [
+                { label: 'Large Cap', value: mc.largeCap, className: 'lg' },
+                { label: 'Mid Cap', value: mc.midCap, className: 'md' },
+                { label: 'Small Cap', value: mc.smallCap, className: 'sm' },
+                { label: 'Cash', value: mc.cash, className: 'cash' },
+              ].filter((s) => s.value != null && s.value > 0)
+            : [];
+
+          const sortedSectors = fd.sectorAllocation ? [...fd.sectorAllocation].sort((a, b) => b.weightPct - a.weightPct) : [];
+          const maxSectorWeight = sortedSectors.length ? sortedSectors[0].weightPct : 1;
+
+          return (
+            <div className="pmsd-section">
+              <div className="pmsd-section-head">
+                <span className="pmsd-section-title">Portfolio Composition</span>
+                <span className="pmsd-section-sub">
+                  From the {fd.strategyName} factsheet{fd.period ? ` · ${fd.period}` : ''}{fd.asOfDate ? ` · data as of ${fd.asOfDate}` : ''}
+                </span>
+              </div>
+
+              {mcSegments.length > 0 && (
+                <div className="pmsd-composition-block">
+                  <div className="pmsd-composition-label">Market Cap Allocation</div>
+                  <div className="pmsd-mcap-bar">
+                    {mcSegments.map((s) => (
+                      <div key={s.label} className={`pmsd-mcap-seg ${s.className}`} style={{ width: `${s.value}%` }} title={`${s.label}: ${s.value}%`} />
+                    ))}
+                  </div>
+                  <div className="pmsd-mcap-legend">
+                    {mcSegments.map((s) => (
+                      <span key={s.label} className="pmsd-mcap-legend-item">
+                        <span className={`pmsd-mcap-swatch ${s.className}`} />
+                        {s.label} <b>{s.value}%</b>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {sortedSectors.length > 0 && (
+                <div className="pmsd-composition-block">
+                  <div className="pmsd-composition-label">Sector Allocation</div>
+                  <div className="pmsd-sector-list">
+                    {sortedSectors.map((s) => (
+                      <div key={s.sector} className="pmsd-sector-row">
+                        <span className="pmsd-sector-name">{s.sector}</span>
+                        <div className="pmsd-sector-bar-wrap">
+                          <div className="pmsd-sector-bar-fill" style={{ width: `${(s.weightPct / maxSectorWeight) * 100}%` }} />
+                        </div>
+                        <span className="pmsd-sector-val">{s.weightPct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {fd.topHoldings && fd.topHoldings.length > 0 && (
+                <div className="pmsd-composition-block">
+                  <div className="pmsd-composition-label">Top Holdings</div>
+                  <div className="pmsd-holdings-grid">
+                    {fd.topHoldings.map((h, i) => (
+                      <div key={h.name} className="pmsd-holding-item">
+                        <span className="pmsd-holding-rank">{i + 1}</span>
+                        <span className="pmsd-holding-name">{h.name}</span>
+                        <span className="pmsd-holding-weight">{h.weightPct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── FUNDAMENTALS VS BENCHMARK (from factsheet extraction, always free) ── */}
+        {d.factsheetData?.portfolioAttributes && (() => {
+          const pa = d.factsheetData.portfolioAttributes;
+          const rows = [
+            ['Revenue CAGR', pa.revenueCagr, '%'],
+            ['EPS CAGR', pa.epsCagr, '%'],
+            ['Portfolio PE', pa.portfolioPe, 'x'],
+            ['ROE', pa.roe, '%'],
+            ['Net Debt/Equity', pa.netDebtEquity, 'x'],
+            ['PEG Ratio', pa.peg, 'x'],
+            ['Sharpe Ratio', pa.sharpeRatio, ''],
+            ['Std. Deviation', pa.standardDeviation, '%'],
+          ].filter(([, v]) => v.strategy != null || v.benchmark != null);
+
+          if (rows.length === 0) return null;
+
+          return (
+            <div className="pmsd-section">
+              <div className="pmsd-section-head">
+                <span className="pmsd-section-title">Fundamentals vs Benchmark</span>
+                <span className="pmsd-section-sub">Strategy vs {d.benchmark || 'benchmark'}, from the factsheet</span>
+              </div>
+              <div className="pmsd-fund-table">
+                <div className="pmsd-fund-row pmsd-fund-head">
+                  <span>Metric</span>
+                  <span>Strategy</span>
+                  <span>Benchmark</span>
+                </div>
+                {rows.map(([label, v, unit]) => (
+                  <div key={label} className="pmsd-fund-row">
+                    <span className="pmsd-fund-label">{label}</span>
+                    <span className="pmsd-fund-val">{v.strategy != null ? `${v.strategy}${unit}` : '—'}</span>
+                    <span className="pmsd-fund-val muted">{v.benchmark != null ? `${v.benchmark}${unit}` : '—'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── WHAT CHANGED THIS MONTH (from factsheet extraction, always free) ── */}
+        {d.factsheetData?.portfolioChanges &&
+          (d.factsheetData.portfolioChanges.newEntrants.length > 0 || d.factsheetData.portfolioChanges.exits.length > 0) && (
+            <div className="pmsd-section">
+              <div className="pmsd-section-head">
+                <span className="pmsd-section-title">What Changed This Month</span>
+              </div>
+              <div className="pmsd-changes-grid">
+                {d.factsheetData.portfolioChanges.newEntrants.length > 0 && (
+                  <div>
+                    <div className="pmsd-composition-label">New Entrants</div>
+                    <ul className="pmsd-changes-list">
+                      {d.factsheetData.portfolioChanges.newEntrants.map((n) => (
+                        <li key={n} className="pmsd-changes-item entrant">{n}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {d.factsheetData.portfolioChanges.exits.length > 0 && (
+                  <div>
+                    <div className="pmsd-composition-label">Exits</div>
+                    <ul className="pmsd-changes-list">
+                      {d.factsheetData.portfolioChanges.exits.map((n) => (
+                        <li key={n} className="pmsd-changes-item exit">{n}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
         {/* ── FACTSHEETS & PRESENTATIONS (always free, curated providers only) ── */}
         {d.factsheets && d.factsheets.length > 0 && (() => {
           const byStrategy = new Map();

@@ -338,6 +338,242 @@ async function fetchRenaissance() {
   });
 }
 
+// ── Gemini-based structured extraction from factsheet PDFs ─────────────────
+// Links alone don't tell an investor what's actually in the strategy --
+// this reads each factsheet's real content (top holdings, sector and
+// market-cap allocation, valuation/quality metrics vs the benchmark, and
+// what changed since last month) into structured JSON. Verified live
+// against a real Carnelian factsheet before this was wired in: every
+// field matched the source PDF exactly, including market-cap allocation
+// (a pie chart with no text layer at all -- unextractable by any plain
+// PDF-text-parsing approach, confirmed by testing scripts/../pdf-parse
+// against the same file during design). Only `docType: 'factsheet'`
+// documents are extracted -- presentations are narrative decks, not
+// data-dense, and stay as plain links.
+//
+// `gemini-flash-latest` (not a pinned version) is deliberate: a pinned
+// model name observed live during development (gemini-2.5-pro) was
+// already retired for new callers within the same development session --
+// the "-latest" alias exists specifically so this script doesn't need a
+// model-name update every time Google rotates versions.
+const GEMINI_MODEL = 'gemini-flash-latest';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+const EXTRACTION_SCHEMA_PROMPT = `Extract structured data from this PMS strategy factsheet PDF. Return ONLY valid JSON matching this exact shape, no markdown fences, no commentary:
+{
+  "asOfDate": "YYYY-MM-DD or null",
+  "marketCapAllocation": {"largeCap": number|null, "midCap": number|null, "smallCap": number|null, "cash": number|null},
+  "sectorAllocation": [{"sector": string, "weightPct": number}],
+  "topHoldings": [{"name": string, "weightPct": number}],
+  "portfolioAttributes": {
+    "revenueCagr": {"strategy": number|null, "benchmark": number|null},
+    "epsCagr": {"strategy": number|null, "benchmark": number|null},
+    "portfolioPe": {"strategy": number|null, "benchmark": number|null},
+    "roe": {"strategy": number|null, "benchmark": number|null},
+    "netDebtEquity": {"strategy": number|null, "benchmark": number|null},
+    "peg": {"strategy": number|null, "benchmark": number|null},
+    "sharpeRatio": {"strategy": number|null, "benchmark": number|null},
+    "standardDeviation": {"strategy": number|null, "benchmark": number|null}
+  },
+  "portfolioChanges": {"newEntrants": [string], "exits": [string]}
+}
+If a field genuinely is not present in the document, use null (for objects/numbers) or an empty array -- never invent a value.`;
+
+// A 429 whose quotaId contains "PerDay" is a hard daily cap, not a
+// transient rate limit -- verified live during development against the
+// free tier's real 20-requests/day ceiling for this model. Retrying that
+// within the same run cannot succeed (the quota doesn't reset for hours),
+// so it's surfaced as a distinct, non-retryable signal the caller can
+// use to stop attempting further documents in this run entirely, rather
+// than burning the rest of the run on calls that are certain to fail the
+// same way.
+class DailyQuotaExhaustedError extends Error {}
+
+async function callGeminiWithRetry(base64Pdf, retries = 3, delayMs = 4000) {
+  for (let i = 0; i <= retries; i++) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(60000),
+        body: JSON.stringify({
+          contents: [{ parts: [{ inline_data: { mime_type: 'application/pdf', data: base64Pdf } }, { text: EXTRACTION_SCHEMA_PROMPT }] }],
+          generationConfig: { responseMimeType: 'application/json' },
+        }),
+      }
+    );
+    if (res.ok) return res.json();
+
+    const body = await res.text().catch(() => '');
+    if (res.status === 429 && /PerDay/i.test(body)) {
+      throw new DailyQuotaExhaustedError(`Gemini free-tier daily request quota exhausted: ${body.slice(0, 300)}`);
+    }
+    const retryable = res.status === 429 || res.status === 503;
+    if (!retryable || i >= retries) {
+      throw new Error(`Gemini HTTP ${res.status}: ${body.slice(0, 300)}`);
+    }
+    await sleep(delayMs * (i + 1));
+  }
+}
+
+// A number that's finite and within a sane range for a percentage-shaped
+// field; anything else (a hallucinated string, an out-of-range value)
+// becomes null rather than being stored.
+function sanePct(v, max = 100) {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 && n <= max ? n : null;
+}
+function saneNum(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function saneMetricPair(pair) {
+  if (!pair || typeof pair !== 'object') return { strategy: null, benchmark: null };
+  return { strategy: saneNum(pair.strategy), benchmark: saneNum(pair.benchmark) };
+}
+
+// Field-level validation: a bad/missing individual field is dropped (set
+// null/empty) rather than discarding the whole extraction, so one shaky
+// number never hides everything else that extracted correctly. Returns
+// null only if literally nothing usable came back at all.
+function validateAndCleanExtraction(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const mc = raw.marketCapAllocation;
+  let marketCapAllocation = null;
+  if (mc && typeof mc === 'object') {
+    const cleaned = { largeCap: sanePct(mc.largeCap), midCap: sanePct(mc.midCap), smallCap: sanePct(mc.smallCap), cash: sanePct(mc.cash) };
+    const values = Object.values(cleaned).filter((v) => v != null);
+    // Real allocations sum to ~100 -- a wildly-off total (bad OCR/extraction
+    // reading, or a hallucinated number) is rejected wholesale rather than
+    // shown as a broken bar chart.
+    const total = values.reduce((a, b) => a + b, 0);
+    if (values.length >= 2 && total >= 85 && total <= 115) marketCapAllocation = cleaned;
+  }
+
+  let sectorAllocation = null;
+  if (Array.isArray(raw.sectorAllocation)) {
+    const cleaned = raw.sectorAllocation
+      .map((s) => ({ sector: typeof s?.sector === 'string' ? s.sector.trim() : null, weightPct: sanePct(s?.weightPct) }))
+      .filter((s) => s.sector && s.weightPct != null);
+    if (cleaned.length > 0) sectorAllocation = cleaned;
+  }
+
+  let topHoldings = null;
+  if (Array.isArray(raw.topHoldings)) {
+    const cleaned = raw.topHoldings
+      .map((h) => ({ name: typeof h?.name === 'string' ? h.name.trim() : null, weightPct: sanePct(h?.weightPct) }))
+      .filter((h) => h.name && h.weightPct != null);
+    if (cleaned.length > 0) topHoldings = cleaned;
+  }
+
+  let portfolioAttributes = null;
+  if (raw.portfolioAttributes && typeof raw.portfolioAttributes === 'object') {
+    const pa = raw.portfolioAttributes;
+    const cleaned = {
+      revenueCagr: saneMetricPair(pa.revenueCagr),
+      epsCagr: saneMetricPair(pa.epsCagr),
+      portfolioPe: saneMetricPair(pa.portfolioPe),
+      roe: saneMetricPair(pa.roe),
+      netDebtEquity: saneMetricPair(pa.netDebtEquity),
+      peg: saneMetricPair(pa.peg),
+      sharpeRatio: saneMetricPair(pa.sharpeRatio),
+      standardDeviation: saneMetricPair(pa.standardDeviation),
+    };
+    if (Object.values(cleaned).some((p) => p.strategy != null || p.benchmark != null)) portfolioAttributes = cleaned;
+  }
+
+  let portfolioChanges = null;
+  if (raw.portfolioChanges && typeof raw.portfolioChanges === 'object') {
+    const newEntrants = Array.isArray(raw.portfolioChanges.newEntrants) ? raw.portfolioChanges.newEntrants.filter((s) => typeof s === 'string' && s.trim()) : [];
+    const exits = Array.isArray(raw.portfolioChanges.exits) ? raw.portfolioChanges.exits.filter((s) => typeof s === 'string' && s.trim()) : [];
+    if (newEntrants.length > 0 || exits.length > 0) portfolioChanges = { newEntrants, exits };
+  }
+
+  const asOfDate = typeof raw.asOfDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.asOfDate) ? raw.asOfDate : null;
+
+  if (!marketCapAllocation && !sectorAllocation && !topHoldings && !portfolioAttributes && !portfolioChanges) return null;
+
+  return { asOfDate, marketCapAllocation, sectorAllocation, topHoldings, portfolioAttributes, portfolioChanges };
+}
+
+async function extractFactsheetData(pdfUrl) {
+  const pdfRes = await fetchWithRetry(pdfUrl);
+  if (!pdfRes.ok) throw new Error(`PDF fetch HTTP ${pdfRes.status}`);
+  const buf = Buffer.from(await pdfRes.arrayBuffer());
+  const base64 = buf.toString('base64');
+
+  const json = await callGeminiWithRetry(base64);
+  const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('Gemini returned no content');
+
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw new Error('Gemini response was not valid JSON');
+  }
+
+  const cleaned = validateAndCleanExtraction(raw);
+  if (!cleaned) throw new Error('Extraction produced no usable fields after validation');
+  return { ...cleaned, extractedAt: new Date().toISOString() };
+}
+
+// Enriches each factsheet-type document with `.extracted` in place. Skips
+// entirely (leaves `.extracted` unset) if GEMINI_API_KEY isn't configured
+// -- the link-based sync must keep working whether or not extraction is
+// set up. Re-extraction is skipped when a document's URL is unchanged
+// from the previous run (same month's factsheet, already extracted) --
+// both to avoid needless API calls and because a stable input should
+// give a stable output.
+//
+// `quotaState` is shared across every provider's call in one run (see
+// run()): once the free tier's daily request cap is hit for ANY document,
+// every remaining document -- across every remaining provider -- would
+// fail identically, so the whole run stops attempting new extractions
+// rather than burning the rest of the run on calls certain to fail the
+// same way. Whatever was already extracted earlier in the run is kept;
+// whatever wasn't reached yet simply retries on the next scheduled or
+// manually-triggered run (the URL-unchanged cache means already-extracted
+// documents aren't re-spent either).
+async function enrichWithExtraction(documents, previousDocs, quotaState) {
+  if (!GEMINI_API_KEY) {
+    console.warn('[PMS Factsheets] GEMINI_API_KEY not set -- skipping structured extraction, links-only sync proceeds.');
+    return documents;
+  }
+  const prevByKey = new Map((previousDocs || []).map((d) => [`${d.strategyName}::${d.docType}`, d]));
+
+  for (const doc of documents) {
+    if (doc.docType !== 'factsheet') continue;
+    const prev = prevByKey.get(`${doc.strategyName}::${doc.docType}`);
+    if (prev && prev.url === doc.url && prev.extracted) {
+      doc.extracted = prev.extracted;
+      continue;
+    }
+    if (quotaState.exhausted) {
+      if (prev?.extracted) doc.extracted = prev.extracted;
+      continue;
+    }
+    try {
+      doc.extracted = await extractFactsheetData(doc.url);
+      console.log(`[PMS Factsheets] Extracted: ${doc.strategyName} (${doc.period || 'undated'})`);
+    } catch (err) {
+      if (err instanceof DailyQuotaExhaustedError) {
+        quotaState.exhausted = true;
+        console.warn(`[PMS Factsheets] Daily Gemini quota exhausted -- stopping further extraction attempts for the rest of this run. Remaining documents will be picked up on a later run.`);
+      } else {
+        console.warn(`[PMS Factsheets] Extraction failed for ${doc.strategyName} (${doc.url}): ${err.message}`);
+      }
+      // A failed extraction keeps the previous month's extracted data
+      // (if any) rather than wiping it -- same "don't overwrite good data
+      // with a bad result" principle as everywhere else in this pipeline.
+      if (prev?.extracted) doc.extracted = prev.extracted;
+    }
+  }
+  return documents;
+}
+
 // ── Provider registry ────────────────────────────────────────────────────
 // matchFragments: lowercase substrings checked against APMI's own
 // `providerName` field (from lib/pmsScrapers.js) to attach these
@@ -363,6 +599,7 @@ async function run() {
   });
 
   const providers = {};
+  const quotaState = { exhausted: false };
   for (const p of PROVIDERS) {
     let documents = [];
     try {
@@ -376,6 +613,7 @@ async function run() {
       console.warn(`[PMS Factsheets] ${p.key}: fetch returned 0 documents -- keeping previous ${previousDocs.length} rather than wiping them.`);
       providers[p.key] = existing.providers[p.key];
     } else {
+      documents = await enrichWithExtraction(documents, previousDocs, quotaState);
       providers[p.key] = { displayName: p.displayName, matchFragments: p.matchFragments, documents };
     }
     console.log(`[PMS Factsheets] ${p.key}: ${providers[p.key].documents.length} documents.`);
@@ -458,6 +696,46 @@ function selfTest() {
   // 2026" -- this is the exact real-world discrepancy the fix addresses.
   assert.strictEqual(fixtureDocs[0].period, 'August 2026');
 
+  // validateAndCleanExtraction: real, verified-against-source values from
+  // the live Carnelian Compounder Strategy factsheet (August 2026) --
+  // confirmed field-for-field correct against the actual PDF during
+  // development, not synthetic.
+  const realExtraction = validateAndCleanExtraction({
+    asOfDate: '2026-07-31',
+    marketCapAllocation: { largeCap: 30.1, midCap: 46.3, smallCap: 20.9, cash: 2.7 },
+    sectorAllocation: [{ sector: 'Pharma & CDMO', weightPct: 29.9 }, { sector: 'BFSI - Credit', weightPct: 16.3 }],
+    topHoldings: [{ name: 'Aditya Birla Capital', weightPct: 10.2 }],
+    portfolioAttributes: { revenueCagr: { strategy: 16.4, benchmark: 13.4 }, sharpeRatio: { strategy: 0.8, benchmark: 0.6 } },
+    portfolioChanges: { newEntrants: ['Sun Pharma'], exits: ['Bandhan Bank'] },
+  });
+  assert.strictEqual(realExtraction.marketCapAllocation.largeCap, 30.1);
+  assert.strictEqual(realExtraction.sectorAllocation.length, 2);
+  assert.strictEqual(realExtraction.portfolioAttributes.revenueCagr.strategy, 16.4);
+  assert.strictEqual(realExtraction.portfolioChanges.newEntrants[0], 'Sun Pharma');
+
+  // A market-cap allocation that doesn't sum anywhere near 100 is a sign
+  // of a bad read (hallucination, misparsed chart) -- rejected wholesale
+  // rather than shown as a broken bar chart, while unrelated fields in
+  // the SAME response still survive individually.
+  const badMarketCap = validateAndCleanExtraction({
+    marketCapAllocation: { largeCap: 5, midCap: 5, smallCap: 5, cash: 5 }, // sums to 20, nowhere near 100
+    sectorAllocation: [{ sector: 'IT', weightPct: 50 }],
+  });
+  assert.strictEqual(badMarketCap.marketCapAllocation, null);
+  assert.strictEqual(badMarketCap.sectorAllocation.length, 1);
+
+  // A holding with a non-numeric/out-of-range weight is dropped, not
+  // stored as-is or coerced into a wrong number.
+  const badHolding = validateAndCleanExtraction({
+    topHoldings: [{ name: 'Real Stock', weightPct: 8.5 }, { name: 'Bad Row', weightPct: 'not a number' }, { name: 'Also Bad', weightPct: 250 }],
+  });
+  assert.strictEqual(badHolding.topHoldings.length, 1);
+  assert.strictEqual(badHolding.topHoldings[0].name, 'Real Stock');
+
+  // Nothing usable at all -> null, not an empty-shelled object.
+  assert.strictEqual(validateAndCleanExtraction({ asOfDate: 'not-a-date' }), null);
+  assert.strictEqual(validateAndCleanExtraction(null), null);
+
   console.log('[PMS Factsheets Sync] Self-test: ALL PASSED');
 }
 
@@ -466,6 +744,7 @@ module.exports = {
   matchRenaissanceStrategy,
   extractPeriodFromFilename,
   toTitleCase,
+  validateAndCleanExtraction,
   fetchCarnelian,
   fetchStallion,
   fetchNarnolia,

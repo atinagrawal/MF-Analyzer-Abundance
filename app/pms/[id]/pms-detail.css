@@ -125,6 +125,110 @@
 .pmsd-factsheet-period { color: var(--muted); font-weight: 600; }
 .pmsd-factsheet-arrow { color: var(--muted); font-size: .68rem; }
 
+/* ── Portfolio Composition (market cap / sector / holdings) ──────────────── */
+.pmsd-composition-block { margin-bottom: 20px; }
+.pmsd-composition-block:last-child { margin-bottom: 0; }
+.pmsd-composition-label {
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.pmsd-mcap-bar {
+  display: flex;
+  width: 100%;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--s2);
+  margin-bottom: 10px;
+}
+.pmsd-mcap-seg { height: 100%; transition: width .3s ease; }
+.pmsd-mcap-seg.lg { background: var(--g1); }
+.pmsd-mcap-seg.md { background: var(--g3); }
+.pmsd-mcap-seg.sm { background: var(--g-light); }
+.pmsd-mcap-seg.cash { background: var(--border); }
+.pmsd-mcap-legend { display: flex; flex-wrap: wrap; gap: 14px; }
+.pmsd-mcap-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; color: var(--text2); }
+.pmsd-mcap-legend-item b { color: var(--text); }
+.pmsd-mcap-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.pmsd-mcap-swatch.lg { background: var(--g1); }
+.pmsd-mcap-swatch.md { background: var(--g3); }
+.pmsd-mcap-swatch.sm { background: var(--g-light); }
+.pmsd-mcap-swatch.cash { background: var(--border); }
+
+.pmsd-sector-list { display: flex; flex-direction: column; gap: 8px; }
+.pmsd-sector-row { display: grid; grid-template-columns: 160px 1fr 48px; align-items: center; gap: 10px; }
+.pmsd-sector-name { font-size: .74rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pmsd-sector-bar-wrap { height: 8px; background: var(--s2); border-radius: 4px; overflow: hidden; }
+.pmsd-sector-bar-fill { height: 100%; background: var(--g2); border-radius: 4px; }
+.pmsd-sector-val { font-family: 'JetBrains Mono', monospace; font-size: .72rem; font-weight: 700; color: var(--muted); text-align: right; }
+
+.pmsd-holdings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.pmsd-holding-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+.pmsd-holding-rank {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--g-xlight);
+  color: var(--g1);
+  font-size: .66rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pmsd-holding-name { flex: 1; font-size: .76rem; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pmsd-holding-weight { font-family: 'JetBrains Mono', monospace; font-size: .72rem; font-weight: 700; color: var(--muted); }
+
+/* ── Fundamentals vs Benchmark ─────────────────────────────────────────── */
+.pmsd-fund-table { display: flex; flex-direction: column; }
+.pmsd-fund-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 100px;
+  align-items: center;
+  padding: 9px 4px;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+.pmsd-fund-row:last-child { border-bottom: none; }
+.pmsd-fund-row.pmsd-fund-head {
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1.5px solid var(--border);
+}
+.pmsd-fund-label { font-size: .78rem; font-weight: 600; color: var(--text); }
+.pmsd-fund-val { font-family: 'JetBrains Mono', monospace; font-size: .78rem; font-weight: 700; color: var(--text); text-align: right; }
+.pmsd-fund-val.muted { color: var(--muted); font-weight: 600; }
+
+/* ── What Changed This Month ───────────────────────────────────────────── */
+.pmsd-changes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+.pmsd-changes-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.pmsd-changes-item {
+  font-size: .78rem;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+}
+.pmsd-changes-item.entrant { background: var(--g-xlight); color: var(--g1); border-left-color: var(--g2); }
+.pmsd-changes-item.exit { background: var(--s2); color: var(--text2); border-left-color: var(--border); }
+
 /* ── Facts / fee grid ─────────────────────────────────────────────────── */
 .pmsd-facts-grid {
   display: grid;
