@@ -153,10 +153,30 @@ function parseCarnelianTitle(rawTitle, docType) {
   return { strategyName, period };
 }
 
+// Strategy names here come straight from each document's own title text
+// (Carnelian has no fixed, published strategy list to pattern-match
+// against the way Renaissance's fetcher does) -- so a strategy that was
+// renamed or discontinued leaves old documents in the WordPress media
+// library under a name that no longer corresponds to anything. Verified
+// live: "Bharat Amritkaal Fund", "Structural Shift Fund", "Compounder
+// Fund", and "Yng Strategy" all turned up once per_page was widened, none
+// of them registered with APMI under Carnelian at all (checked directly
+// against the live PMS screener's full strategy list, all 4 categories) --
+// stale, abandoned product names, not real gaps. A document whose upload
+// is older than this drops out rather than appearing as a phantom
+// "strategy" with no real page to attach to; a genuinely active strategy
+// publishes monthly, so this is a generous buffer, not a tight one.
+const CARNELIAN_RECENCY_CUTOFF_DAYS = 120;
+
 async function fetchCarnelian() {
   const documents = [];
   for (const docType of ['factsheet', 'presentation']) {
-    const res = await fetchWithRetry(`https://carneliancapital.co.in/wp-json/wp/v2/media?search=${docType}&per_page=50`);
+    // per_page=100 (WordPress's max) rather than 50 -- at 50, some older
+    // strategy names sorted outside the most-recent-50 window and were
+    // silently missed; 100 covers this site's current full result count
+    // (85) in one call. Anything still stale after that is handled by
+    // the recency filter below, not by limiting how much we ask for.
+    const res = await fetchWithRetry(`https://carneliancapital.co.in/wp-json/wp/v2/media?search=${docType}&per_page=100`);
     if (!res.ok) {
       console.warn(`[PMS Factsheets] Carnelian ${docType}: HTTP ${res.status}`);
       continue;
@@ -184,6 +204,8 @@ async function fetchCarnelian() {
       }
     }
     for (const doc of byStrategy.values()) {
+      const ageDays = (Date.now() - new Date(doc.date).getTime()) / 86400000;
+      if (ageDays > CARNELIAN_RECENCY_CUTOFF_DAYS) continue;
       delete doc.date;
       documents.push(doc);
     }
