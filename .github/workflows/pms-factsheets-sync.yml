@@ -1,0 +1,36 @@
+name: Monthly PMS Factsheets Sync
+
+on:
+  schedule:
+    # PMS factsheets are published monthly by each AMC (timing varies by
+    # provider -- Carnelian typically within the first week, others later);
+    # the 10th gives every provider a reasonable buffer to have published
+    # that month's factsheet. Re-running on unchanged data is harmless
+    # (idempotent) -- each provider's own fetch just returns the same
+    # already-latest documents.
+    - cron: '0 3 10 * *'
+  workflow_dispatch:
+
+jobs:
+  sync-pms-factsheets:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install deps
+        run: npm install aws4fetch cheerio --no-save
+
+      - name: Run PMS Factsheets Sync
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        run: node scripts/sync_pms_factsheets.js
