@@ -17,6 +17,7 @@ import { getUserPlan } from '@/lib/plan';
 import { getPmsDetailsCached } from '@/lib/pmsDetailsCache';
 import { getPmsPeriodHistoryCached } from '@/lib/pmsPeriodHistoryCache';
 import { getPmsQuartileCached } from '@/lib/pmsQuartileCache';
+import { getFactsheetsForProvider } from '@/lib/pmsFactsheetsCache';
 import { MONTH_ABBR } from '@/lib/pmsScrapers';
 import { checkRateLimitSafe, rateLimitResponse } from '@/lib/rateLimit';
 
@@ -49,6 +50,13 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Strategy not found' }, { status: 404 });
     }
 
+    // Free for every visitor, Pro or not -- these are just links to PDFs
+    // the AMC itself already publishes publicly, no computed/proprietary
+    // insight, same reasoning already applied to AUM info elsewhere in
+    // this app. null (not an empty array) when this provider isn't one of
+    // the small set scripts/sync_pms_factsheets.js currently covers.
+    const factsheets = await getFactsheetsForProvider(details.providerName).catch(() => null);
+
     const publicFields = {
       iaid: id,
       iaName: details.iaName,
@@ -64,6 +72,7 @@ export async function GET(request, { params }) {
       variableFees: details.variableFees,
       exitLoad: details.exitLoad,
       purpose: details.purpose,
+      factsheets,
     };
 
     if (!isPro) {
