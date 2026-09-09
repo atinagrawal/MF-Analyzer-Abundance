@@ -7,14 +7,14 @@
  * lib/pmsFactsheetsCache.js and composed into
  * app/api/pms-detail/[id]/route.js's response.
  *
- * Covers 8 providers verified live during research (see
+ * Covers 9 providers verified live during research (see
  * pms_factsheets_research.txt and this session's chat history for the
  * verification trail): Carnelian Capital, Stallion Asset, Narnolia
  * Financial Advisors, Renaissance Investment Managers, Sundaram Alternate
- * Assets, Green Lantern Capital, ICICI Prudential, and Alchemy Capital.
- * Every other PMS provider's detail page is unaffected --
- * lib/pmsFactsheetsCache.js's matchProvider() simply returns no match for
- * anything not in this list, and the UI section doesn't render.
+ * Assets, Green Lantern Capital, ICICI Prudential, Alchemy Capital, and
+ * Abakkus Investment Managers. Every other PMS provider's detail page is
+ * unaffected -- lib/pmsFactsheetsCache.js's matchProvider() simply returns
+ * no match for anything not in this list, and the UI section doesn't render.
  *
  * Each provider has a genuinely different technical shape (verified, not
  * assumed):
@@ -637,6 +637,45 @@ async function fetchAlchemy() {
   return documents;
 }
 
+// ── Abakkus Asset Manager: 3 public PMS strategies, fixed S3 URLs ──────────
+// Verified live: abakkuscapital's Our Products page separates PMS from
+// AIF/PE/RIA products -- only 3 of the 14 APMI-registered Abakkus PMS
+// strategies are marketed publicly with real factsheets (the rest --
+// Select Opportunities, Shariah/ESG/FPI variants, "2" variants -- simply
+// aren't listed there, same "not everything registered is publicly
+// marketed" pattern as every other provider this session). Each strategy's
+// Factsheet + Presentation PDF is a direct, fixed S3 URL with no month/date
+// encoded in the filename at all (verified: "AACA_Factsheet.pdf", no
+// "_sep26" suffix like other providers) -- same honest-null-period
+// precedent as Stallion's fixed URLs, existence-checked via urlExists()
+// rather than assumed. `strategyName` is APMI's own IAName for each
+// (verified live via IaInsight.htm for all 3 IAIDs).
+// Note the real, verified-live inconsistency: the factsheet filename uses
+// "AEO" for Emerging Opportunities, but the presentation filename uses
+// "AEOA" -- not a typo to "fix", just how Abakkus's own S3 bucket is
+// named. Each strategy's two URLs are therefore listed explicitly rather
+// than derived from one shared slug.
+const ABAKKUS_CANDIDATES = [
+  { strategyName: 'Abakkus All Cap Approach', docType: 'factsheet', url: 'https://abakkus-website.s3.ap-south-1.amazonaws.com/files/factsheets/AACA_Factsheet.pdf' },
+  { strategyName: 'Abakkus All Cap Approach', docType: 'presentation', url: 'https://abakkus-website.s3.ap-south-1.amazonaws.com/files/presentations/Abakkus+Investment+Profile+PPT+-+AACA.pdf' },
+  { strategyName: 'Abakkus Emerging Opportunities Approach', docType: 'factsheet', url: 'https://abakkus-website.s3.ap-south-1.amazonaws.com/files/factsheets/AEO_Factsheet.pdf' },
+  { strategyName: 'Abakkus Emerging Opportunities Approach', docType: 'presentation', url: 'https://abakkus-website.s3.ap-south-1.amazonaws.com/files/presentations/Abakkus+Investment+Profile+PPT+-+AEOA.pdf' },
+  { strategyName: 'Abakkus Diversified Alpha Approach', docType: 'factsheet', url: 'https://abakkus-website.s3.ap-south-1.amazonaws.com/files/factsheets/ADAA_Factsheet.pdf' },
+  { strategyName: 'Abakkus Diversified Alpha Approach', docType: 'presentation', url: 'https://abakkus-website.s3.ap-south-1.amazonaws.com/files/presentations/Abakkus+Investment+Profile+PPT+-+ADAA.pdf' },
+];
+
+async function fetchAbakkus() {
+  const documents = [];
+  for (const c of ABAKKUS_CANDIDATES) {
+    if (await urlExists(c.url)) {
+      documents.push({ strategyName: c.strategyName, docType: c.docType, period: null, title: c.strategyName, url: c.url });
+    } else {
+      console.warn(`[PMS Factsheets] Abakkus ${c.strategyName} (${c.docType}): URL no longer resolves, dropping.`);
+    }
+  }
+  return documents;
+}
+
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────
 // Links alone don't tell an investor what's actually in the strategy --
 // this reads each factsheet's real content (top holdings, sector and
@@ -1023,6 +1062,7 @@ const PROVIDERS = [
   { key: 'greenlantern', displayName: 'Green Lantern Capital', matchFragments: ['green lantern'], fetch: fetchGreenLantern },
   { key: 'iciciprudential', displayName: 'ICICI Prudential Asset Management Company', matchFragments: ['icici prudential'], fetch: fetchICICIPru },
   { key: 'alchemy', displayName: 'Alchemy Capital Management', matchFragments: ['alchemy'], fetch: fetchAlchemy },
+  { key: 'abakkus', displayName: 'Abakkus Investment Managers', matchFragments: ['abakkus'], fetch: fetchAbakkus },
 ];
 
 async function run() {
@@ -1288,6 +1328,7 @@ module.exports = {
   resolveIciciUrl,
   fetchAlchemy,
   parseAlchemyDocLinks,
+  fetchAbakkus,
   PROVIDERS,
 };
 
