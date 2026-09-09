@@ -7,13 +7,14 @@
  * lib/pmsFactsheetsCache.js and composed into
  * app/api/pms-detail/[id]/route.js's response.
  *
- * Covers 5 providers verified live during research (see
+ * Covers 6 providers verified live during research (see
  * pms_factsheets_research.txt and this session's chat history for the
  * verification trail): Carnelian Capital, Stallion Asset, Narnolia
- * Financial Advisors, Renaissance Investment Managers, and Sundaram
- * Alternate Assets. Every other PMS provider's detail page is unaffected
- * -- lib/pmsFactsheetsCache.js's matchProvider() simply returns no match
- * for anything not in this list, and the UI section doesn't render.
+ * Financial Advisors, Renaissance Investment Managers, Sundaram Alternate
+ * Assets, and Green Lantern Capital. Every other PMS provider's detail
+ * page is unaffected -- lib/pmsFactsheetsCache.js's matchProvider()
+ * simply returns no match for anything not in this list, and the UI
+ * section doesn't render.
  *
  * Each provider has a genuinely different technical shape (verified, not
  * assumed):
@@ -36,6 +37,14 @@
  *     a per-strategy factsheet) -- one Gemini call extracts all 4
  *     strategies from it at once (see extractMultiStrategyFactsheetData),
  *     a meaningful saving against the free tier's daily request cap.
+ *   - Green Lantern: the opposite of Sundaram -- each of its 2 strategy
+ *     pages links to its OWN separate, genuinely-different PDF (verified
+ *     live: different byte content, different file sizes), so this uses
+ *     the plain single-doc extraction path. No reliable period signal
+ *     exists (the upload directory's YYYY/MM is the upload date, not the
+ *     covered month -- verified live: a PDF's own cover page read "AUGUST
+ *     2026" while its URL directory was "/2026/09/"), so period stays
+ *     null, same honest-null precedent as Stallion's fixed URLs.
  *
  * Usage:
  *   node scripts/sync_pms_factsheets.js [--dry-run]
@@ -453,6 +462,50 @@ function parseSundaramFactsheetUrl(html) {
   return url;
 }
 
+// ── Green Lantern Capital: 2 strategies, each its own real PDF ─────────────
+// Verified live: unlike Sundaram, each of these 2 product pages links to a
+// genuinely different PDF (different byte content, different sizes) --
+// standard single-doc extraction, no multi-strategy call needed.
+// `strategyName` is APMI's own IAName for each (verified live via
+// IaInsight.htm: IAID 317/318 -> "GLC Growth Fund"/"GL Alpha Fund"
+// exactly), not the PDF's own shorter "GROWTH FUND"/"ALPHA FUND" headings.
+const GREEN_LANTERN_PRODUCTS = [
+  { strategyName: 'GLC Growth Fund', slug: 'growth-fund' },
+  { strategyName: 'GL Alpha Fund', slug: 'alpha-fund' },
+];
+
+async function fetchGreenLantern() {
+  const documents = [];
+  for (const p of GREEN_LANTERN_PRODUCTS) {
+    const res = await fetchWithRetry(`https://greenlanterncapital.in/our-offerings/${p.slug}/`);
+    if (!res.ok) {
+      console.warn(`[PMS Factsheets] Green Lantern ${p.strategyName}: HTTP ${res.status}`);
+      continue;
+    }
+    const html = await res.text();
+    const url = parseGreenLanternFactsheetUrl(html);
+    if (!url) {
+      console.warn(`[PMS Factsheets] Green Lantern ${p.strategyName}: no factsheet link found`);
+      continue;
+    }
+    // No reliable period signal: the upload directory's YYYY/MM is the
+    // upload date, not the covered month (verified live: a PDF's own
+    // cover page read "AUGUST 2026" while its URL directory was
+    // "/2026/09/") -- period stays honestly null, same precedent as
+    // Stallion's fixed URLs.
+    documents.push({ strategyName: p.strategyName, docType: 'factsheet', period: null, title: p.strategyName, url });
+  }
+  return documents;
+}
+
+// The download button is a plain <a href="...Fact-Sheet.pdf"> (verified
+// live), simpler than Sundaram's img[data-src] markup.
+function parseGreenLanternFactsheetUrl(html) {
+  const $ = cheerio.load(html);
+  const href = $('a[href*="Fact-Sheet.pdf"]').first().attr('href');
+  return href ? new URL(href, 'https://greenlanterncapital.in').href : null;
+}
+
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────
 // Links alone don't tell an investor what's actually in the strategy --
 // this reads each factsheet's real content (top holdings, sector and
@@ -813,6 +866,7 @@ const PROVIDERS = [
   { key: 'narnolia', displayName: 'Narnolia Financial Advisors', matchFragments: ['narnolia'], fetch: fetchNarnolia },
   { key: 'renaissance', displayName: 'Renaissance Investment Managers', matchFragments: ['renaissance'], fetch: fetchRenaissance },
   { key: 'sundaram', displayName: 'Sundaram Alternate Assets', matchFragments: ['sundaram'], fetch: fetchSundaram },
+  { key: 'greenlantern', displayName: 'Green Lantern Capital', matchFragments: ['green lantern'], fetch: fetchGreenLantern },
 ];
 
 async function run() {
@@ -1002,6 +1056,16 @@ function selfTest() {
   // Sundaram-specific period parser.
   assert.strictEqual(extractPeriodFromFilename('/pdf2/2026/Factsheet/Facsheet_Jun_26.pdf'), 'June 2026');
 
+  // parseGreenLanternFactsheetUrl: the real live markup is a plain
+  // <a href="...Fact-Sheet.pdf">, simpler than Sundaram's img[data-src].
+  assert.strictEqual(
+    parseGreenLanternFactsheetUrl(
+      '<a href="https://greenlanterncapital.in/wp-content/uploads/2026/09/Green-Lantern-Capital-LLP_Growth-Fund-Fact-Sheet.pdf" target="_blank">Download</a>'
+    ),
+    'https://greenlanterncapital.in/wp-content/uploads/2026/09/Green-Lantern-Capital-LLP_Growth-Fund-Fact-Sheet.pdf'
+  );
+  assert.strictEqual(parseGreenLanternFactsheetUrl('<div>no download link here</div>'), null);
+
   console.log('[PMS Factsheets Sync] Self-test: ALL PASSED');
 }
 
@@ -1017,6 +1081,8 @@ module.exports = {
   fetchRenaissance,
   fetchSundaram,
   parseSundaramFactsheetUrl,
+  fetchGreenLantern,
+  parseGreenLanternFactsheetUrl,
   PROVIDERS,
 };
 
