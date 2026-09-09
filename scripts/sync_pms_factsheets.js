@@ -540,6 +540,12 @@ function sanePct(v, max = 100) {
   return Number.isFinite(n) && n >= 0 && n <= max ? n : null;
 }
 function saneNum(v) {
+  // v == null (null OR undefined) must short-circuit before Number(v) --
+  // Number(null) is 0, not NaN, so without this check a genuinely-absent
+  // field was silently stored (and rendered) as 0 instead of staying
+  // null. Verified live: this is exactly why several stored extractions
+  // showed "0%"/"0x" for metrics the source factsheet never mentioned.
+  if (v == null) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
@@ -957,6 +963,22 @@ function selfTest() {
   // Nothing usable at all -> null, not an empty-shelled object.
   assert.strictEqual(validateAndCleanExtraction({ asOfDate: 'not-a-date' }), null);
   assert.strictEqual(validateAndCleanExtraction(null), null);
+
+  // Regression: Number(null) === 0 in JS, so a genuinely-absent metric
+  // pair must stay null, never silently become a displayed "0%"/"0x".
+  // One real pair present (sharpeRatio) so the extraction as a whole
+  // survives the "nothing usable at all" check.
+  const nullMetricsExtraction = validateAndCleanExtraction({
+    portfolioAttributes: {
+      revenueCagr: { strategy: null, benchmark: null },
+      epsCagr: { strategy: null, benchmark: null },
+      sharpeRatio: { strategy: 0.7, benchmark: 0.4 },
+    },
+  });
+  assert.strictEqual(nullMetricsExtraction.portfolioAttributes.revenueCagr.strategy, null);
+  assert.strictEqual(nullMetricsExtraction.portfolioAttributes.revenueCagr.benchmark, null);
+  assert.strictEqual(nullMetricsExtraction.portfolioAttributes.epsCagr.strategy, null);
+  assert.strictEqual(nullMetricsExtraction.portfolioAttributes.sharpeRatio.strategy, 0.7);
 
   // parseSundaramFactsheetUrl: the "Factsheet" download button's markup,
   // verified against the real live page (a <p>Factsheet</p> label whose
