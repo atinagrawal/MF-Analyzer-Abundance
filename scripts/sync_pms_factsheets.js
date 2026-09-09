@@ -7,14 +7,14 @@
  * lib/pmsFactsheetsCache.js and composed into
  * app/api/pms-detail/[id]/route.js's response.
  *
- * Covers 7 providers verified live during research (see
+ * Covers 8 providers verified live during research (see
  * pms_factsheets_research.txt and this session's chat history for the
  * verification trail): Carnelian Capital, Stallion Asset, Narnolia
  * Financial Advisors, Renaissance Investment Managers, Sundaram Alternate
- * Assets, Green Lantern Capital, and ICICI Prudential. Every other PMS
- * provider's detail page is unaffected -- lib/pmsFactsheetsCache.js's
- * matchProvider() simply returns no match for anything not in this list,
- * and the UI section doesn't render.
+ * Assets, Green Lantern Capital, ICICI Prudential, and Alchemy Capital.
+ * Every other PMS provider's detail page is unaffected --
+ * lib/pmsFactsheetsCache.js's matchProvider() simply returns no match for
+ * anything not in this list, and the UI section doesn't render.
  *
  * Each provider has a genuinely different technical shape (verified, not
  * assumed):
@@ -57,6 +57,10 @@
  *     (a real, APMI-registered strategy, inception Feb 2026) is simply
  *     absent from both arrays as of this writing, verified not a missed
  *     URL pattern but genuinely not yet published.
+ *   - Alchemy: 8 PMS strategies, only 1 of which was linked from the
+ *     site's own nav -- the real sitemap (https://www.alchemycapital.com/
+ *     sitemap) surfaced all 8 real strategy page URLs, each APMI-
+ *     registered and each with its own factsheet + presentation.
  *
  * Usage:
  *   node scripts/sync_pms_factsheets.js [--dry-run]
@@ -576,6 +580,63 @@ async function fetchICICIPru() {
   return documents;
 }
 
+// ── Alchemy Capital: 8 strategies, each its own factsheet + presentation ───
+// Verified live via the site's real sitemap (https://www.alchemycapital.com/
+// sitemap) -- the nav only linked one of the 8 strategy pages, but all 8
+// exist at predictable /portfolio-management-services/{slug} URLs and all
+// 8 are APMI-registered. Each page has two plain <a href="...pdf"> buttons
+// labelled "DOWNLOAD FACTSHEET" / "DOWNLOAD PRESENTATION" (verified live).
+// `strategyName` is APMI's own IAName for each (verified live via
+// IaInsight.htm for all 8 IAIDs), not the page's own shorter title.
+const ALCHEMY_PRODUCTS = [
+  { strategyName: 'Alchemy Select Stock', slug: 'alchemy-select-stock' },
+  { strategyName: 'Alchemy High Growth', slug: 'alchemy-high-growth' },
+  { strategyName: 'ALCHEMY W.I.N STRATEGY', slug: 'alchemy-win-strategy' },
+  { strategyName: 'Alchemy Ascent', slug: 'alchemy-ascent' },
+  { strategyName: 'Alchemy Alpha 100', slug: 'alchemy-alpha-100' },
+  { strategyName: 'Alchemy Alpha Small cap', slug: 'alchemy-alpha-smallcap' },
+  { strategyName: 'Alchemy Smart Alpha 250', slug: 'alchemy-smart-alpha-250' },
+  { strategyName: 'Alchemy Smart Alpha Micro & Small cap', slug: 'alchemy-smart-alpha-micro-%26-small-cap' },
+];
+
+function parseAlchemyDocLinks(html) {
+  const $ = cheerio.load(html);
+  const links = {};
+  $('a[href$=".pdf"]').each((_, el) => {
+    const text = $(el).text().replace(/\s+/g, ' ').trim().toUpperCase();
+    const href = $(el).attr('href');
+    if (!href) return;
+    if (text.includes('FACTSHEET')) links.factsheet = href;
+    else if (text.includes('PRESENTATION')) links.presentation = href;
+  });
+  return links;
+}
+
+async function fetchAlchemy() {
+  const documents = [];
+  for (const p of ALCHEMY_PRODUCTS) {
+    const res = await fetchWithRetry(`https://www.alchemycapital.com/portfolio-management-services/${p.slug}`);
+    if (!res.ok) {
+      console.warn(`[PMS Factsheets] Alchemy ${p.strategyName}: HTTP ${res.status}`);
+      continue;
+    }
+    const html = await res.text();
+    const links = parseAlchemyDocLinks(html);
+    for (const [docType, href] of Object.entries(links)) {
+      const url = new URL(href, 'https://www.alchemycapital.com').href;
+      const period = extractPeriodFromFilename(href);
+      documents.push({
+        strategyName: p.strategyName,
+        docType,
+        period,
+        title: `${p.strategyName}${period ? ' – ' + period : ''}`,
+        url,
+      });
+    }
+  }
+  return documents;
+}
+
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────
 // Links alone don't tell an investor what's actually in the strategy --
 // this reads each factsheet's real content (top holdings, sector and
@@ -961,6 +1022,7 @@ const PROVIDERS = [
   { key: 'sundaram', displayName: 'Sundaram Alternate Assets', matchFragments: ['sundaram'], fetch: fetchSundaram },
   { key: 'greenlantern', displayName: 'Green Lantern Capital', matchFragments: ['green lantern'], fetch: fetchGreenLantern },
   { key: 'iciciprudential', displayName: 'ICICI Prudential Asset Management Company', matchFragments: ['icici prudential'], fetch: fetchICICIPru },
+  { key: 'alchemy', displayName: 'Alchemy Capital Management', matchFragments: ['alchemy'], fetch: fetchAlchemy },
 ];
 
 async function run() {
@@ -1188,6 +1250,23 @@ function selfTest() {
     'https://www.iciciprualternates.com/static-assets/documents/icici_pru_pms_ace_strategy_factsheet_september_2026.pdf?crafterSite=production'
   );
 
+  // parseAlchemyDocLinks: real live markup -- one button's label is plain
+  // text in the <a>, the other wraps it in <span>; both must be found.
+  const alchemyLinks = parseAlchemyDocLinks(`
+    <div class="btngroup inline">
+      <a href="/media/m4wddqxd/alchemy-win-strategy-jul26-1.pdf" class="snapshot-btn" target="_blank">
+        DOWNLOAD PRESENTATION
+        <img src="/images/download.svg" alt="">
+      </a>
+      <a href="/media/zw2bezw4/alchemy-win-strategy-jul26.pdf" class="snapshot-btn" target="_blank">
+        <span>DOWNLOAD FACTSHEET</span>
+        <img src="/images/download.svg" alt="">
+      </a>
+    </div>
+  `);
+  assert.strictEqual(alchemyLinks.presentation, '/media/m4wddqxd/alchemy-win-strategy-jul26-1.pdf');
+  assert.strictEqual(alchemyLinks.factsheet, '/media/zw2bezw4/alchemy-win-strategy-jul26.pdf');
+
   console.log('[PMS Factsheets Sync] Self-test: ALL PASSED');
 }
 
@@ -1207,6 +1286,8 @@ module.exports = {
   parseGreenLanternFactsheetUrl,
   fetchICICIPru,
   resolveIciciUrl,
+  fetchAlchemy,
+  parseAlchemyDocLinks,
   PROVIDERS,
 };
 
