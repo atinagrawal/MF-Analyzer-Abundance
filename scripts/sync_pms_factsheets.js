@@ -7,13 +7,13 @@
  * lib/pmsFactsheetsCache.js and composed into
  * app/api/pms-detail/[id]/route.js's response.
  *
- * Covers exactly the 4 providers verified live during research (see
+ * Covers 5 providers verified live during research (see
  * pms_factsheets_research.txt and this session's chat history for the
  * verification trail): Carnelian Capital, Stallion Asset, Narnolia
- * Financial Advisors, and Renaissance Investment Managers. Every other
- * PMS provider's detail page is unaffected -- lib/pmsFactsheetsCache.js's
- * matchProvider() simply returns no match for anything not in this list,
- * and the UI section doesn't render.
+ * Financial Advisors, Renaissance Investment Managers, and Sundaram
+ * Alternate Assets. Every other PMS provider's detail page is unaffected
+ * -- lib/pmsFactsheetsCache.js's matchProvider() simply returns no match
+ * for anything not in this list, and the UI section doesn't render.
  *
  * Each provider has a genuinely different technical shape (verified, not
  * assumed):
@@ -31,6 +31,11 @@
  *     resolved period text, rather than assuming freshness. A visible
  *     "as of" period in the UI is how that honesty surfaces, not a
  *     silently-wrong "latest" label.
+ *   - Sundaram: verified live that all 4 equity-strategy product pages
+ *     link to the SAME monthly combined PDF (a "SUNbeam" newsletter, not
+ *     a per-strategy factsheet) -- one Gemini call extracts all 4
+ *     strategies from it at once (see extractMultiStrategyFactsheetData),
+ *     a meaningful saving against the free tier's daily request cap.
  *
  * Usage:
  *   node scripts/sync_pms_factsheets.js [--dry-run]
@@ -360,6 +365,94 @@ async function fetchRenaissance() {
   });
 }
 
+// ── Sundaram Alternates: one combined monthly PDF, 4 strategies ────────────
+// Verified live: each of these 4 equity-strategy product pages carries a
+// "Factsheet" download button whose `data-src` points to the exact same
+// PDF (a "SUNbeam" monthly newsletter covering all 4 strategies together,
+// not a per-strategy factsheet). Scraped per-page (rather than hardcoding
+// one URL) so a future divergence -- one strategy getting its own
+// factsheet -- is picked up automatically rather than silently missed.
+// `strategyName` here is APMI's own IAName for each (verified live via
+// IaInsight.htm: IAID 324/325/326/327 -> "SISOP"/"S.E.L.F"/"VOYAGER"/
+// "RISING STAR" exactly), so downstream matching in
+// lib/pmsFactsheetsCache.js needs no fuzzy guessing. Sundaram's 5th
+// product, F.I.R.S.T. (a debt strategy), links to the same PDF too but
+// isn't covered by its content in any given month -- deliberately
+// excluded here since there's nothing to extract for it.
+const SUNDARAM_PRODUCTS = [
+  { strategyName: 'SISOP', slug: 'sundaram-india-secular-opportunities-portfolio-sisop' },
+  { strategyName: 'S.E.L.F', slug: 'sundaram-emerging-leadership-fund-s-e-l-f' },
+  { strategyName: 'VOYAGER', slug: 'sundaram-voyager' },
+  { strategyName: 'RISING STAR', slug: 'sundaram-rising-stars' },
+];
+
+async function fetchSundaram() {
+  const documents = [];
+  for (const p of SUNDARAM_PRODUCTS) {
+    const res = await fetchWithRetry(`https://www.sundaramalternates.com/portfolios/products/${p.slug}`);
+    if (!res.ok) {
+      console.warn(`[PMS Factsheets] Sundaram ${p.strategyName}: HTTP ${res.status}`);
+      continue;
+    }
+    const html = await res.text();
+    let url = parseSundaramFactsheetUrl(html);
+    if (!url) {
+      console.warn(`[PMS Factsheets] Sundaram ${p.strategyName}: no factsheet link found`);
+      continue;
+    }
+    url = await resolveSundaramFactsheetUrl(url);
+    const period = extractPeriodFromFilename(url);
+    documents.push({
+      strategyName: p.strategyName,
+      docType: 'factsheet',
+      period,
+      title: `${p.strategyName}${period ? ' – ' + period : ''}`,
+      url,
+    });
+  }
+  return documents;
+}
+
+// Verified live: Sundaram's own S.E.L.F. product page links to
+// ".../Factsheet_Jun_26.pdf" (correct spelling) which actually 302s
+// elsewhere -- the real file lives under ".../Facsheet_Jun_26.pdf" (a
+// typo, but the one every other product page uses and the one that
+// really serves a PDF). Rather than hardcode either spelling, the
+// discovered URL is verified with a HEAD check; if it doesn't look like
+// a real PDF, the one-letter swap is tried before giving up and using
+// the original anyway (a later stage -- the PDF fetch itself -- will
+// then surface the real failure rather than this silently swallowing it).
+async function urlLooksLikeRealPdf(url) {
+  try {
+    const res = await fetchWithRetry(url, { method: 'HEAD' }, 1, 500);
+    return res.ok && (res.headers.get('content-type') || '').includes('pdf');
+  } catch {
+    return false;
+  }
+}
+
+async function resolveSundaramFactsheetUrl(url) {
+  if (await urlLooksLikeRealPdf(url)) return url;
+  const swapped = url.includes('/Factsheet_') ? url.replace('/Factsheet_', '/Facsheet_') : url.replace('/Facsheet_', '/Factsheet_');
+  if (swapped !== url && (await urlLooksLikeRealPdf(swapped))) return swapped;
+  return url;
+}
+
+// Finds the real PDF path from the "Factsheet" download button's markup
+// (verified live: a <p>Factsheet</p> label whose sibling <img data-src>
+// carries the actual path -- the href isn't on an <a> tag at all here).
+function parseSundaramFactsheetUrl(html) {
+  const $ = cheerio.load(html);
+  let url = null;
+  $('p').each((_, el) => {
+    if ($(el).text().trim().toLowerCase() !== 'factsheet') return;
+    const src = $(el).siblings('img[data-src]').first().attr('data-src');
+    if (src) url = new URL(src, 'https://www.sundaramalternates.com').href;
+    return false;
+  });
+  return url;
+}
+
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────
 // Links alone don't tell an investor what's actually in the strategy --
 // this reads each factsheet's real content (top holdings, sector and
@@ -411,7 +504,7 @@ If a field genuinely is not present in the document, use null (for objects/numbe
 // same way.
 class DailyQuotaExhaustedError extends Error {}
 
-async function callGeminiWithRetry(base64Pdf, retries = 3, delayMs = 4000) {
+async function callGeminiWithRetry(base64Pdf, promptText = EXTRACTION_SCHEMA_PROMPT, retries = 3, delayMs = 4000) {
   for (let i = 0; i <= retries; i++) {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
@@ -420,7 +513,7 @@ async function callGeminiWithRetry(base64Pdf, retries = 3, delayMs = 4000) {
         headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(60000),
         body: JSON.stringify({
-          contents: [{ parts: [{ inline_data: { mime_type: 'application/pdf', data: base64Pdf } }, { text: EXTRACTION_SCHEMA_PROMPT }] }],
+          contents: [{ parts: [{ inline_data: { mime_type: 'application/pdf', data: base64Pdf } }, { text: promptText }] }],
           generationConfig: { responseMimeType: 'application/json' },
         }),
       }
@@ -542,6 +635,73 @@ async function extractFactsheetData(pdfUrl) {
   return { ...cleaned, extractedAt: new Date().toISOString() };
 }
 
+// Same schema as EXTRACTION_SCHEMA_PROMPT, but for a PDF that covers
+// several strategies together (see Sundaram's fetcher comment) --
+// returns a "strategies" array with one entry per strategy name given,
+// so one Gemini call extracts all of them instead of one call each.
+function buildMultiStrategySchemaPrompt(strategyNames) {
+  const nameList = strategyNames.map((n) => `"${n}"`).join(', ');
+  return `Extract structured data from this PMS factsheet/newsletter PDF, which covers MULTIPLE strategies. Return ONLY valid JSON matching this exact shape, no markdown fences, no commentary:
+{
+  "strategies": [
+    {
+      "strategyName": "<exactly one of: ${nameList}>",
+      "asOfDate": "YYYY-MM-DD or null",
+      "marketCapAllocation": {"largeCap": number|null, "midCap": number|null, "smallCap": number|null, "cash": number|null},
+      "sectorAllocation": [{"sector": string, "weightPct": number}],
+      "topHoldings": [{"name": string, "weightPct": number}],
+      "portfolioAttributes": {
+        "revenueCagr": {"strategy": number|null, "benchmark": number|null},
+        "epsCagr": {"strategy": number|null, "benchmark": number|null},
+        "portfolioPe": {"strategy": number|null, "benchmark": number|null},
+        "roe": {"strategy": number|null, "benchmark": number|null},
+        "netDebtEquity": {"strategy": number|null, "benchmark": number|null},
+        "peg": {"strategy": number|null, "benchmark": number|null},
+        "sharpeRatio": {"strategy": number|null, "benchmark": number|null},
+        "standardDeviation": {"strategy": number|null, "benchmark": number|null}
+      },
+      "portfolioChanges": {"newEntrants": [string], "exits": [string]}
+    }
+  ]
+}
+Return exactly one entry per strategy name listed above, using that exact strategyName string. If a field genuinely is not present for a given strategy, use null (for objects/numbers) or an empty array -- never invent a value.`;
+}
+
+// One Gemini call, one PDF fetch -- returns a Map<strategyName, cleaned
+// extraction> covering as many of `strategyNames` as the model actually
+// found usable data for. A strategy missing from the result (unmatched
+// name, or nothing survived validateAndCleanExtraction) simply isn't a
+// key in the returned Map; the caller falls back to that strategy's
+// previous extraction, same as any other failure in this pipeline.
+async function extractMultiStrategyFactsheetData(pdfUrl, strategyNames) {
+  const pdfRes = await fetchWithRetry(pdfUrl);
+  if (!pdfRes.ok) throw new Error(`PDF fetch HTTP ${pdfRes.status}`);
+  const buf = Buffer.from(await pdfRes.arrayBuffer());
+  const base64 = buf.toString('base64');
+
+  const json = await callGeminiWithRetry(base64, buildMultiStrategySchemaPrompt(strategyNames));
+  const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('Gemini returned no content');
+
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw new Error('Gemini response was not valid JSON');
+  }
+
+  const result = new Map();
+  if (Array.isArray(raw?.strategies)) {
+    for (const entry of raw.strategies) {
+      if (!entry || typeof entry.strategyName !== 'string') continue;
+      const cleaned = validateAndCleanExtraction(entry);
+      if (cleaned) result.set(entry.strategyName, { ...cleaned, extractedAt: new Date().toISOString() });
+    }
+  }
+  if (result.size === 0) throw new Error('Multi-strategy extraction produced no usable fields for any strategy');
+  return result;
+}
+
 // Enriches each factsheet-type document with `.extracted` in place. Skips
 // entirely (leaves `.extracted` unset) if GEMINI_API_KEY isn't configured
 // -- the link-based sync must keep working whether or not extraction is
@@ -559,38 +719,77 @@ async function extractFactsheetData(pdfUrl) {
 // whatever wasn't reached yet simply retries on the next scheduled or
 // manually-triggered run (the URL-unchanged cache means already-extracted
 // documents aren't re-spent either).
+//
+// Documents are grouped by URL first: when several strategies share one
+// PDF (Sundaram's fetcher -- see its comment), one Gemini call covers the
+// whole group via extractMultiStrategyFactsheetData instead of one call
+// per strategy. A group of size 1 behaves exactly as before (single-doc
+// providers are unaffected by this grouping).
 async function enrichWithExtraction(documents, previousDocs, quotaState) {
   if (!GEMINI_API_KEY) {
     console.warn('[PMS Factsheets] GEMINI_API_KEY not set -- skipping structured extraction, links-only sync proceeds.');
     return documents;
   }
   const prevByKey = new Map((previousDocs || []).map((d) => [`${d.strategyName}::${d.docType}`, d]));
+  const prevFor = (doc) => prevByKey.get(`${doc.strategyName}::${doc.docType}`);
 
+  const byUrl = new Map();
   for (const doc of documents) {
     if (doc.docType !== 'factsheet') continue;
-    const prev = prevByKey.get(`${doc.strategyName}::${doc.docType}`);
-    if (prev && prev.url === doc.url && prev.extracted) {
-      doc.extracted = prev.extracted;
+    if (!byUrl.has(doc.url)) byUrl.set(doc.url, []);
+    byUrl.get(doc.url).push(doc);
+  }
+
+  for (const group of byUrl.values()) {
+    const allCached = group.every((doc) => {
+      const prev = prevFor(doc);
+      return prev && prev.url === doc.url && prev.extracted;
+    });
+    if (allCached) {
+      for (const doc of group) doc.extracted = prevFor(doc).extracted;
       continue;
     }
+
     if (quotaState.exhausted) {
-      if (prev?.extracted) doc.extracted = prev.extracted;
+      for (const doc of group) {
+        const prev = prevFor(doc);
+        if (prev?.extracted) doc.extracted = prev.extracted;
+      }
       continue;
     }
+
     try {
-      doc.extracted = await extractFactsheetData(doc.url);
-      console.log(`[PMS Factsheets] Extracted: ${doc.strategyName} (${doc.period || 'undated'})`);
+      if (group.length === 1) {
+        group[0].extracted = await extractFactsheetData(group[0].url);
+        console.log(`[PMS Factsheets] Extracted: ${group[0].strategyName} (${group[0].period || 'undated'})`);
+      } else {
+        const byStrategy = await extractMultiStrategyFactsheetData(group[0].url, group.map((d) => d.strategyName));
+        for (const doc of group) {
+          const cleaned = byStrategy.get(doc.strategyName);
+          if (cleaned) {
+            doc.extracted = cleaned;
+            console.log(`[PMS Factsheets] Extracted: ${doc.strategyName} (${doc.period || 'undated'})`);
+          } else {
+            console.warn(`[PMS Factsheets] Multi-strategy extraction had no usable data for ${doc.strategyName}`);
+            const prev = prevFor(doc);
+            if (prev?.extracted) doc.extracted = prev.extracted;
+          }
+        }
+      }
     } catch (err) {
       if (err instanceof DailyQuotaExhaustedError) {
         quotaState.exhausted = true;
         console.warn(`[PMS Factsheets] Daily Gemini quota exhausted -- stopping further extraction attempts for the rest of this run. Remaining documents will be picked up on a later run.`);
       } else {
-        console.warn(`[PMS Factsheets] Extraction failed for ${doc.strategyName} (${doc.url}): ${err.message}`);
+        console.warn(`[PMS Factsheets] Extraction failed for ${group.map((d) => d.strategyName).join(', ')} (${group[0].url}): ${err.message}`);
       }
       // A failed extraction keeps the previous month's extracted data
       // (if any) rather than wiping it -- same "don't overwrite good data
       // with a bad result" principle as everywhere else in this pipeline.
-      if (prev?.extracted) doc.extracted = prev.extracted;
+      for (const doc of group) {
+        const prev = prevFor(doc);
+        if (prev?.extracted) doc.extracted = prev.extracted;
+      }
     }
   }
   return documents;
@@ -607,6 +806,7 @@ const PROVIDERS = [
   { key: 'stallion', displayName: 'Stallion Asset', matchFragments: ['stallion'], fetch: fetchStallion },
   { key: 'narnolia', displayName: 'Narnolia Financial Advisors', matchFragments: ['narnolia'], fetch: fetchNarnolia },
   { key: 'renaissance', displayName: 'Renaissance Investment Managers', matchFragments: ['renaissance'], fetch: fetchRenaissance },
+  { key: 'sundaram', displayName: 'Sundaram Alternate Assets', matchFragments: ['sundaram'], fetch: fetchSundaram },
 ];
 
 async function run() {
@@ -758,6 +958,28 @@ function selfTest() {
   assert.strictEqual(validateAndCleanExtraction({ asOfDate: 'not-a-date' }), null);
   assert.strictEqual(validateAndCleanExtraction(null), null);
 
+  // parseSundaramFactsheetUrl: the "Factsheet" download button's markup,
+  // verified against the real live page (a <p>Factsheet</p> label whose
+  // sibling <img data-src> carries the actual PDF path, not an <a href>).
+  assert.strictEqual(
+    parseSundaramFactsheetUrl(`
+      <div class="downloadWrap pt-4">
+        <div class="downloadTxt">
+          <p class="fw500 p_quaternary clr000">Factsheet</p>
+          <img src="/Assets/Images/reports/viewIcon.svg" data-src="/pdf2/2026/Factsheet/Facsheet_Jun_26.pdf" class="viewBtn">
+          <img src="/Assets/Images/reports/downloadBtn.svg" data-src="/pdf2/2026/Factsheet/Facsheet_Jun_26.pdf" class="downloadBtn">
+        </div>
+      </div>
+    `),
+    'https://www.sundaramalternates.com/pdf2/2026/Factsheet/Facsheet_Jun_26.pdf'
+  );
+  assert.strictEqual(parseSundaramFactsheetUrl('<div>no factsheet button here</div>'), null);
+
+  // extractPeriodFromFilename already handles Sundaram's real filename
+  // shape ("Facsheet_Jun_26.pdf") -- confirms the shared helper needs no
+  // Sundaram-specific period parser.
+  assert.strictEqual(extractPeriodFromFilename('/pdf2/2026/Factsheet/Facsheet_Jun_26.pdf'), 'June 2026');
+
   console.log('[PMS Factsheets Sync] Self-test: ALL PASSED');
 }
 
@@ -771,6 +993,8 @@ module.exports = {
   fetchStallion,
   fetchNarnolia,
   fetchRenaissance,
+  fetchSundaram,
+  parseSundaramFactsheetUrl,
   PROVIDERS,
 };
 
