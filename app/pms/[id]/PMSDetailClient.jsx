@@ -277,7 +277,13 @@ export default function PMSDetailClient({ iaid }) {
                       <div key={h.name} className="pmsd-holding-item">
                         <span className="pmsd-holding-rank">{i + 1}</span>
                         <span className="pmsd-holding-name">{h.name}</span>
-                        <span className="pmsd-holding-weight">{h.weightPct}%</span>
+                        {h.weightPct != null ? (
+                          <span className="pmsd-holding-weight">{h.weightPct}%</span>
+                        ) : h.capBucket ? (
+                          <span className="pmsd-holding-bucket">{h.capBucket}</span>
+                        ) : (
+                          <span />
+                        )}
                       </div>
                     ))}
                   </div>

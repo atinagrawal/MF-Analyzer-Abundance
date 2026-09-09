@@ -532,7 +532,7 @@ const EXTRACTION_SCHEMA_PROMPT = `Extract structured data from this PMS strategy
   "asOfDate": "YYYY-MM-DD or null",
   "marketCapAllocation": {"largeCap": number|null, "midCap": number|null, "smallCap": number|null, "cash": number|null},
   "sectorAllocation": [{"sector": string, "weightPct": number}],
-  "topHoldings": [{"name": string, "weightPct": number}],
+  "topHoldings": [{"name": string, "weightPct": number|null, "capBucket": "Large Cap"|"Mid Cap"|"Small Cap"|null}],
   "portfolioAttributes": {
     "revenueCagr": {"strategy": number|null, "benchmark": number|null},
     "epsCagr": {"strategy": number|null, "benchmark": number|null},
@@ -589,6 +589,9 @@ async function callGeminiWithRetry(base64Pdf, promptText = EXTRACTION_SCHEMA_PRO
 // field; anything else (a hallucinated string, an out-of-range value)
 // becomes null rather than being stored.
 function sanePct(v, max = 100) {
+  // Same Number(null)===0 trap as saneNum below -- must short-circuit
+  // before Number(v) or a genuinely-absent field becomes a stored 0%.
+  if (v == null) return null;
   const n = Number(v);
   return Number.isFinite(n) && n >= 0 && n <= max ? n : null;
 }
@@ -605,6 +608,16 @@ function saneNum(v) {
 function saneMetricPair(pair) {
   if (!pair || typeof pair !== 'object') return { strategy: null, benchmark: null };
   return { strategy: saneNum(pair.strategy), benchmark: saneNum(pair.benchmark) };
+}
+
+// Only these 3 values are meaningful to the UI (a market-cap-bucket
+// label alongside a holding, used when no weight% is published) --
+// anything else becomes null rather than showing an unrecognized string.
+const KNOWN_CAP_BUCKETS = new Set(['Large Cap', 'Mid Cap', 'Small Cap']);
+function saneCapBucket(v) {
+  if (typeof v !== 'string') return null;
+  const trimmed = v.trim();
+  return KNOWN_CAP_BUCKETS.has(trimmed) ? trimmed : null;
 }
 
 // Field-level validation: a bad/missing individual field is dropped (set
@@ -634,11 +647,21 @@ function validateAndCleanExtraction(raw) {
     if (cleaned.length > 0) sectorAllocation = cleaned;
   }
 
+  // A named holding is kept even when weightPct is absent or invalid --
+  // verified necessary against Sundaram's real factsheets, which rank
+  // top holdings per strategy but publish only a market-cap bucket per
+  // name, never a weight% at all. Only `name` is required to survive;
+  // weightPct and capBucket are independently cleaned (garbage in either
+  // becomes null on that field, not a dropped row).
   let topHoldings = null;
   if (Array.isArray(raw.topHoldings)) {
     const cleaned = raw.topHoldings
-      .map((h) => ({ name: typeof h?.name === 'string' ? h.name.trim() : null, weightPct: sanePct(h?.weightPct) }))
-      .filter((h) => h.name && h.weightPct != null);
+      .map((h) => ({
+        name: typeof h?.name === 'string' ? h.name.trim() : null,
+        weightPct: sanePct(h?.weightPct),
+        capBucket: saneCapBucket(h?.capBucket),
+      }))
+      .filter((h) => h.name);
     if (cleaned.length > 0) topHoldings = cleaned;
   }
 
@@ -708,7 +731,7 @@ function buildMultiStrategySchemaPrompt(strategyNames) {
       "asOfDate": "YYYY-MM-DD or null",
       "marketCapAllocation": {"largeCap": number|null, "midCap": number|null, "smallCap": number|null, "cash": number|null},
       "sectorAllocation": [{"sector": string, "weightPct": number}],
-      "topHoldings": [{"name": string, "weightPct": number}],
+      "topHoldings": [{"name": string, "weightPct": number|null, "capBucket": "Large Cap"|"Mid Cap"|"Small Cap"|null}],
       "portfolioAttributes": {
         "revenueCagr": {"strategy": number|null, "benchmark": number|null},
         "epsCagr": {"strategy": number|null, "benchmark": number|null},
@@ -1006,13 +1029,33 @@ function selfTest() {
   assert.strictEqual(badMarketCap.marketCapAllocation, null);
   assert.strictEqual(badMarketCap.sectorAllocation.length, 1);
 
-  // A holding with a non-numeric/out-of-range weight is dropped, not
-  // stored as-is or coerced into a wrong number.
+  // A holding with a non-numeric/out-of-range weight keeps the row but
+  // nulls just that field -- weight isn't required to know what a
+  // strategy holds. An unnamed row is dropped (nothing to show at all).
   const badHolding = validateAndCleanExtraction({
-    topHoldings: [{ name: 'Real Stock', weightPct: 8.5 }, { name: 'Bad Row', weightPct: 'not a number' }, { name: 'Also Bad', weightPct: 250 }],
+    topHoldings: [
+      { name: 'Real Stock', weightPct: 8.5 },
+      { name: 'Bad Weight Kept', weightPct: 'not a number' },
+      { name: 'Out Of Range Kept', weightPct: 250 },
+      { name: '', weightPct: 5 },
+    ],
   });
-  assert.strictEqual(badHolding.topHoldings.length, 1);
-  assert.strictEqual(badHolding.topHoldings[0].name, 'Real Stock');
+  assert.strictEqual(badHolding.topHoldings.length, 3);
+  assert.strictEqual(badHolding.topHoldings[0].weightPct, 8.5);
+  assert.strictEqual(badHolding.topHoldings[1].weightPct, null);
+  assert.strictEqual(badHolding.topHoldings[2].weightPct, null);
+
+  // Real shape verified against Sundaram's factsheets: top holdings
+  // ranked by name with a market-cap bucket, no weight% at all.
+  const bucketOnlyHoldings = validateAndCleanExtraction({
+    topHoldings: [
+      { name: 'Polycab India Limited', weightPct: null, capBucket: 'Large Cap' },
+      { name: 'Unrecognized Bucket', weightPct: null, capBucket: 'Micro Cap' },
+    ],
+  });
+  assert.strictEqual(bucketOnlyHoldings.topHoldings[0].weightPct, null);
+  assert.strictEqual(bucketOnlyHoldings.topHoldings[0].capBucket, 'Large Cap');
+  assert.strictEqual(bucketOnlyHoldings.topHoldings[1].capBucket, null); // not one of the 3 known buckets
 
   // Nothing usable at all -> null, not an empty-shelled object.
   assert.strictEqual(validateAndCleanExtraction({ asOfDate: 'not-a-date' }), null);
