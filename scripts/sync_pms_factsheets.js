@@ -7,14 +7,14 @@
  * lib/pmsFactsheetsCache.js and composed into
  * app/api/pms-detail/[id]/route.js's response.
  *
- * Covers 6 providers verified live during research (see
+ * Covers 7 providers verified live during research (see
  * pms_factsheets_research.txt and this session's chat history for the
  * verification trail): Carnelian Capital, Stallion Asset, Narnolia
  * Financial Advisors, Renaissance Investment Managers, Sundaram Alternate
- * Assets, and Green Lantern Capital. Every other PMS provider's detail
- * page is unaffected -- lib/pmsFactsheetsCache.js's matchProvider()
- * simply returns no match for anything not in this list, and the UI
- * section doesn't render.
+ * Assets, Green Lantern Capital, and ICICI Prudential. Every other PMS
+ * provider's detail page is unaffected -- lib/pmsFactsheetsCache.js's
+ * matchProvider() simply returns no match for anything not in this list,
+ * and the UI section doesn't render.
  *
  * Each provider has a genuinely different technical shape (verified, not
  * assumed):
@@ -45,6 +45,18 @@
  *     covered month -- verified live: a PDF's own cover page read "AUGUST
  *     2026" while its URL directory was "/2026/09/"), so period stays
  *     null, same honest-null precedent as Stallion's fixed URLs.
+ *   - ICICI Prudential: a clean JSON API (/api/v1/investorcornerrevamp.json),
+ *     but its PDF assets sit behind an F5 WAF that blocks a bare
+ *     User-Agent-only request (a real HTML "Page Not Found" body, not a
+ *     network error) -- verified live that a realistic Accept/
+ *     Accept-Language pair (now part of the shared HEADERS, since these
+ *     are harmless to send to every provider) plus a `?crafterSite=
+ *     production` query parameter on the asset URL together resolve it.
+ *     Covers only the strategies actually present in that JSON's
+ *     `factsheets`/`presentations` arrays -- e.g. Rising Stars Strategy
+ *     (a real, APMI-registered strategy, inception Feb 2026) is simply
+ *     absent from both arrays as of this writing, verified not a missed
+ *     URL pattern but genuinely not yet published.
  *
  * Usage:
  *   node scripts/sync_pms_factsheets.js [--dry-run]
@@ -56,8 +68,14 @@ const { backupThenPut } = require('./lib/r2SyncSafety');
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const R2_KEY = 'pms-factsheets.json';
+// Accept/Accept-Language verified necessary for ICICI Prudential's site
+// specifically (a User-Agent alone still hit its WAF's bot-mitigation
+// page) -- both are generic, realistic-browser headers, harmless to send
+// to every provider, so added here rather than special-cased.
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,application/json,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
 };
 
 function sleep(ms) {
@@ -506,6 +524,58 @@ function parseGreenLanternFactsheetUrl(html) {
   return href ? new URL(href, 'https://greenlanterncapital.in').href : null;
 }
 
+// ── ICICI Prudential: clean JSON API, WAF-gated PDF assets ─────────────────
+// The JSON's own `strategy`/`title` field is verbatim identical to APMI's
+// IAName (verified live for 2 IAIDs) -- used as-is for strategyName, no
+// fuzzy matching needed downstream. `?crafterSite=production` is baked
+// into the stored URL itself (not just the fetch call here) so every
+// later fetch of this URL -- the public link, and extractFactsheetData's
+// own PDF download -- carries it automatically.
+const ICICI_API_URL = 'https://www.iciciprualternates.com/api/v1/investorcornerrevamp.json?crafterSite=production';
+
+function resolveIciciUrl(rawUrl) {
+  return new URL(rawUrl, 'https://www.iciciprualternates.com').href + '?crafterSite=production';
+}
+
+async function fetchICICIPru() {
+  const res = await fetchWithRetry(ICICI_API_URL);
+  if (!res.ok) {
+    console.warn(`[PMS Factsheets] ICICI Prudential: HTTP ${res.status}`);
+    return [];
+  }
+  const json = await res.json();
+  const documents = [];
+
+  for (const item of json?.factsheets?.items || []) {
+    const rawUrl = item.url?.[0];
+    if (!rawUrl || !item.strategy) continue;
+    documents.push({
+      strategyName: item.strategy,
+      docType: 'factsheet',
+      period: extractPeriodFromFilename(rawUrl),
+      title: item.strategy,
+      url: resolveIciciUrl(rawUrl),
+    });
+  }
+
+  for (const item of json?.presentations?.items || []) {
+    const rawUrl = item.url?.[0];
+    // "ICICI Prudential PMS About Us" is a firm-level deck, not tied to
+    // one strategy -- excluded, same reasoning as Carnelian's generic
+    // "Introduction" presentation.
+    if (!rawUrl || !item.title || /\babout us\b/i.test(item.title)) continue;
+    documents.push({
+      strategyName: item.title,
+      docType: 'presentation',
+      period: extractPeriodFromFilename(rawUrl),
+      title: item.title,
+      url: resolveIciciUrl(rawUrl),
+    });
+  }
+
+  return documents;
+}
+
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────
 // Links alone don't tell an investor what's actually in the strategy --
 // this reads each factsheet's real content (top holdings, sector and
@@ -890,6 +960,7 @@ const PROVIDERS = [
   { key: 'renaissance', displayName: 'Renaissance Investment Managers', matchFragments: ['renaissance'], fetch: fetchRenaissance },
   { key: 'sundaram', displayName: 'Sundaram Alternate Assets', matchFragments: ['sundaram'], fetch: fetchSundaram },
   { key: 'greenlantern', displayName: 'Green Lantern Capital', matchFragments: ['green lantern'], fetch: fetchGreenLantern },
+  { key: 'iciciprudential', displayName: 'ICICI Prudential Asset Management Company', matchFragments: ['icici prudential'], fetch: fetchICICIPru },
 ];
 
 async function run() {
@@ -1109,6 +1180,14 @@ function selfTest() {
   );
   assert.strictEqual(parseGreenLanternFactsheetUrl('<div>no download link here</div>'), null);
 
+  // resolveIciciUrl: bakes the ?crafterSite=production param that the
+  // live WAF requires directly into the stored URL, verified live
+  // against the real F5-protected asset host.
+  assert.strictEqual(
+    resolveIciciUrl('/static-assets/documents/icici_pru_pms_ace_strategy_factsheet_september_2026.pdf'),
+    'https://www.iciciprualternates.com/static-assets/documents/icici_pru_pms_ace_strategy_factsheet_september_2026.pdf?crafterSite=production'
+  );
+
   console.log('[PMS Factsheets Sync] Self-test: ALL PASSED');
 }
 
@@ -1126,6 +1205,8 @@ module.exports = {
   parseSundaramFactsheetUrl,
   fetchGreenLantern,
   parseGreenLanternFactsheetUrl,
+  fetchICICIPru,
+  resolveIciciUrl,
   PROVIDERS,
 };
 
