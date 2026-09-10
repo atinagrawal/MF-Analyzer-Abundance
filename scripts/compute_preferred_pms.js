@@ -17,6 +17,10 @@
 const DRY_RUN = process.argv.includes('--dry-run');
 const R2_KEY = 'pms-preferred-strategies.json';
 
+const { backupThenPut } = require('./lib/r2SyncSafety');
+const { PROVIDERS } = require('./sync_pms_factsheets.js');
+const { getPmsDetailsStandalone, getLatestMonthSnapshotStandalone, getPmsQuartileStandalone } = require('./lib/apmiStandalone.js');
+
 // ── Step 4 of the spec: Top-Quartile eligibility rule ───────────────────────
 // quartileRows: [{ period, label, peers, iaTwrr, benchmark, quartile }], the
 // exact shape scripts/lib/apmiStandalone.js's getPmsQuartileStandalone()
@@ -190,11 +194,133 @@ async function loadLatestLeaderboard(r2Get) {
   return null;
 }
 
+const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function parseAsOnMonth(asOnMonth) {
+  const [abbr, yearStr] = asOnMonth.split('-');
+  return { year: parseInt(yearStr, 10), month: MONTH_ABBR.indexOf(abbr) + 1 };
+}
+
+async function run() {
+  console.log('=== Computing PMS Preferred Strategies ===');
+  if (DRY_RUN) console.log('[Dry Run Mode Active]');
+
+  const { r2Get, r2Put } = await import('../lib/r2.js');
+  const { fetchPmsDetails, fetchPmsMonthSnapshot } = await import('../lib/pmsScrapers.js');
+  const deps = { r2Get, r2Put, fetchPmsDetails, fetchPmsMonthSnapshot };
+
+  // Step 1 -- load candidates from pms-factsheets.json.
+  const factsheets = await r2Get('pms-factsheets.json');
+  if (!factsheets?.providers) {
+    console.error('[compute_preferred_pms] pms-factsheets.json missing or empty -- aborting.');
+    process.exit(1);
+  }
+  const candidates = [];
+  for (const [providerKey, info] of Object.entries(factsheets.providers)) {
+    for (const doc of info.documents || []) {
+      if (doc.docType === 'factsheet' && doc.extracted) {
+        candidates.push({ providerKey, providerDisplayName: info.displayName, strategyName: doc.strategyName, extracted: doc.extracted });
+      }
+    }
+  }
+  console.log(`[compute_preferred_pms] ${candidates.length} candidates with extracted data.`);
+
+  // Step 2 -- resolve IAIDs.
+  const leaderboard = await loadLatestLeaderboard(r2Get);
+  if (!leaderboard) {
+    console.error('[compute_preferred_pms] No leaderboard cache found in the last 4 months -- aborting.');
+    process.exit(1);
+  }
+  const resolved = [];
+  for (const c of candidates) {
+    const provider = PROVIDERS.find((p) => p.key === c.providerKey);
+    if (!provider) continue;
+    const iaid = resolveIaid({ providerKey: c.providerKey, strategyName: c.strategyName }, leaderboard, provider.matchFragments);
+    if (!iaid) {
+      console.warn(`[compute_preferred_pms] Could not resolve IAID for ${c.providerDisplayName} / ${c.strategyName} -- excluded.`);
+      continue;
+    }
+    resolved.push({ ...c, iaid });
+  }
+  console.log(`[compute_preferred_pms] ${resolved.length} of ${candidates.length} candidates resolved to an IAID.`);
+
+  // Step 3 -- pull quartile eligibility (and the latest performance
+  // snapshot, reused later for the "best alpha" insight).
+  const qualifying = [];
+  for (const c of resolved) {
+    let details, snapshot, quartile;
+    try {
+      details = await getPmsDetailsStandalone(c.iaid, deps);
+      if (!details) throw new Error('no details returned');
+      snapshot = await getLatestMonthSnapshotStandalone(c.iaid, deps);
+      if (snapshot) {
+        const { year, month } = parseAsOnMonth(snapshot.asOnMonth);
+        quartile = await getPmsQuartileStandalone(c.iaid, details.providerName, details.strategyName || 'Equity', year, month, deps);
+      }
+    } catch (err) {
+      console.warn(`[compute_preferred_pms] Failed to pull quartile data for IAID ${c.iaid} (${c.strategyName}): ${err.message}`);
+      continue;
+    }
+    if (!quartile || !isPreferred(quartile)) continue;
+
+    const threeYear = quartile.find((r) => r.label === '3 Years' && r.quartile != null);
+    const qualifyingRow = threeYear || [...quartile].reverse().find((r) => r.quartile === 'Top Quartile');
+
+    qualifying.push({
+      iaid: c.iaid,
+      providerKey: c.providerKey,
+      providerName: details.providerName,
+      strategyName: c.strategyName,
+      category: details.strategyName || 'Equity',
+      aumCr: details.aumCr ?? null,
+      qualifyingPeriod: qualifyingRow?.label ?? null,
+      quartile: qualifyingRow?.quartile ?? null,
+      extracted: c.extracted,
+      performance: snapshot ? { ia: snapshot.ia, benchmark: snapshot.benchmark } : null,
+    });
+    console.log(`[compute_preferred_pms] Qualifies: ${c.providerDisplayName} / ${c.strategyName} (${qualifyingRow?.label}, ${qualifyingRow?.quartile})`);
+  }
+  console.log(`[compute_preferred_pms] ${qualifying.length} strategies qualify.`);
+
+  // Step 5 -- cross-strategy aggregates, over the qualifying set only.
+  const insights = {
+    mostHeldStock: tallyMostHeldStock(qualifying),
+    topSector: tallyTopSector(qualifying),
+    bestAlpha: findBestAlpha(qualifying),
+    bestSharpe: findBestSharpe(qualifying),
+  };
+
+  // Step 6 -- write the result.
+  const result = {
+    computedAt: new Date().toISOString(),
+    criteria: {
+      quartilePeriodPrimary: '3 Years',
+      fallbackRule: 'Top Quartile in at least half of periods with real peer data, when 3-Year data isn\'t available yet',
+    },
+    strategies: qualifying.map(({ providerKey, iaid, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, extracted }) => ({
+      iaid, providerKey, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, extracted,
+    })),
+    insights,
+  };
+
+  if (!DRY_RUN) {
+    const existing = await r2Get(R2_KEY).catch(() => null);
+    await backupThenPut(r2Put, R2_KEY, existing, JSON.stringify(result));
+    console.log(`[compute_preferred_pms] Successfully wrote to R2 (${R2_KEY}).`);
+  } else {
+    console.log('[compute_preferred_pms] Dry run -- not writing to R2. Result:', JSON.stringify(result, null, 2).slice(0, 2000));
+  }
+}
+
 module.exports = { isPreferred, tallyMostHeldStock, tallyTopSector, findBestAlpha, findBestSharpe, resolveIaid, loadLatestLeaderboard };
 
 if (require.main === module) {
   if (process.argv.includes('--self-test')) {
     selfTest();
+  } else {
+    run().catch((err) => {
+      console.error('[compute_preferred_pms] Fatal error:', err);
+      process.exit(1);
+    });
   }
 }
 
