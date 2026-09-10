@@ -110,7 +110,87 @@ function findBestSharpe(strategies) {
   return best;
 }
 
-module.exports = { isPreferred, tallyMostHeldStock, tallyTopSector, findBestAlpha, findBestSharpe };
+// ── Step 2 of the spec: resolve each factsheet-extracted candidate to its
+// real APMI IAID. Same significantWords-overlap scoring as
+// lib/pmsFactsheetsCache.js's getFactsheetDataForStrategy(), run in the
+// REVERSE direction (given a factsheet's own strategyName as the
+// candidate, score it against each leaderboard row's strategyName as the
+// target) -- reimplemented here rather than imported, matching this
+// session's own precedent of keeping matching helpers self-contained per
+// file rather than shared across files.
+const STOPWORDS = new Set([
+  'pvt', 'ltd', 'llp', 'limited', 'private', 'asset', 'assets', 'management', 'advisors', 'advisor',
+  'managers', 'manager', 'investment', 'investments', 'services', 'financial', 'capital',
+  'strategy', 'strategies', 'portfolio', 'portfolios', 'fund', 'funds', 'pms', 'scheme', 'approach',
+  'the', 'and', 'of',
+]);
+
+function significantWords(str) {
+  return (str || '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 2 && !STOPWORDS.has(w));
+}
+
+// Resolves ONE candidate ({ providerKey, strategyName }) to an IAID number,
+// or null if no leaderboard row scores above 0 (never guessed).
+// `matchFragments` comes from sync_pms_factsheets.js's PROVIDERS entry for
+// this candidate's providerKey.
+function resolveIaid(candidate, leaderboardRows, matchFragments) {
+  const providerRows = leaderboardRows.filter((row) => {
+    const name = (row.portfolioManager || '').toLowerCase();
+    return matchFragments.some((f) => name.includes(f.toLowerCase()));
+  });
+
+  const candidateWords = significantWords(candidate.strategyName);
+  if (candidateWords.length === 0 || providerRows.length === 0) return null;
+
+  let best = null;
+  let bestScore = 0;
+  for (const row of providerRows) {
+    const targetWords = new Set(significantWords(row.strategyName));
+    const matched = candidateWords.filter((w) => targetWords.has(w)).length;
+    const score = matched / candidateWords.length;
+    if (score > bestScore) {
+      bestScore = score;
+      best = row;
+    }
+  }
+  if (!best || bestScore === 0) return null;
+
+  try {
+    const url = new URL(best.apmiLink);
+    const iaid = url.searchParams.get('IAID');
+    return iaid ? Number(iaid) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Loads the freshest available pms-cache/pms-equity-{YYYY}-{MM}.json,
+// walking backward up to 3 months if the current month's key doesn't
+// exist yet (the leaderboard scrape and the factsheet sync don't
+// necessarily refresh on identical days).
+async function loadLatestLeaderboard(r2Get) {
+  const now = new Date();
+  for (let back = 0; back <= 3; back++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - back, 1);
+    const key = `pms-cache/pms-equity-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.json`;
+    try {
+      const payload = await r2Get(key);
+      const rows = payload?.data;
+      if (Array.isArray(rows) && rows.length > 0) {
+        console.log(`[compute_preferred_pms] Using leaderboard cache: ${key} (${rows.length} rows)`);
+        return rows;
+      }
+    } catch (err) {
+      console.warn(`[compute_preferred_pms] R2 read failed for ${key}: ${err.message}`);
+    }
+  }
+  return null;
+}
+
+module.exports = { isPreferred, tallyMostHeldStock, tallyTopSector, findBestAlpha, findBestSharpe, resolveIaid, loadLatestLeaderboard };
 
 if (require.main === module) {
   if (process.argv.includes('--self-test')) {
