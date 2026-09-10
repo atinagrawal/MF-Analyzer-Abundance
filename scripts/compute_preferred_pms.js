@@ -424,10 +424,19 @@ async function run() {
       providerName: details.providerName,
       strategyName: c.strategyName,
       category: details.strategyName || 'Equity',
+      // aumCr / qualifyingPeriod / quartile / asOnMonth / performance are
+      // LIVE APMI data (the run's canonical month). The `extracted` block
+      // (holdings, sector & market-cap allocation, portfolio ratios incl.
+      // Sharpe) is from this strategy's most recent published FACTSHEET,
+      // whose own as-of date -- surfaced here as `factsheetAsOf` -- often
+      // lags the APMI month. Where a metric exists in both sources (AUM,
+      // 1Y return) the APMI value is used; factsheet-only fields carry the
+      // factsheetAsOf caveat.
       aumCr: details.aumCr ?? null,
       qualifyingPeriod: qualifyingRow?.label ?? null,
       quartile: qualifyingRow?.quartile ?? null,
       asOnMonth: snapshot?.asOnMonth ?? runMonth?.label ?? null,
+      factsheetAsOf: c.extracted?.asOfDate ?? null,
       extracted: c.extracted,
       performance: snapshot ? { ia: snapshot.ia, benchmark: snapshot.benchmark } : null,
     });
@@ -443,16 +452,24 @@ async function run() {
     bestSharpe: findBestSharpe(qualifying),
   };
 
+  // Factsheet as-of dates span a range (each provider publishes on its own
+  // schedule); expose the span so the page can disclose it honestly.
+  const factsheetDates = qualifying.map((s) => s.factsheetAsOf).filter(Boolean).sort();
+
   // Step 6 -- write the result.
   const result = {
     computedAt: new Date().toISOString(),
     asOnMonth: runMonth?.label ?? null,
+    factsheetAsOfRange: factsheetDates.length
+      ? { earliest: factsheetDates[0], latest: factsheetDates[factsheetDates.length - 1] }
+      : null,
     criteria: {
       quartilePeriodPrimary: '3 Years',
       fallbackRule: 'Top Quartile in at least half of periods with real peer data, when 3-Year data isn\'t available yet',
+      dataSources: 'AUM, returns and quartile ranking are live APMI data as on the month shown. Holdings, sector & market-cap allocation and portfolio ratios are from each strategy\'s most recently published factsheet, whose date can lag the APMI month.',
     },
-    strategies: qualifying.map(({ providerKey, iaid, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, asOnMonth, extracted }) => ({
-      iaid, providerKey, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, asOnMonth, extracted,
+    strategies: qualifying.map(({ providerKey, iaid, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, asOnMonth, factsheetAsOf, extracted }) => ({
+      iaid, providerKey, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, asOnMonth, factsheetAsOf, extracted,
     })),
     insights,
   };
