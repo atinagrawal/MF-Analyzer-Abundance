@@ -30,7 +30,7 @@ export async function GET() {
     <loc>${BASE}/nfo</loc>
     <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.75</priority>
+    <priority>0.90</priority>
   </url>
 ${entryUrls}
 </urlset>`;

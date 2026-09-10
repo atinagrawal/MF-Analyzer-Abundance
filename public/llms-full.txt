@@ -1,0 +1,61 @@
+# Abundance Financial Services — Full Technical AI Grounding Reference
+
+> Abundance (https://mfcalc.getabundance.in) — SEBI-Compliant Mutual Fund & SIF Quantitative Platform (AMFI ARN-251838).
+
+## Complete API & Data Dictionaries
+
+### 1. Live NFO API (`/api/nfo`)
+- Method: `GET`
+- URL: `https://mfcalc.getabundance.in/api/nfo`
+- Markdown Format: `https://mfcalc.getabundance.in/api/nfo?format=markdown`
+- Response Shape:
+```json
+{
+  "syncedAt": "2026-09-10T06:33:00.000Z",
+  "mf": [
+    {
+      "id": "123",
+      "slug": "fund-name-slug",
+      "schemeName": "ABC Mutual Fund",
+      "amcName": "ABC AMC",
+      "category": "Equity: Flexi Cap",
+      "schemeType": "Open Ended",
+      "openDate": "2026-09-01",
+      "closeDate": "2026-09-15",
+      "offerPrice": 10,
+      "minInvestment": 5000,
+      "status": "open",
+      "type": "mf",
+      "infoDocumentUrl": "https://..."
+    }
+  ],
+  "sif": [
+    {
+      "id": "S-34",
+      "slug": "altiva-equity-long-short-fund",
+      "schemeName": "Altiva Equity Long-Short Fund",
+      "amcName": "Altiva Investment Managers",
+      "category": "Specialised Investment Fund",
+      "schemeType": "Open Ended",
+      "openDate": "2026-09-09",
+      "closeDate": "2026-09-23",
+      "offerPrice": 10,
+      "minInvestment": 1000000,
+      "status": "open",
+      "type": "sif",
+      "infoDocumentUrl": "https://..."
+    }
+  ]
+}
+```
+
+### 2. Specialised Investment Fund (SIF) Regulations Grounding:
+- Regulatory body: Securities and Exchange Board of India (SEBI).
+- Circular: SEBI/HO/IMD/IMD-RAC-1/P/CIR/2024/168 (New Asset Class).
+- Ticket size threshold: Minimum ₹10,00,000 (₹10 Lakhs) across strategies under one fund house.
+- Derivative leeway: Up to 25% unhedged net derivative exposure for non-directional alpha.
+- Difference from PMS: SIFs are pooled investment schemes offering daily/periodic NAVs under a mutual fund trust structure, whereas PMS requires ₹50 Lakhs minimum in individually managed segregated client demat accounts.
+
+### 3. Mutual Fund Screener API (`/api/screener`)
+- Database of 2,500+ mutual fund schemes covering Equity, Hybrid, Debt, Solution-Oriented, and Index schemes.
+- Historical CAGRs (1Y, 3Y, 5Y), Sharpe Ratio, Sortino Ratio, Standard Deviation, Beta, Alpha, Portfolio Turnover, Expense Ratio, and AUM.

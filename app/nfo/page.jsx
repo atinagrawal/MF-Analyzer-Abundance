@@ -41,6 +41,10 @@ export default async function NfoPage() {
       q: 'Can I start a Systematic Investment Plan (SIP) in an NFO?',
       a: 'During the initial NFO subscription window, investments are primarily accepted via lumpsum. However, most fund houses allow investors to register a SIP mandate concurrently with their NFO application. In such cases, the first installment is processed at the NFO offer price of ₹10 per unit, and subsequent installments execute at prevailing NAVs once the fund reopens for continuous transactions.',
     },
+    {
+      q: 'Where can I find and verify the official Scheme Information Document (SID) of an NFO?',
+      a: 'The Scheme Information Document (SID) and Key Information Memorandum (KIM) are officially filed with SEBI and AMFI prior to launch. On the Abundance NFO Tracker, every scheme includes a direct link to the official SID PDF hosted by the AMC, outlining investment objectives, asset allocation mandatories, fund manager details, and the scheme risk-o-meter.',
+    },
   ];
 
   const jsonLd = {
@@ -57,7 +61,78 @@ export default async function NfoPage() {
           '@type': 'FinancialService',
           name: 'Abundance Financial Services',
           url: 'https://mfcalc.getabundance.in',
+          sameAs: [
+            'https://twitter.com/abundancefinsvs',
+            'https://www.linkedin.com/company/abundance-financial-services',
+          ],
         },
+        about: [
+          {
+            '@type': 'Thing',
+            name: 'Mutual funds in India',
+            sameAs: 'https://en.wikipedia.org/wiki/Mutual_funds_in_India',
+          },
+          {
+            '@type': 'Thing',
+            name: 'Securities and Exchange Board of India',
+            sameAs: 'https://en.wikipedia.org/wiki/Securities_and_Exchange_Board_of_India',
+          },
+          {
+            '@type': 'Thing',
+            name: 'Specialised Investment Fund',
+            sameAs: 'https://www.amfiindia.com/sif/new-fund-offer',
+          },
+        ],
+        mentions: [
+          {
+            '@type': 'Organization',
+            name: 'Association of Mutual Funds in India',
+            sameAs: 'https://www.amfiindia.com',
+          },
+          {
+            '@type': 'GovernmentOrganization',
+            name: 'Securities and Exchange Board of India',
+            sameAs: 'https://www.sebi.gov.in',
+          },
+        ],
+        speakable: {
+          '@type': 'SpeakableSpecification',
+          cssSelector: ['.nfo-ai-brief', '.nfo-hero'],
+        },
+      },
+      {
+        '@type': 'Dataset',
+        '@id': 'https://mfcalc.getabundance.in/nfo#dataset',
+        name: 'Live Indian Mutual Fund and SIF New Fund Offers (NFO) Dataset',
+        description:
+          'Comprehensive dataset tracking active, upcoming, and recently closed New Fund Offers (NFOs) across Indian AMCs and Specialised Investment Funds (SIFs), synchronized directly from AMFI.',
+        url: 'https://mfcalc.getabundance.in/nfo',
+        license: 'https://creativecommons.org/licenses/by/4.0/',
+        isAccessibleForFree: true,
+        creator: {
+          '@type': 'FinancialService',
+          name: 'Abundance Financial Services',
+          url: 'https://mfcalc.getabundance.in',
+        },
+        sourceOrganization: {
+          '@type': 'Organization',
+          name: 'Association of Mutual Funds in India (AMFI)',
+          url: 'https://www.amfiindia.com',
+        },
+        spatialCoverage: 'IN',
+        temporalCoverage: '2026',
+        distribution: [
+          {
+            '@type': 'DataDownload',
+            encodingFormat: 'application/json',
+            contentUrl: 'https://mfcalc.getabundance.in/api/nfo',
+          },
+          {
+            '@type': 'DataDownload',
+            encodingFormat: 'text/markdown',
+            contentUrl: 'https://mfcalc.getabundance.in/api/nfo?format=markdown',
+          },
+        ],
       },
       {
         '@type': 'BreadcrumbList',
@@ -142,6 +217,53 @@ export default async function NfoPage() {
           <div className="nfo-stat-card">
             <span className="nfo-stat-val">₹10</span>
             <span className="nfo-stat-lbl">Offer Price (Par)</span>
+          </div>
+        </section>
+
+        {/* ── Executive Briefing & GEO Grounding for AI & Investors ── */}
+        <section className="nfo-ai-brief" aria-label="Executive Briefing & Key Facts for Investors and AI Assistants">
+          <div className="nfo-ai-brief-badge">
+            <span>⚡ Executive Summary &amp; Grounding</span>
+            <span className="nfo-verified-tag">AMFI Verified Feed · Daily Sync</span>
+          </div>
+          <div className="nfo-ai-brief-content">
+            <p>
+              <strong>Current Status Snapshot:</strong> There are <strong>{allOpen.length} New Fund Offers</strong> currently open for public subscription in India, comprising <strong>{openMf.length} Mutual Funds</strong> and <strong>{openSif.length} Specialised Investment Funds (SIF)</strong>.
+            </p>
+            <ul className="nfo-ai-brief-list">
+              {openSif.length > 0 && (
+                <li>
+                  <strong>Specialised Investment Fund (SIF) Highlight:</strong> {openSif.map((s) => `${s.schemeName} (${s.amcName})`).join(', ')} is actively accepting subscriptions under SEBI&apos;s New Asset Class. Minimum investment is <strong>₹10,00,000 (₹10 Lakhs)</strong>.
+                </li>
+              )}
+              <li>
+                <strong>Allotment Par Value:</strong> All NFO units are issued at <strong>₹10 per unit</strong> face value. (Important: ₹10 NAV does not mean the fund is cheap or undervalued; returns are determined strictly by post-allotment portfolio growth).
+              </li>
+              <li>
+                <strong>Offer Window &amp; Reopening:</strong> SEBI regulations mandate that open-ended NFOs remain open for up to <strong>15 calendar days</strong>, allot units within 5 business days, and reopen for daily continuous purchase and redemption within 5 business days post-allotment.
+              </li>
+              <li>
+                <strong>Official Data Feed:</strong> Directly synchronized and verified from <em>Association of Mutual Funds in India (AMFI)</em> official records.
+              </li>
+            </ul>
+
+            <div className="nfo-ai-footer">
+              <div className="nfo-ai-cite">
+                <strong>How to cite this page:</strong>
+                <code>Abundance (2026). Live NFO Tracker: Mutual Fund &amp; SIF Offers in India. https://mfcalc.getabundance.in/nfo</code>
+              </div>
+              <div className="nfo-api-actions">
+                <a href="/api/nfo" target="_blank" rel="noopener noreferrer" className="nfo-api-btn">
+                  <span>{'{ }'}</span> JSON Feed
+                </a>
+                <a href="/api/nfo?format=markdown" target="_blank" rel="noopener noreferrer" className="nfo-api-btn">
+                  <span>📄</span> Markdown for AI
+                </a>
+                <a href="/llms.txt" target="_blank" rel="noopener noreferrer" className="nfo-api-btn">
+                  <span>🤖</span> /llms.txt
+                </a>
+              </div>
+            </div>
           </div>
         </section>
 

@@ -97,11 +97,31 @@ function buildJsonLd(entry, canonicalUrl) {
         '@type': 'FinancialProduct',
         name: entry.schemeName,
         description: buildDescription(entry),
-        provider: { '@type': 'Organization', name: entry.amcName },
+        provider: {
+          '@type': 'Organization',
+          name: entry.amcName,
+          sameAs: 'https://www.amfiindia.com',
+        },
         url: canonicalUrl,
         category: entry.category || entry.schemeType,
         identifier: entry.schemeId,
         offers,
+        about: [
+          {
+            '@type': 'Thing',
+            name: entry.type === 'sif' ? 'Specialised Investment Fund' : 'Mutual funds in India',
+            sameAs: entry.type === 'sif' ? 'https://www.amfiindia.com/sif/new-fund-offer' : 'https://en.wikipedia.org/wiki/Mutual_funds_in_India',
+          },
+          {
+            '@type': 'GovernmentOrganization',
+            name: 'Securities and Exchange Board of India',
+            sameAs: 'https://www.sebi.gov.in',
+          },
+        ],
+        speakable: {
+          '@type': 'SpeakableSpecification',
+          cssSelector: ['.nfo-detail-ai-summary', '.nfo-detail-header'],
+        },
       },
       {
         '@type': 'BreadcrumbList',
@@ -226,6 +246,21 @@ export default async function NfoDetailPage({ params }) {
           </div>
         )}
 
+        {/* ── Executive AI & Investor Summary Card ── */}
+        <section className="nfo-detail-ai-summary" aria-label="Executive Briefing & Key Facts">
+          <h2>⚡ Executive Summary &amp; Key Facts</h2>
+          <div className="nfo-detail-ai-grid">
+            <div><strong>Fund House:</strong> {entry.amcName || '—'}</div>
+            <div><strong>Asset Class:</strong> {entry.type === 'sif' ? 'Specialised Investment Fund (SIF — SEBI New Asset Class)' : 'Mutual Fund'}</div>
+            <div><strong>Category:</strong> {entry.category || entry.schemeType || '—'}</div>
+            <div><strong>Offer Price:</strong> {entry.offerPrice != null ? `₹${entry.offerPrice} per unit` : '₹10 per unit'} (Nominal Par)</div>
+            <div><strong>Minimum Ticket:</strong> {entry.minInvestment != null ? `₹${new Intl.NumberFormat('en-IN').format(entry.minInvestment)}` : '—'}</div>
+            <div><strong>Subscription Window:</strong> {formatDate(entry.openDate) || '—'} to {formatDate(entry.closeDate) || '—'}</div>
+            <div><strong>Status:</strong> {entry.status === 'open' ? '🟢 Open for Subscription' : '⚪ Subscription Closed'}</div>
+            <div><strong>Data Verification:</strong> Sourced &amp; verified via AMFI India</div>
+          </div>
+        </section>
+
         {entry.objective && <p className="nfo-detail-objective">{entry.objective}</p>}
 
         <table className="nfo-facts-table">
@@ -266,6 +301,20 @@ export default async function NfoDetailPage({ params }) {
               📈 Compare with Existing Funds in MF Screener →
             </a>
           )}
+        </div>
+
+        <div style={{ margin: '20px 0 16px', padding: '14px 16px', background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 8, fontSize: '.76rem', color: 'var(--muted)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <span><strong>How to cite this scheme analysis:</strong></span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <a href="/api/nfo" target="_blank" rel="noopener noreferrer" className="nfo-api-btn">{'{ }'} JSON API</a>
+              <a href="/api/nfo?format=markdown" target="_blank" rel="noopener noreferrer" className="nfo-api-btn">📄 Markdown for AI</a>
+              <a href="/llms.txt" target="_blank" rel="noopener noreferrer" className="nfo-api-btn">🤖 /llms.txt</a>
+            </div>
+          </div>
+          <code style={{ background: 'var(--s2)', padding: '6px 10px', borderRadius: 6, fontFamily: "'JetBrains Mono', monospace", color: 'var(--text)', fontSize: '.72rem', userSelect: 'all' }}>
+            Abundance (2026). {entry.schemeName} NFO Analysis &amp; AMFI Mandate. https://mfcalc.getabundance.in/nfo/{entry.slug}
+          </code>
         </div>
 
         <div style={{ marginTop: 24, marginBottom: 24, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
