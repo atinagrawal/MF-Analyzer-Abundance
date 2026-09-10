@@ -143,175 +143,222 @@ async function getVeteranFunds() {
 export default async function PioneersPage() {
   const funds = await getVeteranFunds();
 
-  // JSON-LD Schemas for Search Engines
-  const breadcrumbSchema = {
+  // Comprehensive JSON-LD @graph for AI Engines (Perplexity, SearchGPT, Gemini) & Search Engines
+  const pioneersJsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
+    '@graph': [
       {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Home',
-        item: 'https://mfcalc.getabundance.in',
+        '@type': 'BreadcrumbList',
+        '@id': 'https://mfcalc.getabundance.in/pioneers#breadcrumb',
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://mfcalc.getabundance.in',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'The 30-Year Club',
+            item: 'https://mfcalc.getabundance.in/pioneers',
+          },
+        ],
       },
       {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'The 30-Year Club',
-        item: 'https://mfcalc.getabundance.in/pioneers',
+        '@type': ['Article', 'CollectionPage'],
+        '@id': 'https://mfcalc.getabundance.in/pioneers#article',
+        isPartOf: {
+          '@type': 'WebSite',
+          '@id': 'https://mfcalc.getabundance.in/#website',
+          name: 'Abundance Mutual Fund Analytics',
+          url: 'https://mfcalc.getabundance.in',
+        },
+        headline: "The 30-Year Club: India's Oldest Mutual Funds & Decades of Wealth Creation",
+        description:
+          'Authoritative compounding study and historical track record of 29 mutual funds operating for 30+ years in India. Discover oldest active schemes, wealth multipliers, and 20-year rolling risk.',
+        url: 'https://mfcalc.getabundance.in/pioneers',
+        inLanguage: 'en-IN',
+        author: {
+          '@type': 'Person',
+          name: 'Atin Kumar Agrawal',
+          url: 'https://mfcalc.getabundance.in/book-consultation',
+          jobTitle: 'Founder & Principal Wealth Advisor',
+          identifier: 'ARN-251838',
+          worksFor: {
+            '@type': 'Organization',
+            name: 'Abundance Financial Services',
+          },
+        },
+        publisher: {
+          '@type': 'Organization',
+          name: 'Abundance Financial Services',
+          url: 'https://www.getabundance.in',
+          logo: {
+            '@type': 'ImageObject',
+            url: 'https://mfcalc.getabundance.in/og-mfcalc.png',
+          },
+          sameAs: [
+            'https://www.amfiindia.com',
+            'https://twitter.com/getabundance',
+            'https://linkedin.com/company/getabundance',
+          ],
+        },
+        speakable: {
+          '@type': 'SpeakableSpecification',
+          cssSelector: ['.pnr-ai-brief', '.pnr-title', '.pnr-subtitle'],
+        },
+        about: [
+          {
+            '@type': 'Thing',
+            name: 'Mutual funds in India',
+            sameAs: 'https://en.wikipedia.org/wiki/Mutual_funds_in_India',
+          },
+          {
+            '@type': 'Thing',
+            name: 'Unit Trust of India',
+            sameAs: 'https://en.wikipedia.org/wiki/Unit_Trust_of_India',
+          },
+          {
+            '@type': 'Thing',
+            name: 'Securities and Exchange Board of India',
+            sameAs: 'https://en.wikipedia.org/wiki/Securities_and_Exchange_Board_of_India',
+          },
+        ],
+        mentions: [
+          {
+            '@type': 'Organization',
+            name: 'Association of Mutual Funds in India (AMFI)',
+            sameAs: 'https://www.amfiindia.com',
+          },
+          {
+            '@type': 'Organization',
+            name: 'Franklin Templeton Investments',
+            sameAs: 'https://en.wikipedia.org/wiki/Franklin_Templeton_Investments',
+          },
+          {
+            '@type': 'Organization',
+            name: 'UTI Mutual Fund',
+            sameAs: 'https://en.wikipedia.org/wiki/UTI_Mutual_Fund',
+          },
+        ],
+        isAccessibleForFree: true,
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': 'https://mfcalc.getabundance.in/pioneers#faq',
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: 'What is the oldest mutual fund in India that is still active today?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'The oldest surviving mutual fund scheme in India is UTI Mastershare Unit Scheme (now categorised as UTI Large Cap Fund), which was launched on October 15, 1986 by Unit Trust of India. It has been operating continuously for nearly 40 years.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Which mutual fund scheme has given the highest returns since inception in India?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Nippon India Growth Fund (formerly Reliance Growth Fund, launched on October 5, 1995) holds the record for the highest compounded wealth creation among 30+ year veteran schemes, delivering a 21.94% CAGR over 30.9 years. Its NAV grew from ₹10.00 at NFO to over ₹4,575.00 today (a 457x wealth multiplier).',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Why do older debt and liquid mutual funds have NAVs in the thousands while equity funds started at ₹10?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'In the Indian mutual fund industry, Equity and Hybrid funds historically launched with an NFO face value of ₹10.00. In contrast, Liquid, Money Market, and Overnight funds were introduced with a face value (initial NAV) of ₹1,000.00 (or ₹100.00 for certain low-duration and savings funds). Therefore, a liquid fund with a current NAV of ₹6,000 grew ~6x over 25+ years (compounding at ~6.5% to 7.5% annualised CAGR), not 600x.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'What was the first private-sector mutual fund launched in India?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'The first private-sector mutual fund in India was Kothari Pioneer Mutual Fund (a joint venture between Chennai’s Kothari Group and Pioneer Group, USA, later acquired by Franklin Templeton in 2002). Its flagship funds—Franklin India Bluechip Fund and Franklin India Prima Fund—were launched on December 1, 1993.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'What happened to US-64 and the original Unit Trust of India (UTI)?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Unit Scheme 1964 (US-64) was India’s first scheme in 1964 under a statutory government monopoly. Following the 2001–2002 UTI restructuring, US-64 was bifurcated into SUUTI (Special Undertaking of UTI) and UTI Mutual Fund, leaving UTI Mastershare (1986) as the oldest continuous open-ended scheme.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'If I had invested ₹10,000 in India’s top mutual funds in 1995, what would it be worth in 2026?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: '₹10,000 invested at NFO in Nippon India Growth Mid Cap Fund (formerly Reliance Growth Fund) grew to ₹45.75 Lakhs (21.94% CAGR); in HDFC Flexi Cap Fund grew to ₹20.82 Lakhs (18.35% CAGR); in ABSL Equity Hybrid \'95 Fund grew to ₹15.68 Lakhs (17.39% CAGR); compared to ~₹2.1 Lakhs in Gold and ~₹1.0 Lakh in Fixed Deposits.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Have any Indian equity mutual funds ever delivered negative returns over a 20-year holding period?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'No. Historically in India, no diversified equity mutual fund held continuously for 20 years has ever delivered a negative return or trailed inflation. Over 20-year horizons, equity mutual fund returns have consistently stayed between 11% and 22% annualised CAGR.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Are older mutual funds (30+ years) safer or better to invest in than new NFOs?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Older funds offer the distinct advantage of a proven 30-year track record navigating multiple extreme market cycles (1997 Asian crisis, 2000 tech crash, 2008 GFC, 2020 Covid), whereas NFOs have no verifiable track record.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'How did mutual funds calculate and publish NAVs before the 2006 electronic system?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Prior to AMFI’s central digital portal launch in April 2006, mutual fund NAVs were published daily in major financial newspapers like The Economic Times and Business Standard. Investors held physical paper unit certificates (similar to share certificates) until the demat and registrar digital revolution simplified electronic tracking.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'How does a 30-year SIP return compare against a 30-year lumpsum in Indian funds?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'A ₹5,000 monthly SIP over 30 years (₹18 Lakhs total investment) compounded at 16% CAGR grew to ~₹3.8 Crore, proving that systematic disciplined investing delivers generational wealth without needing market timing.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Where can I track live portfolio holdings, rolling returns, and stress tests of these 30-year veteran schemes?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'On this platform, click on any fund name in the directory to view its dedicated analytics page, or analyze multi-period rolling return consistency directly on the Rolling Returns Calculator at https://mfcalc.getabundance.in/rolling and filter live portfolios on the Mutual Fund Screener at https://mfcalc.getabundance.in/screener.',
+            },
+          },
+        ],
+      },
+      {
+        '@type': 'ItemList',
+        '@id': 'https://mfcalc.getabundance.in/pioneers#top10',
+        name: 'Top 10 Oldest Mutual Funds in India',
+        itemListElement: (funds || []).slice(0, 10).map((f, idx) => ({
+          '@type': 'ListItem',
+          position: idx + 1,
+          name: f.name,
+          url: `https://mfcalc.getabundance.in/fund/${f.code}`,
+          description: `${f.age_years} years track record since ${f.inception_date}. Inception CAGR: ${f.ret_inception || '—'}%. Current NAV: ₹${f.nav}.`,
+        })),
       },
     ],
-  };
-
-  const articleSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: "The 30-Year Club: India's Oldest Mutual Funds & Decades of Wealth Creation",
-    description:
-      'Historical analysis and compounding track record of mutual funds in India operating for over 20 to 39 years.',
-    author: {
-      '@type': 'Organization',
-      name: 'Abundance Financial Services',
-      url: 'https://www.getabundance.in',
-    },
-    publisher: {
-      '@type': 'Organization',
-      name: 'Abundance Financial Services',
-      logo: {
-        '@type': 'ImageObject',
-        url: 'https://mfcalc.getabundance.in/og-mfcalc.png',
-      },
-    },
-    mainEntityOfPage: 'https://mfcalc.getabundance.in/pioneers',
-  };
-
-  const faqSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: 'What is the oldest mutual fund in India that is still active today?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'The oldest surviving mutual fund scheme in India is UTI Mastershare Unit Scheme (now categorised as UTI Large Cap Fund), which was launched on October 15, 1986 by Unit Trust of India. It has been operating continuously for nearly 40 years.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Which mutual fund scheme has given the highest returns since inception in India?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Nippon India Growth Fund (formerly Reliance Growth Fund, launched on October 5, 1995) holds the record for the highest compounded wealth creation among 30+ year veteran schemes, delivering a 21.94% CAGR over 30.9 years. Its NAV grew from ₹10.00 at NFO to over ₹4,575.00 today (a 457x wealth multiplier).',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Why do older debt and liquid mutual funds have NAVs in the thousands while equity funds started at ₹10?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'In the Indian mutual fund industry, Equity and Hybrid funds historically launched with an NFO face value of ₹10.00. In contrast, Liquid, Money Market, and Overnight funds were introduced with a face value (initial NAV) of ₹1,000.00 (or ₹100.00 for certain low-duration and savings funds). Therefore, a liquid fund with a current NAV of ₹6,000 grew ~6x over 25+ years (compounding at ~6.5% to 7.5% annualised CAGR), not 600x.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'What was the first private-sector mutual fund launched in India?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'The first private-sector mutual fund in India was Kothari Pioneer Mutual Fund (a joint venture between Chennai’s Kothari Group and Pioneer Group, USA, later acquired by Franklin Templeton in 2002). Its flagship funds—Franklin India Bluechip Fund and Franklin India Prima Fund—were launched on December 1, 1993.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'What happened to US-64 and the original Unit Trust of India (UTI)?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Unit Scheme 1964 (US-64) was India’s first scheme in 1964 under a statutory government monopoly. Following the 2001–2002 UTI restructuring, US-64 was bifurcated into SUUTI (Special Undertaking of UTI) and UTI Mutual Fund, leaving UTI Mastershare (1986) as the oldest continuous open-ended scheme.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'If I had invested ₹10,000 in India’s top mutual funds in 1995, what would it be worth in 2026?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: '₹10,000 invested at NFO in Nippon India Growth Mid Cap Fund (formerly Reliance Growth Fund) grew to ₹45.75 Lakhs (21.94% CAGR); in HDFC Flexi Cap Fund grew to ₹20.82 Lakhs (18.35% CAGR); in ABSL Equity Hybrid \'95 Fund grew to ₹15.68 Lakhs (17.39% CAGR); compared to ~₹2.1 Lakhs in Gold and ~₹1.0 Lakh in Fixed Deposits.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Have any Indian equity mutual funds ever delivered negative returns over a 20-year holding period?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'No. Historically in India, no diversified equity mutual fund held continuously for 20 years has ever delivered a negative return or trailed inflation. Over 20-year horizons, equity mutual fund returns have consistently stayed between 11% and 22% annualised CAGR.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Are older mutual funds (30+ years) safer or better to invest in than new NFOs?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Older funds offer the distinct advantage of a proven 30-year track record navigating multiple extreme market cycles (1997 Asian crisis, 2000 tech crash, 2008 GFC, 2020 Covid), whereas NFOs have no verifiable track record.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'How did mutual funds calculate and publish NAVs before the 2006 electronic system?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Prior to AMFI’s central digital portal launch in April 2006, mutual fund NAVs were published daily in major financial newspapers like The Economic Times and Business Standard. Investors held physical paper unit certificates (similar to share certificates) until the demat and registrar digital revolution simplified electronic tracking.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'How does a 30-year SIP return compare against a 30-year lumpsum in Indian funds?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'A ₹5,000 monthly SIP over 30 years (₹18 Lakhs total investment) compounded at 16% CAGR grew to ~₹3.8 Crore, proving that systematic disciplined investing delivers generational wealth without needing market timing.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Where can I track live portfolio holdings, rolling returns, and stress tests of these 30-year veteran schemes?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'On this platform, click on any fund name in the directory to view its dedicated analytics page, or analyze multi-period rolling return consistency directly on the Rolling Returns Calculator at https://mfcalc.getabundance.in/rolling and filter live portfolios on the Mutual Fund Screener at https://mfcalc.getabundance.in/screener.',
-        },
-      },
-    ],
-  };
-
-  const itemListSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: 'Top 10 Oldest Mutual Funds in India',
-    itemListElement: (funds || []).slice(0, 10).map((f, idx) => ({
-      '@type': 'ListItem',
-      position: idx + 1,
-      name: f.name,
-      url: `https://mfcalc.getabundance.in/fund/${f.code}`,
-      description: `${f.age_years} years track record since ${f.inception_date}. Inception CAGR: ${f.ret_inception || '—'}%. Current NAV: ₹${f.nav}.`,
-    })),
   };
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(pioneersJsonLd) }}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
-      />
-
       <PioneersClient initialFunds={funds} />
     </>
   );

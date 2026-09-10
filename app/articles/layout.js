@@ -15,10 +15,30 @@ export default function ArticlesLayout({ children }) {
       "url": "https://mfcalc.getabundance.in"
     },
     "publisher": {
-      "@type": "FinancialService",
+      "@type": "Organization",
       "name": "Abundance Financial Services",
-      "url": "https://www.getabundance.in",
-      "identifier": "ARN-251838"
+      "url": "https://mfcalc.getabundance.in",
+      "identifier": "ARN-251838",
+      "sameAs": [
+        "https://twitter.com/abundancefinsvs",
+        "https://www.linkedin.com/company/abundance-financial-services"
+      ]
+    },
+    "about": [
+      {
+        "@type": "Thing",
+        "name": "Mutual funds in India",
+        "sameAs": "https://en.wikipedia.org/wiki/Mutual_funds_in_India"
+      },
+      {
+        "@type": "Thing",
+        "name": "Securities and Exchange Board of India",
+        "sameAs": "https://en.wikipedia.org/wiki/Securities_and_Exchange_Board_of_India"
+      }
+    ],
+    "speakable": {
+      "@type": "SpeakableSpecification",
+      "cssSelector": [".art-hero"]
     }
   };
 

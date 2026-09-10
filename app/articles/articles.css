@@ -369,3 +369,61 @@
 @media (max-width: 640px) {
   .art-cta { flex-direction: column; align-items: flex-start; }
 }
+
+/* ── Generative Engine Optimization (GEO) & AI Briefing Box ── */
+.art-ai-brief {
+  max-width: 700px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--g1);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin: 28px 0 32px;
+}
+.art-ai-brief-badge {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.art-ai-brief-badge span:first-child {
+  font-size: .84rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.art-verified-tag {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--g1);
+  background: var(--g-xlight);
+  border: 1px solid var(--g-light);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.art-ai-brief-desc {
+  font-size: .9rem;
+  line-height: 1.6;
+  color: var(--text);
+  margin: 0 0 12px;
+}
+.art-ai-citation {
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: .76rem;
+  color: var(--muted);
+}
+.art-ai-citation code {
+  background: var(--s2);
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .72rem;
+  color: var(--text);
+  user-select: all;
+  word-break: break-all;
+}

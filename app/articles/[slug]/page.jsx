@@ -77,16 +77,43 @@ export default async function ArticlePage({ params }) {
     url,
     datePublished: publishedDate,
     dateModified: publishedDate,
+    isAccessibleForFree: true,
     author: {
       "@type": "Person",
       name: "Atin Kumar Agrawal",
-      jobTitle: "AMFI Registered Mutual Funds & SIF Distributor (ARN-251838)",
+      jobTitle: "AMFI Registered Mutual Funds & SIF Distributor",
+      identifier: "ARN-251838",
+      url: `${SITE}/book-consultation`,
+      sameAs: [
+        "https://twitter.com/abundancefinsvs",
+        "https://www.linkedin.com/company/abundance-financial-services"
+      ]
     },
     publisher: {
-      "@type": "FinancialService",
+      "@type": "Organization",
       name: "Abundance Financial Services",
-      url: "https://www.getabundance.in",
-      identifier: "ARN-251838",
+      url: SITE,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE}/logo-og.png`
+      },
+      identifier: "ARN-251838"
+    },
+    about: [
+      {
+        "@type": "Thing",
+        name: "Mutual funds in India",
+        sameAs: "https://en.wikipedia.org/wiki/Mutual_funds_in_India"
+      },
+      {
+        "@type": "Thing",
+        name: "Securities and Exchange Board of India",
+        sameAs: "https://en.wikipedia.org/wiki/Securities_and_Exchange_Board_of_India"
+      }
+    ],
+    speakable: {
+      "@type": "SpeakableSpecification",
+      cssSelector: [".art-ai-brief", ".art-detail-title"]
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
   };
@@ -131,6 +158,19 @@ export default async function ArticlePage({ params }) {
       </div>
 
       <div className="container">
+        {/* ── Executive AI Takeaway & Factual Grounding ── */}
+        <section className="art-ai-brief" aria-label="Executive Summary & Key Takeaways">
+          <div className="art-ai-brief-badge">
+            <span>⚡ Executive Summary &amp; Key Takeaways</span>
+            <span className="art-verified-tag">AMFI Registered · ARN-251838</span>
+          </div>
+          <p className="art-ai-brief-desc">{article.description}</p>
+          <div className="art-ai-citation">
+            <span><strong>How to cite this research:</strong></span>
+            <code>Agrawal, A. K. ({publishedDate.slice(0, 4)}). &ldquo;{article.title}&rdquo;. Abundance Financial Services. {url}</code>
+          </div>
+        </section>
+
         <div className="art-body">
           <Markdown>{body}</Markdown>
         </div>

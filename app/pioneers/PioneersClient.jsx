@@ -529,31 +529,36 @@ export default function PioneersClient({ initialFunds = [] }) {
             </div>
           </div>
 
-          {/* ── Key Takeaways (Featured Snippet Optimized) ── */}
-          <div className="pnr-takeaways-box">
-            <div className="pnr-takeaways-header">
-              <span className="pnr-takeaways-icon">💡</span>
-              <h2 className="pnr-takeaways-title">Key Historical Takeaways & Compounding Facts</h2>
+          {/* ── Executive AI Briefing & Citation Box (GEO Optimized) ── */}
+          <section className="pnr-ai-brief" aria-label="Compounding Research Executive Summary">
+            <div className="pnr-ai-brief-badge">
+              <span>🤖 Executive AI Brief & Historical Facts</span>
+              <span className="pnr-verified-tag">✓ AMFI & Historical NAV Verified</span>
             </div>
-            <div className="pnr-takeaways-grid">
-              <div className="pnr-takeaway-item">
-                <span className="pnr-takeaway-dot"></span>
-                <span><strong>Oldest Surviving Fund:</strong> UTI Mastershare (launched 15-Oct-1986, running for nearly 40 continuous years).</span>
-              </div>
-              <div className="pnr-takeaway-item">
-                <span className="pnr-takeaway-dot"></span>
-                <span><strong>Highest Wealth Multiplier:</strong> Nippon India Growth Fund delivered a 457.5x return (21.94% CAGR since Oct 1995).</span>
-              </div>
-              <div className="pnr-takeaway-item">
-                <span className="pnr-takeaway-dot"></span>
-                <span><strong>Initial Face Values:</strong> Equity funds launched at ₹10 face value, while Liquid & Money Market funds launched at ₹1,000 face value.</span>
-              </div>
-              <div className="pnr-takeaway-item">
-                <span className="pnr-takeaway-dot"></span>
-                <span><strong>Zero 15-Year Loss Probability:</strong> No diversified open-ended Indian equity scheme has ever lost money over a 15+ year holding period.</span>
-              </div>
+            <ul className="pnr-ai-brief-list">
+              <li>
+                <strong>Oldest Surviving Scheme:</strong> UTI Mastershare Unit Scheme (now UTI Large Cap Fund), launched on October 15, 1986 by Unit Trust of India (nearly 40 years of continuous daily operation).
+              </li>
+              <li>
+                <strong>First Private Sector Schemes:</strong> Franklin India Bluechip Fund and Franklin India Prima Fund (originally Kothari Pioneer Mutual Fund), launched on December 1, 1993.
+              </li>
+              <li>
+                <strong>Highest All-Time Wealth Multiplier:</strong> Nippon India Growth Fund (formerly Reliance Growth Fund, launched Oct 5, 1995) delivered a <strong>21.94% CAGR</strong> over 30+ years, turning ₹10,000 into ₹45.75 Lakhs (a 457.5x wealth multiplier).
+              </li>
+              <li>
+                <strong>Face Value Asymmetry:</strong> In India, Equity & Hybrid funds launched at ₹10 face value, while Liquid, Money Market, and Overnight funds debuted at ₹1,000 face value.
+              </li>
+              <li>
+                <strong>The 15+ Year Compounding Rule:</strong> In Indian mutual fund history, no diversified equity fund held for 15+ continuous years has ever delivered a negative return or trailed long-term inflation.
+              </li>
+            </ul>
+            <div className="pnr-ai-citation">
+              <span>How to cite this compounding research:</span>
+              <code>
+                Atin Kumar Agrawal (ARN-251838). "The 30-Year Club: India's Oldest Mutual Funds & Decades of Wealth Creation." Abundance MF Analytics, https://mfcalc.getabundance.in/pioneers.
+              </code>
             </div>
-          </div>
+          </section>
         </div>
       </header>
 

@@ -7,13 +7,13 @@
  * lib/pmsFactsheetsCache.js and composed into
  * app/api/pms-detail/[id]/route.js's response.
  *
- * Covers 10 providers verified live during research (see
+ * Covers 11 providers verified live during research (see
  * pms_factsheets_research.txt and this session's chat history for the
  * verification trail): Carnelian Capital, Stallion Asset, Narnolia
  * Financial Advisors, Renaissance Investment Managers, Sundaram Alternate
  * Assets, Green Lantern Capital, ICICI Prudential, Alchemy Capital,
- * Abakkus Investment Managers, and Buoyant Capital. Every other PMS
- * provider's detail page is unaffected -- lib/pmsFactsheetsCache.js's
+ * Abakkus Investment Managers, Buoyant Capital, and Dezerv. Every other
+ * PMS provider's detail page is unaffected -- lib/pmsFactsheetsCache.js's
  * matchProvider() simply returns no match for anything not in this list,
  * and the UI section doesn't render.
  *
@@ -71,6 +71,12 @@
  *     guessed. The site's three other PMS (NDPMS, All-Weather, Liquid)
  *     are non-discretionary or absent from APMI's public reporting, so
  *     they have no detail page to enrich.
+ *   - Dezerv: 4 factsheet "decks" at fixed slugs, but only 2 (Equity
+ *     Revival -> IAID 1028, Alpha Focus -> IAID 1032) map to an APMI
+ *     equity strategy with schema-relevant data. SHINE (gold/multi-asset)
+ *     and Dynamic Debt Plus (debt) have no APMI listing. Neither built
+ *     strategy discloses stock holdings -- market-cap, Morningstar sector
+ *     weights and volatility/Sharpe are what get extracted.
  *
  * Usage:
  *   node scripts/sync_pms_factsheets.js [--dry-run]
@@ -748,6 +754,57 @@ async function fetchBuoyant() {
     return [];
   }
   return [doc];
+}
+
+// ── Dezerv: 2 of its equity strategies publish a factsheet with schema data ─
+// Verified live: Dezerv markets 4 factsheet "decks" at fixed slugs
+// (/decks/{ers,afs,shine,ddplus}-factsheet/), each embedding one fixed
+// CloudFront PDF URL. Only two map to an APMI-registered equity strategy
+// AND carry schema-relevant data:
+//   - Equity Revival Strategy  -> APMI IAID 1028
+//   - Alpha Focus Strategy     -> APMI IAID 1032
+// SHINE (a gold / multi-asset strategy) and Dynamic Debt Plus (debt) are
+// absent from APMI's public reporting -- no detail page to attach to --
+// and SHINE's factsheet has no equity holdings / sectors / market-cap to
+// extract anyway. Neither ERS nor AFS discloses stock-level holdings (both
+// are fund-of-sleeves), so topHoldings stays empty; market-cap split,
+// Morningstar sector weights and volatility/Sharpe-vs-benchmark are the
+// real extractable content. The deck page's own <a href> to the PDF is
+// used (survives a filename change) rather than a hard-coded CloudFront
+// URL; strategyName is APMI's exact leaderboard form so the downstream
+// fuzzy match in lib/pmsFactsheetsCache.js resolves cleanly.
+const DEZERV_DECKS = [
+  { strategyName: 'dezerv. Equity Revival Strategy', deck: 'https://www.dezerv.in/decks/ers-factsheet/' },
+  { strategyName: 'dezerv. Alpha Focus Strategy', deck: 'https://www.dezerv.in/decks/afs-factsheet/' },
+];
+
+// Pure: the deck page carries exactly one <a href="...cloudfront.../*.pdf">.
+function parseDezervDeckPdf(html) {
+  const $ = cheerio.load(html);
+  const href = $('a[href$=".pdf"]').first().attr('href');
+  return href && /\.pdf($|\?)/i.test(href) ? href.trim() : null;
+}
+
+async function fetchDezerv() {
+  const documents = [];
+  for (const d of DEZERV_DECKS) {
+    const res = await fetchWithRetry(d.deck);
+    if (!res.ok) {
+      console.warn(`[PMS Factsheets] Dezerv ${d.strategyName}: HTTP ${res.status}`);
+      continue;
+    }
+    const url = parseDezervDeckPdf(await res.text());
+    if (!url) {
+      console.warn(`[PMS Factsheets] Dezerv ${d.strategyName}: no PDF link on ${d.deck}`);
+      continue;
+    }
+    if (!(await urlExists(url))) {
+      console.warn(`[PMS Factsheets] Dezerv ${d.strategyName}: PDF does not resolve (${url}), dropping.`);
+      continue;
+    }
+    documents.push({ strategyName: d.strategyName, docType: 'factsheet', period: null, title: d.strategyName, url });
+  }
+  return documents;
 }
 
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────

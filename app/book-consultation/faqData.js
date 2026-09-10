@@ -41,4 +41,12 @@ export const BOOK_CONSULTATION_FAQ = [
     q: "What if I need to reschedule after booking?",
     a: 'The confirmation email from the booking calendar includes a reschedule/cancel link. You can also call or WhatsApp +91 98081 05923 directly if that\'s easier.',
   },
+  {
+    q: 'Who is Atin Kumar Agrawal and what is Abundance Financial Services?',
+    a: 'Atin Kumar Agrawal is an AMFI-registered Mutual Fund Distributor (ARN-251838) and APMI-registered Portfolio Management Services (PMS) Distributor (APRN04279). He is the founder of Abundance Financial Services and creator of the Abundance Mutual Fund Analytics suite, advising 350+ investor families managing ₹250Cr+ in assets with 15+ years of capital markets experience.',
+  },
+  {
+    q: 'What advisory and investment areas can be reviewed on the call?',
+    a: 'Consultation calls cover comprehensive portfolio health checks, direct vs regular plan cost-benefit analysis, multi-year rolling return evaluations, systematic investment plans (SIP/SWP), capital gains tax harvesting, high-net-worth Specialized Investment Funds (SIF), and SEBI-registered PMS strategies tailored to individual risk appetites.',
+  },
 ];

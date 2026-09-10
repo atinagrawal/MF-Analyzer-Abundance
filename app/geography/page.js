@@ -402,6 +402,34 @@ export default function GeographyPage() {
           </div>
         </div>
 
+        {/* ── Executive AI Briefing & Citation Box (GEO Grounded) ── */}
+        <section className="geo-ai-brief" aria-label="India MF Geography Executive Summary">
+          <div className="geo-ai-brief-badge">
+            <span>🤖 Executive AI Brief & Geographic Facts</span>
+            <span className="geo-verified-tag">✓ AMFI Monthly State Disclosures Verified</span>
+          </div>
+          <ul className="geo-ai-brief-list">
+            <li>
+              <strong>National Dominance:</strong> Maharashtra accounts for ~41% of India's total mutual fund AUM, primarily driven by Mumbai corporate treasuries, banking institutions, and institutional wealth centers.
+            </li>
+            <li>
+              <strong>Top 5 Concentration:</strong> The top 5 states (Maharashtra, New Delhi, Gujarat, Karnataka, and West Bengal) collectively control ~68%–70% of India's overall mutual fund capital.
+            </li>
+            <li>
+              <strong>Retail Equity Pioneers:</strong> While Maharashtra holds the largest total volume, states like Gujarat, West Bengal, and Uttar Pradesh register significantly higher proportions of pure equity schemes relative to debt.
+            </li>
+            <li>
+              <strong>B30 Inflow Momentum:</strong> Beyond-30 (B30) cities and non-metro districts represent the fastest-growing source of new systematic investment plans (SIPs) and retail folio additions across India.
+            </li>
+          </ul>
+          <div className="geo-ai-citation">
+            <span>How to cite this geographic study:</span>
+            <code>
+              Atin Kumar Agrawal (ARN-251838). "India MF Geography: State-wise Mutual Fund AUM & Equity Penetration." Abundance MF Analytics, https://mfcalc.getabundance.in/geography.
+            </code>
+          </div>
+        </section>
+
         {/* Map + Detail layout */}
         <div className="geo-layout">
           <div className="map-card" ref={mapContainerRef}>

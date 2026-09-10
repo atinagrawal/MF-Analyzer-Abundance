@@ -28,16 +28,25 @@ export default function GeographyLayout({ children }) {
       "State detail panel with full fund-type breakdown"
     ],
     "provider": {
-      "@type": "FinancialService",
+      "@type": "Organization",
       "name": "Abundance Financial Services",
       "url": "https://www.getabundance.in",
       "telephone": "+919808105923",
-      "identifier": "ARN-251838"
+      "identifier": "ARN-251838",
+      "sameAs": [
+        "https://www.amfiindia.com",
+        "https://twitter.com/getabundance",
+        "https://linkedin.com/company/getabundance"
+      ]
     },
     "isPartOf": {
       "@type": "WebSite",
       "name": "Abundance MF Calculator",
       "url": "https://mfcalc.getabundance.in"
+    },
+    "speakable": {
+      "@type": "SpeakableSpecification",
+      "cssSelector": [".geo-ai-brief", ".page-title", ".page-subtitle"]
     }
   };
 
@@ -57,15 +66,61 @@ export default function GeographyLayout({ children }) {
     "name": "AMFI State-wise Mutual Fund AUM Data — India",
     "description": "Monthly state-wise mutual fund AUM data for all 36 Indian states and union territories from AMFI. Includes total AUM, equity, debt, balanced, ETF, and FoF breakdowns. Historical data from March 2014.",
     "url": "https://mfcalc.getabundance.in/geography",
-    "creator": { "@type": "Organization", "name": "AMFI", "url": "https://www.amfiindia.com" },
-    "publisher": { "@type": "Organization", "name": "Abundance Financial Services", "url": "https://www.getabundance.in" },
+    "creator": {
+      "@type": "Organization",
+      "name": "Association of Mutual Funds in India (AMFI)",
+      "url": "https://www.amfiindia.com"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Abundance Financial Services",
+      "url": "https://www.getabundance.in",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://mfcalc.getabundance.in/og-mfcalc.png"
+      },
+      "sameAs": [
+        "https://www.amfiindia.com",
+        "https://twitter.com/getabundance",
+        "https://linkedin.com/company/getabundance"
+      ]
+    },
     "license": "https://www.amfiindia.com",
     "inLanguage": "en-IN",
     "isAccessibleForFree": true,
     "spatialCoverage": { "@type": "Place", "name": "India", "geo": { "@type": "GeoShape", "addressCountry": "IN" } },
     "temporalCoverage": "2014-03/..",
     "variableMeasured": ["Total AUM", "Equity AUM", "Debt AUM", "Balanced AUM", "ETF AUM", "FoF AUM"],
-    "keywords": "state wise mutual fund AUM India, AMFI, equity penetration by state, Maharashtra, B30 states"
+    "keywords": "state wise mutual fund AUM India, AMFI, equity penetration by state, Maharashtra, B30 states, mutual fund geography",
+    "about": [
+      {
+        "@type": "Thing",
+        "name": "Mutual funds in India",
+        "sameAs": "https://en.wikipedia.org/wiki/Mutual_funds_in_India"
+      },
+      {
+        "@type": "Thing",
+        "name": "States and union territories of India",
+        "sameAs": "https://en.wikipedia.org/wiki/States_and_union_territories_of_India"
+      },
+      {
+        "@type": "Thing",
+        "name": "Economy of India",
+        "sameAs": "https://en.wikipedia.org/wiki/Economy_of_India"
+      }
+    ],
+    "mentions": [
+      {
+        "@type": "Organization",
+        "name": "Securities and Exchange Board of India",
+        "sameAs": "https://en.wikipedia.org/wiki/Securities_and_Exchange_Board_of_India"
+      },
+      {
+        "@type": "Organization",
+        "name": "Association of Mutual Funds in India",
+        "sameAs": "https://www.amfiindia.com"
+      }
+    ]
   };
 
   const faqSchema = {
@@ -77,7 +132,7 @@ export default function GeographyLayout({ children }) {
         "name": "Which state has the highest mutual fund AUM in India?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Maharashtra has the highest mutual fund AUM in India by a wide margin, accounting for approximately 41% of the entire industry's ₹83 lakh crore AUM as of February 2026. This is largely driven by Mumbai's dominance as India's financial capital, with large institutional investors and corporate treasuries concentrated there."
+          "text": "Maharashtra has the highest mutual fund AUM in India by a wide margin, accounting for approximately 41% of the entire industry's ₹83+ lakh crore AUM as of 2026. This is driven by Mumbai's role as India's financial hub, housing major corporate treasuries, family offices, and institutional capital."
         }
       },
       {
@@ -85,7 +140,23 @@ export default function GeographyLayout({ children }) {
         "name": "What percentage of India's mutual fund AUM is held by the top 5 states?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "The top 5 states — Maharashtra, Delhi, Karnataka, Gujarat, and West Bengal — together account for approximately 67-68% of India's total mutual fund industry AUM. This high concentration reflects where India's financial activity and high-net-worth investor base is centered."
+          "text": "The top 5 states — Maharashtra, New Delhi, Gujarat, Karnataka, and West Bengal — collectively account for approximately 68% to 70% of India's total mutual fund assets under management."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which Indian state has the highest retail equity allocation ratio?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "While Maharashtra dominates in absolute total AUM due to corporate debt and institutional money market holdings, states like Gujarat, West Bengal, and Uttar Pradesh display significantly higher equity allocations (often exceeding 60-70% of their total state AUM in pure equity schemes), reflecting deep retail equity investor participation."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What are T30 and B30 locations in Indian mutual funds?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Under SEBI guidelines, AMFI classifies geographic inflows into Top 30 (T30) cities and Beyond 30 (B30) cities to incentivize fund houses to expand mutual fund penetration into Tier-2, Tier-3, and rural India. B30 locations represent the fastest-growing frontier for retail SIP adoption."
         }
       }
     ]
