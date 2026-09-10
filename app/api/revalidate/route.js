@@ -14,5 +14,11 @@ export async function POST(req) {
   }
   revalidatePath('/api/screener');
   revalidatePath('/api/sif-nav');
-  return Response.json({ revalidated: true, paths: ['/api/screener', '/api/sif-nav'] });
+  revalidatePath('/nfo');
+  revalidatePath('/api/nfo');
+  revalidatePath('/sitemap-nfo.xml');
+  return Response.json({
+    revalidated: true,
+    paths: ['/api/screener', '/api/sif-nav', '/nfo', '/api/nfo', '/sitemap-nfo.xml']
+  });
 }
