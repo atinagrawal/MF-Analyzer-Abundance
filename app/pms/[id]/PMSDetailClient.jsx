@@ -596,7 +596,7 @@ export default function PMSDetailClient({ iaid }) {
         <div className="pmsd-disclosure">
           Data sourced from APMI India (Association of Portfolio Managers in India).
           Min PMS investment ₹50L per SEBI. Past performance is not indicative of future results.
-          Abundance Financial Services — Atin Kumar Agrawal · ARN-251838 · APRN04279 · APMI Registered PMS Distributor.
+          Atin Kumar Agrawal · APRN04279 · APMI Registered Portfolio Management Services Distributor · Abundance Financial Services.
         </div>
       </main>
       <Footer />

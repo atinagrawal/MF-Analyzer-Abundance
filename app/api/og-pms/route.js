@@ -154,7 +154,7 @@ export async function GET(request) {
                 Atin Kumar Agrawal
               </div>
               <div style={{ fontSize: '15px', color: '#81c784', display: 'flex' }}>
-                APMI Registered PMS Distributor · APRN04279 · ARN-251838
+                APMI Registered PMS Distributor · APRN04279
               </div>
             </div>
           </div>

@@ -28,7 +28,7 @@ export async function generateMetadata({ params }) {
     `${name} is a ${d.strategyName || 'PMS'} Portfolio Management Service by ${d.providerName}.` +
     (d.aumCr ? ` AUM ₹${d.aumCr} Cr.` : '') +
     (d.minInvestment ? ` Min. investment ₹${Number(d.minInvestment).toLocaleString('en-IN')}.` : '') +
-    ` View fee structure, exit load, historical performance and quartile ranking on Abundance — ARN-251838.`;
+    ` View fee structure, exit load, historical performance and quartile ranking on Abundance — Atin Kumar Agrawal, APMI Registered PMS Distributor (APRN04279).`;
 
   const faq = buildPmsDetailFaq(d);
   const jsonLd = {

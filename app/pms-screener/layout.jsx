@@ -114,7 +114,7 @@ const jsonLd = {
                 height: 512,
             },
             description:
-                'SEBI-registered MF & SIF Distributor and APMI Registered Portfolio Management Services Distributor (APRN04279) based in Haldwani, Uttarakhand, India. ARN-251838.',
+                'SEBI-registered MF & SIF Distributor (ARN-251838) and APMI Registered Portfolio Management Services Distributor (APRN04279), based in Haldwani, Uttarakhand, India.',
             contactPoint: {
                 '@type': 'ContactPoint',
                 contactType: 'customer support',

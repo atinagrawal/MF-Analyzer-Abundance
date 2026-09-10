@@ -56,7 +56,7 @@ const FAQS = [
   },
   {
     q: 'Is this page investment advice?',
-    a: 'No. It is a factual, criteria-driven showcase published by Abundance Financial Services (ARN-251838, APRN04279), an APMI-registered PMS distributor. It does not account for your goals, risk tolerance or tax position, and past performance does not predict future results. Speak to a registered adviser before investing in any PMS.',
+    a: 'No. It is a factual, criteria-driven showcase published by Atin Kumar Agrawal (APRN04279), an APMI Registered Portfolio Management Services Distributor, under Abundance Financial Services. It does not account for your goals, risk tolerance or tax position, and past performance does not predict future results. Speak to a registered adviser before investing in any PMS.',
   },
 ];
 
@@ -66,8 +66,8 @@ function pageCopy(count, providerCount) {
   return {
     title: `${count} Abundance Preferred PMS Strategies — Top Quartile Portfolios | Abundance`,
     description: count > 0
-      ? `${count} PMS strategies${acrossProviders} currently Top Quartile vs APMI peers, with extracted holdings, sector allocation and portfolio ratios, plus cross-strategy insights. A disclosed, factual selection rule — not investment advice. By Abundance Financial Services (ARN-251838, APRN04279).`
-      : `PMS strategies that are Top Quartile vs APMI peers, with extracted holdings, sector allocation and portfolio ratios. By Abundance Financial Services (ARN-251838, APRN04279).`,
+      ? `${count} PMS strategies${acrossProviders} currently Top Quartile vs APMI peers, with extracted holdings, sector allocation and portfolio ratios, plus cross-strategy insights. A disclosed, factual selection rule — not investment advice. By Atin Kumar Agrawal, APMI Registered PMS Distributor (APRN04279), Abundance Financial Services.`
+      : `PMS strategies that are Top Quartile vs APMI peers, with extracted holdings, sector allocation and portfolio ratios. By Atin Kumar Agrawal, APMI Registered PMS Distributor (APRN04279), Abundance Financial Services.`,
   };
 }
 
@@ -332,7 +332,7 @@ export default async function PmsPreferredPage() {
               </ul>
               <div className="pmspref-brief-foot">
                 <span className="pmspref-cite">
-                  Cite as: <code>Abundance Preferred PMS Strategies, Abundance Financial Services (ARN-251838), {SITE}/pms-preferred. Quartile data from APMI India.</code>
+                  Cite as: <code>Abundance Preferred PMS Strategies, Atin Kumar Agrawal (APRN04279), APMI Registered PMS Distributor, {SITE}/pms-preferred. Quartile data from APMI India.</code>
                 </span>
                 <span className="pmspref-brief-actions">
                   <a href="/api/pms-preferred" target="_blank" rel="noopener noreferrer" className="pmspref-chip">{'{ }'} JSON</a>
@@ -458,7 +458,7 @@ export default async function PmsPreferredPage() {
         <div className="pmspref-disclosure">
           {provenance ? `${provenance} ` : 'Data sourced from APMI India (Association of Portfolio Managers in India). '}
           Min PMS investment ₹50L per SEBI. Past performance is not indicative of future results.
-          This is not investment advice. Abundance Financial Services — Atin Kumar Agrawal · ARN-251838 · APRN04279 · APMI Registered PMS Distributor.
+          This is not investment advice. Atin Kumar Agrawal · APRN04279 · APMI Registered Portfolio Management Services Distributor · Abundance Financial Services.
         </div>
       </main>
       <Footer />

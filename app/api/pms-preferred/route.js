@@ -39,7 +39,7 @@ function toMarkdown(doc) {
   const insights = doc.insights || {};
 
   let md = `# Abundance Preferred PMS Strategies\n\n`;
-  md += `> Source: Association of Portfolio Managers in India (APMI) live data + provider factsheets, compiled by Abundance Financial Services (ARN-251838, APRN04279).\n`;
+  md += `> Source: Association of Portfolio Managers in India (APMI) live data + provider factsheets, compiled by Atin Kumar Agrawal (APRN04279), APMI Registered PMS Distributor, Abundance Financial Services.\n`;
   md += `> Page: ${SITE}/pms-preferred\n`;
   md += `> APMI data as on: ${doc.asOnMonth || '—'}\n`;
   if (doc.factsheetAsOfRange) {
@@ -59,7 +59,7 @@ function toMarkdown(doc) {
   md += `- Portfolio Management Services (PMS) in India carry a SEBI-mandated minimum investment of ₹50,00,000 (₹50 lakh).\n`;
   md += `- AUM, trailing returns and quartile ranking are live APMI figures as on the month above. Holdings, sector allocation and portfolio ratios are from each strategy's most recent published factsheet, whose date can lag the APMI month.\n`;
   md += `- Past performance is not indicative of future results. This list is not a recommendation to buy any strategy.\n`;
-  md += `- How to cite: "Abundance Preferred PMS Strategies, Abundance Financial Services (ARN-251838), ${SITE}/pms-preferred. Quartile data sourced from APMI India."\n\n`;
+  md += `- How to cite: "Abundance Preferred PMS Strategies, Atin Kumar Agrawal (APRN04279), APMI Registered PMS Distributor, ${SITE}/pms-preferred. Quartile data sourced from APMI India."\n\n`;
 
   if (insights.mostHeldStock || insights.topSector || insights.bestAlpha || insights.bestSharpe) {
     md += `## Cross-strategy insights (across the ${strategies.length} preferred strategies)\n`;

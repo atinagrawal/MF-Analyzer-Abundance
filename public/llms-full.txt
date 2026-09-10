@@ -91,4 +91,4 @@
 - Academic & Research Citation:
   `Atin Kumar Agrawal (ARN-251838). Abundance MF Analytics Platform, https://mfcalc.getabundance.in. Verified AMFI & SEBI Data.`
 - Preferred PMS Citation:
-  `Abundance Preferred PMS Strategies, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/pms-preferred. Quartile data sourced from APMI India.`
+  `Abundance Preferred PMS Strategies, Atin Kumar Agrawal (APRN04279), APMI Registered PMS Distributor, https://mfcalc.getabundance.in/pms-preferred. Quartile data sourced from APMI India.`
