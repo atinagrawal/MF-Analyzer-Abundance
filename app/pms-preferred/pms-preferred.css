@@ -1,0 +1,35 @@
+/* app/pms-preferred/pms-preferred.css */
+.pmspref-main { max-width: 1100px; margin: 0 auto; padding: 32px 20px 60px; }
+.pmspref-title { font-size: 1.9rem; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.pmspref-intro { color: var(--muted); font-size: .92rem; line-height: 1.6; max-width: 760px; margin-bottom: 28px; }
+.pmspref-empty { color: var(--muted); font-size: .95rem; padding: 24px 0; }
+.pmspref-section-title { font-size: 1.2rem; font-weight: 700; color: var(--text); margin: 32px 0 14px; }
+
+.pmspref-insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.pmspref-insight-card { background: var(--g-light); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.pmspref-insight-label { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; }
+.pmspref-insight-value { font-size: 1.15rem; font-weight: 800; color: var(--g1); margin-bottom: 4px; }
+.pmspref-insight-sub { font-size: .76rem; color: var(--muted); }
+
+.pmspref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.pmspref-card { display: block; border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-decoration: none; color: inherit; transition: border-color .15s; }
+.pmspref-card:hover { border-color: var(--g1); }
+.pmspref-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.pmspref-card-logo { height: 22px; width: auto; object-fit: contain; }
+.pmspref-card-category { font-size: .68rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.pmspref-card-name { font-size: 1.02rem; font-weight: 700; color: var(--text); }
+.pmspref-card-provider { font-size: .8rem; color: var(--muted); margin-bottom: 10px; }
+.pmspref-card-stats { display: flex; flex-wrap: wrap; gap: 8px; font-size: .74rem; color: var(--muted); }
+.pmspref-card-badge { background: var(--g-light); border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; font-weight: 600; color: var(--g1); }
+
+.pmspref-table-locked { background: var(--g-light); border: 1px dashed var(--border); border-radius: 10px; padding: 20px; }
+.pmspref-locked-msg { color: var(--muted); font-size: .9rem; }
+.pmspref-locked-msg a { color: var(--g1); font-weight: 600; }
+.pmspref-table-controls { margin-bottom: 12px; }
+.pmspref-table-wrap { overflow-x: auto; }
+.pmspref-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+.pmspref-table th { text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--border); cursor: pointer; white-space: nowrap; color: var(--muted); font-weight: 600; }
+.pmspref-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.pmspref-table a { color: var(--g1); text-decoration: none; font-weight: 600; }
+
+.pmspref-disclosure { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); font-size: .72rem; color: var(--muted); line-height: 1.6; }
