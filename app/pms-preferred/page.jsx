@@ -18,15 +18,18 @@ export const dynamic = 'force-dynamic';
 const SITE = 'https://mfcalc.getabundance.in';
 const PAGE_URL = `${SITE}/pms-preferred`;
 
-export async function generateMetadata() {
-  const doc = await getPreferredStrategies().catch(() => null);
-  const count = doc?.strategies?.length ?? 0;
-  const title = `${count} Abundance Preferred PMS Strategies — Top Quartile Portfolios | Abundance`;
-  const description = count > 0
-    ? `${count} PMS strategies currently Top Quartile vs APMI peers, with real extracted holdings, sector allocation and fundamentals vs benchmark. Curated by disclosed, factual criteria -- not investment advice. By Abundance Financial Services, APRN04279.`
-    : `PMS strategies that are Top Quartile vs APMI peers, with real extracted holdings, sector allocation and fundamentals. By Abundance Financial Services, APRN04279.`;
+// Shared so generateMetadata() and the page body produce identical copy.
+function pageCopy(count) {
+  return {
+    title: `${count} Abundance Preferred PMS Strategies — Top Quartile Portfolios | Abundance`,
+    description: count > 0
+      ? `${count} PMS strategies currently Top Quartile vs APMI peers, with real extracted holdings, sector allocation and fundamentals vs benchmark. Curated by disclosed, factual criteria -- not investment advice. By Abundance Financial Services, APRN04279.`
+      : `PMS strategies that are Top Quartile vs APMI peers, with real extracted holdings, sector allocation and fundamentals. By Abundance Financial Services, APRN04279.`,
+  };
+}
 
-  const jsonLd = {
+function buildJsonLd(doc, description) {
+  return {
     '@context': 'https://schema.org',
     '@graph': [
       {
@@ -34,7 +37,7 @@ export async function generateMetadata() {
         name: 'Abundance Preferred PMS Strategies',
         description,
         url: PAGE_URL,
-        numberOfItems: count,
+        numberOfItems: doc?.strategies?.length ?? 0,
         itemListElement: (doc?.strategies || []).map((s, i) => ({
           '@type': 'ListItem',
           position: i + 1,
@@ -44,6 +47,11 @@ export async function generateMetadata() {
       },
     ],
   };
+}
+
+export async function generateMetadata() {
+  const doc = await getPreferredStrategies().catch(() => null);
+  const { title, description } = pageCopy(doc?.strategies?.length ?? 0);
 
   return {
     title,
@@ -56,7 +64,6 @@ export async function generateMetadata() {
       follow: true,
       googleBot: { index: true, follow: true, 'max-video-preview': -1, 'max-image-preview': 'large', 'max-snippet': -1 },
     },
-    other: { 'script:ld+json': JSON.stringify(jsonLd) },
   };
 }
 
@@ -64,9 +71,18 @@ export default async function PmsPreferredPage() {
   const doc = await getPreferredStrategies().catch(() => null);
   const strategies = doc?.strategies || [];
   const insights = doc?.insights || null;
+  const { description } = pageCopy(strategies.length);
+  const jsonLd = buildJsonLd(doc, description);
 
   return (
     <>
+      {/* Rendered as a real <script type="application/ld+json"> (the repo-majority
+          pattern, e.g. app/articles/[slug]/page.jsx) -- the metadata `other:
+          {'script:ld+json': ...}` form only emits an inert <meta> tag crawlers ignore. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
       <main className="pmspref-main">
         <h1 className="pmspref-title">Abundance Preferred PMS Strategies</h1>
