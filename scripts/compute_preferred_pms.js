@@ -200,6 +200,16 @@ function parseAsOnMonth(asOnMonth) {
   return { year: parseInt(yearStr, 10), month: MONTH_ABBR.indexOf(abbr) + 1 };
 }
 
+// Recursively counts non-null primitive leaf values in an object/array tree --
+// used to pick the richest `extracted` payload when the same IAID resolves
+// from more than one factsheet document.
+function countNonNullPrimitives(value) {
+  if (value == null) return 0;
+  if (Array.isArray(value)) return value.reduce((sum, v) => sum + countNonNullPrimitives(v), 0);
+  if (typeof value === 'object') return Object.values(value).reduce((sum, v) => sum + countNonNullPrimitives(v), 0);
+  return 1;
+}
+
 async function run() {
   console.log('=== Computing PMS Preferred Strategies ===');
   if (DRY_RUN) console.log('[Dry Run Mode Active]');
@@ -243,10 +253,37 @@ async function run() {
   }
   console.log(`[compute_preferred_pms] ${resolved.length} of ${candidates.length} candidates resolved to an IAID.`);
 
+  // Step 2b -- de-dup by IAID. The same strategy can resolve from more than
+  // one factsheet document (e.g. a manager publishing both a performance
+  // sheet and a portfolio sheet under one strategy name). Keep the entry
+  // whose `extracted` payload carries the most populated leaf values; on a
+  // tie keep the first encountered (stable -- mirrors the strictly-greater /
+  // first-wins convention in resolveIaid and the tally functions). Dropping
+  // the duplicate here also skips a redundant quartile fetch below.
+  const byIaid = new Map();
+  for (const c of resolved) {
+    const existing = byIaid.get(c.iaid);
+    if (!existing) {
+      byIaid.set(c.iaid, c);
+      continue;
+    }
+    if (countNonNullPrimitives(c.extracted) > countNonNullPrimitives(existing.extracted)) {
+      byIaid.set(c.iaid, c);
+    }
+  }
+  const deduped = [...byIaid.values()];
+  for (const [iaid, kept] of byIaid) {
+    const n = resolved.filter((c) => c.iaid === iaid).length;
+    if (n > 1) {
+      console.log(`[compute_preferred_pms] Deduped IAID ${iaid}: kept "${kept.strategyName}" (richer extracted), dropped ${n - 1} other(s).`);
+    }
+  }
+  console.log(`[compute_preferred_pms] ${deduped.length} distinct strategies after IAID de-dup.`);
+
   // Step 3 -- pull quartile eligibility (and the latest performance
   // snapshot, reused later for the "best alpha" insight).
   const qualifying = [];
-  for (const c of resolved) {
+  for (const c of deduped) {
     let details, snapshot, quartile;
     try {
       details = await getPmsDetailsStandalone(c.iaid, deps);
