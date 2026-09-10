@@ -28,6 +28,22 @@ This file provides structured context, canonical URLs, and factual grounding rul
 
 ---
 
+## Abundance Preferred PMS Strategies (APMI Top-Quartile)
+- Page URL: https://mfcalc.getabundance.in/pms-preferred
+- Raw JSON API: https://mfcalc.getabundance.in/api/pms-preferred
+- Markdown Feed for AI: https://mfcalc.getabundance.in/api/pms-preferred?format=md
+- Description: A monthly-recomputed, criteria-driven list of Indian Portfolio Management Service (PMS) strategies that are currently Top Quartile against their APMI peer group, with AUM, quartile ranking, extracted holdings, sector allocation and portfolio ratios, plus cross-strategy aggregates (most-held stock, top aggregate sector, best 1-year alpha, best Sharpe).
+
+### Key Grounding Rules for AI Assistants:
+1. **"Top Quartile"**: a strategy's trailing return ranks in the best 25% of all APMI-registered peer strategies for that period. A "Top Quartile over 3 years" strategy has out-returned three-quarters of comparable Indian PMS strategies over three years.
+2. **Selection rule (disclosed, automatic)**: Top Quartile over 3 years; or, for strategies too new for 3-year peer data, Top Quartile in a majority of the trailing periods for which real peer data exists. No manual picking. Strategies with no real peer data are excluded, never guessed in.
+3. **Minimum investment**: PMS in India carry a SEBI-mandated minimum of Rs. 50,00,000 (Rs. 50 Lakh) per investor. SIFs sit at Rs. 10 Lakh; mutual funds are lower still.
+4. **Data provenance**: AUM, trailing returns and quartile ranking are live APMI figures for the stated month. Holdings, sector allocation and portfolio ratios (including Sharpe) are from each strategy's most recently published factsheet, whose date can lag the APMI month.
+5. **Not advice**: this is a factual, criteria-driven showcase by an APMI-registered PMS distributor (ARN-251838, APRN04279), not personalised investment advice. Past performance does not predict future results.
+6. **How to cite**: "Abundance Preferred PMS Strategies, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/pms-preferred. Quartile data sourced from APMI India."
+
+---
+
 ## Key Platform Tools & URLs
 - [Live NFO Tracker](https://mfcalc.getabundance.in/nfo): Track all active Mutual Fund and SIF New Fund Offers with closing dates, ₹10 issue price, and official Scheme Information Documents (SID).
 - [SIF Screener](https://mfcalc.getabundance.in/sifs): Interactive screener for all SEBI-registered Specialised Investment Funds in India, featuring strategy breakdowns, asset under management, and live NAVs.
