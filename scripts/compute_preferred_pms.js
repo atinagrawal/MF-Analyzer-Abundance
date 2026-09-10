@@ -96,7 +96,7 @@ function findBestAlpha(strategies) {
     if (iaYear1 == null || bmYear1 == null) continue;
     const alphaPct = iaYear1 - bmYear1;
     if (!best || alphaPct > best.alphaPct) {
-      best = { strategyName: s.strategyName, providerName: s.providerName, alphaPct: Math.round(alphaPct * 100) / 100 };
+      best = { iaid: s.iaid ?? null, strategyName: s.strategyName, providerName: s.providerName, alphaPct: Math.round(alphaPct * 100) / 100 };
     }
   }
   return best;
@@ -108,7 +108,7 @@ function findBestSharpe(strategies) {
     const sharpe = s.extracted?.portfolioAttributes?.sharpeRatio?.strategy;
     if (sharpe == null) continue;
     if (!best || sharpe > best.sharpeRatio) {
-      best = { strategyName: s.strategyName, providerName: s.providerName, sharpeRatio: sharpe };
+      best = { iaid: s.iaid ?? null, strategyName: s.strategyName, providerName: s.providerName, sharpeRatio: sharpe };
     }
   }
   return best;
@@ -136,39 +136,107 @@ function significantWords(str) {
     .filter((w) => w.length > 2 && !STOPWORDS.has(w));
 }
 
-// Resolves ONE candidate ({ providerKey, strategyName }) to an IAID number,
-// or null if no leaderboard row scores above 0 (never guessed).
-// `matchFragments` comes from sync_pms_factsheets.js's PROVIDERS entry for
-// this candidate's providerKey.
-function resolveIaid(candidate, leaderboardRows, matchFragments) {
-  const providerRows = leaderboardRows.filter((row) => {
-    const name = (row.portfolioManager || '').toLowerCase();
-    return matchFragments.some((f) => name.includes(f.toLowerCase()));
-  });
+// Whole-string normaliser for the exact-match fast path: lowercase, collapse
+// every run of non-alphanumerics to one space, trim. "Abakkus All Cap (FPI)
+// Approach" and "abakkus all cap fpi approach" normalise differently on
+// purpose -- the parens carry the distinction between two real strategies.
+function normalizeStrategyName(str) {
+  return String(str || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
 
-  const candidateWords = significantWords(candidate.strategyName);
-  if (candidateWords.length === 0 || providerRows.length === 0) return null;
-
-  let best = null;
-  let bestScore = 0;
-  for (const row of providerRows) {
-    const targetWords = new Set(significantWords(row.strategyName));
-    const matched = candidateWords.filter((w) => targetWords.has(w)).length;
-    const score = matched / candidateWords.length;
-    if (score > bestScore) {
-      bestScore = score;
-      best = row;
-    }
-  }
-  if (!best || bestScore === 0) return null;
-
+function iaidFromRow(row) {
   try {
-    const url = new URL(best.apmiLink);
-    const iaid = url.searchParams.get('IAID');
+    const iaid = new URL(row.apmiLink).searchParams.get('IAID');
     return iaid ? Number(iaid) : null;
   } catch {
     return null;
   }
+}
+
+// Below this word-overlap score a match is too weak to trust -- return null
+// and let the caller exclude the candidate rather than guess.
+const MIN_RESOLVE_SCORE = 0.5;
+
+// Post-resolution guard: does the APMI product name for a resolved IAID
+// plausibly refer to the same strategy as the factsheet candidate? Lenient
+// on purpose (word order, punctuation, a "Carnelian " provider prefix all
+// fine) but rejects a gross mismatch like "Growth Leaders Shariah" vs
+// "Growth Leaders". An empty apmiName is treated as "can't tell" -> passes.
+function nameLooselyMatches(apmiName, candidateName) {
+  if (!apmiName) return true;
+  const a = normalizeStrategyName(apmiName);
+  const b = normalizeStrategyName(candidateName);
+  if (!a || !b) return true;
+  if (a === b || a.includes(b) || b.includes(a)) return true;
+  const aw = significantWords(apmiName);
+  const bw = new Set(significantWords(candidateName));
+  if (aw.length === 0) return true; // e.g. "SISOP" already handled by the equality check above
+  const shared = aw.filter((w) => bw.has(w)).length;
+  const smaller = Math.min(aw.length, bw.size) || 1;
+  return shared >= 2 || shared / smaller >= 0.5;
+}
+
+// Resolves ONE candidate ({ providerKey, strategyName }) to an IAID number,
+// or null when it can't be resolved with confidence (never guessed). Steps:
+//   1. exact normalised-name match against a provider row wins outright;
+//   2. else score each provider row by word overlap, dividing by
+//      max(candidate words, target words) so a row whose name is a SUPERSET
+//      of the candidate ("Growth Leaders Shariah Strategy" vs "Growth
+//      Leaders Strategy") is penalised for its extra words instead of
+//      scoring a perfect 1.0;
+//   3. return null if the best score is below MIN_RESOLVE_SCORE, or if two
+//      or more rows tie for the best score (ambiguous -- don't pick by
+//      array order).
+// `matchFragments` comes from sync_pms_factsheets.js's PROVIDERS entry for
+// this candidate's providerKey. Pass an { onReason } callback to receive a
+// one-line human explanation of how (or why not) the candidate resolved.
+function resolveIaid(candidate, leaderboardRows, matchFragments, { onReason } = {}) {
+  const say = (msg) => { if (typeof onReason === 'function') onReason(msg); };
+
+  const providerRows = leaderboardRows.filter((row) => {
+    const name = (row.portfolioManager || '').toLowerCase();
+    return matchFragments.some((f) => name.includes(f.toLowerCase()));
+  });
+  if (providerRows.length === 0) {
+    say(`no leaderboard rows for provider (matchFragments ${JSON.stringify(matchFragments)}) -- provider-level miss`);
+    return null;
+  }
+
+  const wantNorm = normalizeStrategyName(candidate.strategyName);
+  const exact = providerRows.find((row) => normalizeStrategyName(row.strategyName) === wantNorm);
+  if (exact) {
+    const iaid = iaidFromRow(exact);
+    say(`exact name match -> "${exact.strategyName}" (IAID ${iaid})`);
+    return iaid;
+  }
+
+  const candidateWords = significantWords(candidate.strategyName);
+  if (candidateWords.length === 0) {
+    say(`candidate reduces to zero significant words -- cannot score, excluded`);
+    return null;
+  }
+
+  const scored = providerRows.map((row) => {
+    const targetWords = significantWords(row.strategyName);
+    const targetSet = new Set(targetWords);
+    const matched = candidateWords.filter((w) => targetSet.has(w)).length;
+    const score = matched / Math.max(candidateWords.length, targetWords.length || 1);
+    return { row, score };
+  });
+  const bestScore = scored.reduce((m, s) => Math.max(m, s.score), 0);
+  if (bestScore < MIN_RESOLVE_SCORE) {
+    say(`best word-overlap score ${bestScore.toFixed(2)} < ${MIN_RESOLVE_SCORE} floor -- too weak, excluded`);
+    return null;
+  }
+  const topRows = scored.filter((s) => s.score === bestScore);
+  if (topRows.length > 1) {
+    say(`${topRows.length} rows tie at score ${bestScore.toFixed(2)} (${topRows.map((s) => `"${s.row.strategyName}"`).join(', ')}) -- ambiguous, excluded`);
+    return null;
+  }
+
+  const iaid = iaidFromRow(topRows[0].row);
+  say(`word-overlap ${bestScore.toFixed(2)} -> "${topRows[0].row.strategyName}" (IAID ${iaid})`);
+  return iaid;
 }
 
 // Loads the freshest available pms-cache/pms-equity-{YYYY}-{MM}.json,
@@ -244,7 +312,17 @@ async function run() {
   for (const c of candidates) {
     const provider = PROVIDERS.find((p) => p.key === c.providerKey);
     if (!provider) continue;
-    const iaid = resolveIaid({ providerKey: c.providerKey, strategyName: c.strategyName }, leaderboard, provider.matchFragments);
+    let reason = '';
+    const iaid = resolveIaid(
+      { providerKey: c.providerKey, strategyName: c.strategyName },
+      leaderboard,
+      provider.matchFragments,
+      { onReason: (m) => { reason = m; } },
+    );
+    // Audit line for every candidate -- a human scanning the workflow log can
+    // spot a bad attribution ("All Cap Approach" -> "All Cap (FPI) Approach")
+    // immediately.
+    console.log(`[compute_preferred_pms] resolve: ${c.providerDisplayName} / "${c.strategyName}" -> ${reason}`);
     if (!iaid) {
       console.warn(`[compute_preferred_pms] Could not resolve IAID for ${c.providerDisplayName} / ${c.strategyName} -- excluded.`);
       continue;
@@ -280,7 +358,32 @@ async function run() {
   }
   console.log(`[compute_preferred_pms] ${deduped.length} distinct strategies after IAID de-dup.`);
 
-  // Step 3 -- pull quartile eligibility (and the latest performance
+  // Step 3a -- pin ONE canonical as-on month for the whole run, so every
+  // strategy's quartile table and performance snapshot are read for the
+  // same reporting month rather than whichever month each strategy's
+  // period-history cache tail happens to hold. Walk back from now; the
+  // first month any deduped strategy has a live snapshot for is the
+  // newest month APMI has published, and that's the run month.
+  let runMonth = null;
+  outer:
+  for (let back = 0; back < 4; back++) {
+    const d = new Date(new Date().getFullYear(), new Date().getMonth() - back, 1);
+    for (const c of deduped) {
+      try {
+        const probe = await fetchPmsMonthSnapshot(c.iaid, d.getFullYear(), d.getMonth() + 1);
+        if (probe) { runMonth = { year: d.getFullYear(), month: d.getMonth() + 1, label: probe.asOnMonth }; break outer; }
+      } catch (err) {
+        // this strategy has nothing for this month -- try the next strategy
+      }
+    }
+  }
+  if (runMonth) {
+    console.log(`[compute_preferred_pms] Run as-on month: ${runMonth.label} (${runMonth.year}-${String(runMonth.month).padStart(2, '0')}).`);
+  } else {
+    console.warn('[compute_preferred_pms] Could not establish a run as-on month from any strategy -- each will use its own latest available.');
+  }
+
+  // Step 3b -- pull quartile eligibility (and the as-on-month performance
   // snapshot, reused later for the "best alpha" insight).
   const qualifying = [];
   for (const c of deduped) {
@@ -288,7 +391,20 @@ async function run() {
     try {
       details = await getPmsDetailsStandalone(c.iaid, deps);
       if (!details) throw new Error('no details returned');
-      snapshot = await getLatestMonthSnapshotStandalone(c.iaid, deps);
+
+      // Sanity check: the IAID we resolved must actually be this strategy.
+      // details.iaName / productName hold APMI's product identity (NOT
+      // details.strategyName, which is the broad category). If neither
+      // loosely matches the factsheet's own strategy name, the resolution
+      // was wrong -- exclude rather than publish a "Top Quartile" claim
+      // against the wrong strategy.
+      const apmiName = details.iaName || details.productName || '';
+      if (!nameLooselyMatches(apmiName, c.strategyName)) {
+        console.warn(`[compute_preferred_pms] IAID ${c.iaid} resolves to APMI name "${apmiName}" which does not match factsheet strategy "${c.strategyName}" -- excluding (likely mis-resolution).`);
+        continue;
+      }
+
+      snapshot = await getLatestMonthSnapshotStandalone(c.iaid, deps, runMonth);
       if (snapshot) {
         const { year, month } = parseAsOnMonth(snapshot.asOnMonth);
         quartile = await getPmsQuartileStandalone(c.iaid, details.providerName, details.strategyName || 'Equity', year, month, deps);
@@ -311,10 +427,11 @@ async function run() {
       aumCr: details.aumCr ?? null,
       qualifyingPeriod: qualifyingRow?.label ?? null,
       quartile: qualifyingRow?.quartile ?? null,
+      asOnMonth: snapshot?.asOnMonth ?? runMonth?.label ?? null,
       extracted: c.extracted,
       performance: snapshot ? { ia: snapshot.ia, benchmark: snapshot.benchmark } : null,
     });
-    console.log(`[compute_preferred_pms] Qualifies: ${c.providerDisplayName} / ${c.strategyName} (${qualifyingRow?.label}, ${qualifyingRow?.quartile})`);
+    console.log(`[compute_preferred_pms] Qualifies: ${c.providerDisplayName} / ${c.strategyName} (${qualifyingRow?.label}, ${qualifyingRow?.quartile}, as on ${snapshot?.asOnMonth ?? 'n/a'})`);
   }
   console.log(`[compute_preferred_pms] ${qualifying.length} strategies qualify.`);
 
@@ -329,18 +446,34 @@ async function run() {
   // Step 6 -- write the result.
   const result = {
     computedAt: new Date().toISOString(),
+    asOnMonth: runMonth?.label ?? null,
     criteria: {
       quartilePeriodPrimary: '3 Years',
       fallbackRule: 'Top Quartile in at least half of periods with real peer data, when 3-Year data isn\'t available yet',
     },
-    strategies: qualifying.map(({ providerKey, iaid, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, extracted }) => ({
-      iaid, providerKey, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, extracted,
+    strategies: qualifying.map(({ providerKey, iaid, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, asOnMonth, extracted }) => ({
+      iaid, providerKey, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, asOnMonth, extracted,
     })),
     insights,
   };
 
   if (!DRY_RUN) {
     const existing = await r2Get(R2_KEY).catch(() => null);
+    // Partial-failure guard (matches every sibling sync script in this repo,
+    // e.g. sync_amfi_aum.js / sync_pms_factsheets.js): a transient APMI
+    // outage would make every strategy fail the try/catch above, leaving
+    // `qualifying` empty. Refuse to overwrite a good document with that --
+    // exit non-zero so the workflow step goes red and is noticed, instead
+    // of silently publishing a false "nobody qualifies" page for a month.
+    const existingCount = Array.isArray(existing?.strategies) ? existing.strategies.length : 0;
+    if (existingCount > 0 && qualifying.length < existingCount * 0.5) {
+      console.error(
+        `[compute_preferred_pms] REFUSING TO WRITE: only ${qualifying.length} strategies qualify now vs ${existingCount} in the existing document ` +
+        `(under 50%). This usually means APMI was unreachable during the run, not that strategies genuinely dropped out. ` +
+        `The existing document is left untouched. Re-run once APMI is healthy.`,
+      );
+      process.exit(1);
+    }
     await backupThenPut(r2Put, R2_KEY, existing, JSON.stringify(result));
     console.log(`[compute_preferred_pms] Successfully wrote to R2 (${R2_KEY}).`);
   } else {
@@ -348,7 +481,10 @@ async function run() {
   }
 }
 
-module.exports = { isPreferred, tallyMostHeldStock, tallyTopSector, findBestAlpha, findBestSharpe, resolveIaid, loadLatestLeaderboard };
+module.exports = {
+  isPreferred, tallyMostHeldStock, tallyTopSector, findBestAlpha, findBestSharpe,
+  resolveIaid, loadLatestLeaderboard, nameLooselyMatches, parseAsOnMonth, countNonNullPrimitives,
+};
 
 if (require.main === module) {
   if (process.argv.includes('--self-test')) {
@@ -440,5 +576,100 @@ function selfTest() {
   const bestSharpe = findBestSharpe(fixtureStrategies);
   assert.strictEqual(bestSharpe.strategyName, 'Strategy A'); // Strategy B skipped, sharpeRatio null
   assert.strictEqual(bestSharpe.sharpeRatio, 0.9);
+  assert.strictEqual(bestAlpha.iaid, null, 'insight carries iaid field (null when fixture omits it)');
+  assert.strictEqual(bestSharpe.iaid, null);
+
+  // ── resolveIaid: the superset-match cases from the whole-branch review ──
+  const row = (name, iaid) => ({
+    strategyName: name,
+    portfolioManager: 'Test Manager Pvt Ltd',
+    apmiLink: `https://www.apmiindia.org/apmi/IaInsight.htm?IAID=${iaid}`,
+  });
+  const TEST_FRAGS = ['test manager'];
+
+  // 1. Exact name wins even when a superset row (extra "(FPI)") sits first.
+  const abakkusRows = [
+    row('Abakkus All Cap (FPI) Approach', 2523),
+    row('Abakkus All Cap Approach', 2510),
+    row('Abakkus All Cap Approach 2', 2511),
+    row('Abakkus All Cap (ESG) Approach', 2515),
+  ];
+  assert.strictEqual(
+    resolveIaid({ strategyName: 'Abakkus All Cap Approach' }, abakkusRows, TEST_FRAGS),
+    2510,
+    'exact-name match beats a superset row that appears first'
+  );
+
+  // 2. ICICI Growth Leaders must not land on the Shariah variant.
+  const iciciRows = [
+    row('ICICI Prudential PMS Growth Leaders Shariah Strategy', 801),
+    row('ICICI Prudential PMS Growth Leaders Strategy', 780),
+  ];
+  assert.strictEqual(
+    resolveIaid({ strategyName: 'ICICI Prudential PMS Growth Leaders Strategy' }, iciciRows, TEST_FRAGS),
+    780,
+    'exact-name match beats the Shariah superset variant'
+  );
+
+  // 3. "ALCHEMY W.I.N STRATEGY" -> zero significant words, but the exact
+  //    normalised name still matches its own row.
+  const alchemyRows = [
+    row('Alchemy Select Stock', 481),
+    row('ALCHEMY W.I.N STRATEGY', 1505),
+    row('Alchemy Smart Alpha 250', 1463),
+  ];
+  assert.strictEqual(
+    resolveIaid({ strategyName: 'ALCHEMY W.I.N STRATEGY' }, alchemyRows, TEST_FRAGS),
+    1505,
+    'punctuation-only name still resolves via exact normalised match, not a guess'
+  );
+
+  // 4. No exact match + only a weak/ambiguous fuzzy match -> null, never guessed.
+  assert.strictEqual(
+    resolveIaid({ strategyName: 'Completely Unrelated Portfolio' }, alchemyRows, TEST_FRAGS),
+    null,
+    'weak fuzzy match below the floor -> null'
+  );
+
+  // 5. Two rows tying on the best fuzzy score -> null (ambiguous), not array order.
+  //    Both targets share the candidate's two words and add one equal-count
+  //    distinguishing word, so both score 2/3 and neither wins.
+  const tieRows = [row('Alpha Growth Domestic', 11), row('Alpha Growth Global', 12)];
+  assert.strictEqual(
+    resolveIaid({ strategyName: 'Alpha Growth Portfolio' }, tieRows, TEST_FRAGS),
+    null,
+    'a fuzzy-score tie is ambiguous -> null'
+  );
+
+  // 6. Provider-level miss (no matching portfolioManager) -> null.
+  assert.strictEqual(
+    resolveIaid({ strategyName: 'Whatever' }, alchemyRows, ['nonexistent provider']),
+    null,
+    'no leaderboard rows for the provider -> null'
+  );
+
+  // 7. A legitimate provider-prefix fuzzy match still resolves.
+  const carnelianRows = [row('Carnelian Shift Strategy', 1194), row('Carnelian Contra Portfolio Strategy', 1197)];
+  assert.strictEqual(
+    resolveIaid({ strategyName: 'Shift Strategy' }, carnelianRows, ['test manager']),
+    1194,
+    'candidate is a subset of one row and unrelated to the other -> resolves'
+  );
+
+  // ── nameLooselyMatches ──
+  assert.strictEqual(nameLooselyMatches('SISOP', 'SISOP'), true);
+  assert.strictEqual(nameLooselyMatches('Carnelian Shift Strategy', 'Shift Strategy'), true, 'provider prefix is fine');
+  assert.strictEqual(nameLooselyMatches('', 'Anything'), true, 'missing APMI name -> cannot disprove -> passes');
+  assert.strictEqual(nameLooselyMatches('Alchemy High Growth', 'Renaissance Midcap PMS'), false, 'unrelated names -> rejected');
+
+  // ── parseAsOnMonth ──
+  assert.deepStrictEqual(parseAsOnMonth('Aug-2026'), { year: 2026, month: 8 });
+  assert.deepStrictEqual(parseAsOnMonth('Jan-2024'), { year: 2024, month: 1 });
+
+  // ── countNonNullPrimitives ──
+  assert.strictEqual(countNonNullPrimitives(null), 0);
+  assert.strictEqual(countNonNullPrimitives({ a: 1, b: null, c: { d: 2, e: null }, f: [3, null, 4] }), 4);
+  assert.strictEqual(countNonNullPrimitives({ a: null, b: { c: null } }), 0);
+
   console.log('[compute_preferred_pms] Self-test: ALL PASSED');
 }

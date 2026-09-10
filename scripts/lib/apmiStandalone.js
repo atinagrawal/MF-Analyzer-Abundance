@@ -46,24 +46,52 @@ async function getPmsDetailsStandalone(iaid, { r2Get, r2Put, fetchPmsDetails }) 
   return data;
 }
 
+const MONTH_ABBR_LOCAL = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// "Aug-2026" -> 202608 (comparable integer). Returns 0 for an unparseable value.
+function monthRank(asOnMonth) {
+  const [abbr, yearStr] = String(asOnMonth || '').split('-');
+  const mi = MONTH_ABBR_LOCAL.indexOf(abbr);
+  const yr = parseInt(yearStr, 10);
+  return mi >= 0 && Number.isFinite(yr) ? yr * 100 + (mi + 1) : 0;
+}
+
 // ── Latest month's IA-vs-benchmark snapshot (for the "best alpha" insight
 // and for identifying which year/month to ask the quartile endpoint about).
 // Deliberately does NOT do lib/pmsPeriodHistoryCache.js's full ~40-month
 // backfill -- only one snapshot is needed here, and writing a partial
 // series into that cache key would corrupt it for the live app (which
-// expects the FULL history back to EARLIEST_YEAR/EARLIEST_MONTH). Reads
-// that same cache key opportunistically (usually a hit, zero live APMI
-// traffic); only live-fetches (without persisting to that key) when cold.
-async function getLatestMonthSnapshotStandalone(iaid, { r2Get, fetchPmsMonthSnapshot }) {
+// expects the FULL history back to EARLIEST_YEAR/EARLIEST_MONTH).
+//
+// `targetMonth` ({ year, month } 1-indexed) is the run's single canonical
+// as-on month -- passing it keeps every strategy on the SAME reporting
+// month instead of whatever each one's period-history cache tail happens
+// to hold (that cache has no TTL and only grows on live /pms/[id] visits,
+// so a rarely-visited strategy can lag months behind a popular one). The
+// cache tail is still used when it already IS the target month (zero live
+// APMI traffic); otherwise the target month is live-fetched (without
+// persisting to that key), walking back up to 3 months if the strategy
+// hasn't published the target month yet.
+async function getLatestMonthSnapshotStandalone(iaid, { r2Get, fetchPmsMonthSnapshot }, targetMonth = null) {
+  let cachedTail = null;
   try {
     const cached = await r2Get(`pms-period-history-cache/${iaid}.json`);
-    if (cached?.data?.length > 0) return cached.data[cached.data.length - 1];
+    if (cached?.data?.length > 0) cachedTail = cached.data[cached.data.length - 1];
   } catch (err) {
     console.warn(`[apmiStandalone] R2 read failed for period-history/${iaid}: ${err.message}`);
   }
-  const now = new Date();
+
+  if (!targetMonth) {
+    if (cachedTail) return cachedTail;
+  } else {
+    const targetRank = targetMonth.year * 100 + targetMonth.month;
+    if (cachedTail && monthRank(cachedTail.asOnMonth) >= targetRank) return cachedTail;
+  }
+
+  const anchor = targetMonth
+    ? new Date(targetMonth.year, targetMonth.month - 1, 1)
+    : new Date();
   for (let back = 0; back < 4; back++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - back, 1);
+    const d = new Date(anchor.getFullYear(), anchor.getMonth() - back, 1);
     try {
       const snap = await fetchPmsMonthSnapshot(iaid, d.getFullYear(), d.getMonth() + 1);
       if (snap) return snap;
@@ -71,7 +99,7 @@ async function getLatestMonthSnapshotStandalone(iaid, { r2Get, fetchPmsMonthSnap
       // No data published for this month yet -- keep walking back.
     }
   }
-  return null;
+  return cachedTail; // last resort: a stale tail beats nothing
 }
 
 // ── Provider display name -> APMI's numeric pmsProvider ID ─────────────────
