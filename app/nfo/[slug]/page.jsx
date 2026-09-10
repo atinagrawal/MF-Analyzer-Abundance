@@ -80,11 +80,7 @@ function buildDescription(entry) {
 
 // Builds the FinancialProduct JSON-LD object shared by generateMetadata()
 // (for the description text) and the page body (which renders it as a real
-// <script type="application/ld+json"> tag -- see Fix 1 in the final review:
-// Next's `metadata.other` field only ever emits an inert <meta> tag, never
-// real structured data). Never fabricates a price: `offers.validFrom`/
-// `validThrough` are omitted entirely rather than set to null when the
-// corresponding date is missing.
+// <script type="application/ld+json"> tag).
 function buildJsonLd(entry, canonicalUrl) {
   const offers = {
     '@type': 'Offer',
@@ -107,6 +103,29 @@ function buildJsonLd(entry, canonicalUrl) {
         identifier: entry.schemeId,
         offers,
       },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://mfcalc.getabundance.in',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'New Fund Offers (NFO)',
+            item: 'https://mfcalc.getabundance.in/nfo',
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: entry.schemeName,
+            item: canonicalUrl,
+          },
+        ],
+      },
     ],
   };
 }
@@ -118,16 +137,41 @@ export async function generateMetadata({ params }) {
     return { title: 'NFO Not Found | Abundance', robots: { index: false, follow: false } };
   }
 
-  const title = `${entry.schemeName} NFO — Open Date, Price & Minimum Investment | Abundance`;
+  const title = `${entry.schemeName} NFO — ${entry.amcName} | Open Date, Price & Min Investment`;
   const description = buildDescription(entry);
   const canonicalUrl = `https://mfcalc.getabundance.in/nfo/${entry.slug}`;
+  const ogImageUrl = 'https://mfcalc.getabundance.in/api/og-nfo';
+
+  const keywords = [
+    `${entry.schemeName} NFO`,
+    `${entry.schemeName} open date`,
+    `${entry.schemeName} close date`,
+    `${entry.amcName} NFO`,
+    entry.type === 'sif' ? 'SIF NFO India' : 'mutual fund NFO',
+    entry.type === 'sif' ? 'Specialised Investment Fund NFO' : 'new fund offer India',
+    `minimum investment ${entry.schemeName}`,
+    'AMFI NFO live',
+    'Abundance Financial Services',
+  ].filter(Boolean).join(', ');
 
   return {
     title,
     description,
+    keywords,
     alternates: { canonical: canonicalUrl },
-    openGraph: { title, description, type: 'website', url: canonicalUrl },
-    twitter: { card: 'summary', title, description },
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      url: canonicalUrl,
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: `${entry.schemeName} NFO` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImageUrl],
+    },
     robots: { index: true, follow: true },
   };
 }
@@ -147,7 +191,13 @@ export default async function NfoDetailPage({ params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Navbar activePage="nfo" />
       <main className="nfo-detail container">
-        <a href="/nfo" className="nfo-back-link">← All NFOs</a>
+        <nav aria-label="Breadcrumb" className="nfo-breadcrumbs">
+          <a href="/">Home</a>
+          <span>/</span>
+          <a href="/nfo">New Fund Offers</a>
+          <span>/</span>
+          <span>{entry.schemeName}</span>
+        </nav>
 
         <header className="nfo-detail-header">
           {logo && <img src={logo} alt={entry.amcName || ''} className="nfo-detail-logo" />}
@@ -157,9 +207,22 @@ export default async function NfoDetailPage({ params }) {
           </div>
         </header>
 
-        {entry.status === 'closed' && (
+        {entry.type === 'sif' && (
+          <div className="nfo-sif-badge-box">
+            <strong>🛡️ Specialised Investment Fund (SIF) — SEBI New Asset Class</strong>
+            <p>
+              This scheme is regulated under SEBI&apos;s Specialised Investment Fund framework with a minimum ticket size of ₹10,00,000 (₹10 Lakhs) across strategies within the same fund house. SIFs can employ unhedged derivative positions up to 25% and non-directional long-short strategies.
+            </p>
+          </div>
+        )}
+
+        {entry.status === 'closed' ? (
           <div className="nfo-closed-banner">
             This NFO closed on {formatDate(entry.closeDate)} and is no longer accepting subscriptions.
+          </div>
+        ) : (
+          <div className="nfo-open-banner" style={{ background: 'var(--g-xlight)', border: '1px solid var(--g-light)', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: '.84rem', color: 'var(--g1)', fontWeight: 700 }}>
+            🟢 Currently Open for Subscription · Closes on {formatDate(entry.closeDate) || 'announced date'}
           </div>
         )}
 
@@ -167,9 +230,10 @@ export default async function NfoDetailPage({ params }) {
 
         <table className="nfo-facts-table">
           <tbody>
+            <tr><th>Asset Class</th><td>{entry.type === 'sif' ? 'Specialised Investment Fund (SIF)' : 'Mutual Fund'}</td></tr>
             <tr><th>Category</th><td>{entry.category || '—'}</td></tr>
             <tr><th>Scheme type</th><td>{entry.schemeType || '—'}</td></tr>
-            <tr><th>Offer price</th><td>{entry.offerPrice != null ? `₹${entry.offerPrice}` : '—'}</td></tr>
+            <tr><th>Offer price</th><td>{entry.offerPrice != null ? `₹${entry.offerPrice} per unit` : '₹10 per unit'}</td></tr>
             <tr><th>Minimum investment</th><td>{entry.minInvestment != null ? `₹${new Intl.NumberFormat('en-IN').format(entry.minInvestment)}` : '—'}</td></tr>
             <tr><th>Opens</th><td>{formatDate(entry.openDate) || '—'}</td></tr>
             <tr><th>Closes</th><td>{formatDate(entry.closeDate) || '—'}</td></tr>
@@ -180,22 +244,34 @@ export default async function NfoDetailPage({ params }) {
         <div className="nfo-detail-links">
           {entry.infoDocumentUrl && (
             <a href={entry.infoDocumentUrl} target="_blank" rel="noopener noreferrer" className="nfo-external-link">
-              📄 Official Offer Document (PDF) ↗
+              📄 Official Scheme Information Document (SID / PDF) ↗
             </a>
           )}
           {entry.amcWebsite && (
             <a href={entry.amcWebsite} target="_blank" rel="noopener noreferrer" className="nfo-external-link">
-              🔗 {entry.amcName} Website ↗
+              🔗 Official {entry.amcName} Website ↗
             </a>
           )}
           {liveLink && (
             <a href={liveLink} className="nfo-external-link">
-              📊 View Full Analysis →
+              📊 View Full Analysis in Screener →
+            </a>
+          )}
+          {entry.type === 'sif' ? (
+            <a href="/sifs" className="nfo-external-link">
+              🛡️ Compare All Specialised Investment Funds (SIF Screener) →
+            </a>
+          ) : (
+            <a href="/screener" className="nfo-external-link">
+              📈 Compare with Existing Funds in MF Screener →
             </a>
           )}
         </div>
 
-        <a href="/book-consultation" className="nfo-cta-button">Talk to an Advisor</a>
+        <div style={{ marginTop: 24, marginBottom: 24, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <a href="/book-consultation" className="nfo-cta-button">Talk to an AMFI Registered Advisor</a>
+          <a href="/nfo" className="nfo-external-link" style={{ background: 'transparent', display: 'flex', alignItems: 'center' }}>← Back to All NFOs</a>
+        </div>
       </main>
       <Footer />
     </>
