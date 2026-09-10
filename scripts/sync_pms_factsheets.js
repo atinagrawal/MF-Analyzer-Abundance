@@ -7,14 +7,15 @@
  * lib/pmsFactsheetsCache.js and composed into
  * app/api/pms-detail/[id]/route.js's response.
  *
- * Covers 9 providers verified live during research (see
+ * Covers 10 providers verified live during research (see
  * pms_factsheets_research.txt and this session's chat history for the
  * verification trail): Carnelian Capital, Stallion Asset, Narnolia
  * Financial Advisors, Renaissance Investment Managers, Sundaram Alternate
- * Assets, Green Lantern Capital, ICICI Prudential, Alchemy Capital, and
- * Abakkus Investment Managers. Every other PMS provider's detail page is
- * unaffected -- lib/pmsFactsheetsCache.js's matchProvider() simply returns
- * no match for anything not in this list, and the UI section doesn't render.
+ * Assets, Green Lantern Capital, ICICI Prudential, Alchemy Capital,
+ * Abakkus Investment Managers, and Buoyant Capital. Every other PMS
+ * provider's detail page is unaffected -- lib/pmsFactsheetsCache.js's
+ * matchProvider() simply returns no match for anything not in this list,
+ * and the UI section doesn't render.
  *
  * Each provider has a genuinely different technical shape (verified, not
  * assumed):
@@ -61,6 +62,15 @@
  *     site's own nav -- the real sitemap (https://www.alchemycapital.com/
  *     sitemap) surfaced all 8 real strategy page URLs, each APMI-
  *     registered and each with its own factsheet + presentation.
+ *   - Abakkus: 3 publicly-marketed PMS strategies, fixed S3 URLs with no
+ *     month in the filename -- existence-checked, honest-null period.
+ *   - Buoyant: a single APMI-registered strategy (Opportunities PMS,
+ *     IAID 606). The /insights/factsheets/ page carries a WP-localised
+ *     JSON month list; filenames vary month-to-month, so the newest
+ *     "factsheet"-named PDF is discovered from that list rather than
+ *     guessed. The site's three other PMS (NDPMS, All-Weather, Liquid)
+ *     are non-discretionary or absent from APMI's public reporting, so
+ *     they have no detail page to enrich.
  *
  * Usage:
  *   node scripts/sync_pms_factsheets.js [--dry-run]
@@ -676,6 +686,70 @@ async function fetchAbakkus() {
   return documents;
 }
 
+// ── Buoyant Capital: one flagship strategy, month-list embedded in the page ─
+// Verified live: only ONE Buoyant strategy is APMI-registered ("Buoyant
+// Opportunities PMS", IAID 606) -- the site's other three (Opportunities
+// NDPMS, All-Weather, Liquid) are non-discretionary / not in APMI's public
+// reporting, and the single monthly PDF is Opportunities-only. The
+// /insights/factsheets/ page ships a WordPress-localised JSON array of
+// {"month":"August 2026","url":"...pdf"} entries; filenames are NOT
+// consistent month-to-month ("Buoyant-factsheet-July-2026.pdf" vs
+// "Buoyant-PMS-Factsheet-Aug-2026.pdf" vs older "Quick-Insights-*.pdf"),
+// so the latest is discovered from that list, not guessed from a URL
+// pattern. Only entries whose URL path contains "factsheet" are considered
+// -- a month that only has a lighter "Quick Insights" note keeps last
+// month's real factsheet rather than regressing to a sparse PDF.
+const BUOYANT_MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+
+// Pure: given the /insights/factsheets/ page HTML, return { strategyName,
+// docType, period, title, url } for the newest factsheet PDF, or null.
+function parseBuoyantLatestFactsheet(html) {
+  const entryRe = /\{"month":"([A-Za-z]+ \d{4})","url":"([^"]+?\.pdf)"\}/g;
+  let best = null;
+  let bestRank = -1;
+  let m;
+  while ((m = entryRe.exec(html))) {
+    const monthLabel = m[1];
+    const url = m[2].replace(/\\\//g, '/');
+    if (!/buoyantcap\.com/i.test(url) || !/factsheet/i.test(url)) continue;
+    const [mon, yr] = monthLabel.toLowerCase().split(' ');
+    const monIdx = BUOYANT_MONTHS.indexOf(mon);
+    const year = parseInt(yr, 10);
+    if (monIdx < 0 || !Number.isFinite(year)) continue;
+    const rank = year * 12 + monIdx;
+    if (rank > bestRank) {
+      bestRank = rank;
+      best = { monthLabel, url };
+    }
+  }
+  if (!best) return null;
+  return {
+    strategyName: 'Buoyant Opportunities PMS',
+    docType: 'factsheet',
+    period: best.monthLabel,
+    title: `Buoyant Opportunities PMS — ${best.monthLabel}`,
+    url: best.url,
+  };
+}
+
+async function fetchBuoyant() {
+  const res = await fetchWithRetry('https://www.buoyantcap.com/insights/factsheets/');
+  if (!res.ok) {
+    console.warn(`[PMS Factsheets] Buoyant: HTTP ${res.status}`);
+    return [];
+  }
+  const doc = parseBuoyantLatestFactsheet(await res.text());
+  if (!doc) {
+    console.warn('[PMS Factsheets] Buoyant: no factsheet entry found on /insights/factsheets/');
+    return [];
+  }
+  if (!(await urlExists(doc.url))) {
+    console.warn(`[PMS Factsheets] Buoyant: newest factsheet URL does not resolve (${doc.url}), dropping.`);
+    return [];
+  }
+  return [doc];
+}
+
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────
 // Links alone don't tell an investor what's actually in the strategy --
 // this reads each factsheet's real content (top holdings, sector and
@@ -1063,6 +1137,7 @@ const PROVIDERS = [
   { key: 'iciciprudential', displayName: 'ICICI Prudential Asset Management Company', matchFragments: ['icici prudential'], fetch: fetchICICIPru },
   { key: 'alchemy', displayName: 'Alchemy Capital Management', matchFragments: ['alchemy'], fetch: fetchAlchemy },
   { key: 'abakkus', displayName: 'Abakkus Investment Managers', matchFragments: ['abakkus'], fetch: fetchAbakkus },
+  { key: 'buoyant', displayName: 'Buoyant Capital', matchFragments: ['buoyant'], fetch: fetchBuoyant },
 ];
 
 async function run() {
@@ -1307,6 +1382,21 @@ function selfTest() {
   assert.strictEqual(alchemyLinks.presentation, '/media/m4wddqxd/alchemy-win-strategy-jul26-1.pdf');
   assert.strictEqual(alchemyLinks.factsheet, '/media/zw2bezw4/alchemy-win-strategy-jul26.pdf');
 
+  // parseBuoyantLatestFactsheet: the real page ships an escaped-slash JSON
+  // month list; the newest "factsheet"-named PDF wins, a Quick-Insights
+  // entry for a later month is ignored, and cross-year ordering is by
+  // (year, month) not string sort.
+  const buoyant = parseBuoyantLatestFactsheet(
+    '{"month":"December 2025","url":"https:\\/\\/www.buoyantcap.com\\/wp-content\\/uploads\\/2025\\/12\\/Buoyant-factsheet-December-2025.pdf"},' +
+    '{"month":"July 2026","url":"https:\\/\\/www.buoyantcap.com\\/wp-content\\/uploads\\/2026\\/08\\/Buoyant-factsheet-July-2026.pdf"},' +
+    '{"month":"August 2026","url":"https:\\/\\/www.buoyantcap.com\\/wp-content\\/uploads\\/2026\\/09\\/Buoyant-PMS-Factsheet-Aug-2026.pdf"},' +
+    '{"month":"September 2026","url":"https:\\/\\/www.buoyantcap.com\\/wp-content\\/uploads\\/2026\\/10\\/Quick-Insights-September-2026.pdf"}'
+  );
+  assert.strictEqual(buoyant.url, 'https://www.buoyantcap.com/wp-content/uploads/2026/09/Buoyant-PMS-Factsheet-Aug-2026.pdf');
+  assert.strictEqual(buoyant.strategyName, 'Buoyant Opportunities PMS');
+  assert.strictEqual(buoyant.period, 'August 2026');
+  assert.strictEqual(parseBuoyantLatestFactsheet('<div>no month list here</div>'), null);
+
   console.log('[PMS Factsheets Sync] Self-test: ALL PASSED');
 }
 
@@ -1329,6 +1419,8 @@ module.exports = {
   fetchAlchemy,
   parseAlchemyDocLinks,
   fetchAbakkus,
+  fetchBuoyant,
+  parseBuoyantLatestFactsheet,
   PROVIDERS,
 };
 
