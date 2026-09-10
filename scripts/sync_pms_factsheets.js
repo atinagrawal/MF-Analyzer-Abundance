@@ -557,6 +557,28 @@ function resolveIciciUrl(rawUrl) {
   return new URL(rawUrl, 'https://www.iciciprualternates.com').href + '?crafterSite=production';
 }
 
+// Strategies that ARE APMI-registered and whose factsheet we already hold
+// (supplied by the distributor) but which ICICI has not yet added to its
+// investor-corner JSON API. Carried with url:null -- the extracted data is
+// filled manually and the /pms/[id] page shows the portfolio breakdown
+// without a (non-existent) download link. As soon as ICICI publishes the
+// strategy to its API, fetchICICIPru()'s dedupe drops this entry and the
+// real, WAF-verified URL takes over automatically.
+const ICICI_PENDING_FACTSHEETS = [
+  { strategyName: 'ICICI Prudential PMS Rising Stars Strategy', period: 'August 2026' },
+];
+
+// Pure: append each ICICI_PENDING_FACTSHEETS entry that isn't already
+// present as a factsheet in `documents` (the API version always wins).
+function appendPendingIciciFactsheets(documents, pending = ICICI_PENDING_FACTSHEETS) {
+  const known = new Set(documents.filter((d) => d.docType === 'factsheet').map((d) => d.strategyName));
+  for (const p of pending) {
+    if (known.has(p.strategyName)) continue;
+    documents.push({ strategyName: p.strategyName, docType: 'factsheet', period: p.period ?? null, title: p.strategyName, url: null });
+  }
+  return documents;
+}
+
 async function fetchICICIPru() {
   const res = await fetchWithRetry(ICICI_API_URL);
   if (!res.ok) {
@@ -593,7 +615,8 @@ async function fetchICICIPru() {
     });
   }
 
-  return documents;
+  // Append pending-publication factsheets the API doesn't yet carry.
+  return appendPendingIciciFactsheets(documents);
 }
 
 // ── Alchemy Capital: 8 strategies, each its own factsheet + presentation ───
@@ -1118,9 +1141,20 @@ async function enrichWithExtraction(documents, previousDocs, quotaState) {
 
   const byUrl = new Map();
   for (const doc of documents) {
-    if (doc.docType !== 'factsheet') continue;
+    // Skip non-factsheets, and pending docs with no URL yet (nothing to
+    // download for Gemini -- their extracted data is filled manually and
+    // preserved via prevFor() below).
+    if (doc.docType !== 'factsheet' || !doc.url) continue;
     if (!byUrl.has(doc.url)) byUrl.set(doc.url, []);
     byUrl.get(doc.url).push(doc);
+  }
+
+  // A URL-less factsheet doc still inherits any previously-stored extraction.
+  for (const doc of documents) {
+    if (doc.docType === 'factsheet' && !doc.url && !doc.extracted) {
+      const prev = prevFor(doc);
+      if (prev?.extracted) doc.extracted = prev.extracted;
+    }
   }
 
   for (const group of byUrl.values()) {
@@ -1455,6 +1489,23 @@ function selfTest() {
   assert.strictEqual(buoyant.period, 'August 2026');
   assert.strictEqual(parseBuoyantLatestFactsheet('<div>no month list here</div>'), null);
 
+  // appendPendingIciciFactsheets: a pending strategy is added as a
+  // url:null factsheet when absent, and skipped once the API carries it.
+  const pending = [{ strategyName: 'ICICI Prudential PMS Rising Stars Strategy', period: 'August 2026' }];
+  const absent = appendPendingIciciFactsheets(
+    [{ strategyName: 'ICICI Prudential PMS ACE Strategy', docType: 'factsheet', url: 'https://x/ace.pdf' }],
+    pending,
+  );
+  assert.strictEqual(absent.length, 2);
+  assert.strictEqual(absent[1].strategyName, 'ICICI Prudential PMS Rising Stars Strategy');
+  assert.strictEqual(absent[1].url, null);
+  assert.strictEqual(absent[1].period, 'August 2026');
+  const present = appendPendingIciciFactsheets(
+    [{ strategyName: 'ICICI Prudential PMS Rising Stars Strategy', docType: 'factsheet', url: 'https://x/rs.pdf' }],
+    pending,
+  );
+  assert.strictEqual(present.length, 1, 'API version already present -> pending entry skipped');
+
   // parseDezervDeckPdf: the deck page carries one <a href> to a CloudFront
   // PDF; trailing query strings are tolerated, a non-PDF link is ignored.
   assert.strictEqual(
@@ -1485,6 +1536,7 @@ module.exports = {
   parseGreenLanternFactsheetUrl,
   fetchICICIPru,
   resolveIciciUrl,
+  appendPendingIciciFactsheets,
   fetchAlchemy,
   parseAlchemyDocLinks,
   fetchAbakkus,

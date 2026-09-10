@@ -366,9 +366,13 @@ export default function PMSDetailClient({ iaid }) {
           )}
 
         {/* ── FACTSHEETS & PRESENTATIONS (always free, curated providers only) ── */}
-        {d.factsheets && d.factsheets.length > 0 && (() => {
+        {d.factsheets && d.factsheets.some((doc) => doc.url) && (() => {
           const byStrategy = new Map();
           for (const doc of d.factsheets) {
+            // A doc with no url can't be a download link (e.g. a factsheet
+            // we hold but the provider hasn't published online yet) -- its
+            // portfolio data still renders above, just skip the link chip.
+            if (!doc.url) continue;
             if (!byStrategy.has(doc.strategyName)) byStrategy.set(doc.strategyName, []);
             byStrategy.get(doc.strategyName).push(doc);
           }
