@@ -28,21 +28,25 @@ export default function BookConsultationLayout({ children }) {
         "@type": "Person",
         "name": "Atin Kumar Agrawal",
         "jobTitle": "Founder & Principal Wealth Advisor",
-        "identifier": "ARN-251838",
+        "identifier": { "@type": "PropertyValue", "name": "AMFI ARN", "value": "ARN-251838" },
       },
-      "identifier": ["ARN-251838", "APRN04279"],
+      "identifier": [
+        { "@type": "PropertyValue", "name": "AMFI ARN", "value": "ARN-251838" },
+        { "@type": "PropertyValue", "name": "APMI APRN", "value": "APRN04279" },
+      ],
+      "memberOf": {
+        "@type": "Organization",
+        "name": "Association of Mutual Funds in India (AMFI)",
+        "url": "https://www.amfiindia.com",
+      },
       "areaServed": "IN",
       "description": "AMFI Registered Mutual Fund Distributor (ARN-251838) and APMI Registered PMS Distributor (APRN04279), advising 350+ families across ₹250Cr+ in assets.",
       "telephone": "+91-98081-05923",
       "sameAs": [
-        "https://www.amfiindia.com",
-        "https://twitter.com/getabundance",
-        "https://linkedin.com/company/getabundance",
+        "https://twitter.com/abundancefinsvs",
+        "https://www.linkedin.com/company/abundance-financial-services",
+        "https://www.instagram.com/abundancefinancialservices",
       ],
-    },
-    "speakable": {
-      "@type": "SpeakableSpecification",
-      "cssSelector": [".bc-hero-h1", ".bc-hero-p", ".bc-faq-list"],
     },
   };
 

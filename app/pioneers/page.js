@@ -199,9 +199,9 @@ export default async function PioneersPage() {
             url: 'https://mfcalc.getabundance.in/og-mfcalc.png',
           },
           sameAs: [
-            'https://www.amfiindia.com',
-            'https://twitter.com/getabundance',
-            'https://linkedin.com/company/getabundance',
+            'https://twitter.com/abundancefinsvs',
+            'https://www.linkedin.com/company/abundance-financial-services',
+            'https://www.instagram.com/abundancefinancialservices',
           ],
         },
         speakable: {

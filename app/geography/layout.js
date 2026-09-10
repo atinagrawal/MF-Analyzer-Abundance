@@ -3,6 +3,8 @@ import Script from 'next/script';
 
 export const metadata = getPageMeta('geography');
 
+const BUILD_DATE = new Date().toISOString().slice(0, 10);
+
 export default function GeographyLayout({ children }) {
   const webAppSchema = {
     "@context": "https://schema.org",
@@ -14,7 +16,7 @@ export default function GeographyLayout({ children }) {
     "operatingSystem": "Any",
     "browserRequirements": "Requires JavaScript",
     "inLanguage": "en-IN",
-    "dateModified": "2026-04-08",
+    "dateModified": BUILD_DATE,
     "offers": {
       "@type": "Offer",
       "price": "0",
@@ -34,19 +36,15 @@ export default function GeographyLayout({ children }) {
       "telephone": "+919808105923",
       "identifier": "ARN-251838",
       "sameAs": [
-        "https://www.amfiindia.com",
-        "https://twitter.com/getabundance",
-        "https://linkedin.com/company/getabundance"
+        "https://twitter.com/abundancefinsvs",
+        "https://www.linkedin.com/company/abundance-financial-services",
+        "https://www.instagram.com/abundancefinancialservices"
       ]
     },
     "isPartOf": {
       "@type": "WebSite",
       "name": "Abundance MF Calculator",
       "url": "https://mfcalc.getabundance.in"
-    },
-    "speakable": {
-      "@type": "SpeakableSpecification",
-      "cssSelector": [".geo-ai-brief", ".page-title", ".page-subtitle"]
     }
   };
 
@@ -80,9 +78,8 @@ export default function GeographyLayout({ children }) {
         "url": "https://mfcalc.getabundance.in/og-mfcalc.png"
       },
       "sameAs": [
-        "https://www.amfiindia.com",
-        "https://twitter.com/getabundance",
-        "https://linkedin.com/company/getabundance"
+        "https://twitter.com/abundancefinsvs",
+        "https://www.linkedin.com/company/abundance-financial-services"
       ]
     },
     "license": "https://www.amfiindia.com",

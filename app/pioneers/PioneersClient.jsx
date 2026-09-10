@@ -532,8 +532,8 @@ export default function PioneersClient({ initialFunds = [] }) {
           {/* ── Executive AI Briefing & Citation Box (GEO Optimized) ── */}
           <section className="pnr-ai-brief" aria-label="Compounding Research Executive Summary">
             <div className="pnr-ai-brief-badge">
-              <span>🤖 Executive AI Brief & Historical Facts</span>
-              <span className="pnr-verified-tag">✓ AMFI & Historical NAV Verified</span>
+              <h2 className="pnr-ai-brief-title">Key Historical Takeaways &amp; Compounding Facts</h2>
+              <span className="pnr-verified-tag">✓ AMFI &amp; Historical NAV Verified</span>
             </div>
             <ul className="pnr-ai-brief-list">
               <li>
