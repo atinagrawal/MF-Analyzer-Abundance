@@ -99,7 +99,11 @@ async function getLatestMonthSnapshotStandalone(iaid, { r2Get, fetchPmsMonthSnap
       // No data published for this month yet -- keep walking back.
     }
   }
-  return cachedTail; // last resort: a stale tail beats nothing
+  // Last resort: a stale cached tail beats returning nothing. When this
+  // fires, this strategy's row will carry an older `asOnMonth` than the
+  // doc-level `asOnMonth` (the run's pinned month) -- the caller records
+  // the per-row value so the page can still disclose it accurately.
+  return cachedTail;
 }
 
 // ── Provider display name -> APMI's numeric pmsProvider ID ─────────────────

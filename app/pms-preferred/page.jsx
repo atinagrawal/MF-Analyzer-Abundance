@@ -67,6 +67,24 @@ function fmtDate(iso) {
     : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// A single-strategy insight tile. Renders as a link to /pms/<iaid> when the
+// iaid is known, otherwise as a plain card (no hrefless anchor).
+function InsightTile({ iaid, label, value, sub, src }) {
+  const inner = (
+    <>
+      <div className="pmspref-insight-label">{label}</div>
+      <div className="pmspref-insight-value">{value}</div>
+      <div className="pmspref-insight-sub">
+        {sub}
+        {src && <span className="pmspref-insight-src"> · {src}</span>}
+      </div>
+    </>
+  );
+  return iaid
+    ? <a className="pmspref-insight-card pmspref-insight-link" href={`/pms/${iaid}`}>{inner}</a>
+    : <div className="pmspref-insight-card">{inner}</div>;
+}
+
 export async function generateMetadata() {
   const doc = await getPreferredStrategies().catch(() => null);
   const { title, description } = pageCopy(doc?.strategies?.length ?? 0);
@@ -91,7 +109,6 @@ export default async function PmsPreferredPage() {
   const fsRange = doc?.factsheetAsOfRange || null;
   const computedOn = doc?.computedAt ? fmtDate(doc.computedAt.slice(0, 10)) : null;
   const provenance = doc?.criteria?.dataSources || null;
-  const fallbackRule = doc?.criteria?.fallbackRule || null;
 
   return (
     <>
@@ -102,9 +119,10 @@ export default async function PmsPreferredPage() {
       <main className="pmspref-main">
         <h1 className="pmspref-title">Abundance Preferred PMS Strategies</h1>
         <p className="pmspref-intro">
-          Strategies here are Top Quartile against their APMI peer group over 3 years
-          {fallbackRule ? ` (or, for strategies too new for 3 years of peer data, ${fallbackRule.charAt(0).toLowerCase()}${fallbackRule.slice(1)})` : ''}.
-          This is a disclosed, factual, automatically-recomputed rule — not a personal recommendation.
+          Strategies here are Top Quartile against their APMI peer group over 3 years — or,
+          for strategies too new for 3 years of peer data, Top Quartile in at least half the
+          periods that do have real peer data. This is a disclosed, factual,
+          automatically-recomputed rule — not a personal recommendation.
         </p>
 
         {(asOn || computedOn) && (
@@ -150,30 +168,22 @@ export default async function PmsPreferredPage() {
                 </div>
               )}
               {insights.bestAlpha && (
-                <a
-                  className="pmspref-insight-card pmspref-insight-link"
-                  href={insights.bestAlpha.iaid ? `/pms/${insights.bestAlpha.iaid}` : undefined}
-                >
-                  <div className="pmspref-insight-label">Best 1-Year Alpha</div>
-                  <div className="pmspref-insight-value">+{insights.bestAlpha.alphaPct}pp</div>
-                  <div className="pmspref-insight-sub">
-                    {insights.bestAlpha.strategyName} ({insights.bestAlpha.providerName})
-                    <span className="pmspref-insight-src"> · APMI, as on {asOn}</span>
-                  </div>
-                </a>
+                <InsightTile
+                  iaid={insights.bestAlpha.iaid}
+                  label="Best 1-Year Alpha"
+                  value={`+${insights.bestAlpha.alphaPct}pp`}
+                  sub={`${insights.bestAlpha.strategyName} (${insights.bestAlpha.providerName})`}
+                  src={asOn ? `APMI, as on ${asOn}` : 'APMI'}
+                />
               )}
               {insights.bestSharpe && (
-                <a
-                  className="pmspref-insight-card pmspref-insight-link"
-                  href={insights.bestSharpe.iaid ? `/pms/${insights.bestSharpe.iaid}` : undefined}
-                >
-                  <div className="pmspref-insight-label">Best Sharpe Ratio</div>
-                  <div className="pmspref-insight-value">{insights.bestSharpe.sharpeRatio}</div>
-                  <div className="pmspref-insight-sub">
-                    {insights.bestSharpe.strategyName} ({insights.bestSharpe.providerName})
-                    <span className="pmspref-insight-src"> · from latest factsheet</span>
-                  </div>
-                </a>
+                <InsightTile
+                  iaid={insights.bestSharpe.iaid}
+                  label="Best Sharpe Ratio"
+                  value={insights.bestSharpe.sharpeRatio}
+                  sub={`${insights.bestSharpe.strategyName} (${insights.bestSharpe.providerName})`}
+                  src="from latest factsheet"
+                />
               )}
             </div>
           </section>
