@@ -1195,6 +1195,7 @@ const PROVIDERS = [
   { key: 'alchemy', displayName: 'Alchemy Capital Management', matchFragments: ['alchemy'], fetch: fetchAlchemy },
   { key: 'abakkus', displayName: 'Abakkus Investment Managers', matchFragments: ['abakkus'], fetch: fetchAbakkus },
   { key: 'buoyant', displayName: 'Buoyant Capital', matchFragments: ['buoyant'], fetch: fetchBuoyant },
+  { key: 'dezerv', displayName: 'Dezerv Investments', matchFragments: ['dezerv'], fetch: fetchDezerv },
 ];
 
 async function run() {
@@ -1454,6 +1455,17 @@ function selfTest() {
   assert.strictEqual(buoyant.period, 'August 2026');
   assert.strictEqual(parseBuoyantLatestFactsheet('<div>no month list here</div>'), null);
 
+  // parseDezervDeckPdf: the deck page carries one <a href> to a CloudFront
+  // PDF; trailing query strings are tolerated, a non-PDF link is ignored.
+  assert.strictEqual(
+    parseDezervDeckPdf(
+      '<a href="https://www.dezerv.in/faq">FAQ</a>' +
+      '<a href="https://d21ldyuk035o7q.cloudfront.net/portfolio-review/acquisition/dezerv-equity-revival-factsheet.pdf">Download</a>'
+    ),
+    'https://d21ldyuk035o7q.cloudfront.net/portfolio-review/acquisition/dezerv-equity-revival-factsheet.pdf'
+  );
+  assert.strictEqual(parseDezervDeckPdf('<a href="/decks/afs-factsheet/">back</a>'), null);
+
   console.log('[PMS Factsheets Sync] Self-test: ALL PASSED');
 }
 
@@ -1478,6 +1490,8 @@ module.exports = {
   fetchAbakkus,
   fetchBuoyant,
   parseBuoyantLatestFactsheet,
+  fetchDezerv,
+  parseDezervDeckPdf,
   PROVIDERS,
 };
 
