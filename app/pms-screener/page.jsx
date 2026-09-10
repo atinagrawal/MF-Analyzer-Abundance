@@ -669,6 +669,8 @@ function PMSScreenerInner() {
                     <p className="page-subtitle">
                         Institutional-grade analytics for Portfolio Management Services — compare {strategy} strategies
                         across all time horizons, assess manager track records, and shortlist portfolios for wealth allocation.
+                        {' '}See our <a href="/pms-preferred">Abundance Preferred PMS</a> list — strategies that are Top Quartile
+                        vs APMI peers, with extracted holdings and cross-strategy insights.
                     </p>
                 </div>
 
