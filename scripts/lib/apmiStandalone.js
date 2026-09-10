@@ -124,8 +124,12 @@ function lastDayOfMonth(year, month) {
 
 function parseQuartileTable(html) {
   // Bare <tbody> fragment -- must wrap in <table> or cheerio silently
-  // drops the <tr>/<td> elements (HTML5 "foster parenting"). Same fix as
-  // lib/pmsQuartileCache.js's own parseQuartileTable.
+  // drops the <tr>/<td> elements (HTML5 "foster parenting"). Row shape
+  // (including q1Min/q2Min/q3Min from tds 5/6/7) must stay byte-identical
+  // to lib/pmsQuartileCache.js's own parseQuartileTable: both write the
+  // SAME pms-quartile-cache/ R2 key, so a narrower object here would be
+  // served by the live app for up to QUARTILE_TTL_MS after a
+  // script-initiated cache miss.
   const $ = cheerio.load(`<table>${html}</table>`);
   const rows = [];
   $('tr').each((_, tr) => {
@@ -146,6 +150,9 @@ function parseQuartileTable(html) {
       iaTwrr: asNum(2),
       benchmark: asNum(3),
       quartile: quartileText === 'NA' || quartileText === '' ? null : quartileText,
+      q1Min: asNum(5),
+      q2Min: asNum(6),
+      q3Min: asNum(7),
     });
   });
   return rows;
