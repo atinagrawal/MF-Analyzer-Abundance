@@ -80,11 +80,42 @@ function toDateOnly(raw) {
   return raw.split('T')[0] || null;
 }
 
-function toNumber(raw) {
+function parseAmount(raw) {
   if (raw === null || raw === undefined || raw === '') return null;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : null;
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
+
+  let str = String(raw).trim().toLowerCase();
+
+  // Check for Lakhs / Lacs (e.g. "Rs. 10 lacs" -> 10,00,000)
+  const lacMatch = str.match(/([\d\.]+)\s*(?:lakhs?|lacs?)/i);
+  if (lacMatch) {
+    const num = parseFloat(lacMatch[1]);
+    return Number.isFinite(num) ? Math.round(num * 100000) : null;
+  }
+
+  // Check for Crores / Cr (e.g. "1.5 cr" -> 15,000,000)
+  const crMatch = str.match(/([\d\.]+)\s*(?:crores?|cr)/i);
+  if (crMatch) {
+    const num = parseFloat(crMatch[1]);
+    return Number.isFinite(num) ? Math.round(num * 10000000) : null;
+  }
+
+  // Clean string: remove leading "rs.", "rs", "inr", "₹", and trailing "/-", "/="
+  str = str
+    .replace(/^[\s₹]*(?:rs\.?|inr)\s*/i, '')
+    .replace(/[\/\-=]+$/g, '')
+    .replace(/,/g, '')
+    .trim();
+
+  const numMatch = str.match(/[\d]+(?:\.\d+)?/);
+  if (numMatch) {
+    const n = Number(numMatch[0]);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
 }
+
+const toNumber = parseAmount;
 
 // No closeDate to judge by -> default to 'open' rather than guessing
 // 'closed'; the summary-list membership (handled in fetchOpenNfos) is the
@@ -97,25 +128,34 @@ function computeStatus(closeDate, todayStr = new Date().toISOString().split('T')
 // Maps one AMFI detail-endpoint item (the raw `items[0]` object from either
 // /api/new-fund-offer?Scheme_Id=X or /api/sif-nfo?Scheme_Id=X) to this app's
 // normalized shape. `type` is 'mf' or 'sif', passed in by the caller rather
-// than inferred, since both endpoints share an identical field set.
+// than inferred. SIF endpoints use alternative keys (Investment_Strategy,
+// Category, Type, Offer_Price_Rs, Minimum_Subscription_Amount, etc.).
 function mapDetailItem(raw, type) {
-  const schemeName = toTitleCase(raw.SchemeName);
-  const closeDate = toDateOnly(raw.NewFundOfferClosureDate) || toDateOnly(raw.NewFundEarliestClosureDate);
+  const rawName = raw.SchemeName || raw.Investment_Strategy || raw.Specialized_Investment_Fund || '';
+  const schemeName = toTitleCase(rawName);
+  const closeDate = toDateOnly(
+    raw.NewFundOfferClosureDate ||
+    raw.New_Fund_Offer_Closure_Date ||
+    raw.NewFundEarliestClosureDate ||
+    raw.New_Fund_Earliest_Closure_Date
+  );
+  const openDate = toDateOnly(raw.NewFundLaunchDate || raw.New_Fund_Launch_Date);
+
   return {
     type,
     schemeId: String(raw.Scheme_Id ?? ''),
-    mfId: raw.MF_Id != null ? String(raw.MF_Id) : null,
-    amcName: raw.MutualFund || null,
+    mfId: raw.MF_Id != null ? String(raw.MF_Id) : (raw.sifId != null ? String(raw.sifId) : null),
+    amcName: raw.MutualFund || raw.Specialized_Investment_Fund || null,
     schemeName,
     slug: slugify(schemeName),
-    schemeType: raw.SchemeType || null,
-    category: raw.SchemeCategory || null,
-    objective: (raw.ObjectiveofScheme || '').trim() || null,
-    openDate: toDateOnly(raw.NewFundLaunchDate),
+    schemeType: raw.SchemeType || raw.Type || null,
+    category: raw.SchemeCategory || raw.Category || null,
+    objective: (raw.ObjectiveofScheme || raw.Objective_of_Investment_Strategy || '').trim() || null,
+    openDate,
     closeDate,
-    offerPrice: toNumber(raw.OfferPriceRs),
-    minInvestment: toNumber(raw.MinimumSubscriptionAmount),
-    amcWebsite: raw.ForFurtherDetailsPleaseVisitWebsite || null,
+    offerPrice: parseAmount(raw.OfferPriceRs || raw.Offer_Price_Rs),
+    minInvestment: parseAmount(raw.MinimumSubscriptionAmount || raw.Minimum_Subscription_Amount),
+    amcWebsite: raw.ForFurtherDetailsPleaseVisitWebsite || raw.For_Further_Details_Please_Visit_Website || null,
     infoDocumentUrl: raw.infoDocumentUrl || null,
     status: computeStatus(closeDate),
   };
@@ -152,7 +192,7 @@ async function fetchOpenNfos(type) {
       continue;
     }
     const item = detailRes.data.NewFundOffer[0]?.items?.[0];
-    if (!item || !item.SchemeName) {
+    if (!item || (!item.SchemeName && !item.Investment_Strategy && !item.Specialized_Investment_Fund)) {
       console.warn(`[NFO Sync] ${type} Scheme_Id=${schemeId}: detail response missing expected fields, skipping.`);
       continue;
     }
@@ -206,8 +246,11 @@ function selfTest() {
   assert.strictEqual(slugify('Bank Of India Value Fund'), 'bank-of-india-value-fund');
   assert.strictEqual(toDateOnly('2026-08-28T00:00:00.000Z'), '2026-08-28');
   assert.strictEqual(toDateOnly(null), null);
-  assert.strictEqual(toNumber('5000'), 5000);
-  assert.strictEqual(toNumber(''), null);
+  assert.strictEqual(parseAmount('5000'), 5000);
+  assert.strictEqual(parseAmount('Rs. 10/-'), 10);
+  assert.strictEqual(parseAmount('Rs. 10 lacs'), 1000000);
+  assert.strictEqual(parseAmount('2.5 Lakhs'), 250000);
+  assert.strictEqual(parseAmount(''), null);
   assert.strictEqual(computeStatus('2099-01-01', '2026-09-06'), 'open');
   assert.strictEqual(computeStatus('2000-01-01', '2026-09-06'), 'closed');
   assert.strictEqual(computeStatus(null, '2026-09-06'), 'open');
@@ -237,6 +280,35 @@ function selfTest() {
   assert.strictEqual(mapped.openDate, '2026-08-28');
   assert.strictEqual(mapped.closeDate, '2026-09-11');
   assert.strictEqual(mapped.type, 'mf');
+
+  // Real SIF fixture from AMFI API
+  const sifMapped = mapDetailItem(
+    {
+      Scheme_Id: 'S-34',
+      sifId: '47',
+      Specialized_Investment_Fund: 'Altiva SIF',
+      Investment_Strategy: 'Altiva Equity Long-Short Fund',
+      Type: 'Open Ended',
+      Category: 'Equity Oriented Investment Strategies - Equity Long-Short Fund',
+      Objective_of_Investment_Strategy: 'To generate long-term capital appreciation by predominantly investing in listed equity.',
+      New_Fund_Launch_Date: '2026-09-10T00:00:00.000Z',
+      New_Fund_Offer_Closure_Date: '2026-09-24T00:00:00.000Z',
+      Offer_Price_Rs: 'Rs. 10/-',
+      Minimum_Subscription_Amount: 'Rs. 10 lacs',
+      For_Further_Details_Please_Visit_Website: 'https://www.edelweissmf.com',
+      infoDocumentUrl: 'https://portal.amfiindia.com/spages/S-34.pdf',
+    },
+    'sif'
+  );
+  assert.strictEqual(sifMapped.schemeName, 'Altiva Equity Long-Short Fund');
+  assert.strictEqual(sifMapped.slug, 'altiva-equity-long-short-fund');
+  assert.strictEqual(sifMapped.offerPrice, 10);
+  assert.strictEqual(sifMapped.minInvestment, 1000000);
+  assert.strictEqual(sifMapped.openDate, '2026-09-10');
+  assert.strictEqual(sifMapped.closeDate, '2026-09-24');
+  assert.strictEqual(sifMapped.type, 'sif');
+  assert.strictEqual(sifMapped.amcName, 'Altiva SIF');
+  assert.strictEqual(sifMapped.category, 'Equity Oriented Investment Strategies - Equity Long-Short Fund');
 
   // Defensive mapping: a detail response missing a required field never
   // throws -- fetchOpenNfos() is what actually skips it, mapDetailItem()
@@ -334,6 +406,7 @@ module.exports = {
   slugify,
   toDateOnly,
   toNumber,
+  parseAmount,
   computeStatus,
   mapDetailItem,
   archiveClosedEntries,

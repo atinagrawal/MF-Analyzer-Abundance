@@ -1,0 +1,203 @@
+================================================================================
+SEBI-REGISTERED INDIAN PMS PROVIDERS WITH PUBLIC STRATEGY FACTSHEET PDFS
+Research Report & Automated Tracking Feasibility
+Date: September 2026
+================================================================================
+
+EXECUTIVE SUMMARY
+-----------------
+This research identifies Indian Portfolio Management Services (PMS) providers that
+publish strategy-level, downloadable monthly factsheet PDFs on public, unauthenticated
+web pages (similar to Carnelian Capital Advisors).
+
+Most major Indian PMS providers gate their strategy factsheets behind private client/
+distributor portals (e.g. Marcellus, ASK, Unifi) or submit data exclusively to the
+APMI central regulatory portal. However, several top SEBI-registered PMS managers
+maintain open, browsable strategy pages with direct, downloadable factsheets.
+
+================================================================================
+VERIFIED PMS PROVIDERS WITH PUBLIC STRATEGY FACTSHEETS
+================================================================================
+
+--------------------------------------------------------------------------------
+1. CARNELIAN CAPITAL ADVISORS
+--------------------------------------------------------------------------------
+* Provider / AMC Name:
+  Carnelian Capital Advisors LLP (SEBI Reg: INP000006387)
+
+* Strategies / Products Listing URL:
+  https://carneliancapital.co.in/pms
+
+* Individual Strategies Listed:
+  1. Carnelian Shift Strategy (Multi-Cap / Manufacturing & Tech)
+  2. Carnelian Compounder Strategy (Large & Midcap Quality Compounders)
+  3. Carnelian Contra Strategy (Special Situations & Turnaround)
+  4. Carnelian Bharat Amritkaal Strategy (Capex & Infrastructure)
+  5. Carnelian Emerging Champion Strategy (Small & Midcap)
+
+* Verified Live Factsheet PDF URLs (Tested & Confirmed 200 OK):
+  - Factsheet:
+    https://carneliancapital.co.in/wp-content/uploads/2026/08/Factsheet_Shift-Strategy-PMS-August-2026-1.pdf
+  - Presentation:
+    https://carneliancapital.co.in/wp-content/uploads/2026/08/Carnelian-Shift-Strategy-Presentation-August-2026-1.pdf
+
+* URL Pattern & Automated Monthly Tracking Notes:
+  - Base Directory: /wp-content/uploads/YYYY/MM/
+  - Factsheet Slug Pattern: Factsheet_[Strategy-Name]-PMS-[Month]-[Year]-[rev].pdf
+  - Automation Predictability: HIGH
+  - Feasibility: Standard WordPress media directory format. For automated monthly
+    downloads, a script can either poll https://carneliancapital.co.in/pms directly
+    via simple HTML regex or construct candidate URLs based on YYYY/MM and probe
+    revision suffixes (-1.pdf, -2.pdf).
+
+--------------------------------------------------------------------------------
+2. RENAISSANCE INVESTMENT MANAGERS
+--------------------------------------------------------------------------------
+* Provider / AMC Name:
+  Renaissance Investment Managers (Pankaj Murarka / SEBI Reg: INP000005436)
+
+* Strategies / Products Listing URL:
+  https://renaissanceinvest.in/factsheets
+  https://renaissanceinvest.in/strategies/
+
+* Individual Strategies Listed:
+  1. Renaissance India Next PMS (Multi-Cap Secular Growth)
+  2. Renaissance Midcap PMS (Mid & Small Cap Focus)
+  3. Renaissance Opportunities PMS (Large & Midcap High Growth)
+  4. Renaissance Smart Alpha PMS
+
+* Verified Live Factsheet PDF URLs (Tested & Confirmed 200 OK):
+  - Renaissance India Next PMS:
+    https://renaissanceinvest.in/assets/pdf/factsheet/pms/2026/04-apr/Renaissance%20India%20Next%20PMS%20Factsheet%20-%20Apr%202026.pdf
+  - Renaissance Midcap PMS:
+    https://renaissanceinvest.in/assets/pdf/factsheet/pms/2026/04-apr/Renaissance%20Midcap%20PMS%20Factsheet%20-%20Apr%202026.pdf
+  - Renaissance Opportunities PMS:
+    https://renaissanceinvest.in/assets/pdf/factsheet/pms/2026/04-apr/Renaissance%20Opportunities%20PMS%20Factsheet%20-%20Apr%202026.pdf
+
+* URL Pattern & Automated Monthly Tracking Notes:
+  - Base Directory: /assets/pdf/factsheet/pms/{YYYY}/{MM-slug}/
+  - Factsheet Slug Pattern: Renaissance%20{Strategy_Name}%20PMS%20Factsheet%20-%20{Month}%20{YYYY}.pdf
+  - Monthly Archive Depth: Complete historical monthly factsheets back to 2022 are
+    publicly indexed and browsable on https://renaissanceinvest.in/factsheets.
+  - Automation Predictability: VERY HIGH
+  - Feasibility: Predictable, strictly hierarchical folder path by calendar year and
+    month folder (e.g. 2026/04-apr/, 2026/05-may/). A lightweight cron scraper
+    fetching https://renaissanceinvest.in/factsheets can extract all current and
+    historical strategy PDFs.
+
+--------------------------------------------------------------------------------
+3. NARNOLIA FINANCIAL ADVISORS
+--------------------------------------------------------------------------------
+* Provider / AMC Name:
+  Narnolia Financial Advisors Ltd (SEBI Reg: INP000003058)
+
+* Strategies / Products Listing URL:
+  https://www.narnolia.com/portfolio-management-services-pms
+  https://www.narnolia.com/downloads
+
+* Individual Strategies Listed:
+  1. PMS Large Cap Strategy
+  2. PMS Mid & Small Cap Strategy
+  3. PMS Multi Cap Strategy
+  4. PMS 5T x 5T Strategy
+  5. NS Industry Leaders Strategy
+
+* Verified Live Factsheet PDF URLs (Tested & Confirmed 200 OK):
+  - PMS Large Cap Strategy:
+    https://www.narnolia.com/files/Pms-Iap-pdf/639221272508634354_PMS_Large_Cap_Strategy_Factsheet_-_August_2026.pdf
+  - PMS Mid and Small Cap Strategy:
+    https://www.narnolia.com/files/Pms-Iap-pdf/639221272670826053_PMS_Mid_and_Small_Cap_Strategy_Factsheet_-_August_2026.pdf
+  - PMS Multi Cap Strategy:
+    https://www.narnolia.com/files/Pms-Iap-pdf/639221272835074542_PMS_Multi_Cap_Strategy_Factsheet_-_August_2026.pdf
+  - PMS 5T x 5T Strategy:
+    https://www.narnolia.com/files/Pms-Iap-pdf/639221272978445842_PMS_5T_x_5T_Strategy_Factsheet_-_August_2026.pdf
+  - NS Industry Leaders Strategy:
+    https://www.narnolia.com/files/Pms-Iap-pdf/639242057170582039_NS_Industry_Leaders_Factsheet_-_Sept_2026.pdf
+
+* URL Pattern & Automated Monthly Tracking Notes:
+  - Base Directory: /files/Pms-Iap-pdf/
+  - Factsheet Slug Pattern: {18_digit_cms_timestamp_id}_PMS_{Strategy_Name}_Factsheet_-_{Month}_{Year}.pdf
+  - Automation Predictability: MEDIUM-HIGH
+  - Feasibility: Because the CMS generates an 18-digit epoch/timestamp prefix for
+    every upload, URL prediction via pure string interpolation is not possible.
+    However, the listing page (https://www.narnolia.com/portfolio-management-services-pms
+    or https://www.narnolia.com/downloads) is server-side rendered and unauthenticated.
+    A single HTTP GET request parses and resolves all current strategy factsheet links.
+
+--------------------------------------------------------------------------------
+4. STALLION ASSET PMS
+--------------------------------------------------------------------------------
+* Provider / AMC Name:
+  Stallion Asset Private Limited (Amit Jeswani / SEBI Reg: INP000006129)
+
+* Strategies / Products Listing URL:
+  https://www.stallionasset.com/core-fund/
+  https://www.stallionasset.com/regulatory/
+
+* Individual Strategies Listed:
+  1. Stallion Asset Core Fund (Multi-Cap Long-Bias PMS)
+
+* Verified Live Factsheet & Performance PDFs (Tested & Confirmed 200 OK):
+  - Monthly Performance Factsheet:
+    https://www.stallionasset.com/regulatory/PMS_Performance.pdf (541 KB)
+  - Strategy Factsheet Note:
+    https://www.stallionasset.com/regulatory/Stallion_Asset_Factsheet_Freelanced_12.pdf (273 KB)
+  - Investor Presentation:
+    https://www.stallionasset.com/regulatory/Stallion_Asset_PMS_Presentation_131.pdf (862 KB)
+
+* URL Pattern & Automated Monthly Tracking Notes:
+  - Factsheet Slug Pattern: https://www.stallionasset.com/regulatory/PMS_Performance.pdf
+  - Automation Predictability: VERY HIGH
+  - Feasibility: The primary performance factsheet uses a static file name that is
+    overwritten in place each month. Automated download requires zero web scraping;
+    a direct monthly GET request to the static URL retrieves the latest data.
+
+================================================================================
+SUMMARY COMPARISON TABLE
+================================================================================
+
+Provider Name       | Strategies Page                                      | Sample Verified Factsheet PDF (Tested 200 OK)                                                                                        | URL Predictability
+--------------------+------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------+-------------------
+Carnelian Capital   | https://carneliancapital.co.in/pms                   | https://carneliancapital.co.in/wp-content/uploads/2026/08/Factsheet_Shift-Strategy-PMS-August-2026-1.pdf                             | High (WordPress YYYY/MM)
+Renaissance Invest  | https://renaissanceinvest.in/factsheets              | https://renaissanceinvest.in/assets/pdf/factsheet/pms/2026/04-apr/Renaissance%20India%20Next%20PMS%20Factsheet%20-%20Apr%202026.pdf | Very High (Hierarchical date)
+Narnolia Financial  | https://www.narnolia.com/portfolio-management-services-pms | https://www.narnolia.com/files/Pms-Iap-pdf/639221272508634354_PMS_Large_Cap_Strategy_Factsheet_-_August_2026.pdf                   | Medium-High (CMS ID prefix)
+Stallion Asset      | https://www.stallionasset.com/core-fund/             | https://www.stallionasset.com/regulatory/PMS_Performance.pdf                                                                         | Very High (Static URL)
+
+================================================================================
+AUDIT OF OTHER NOTABLE PMS PROVIDERS & DISTRIBUTION PATTERNS
+================================================================================
+
+1. Marcellus Investment Managers (marcellus.in):
+   - Status: Gated behind client login.
+   - Detail: Marcellus lists its strategies (Consistent Compounders, Kings of Capital,
+     Little Champs, Rising Giants) publicly with high-level descriptions and newsletters,
+     but full monthly factsheet PDFs and portfolio holdings require distributor or
+     investor portal authentication (portal.marcellus.in).
+
+2. ASK Investment Managers (askfinancials.com):
+   - Status: Gated behind investor portal.
+   - Detail: Detailed performance metrics for IEP, Growth, Financial Opportunities,
+     and Golden Decade are restricted behind client/distributor logins.
+
+3. Unifi Capital (unificap.com):
+   - Status: Gated / Inquiry based.
+   - Detail: Strategy overviews (Blended, Spin-Off, Insider Shadow, Green Fund) are
+     publicly viewable, but monthly factsheets are distributed directly to investors
+     via email / relationship managers.
+
+4. WhiteOak Capital Management (whiteoakamc.com / whiteoakindia.com):
+   - Status: Aggregated monthly regulatory report rather than standalone strategy PDFs.
+   - Detail: Strategy-level data is provided primarily in aggregate monthly disclosures
+     and investor presentations rather than isolated standalone monthly factsheet PDFs.
+
+5. Institutional Mutual Fund PMS Arms (Kotak PMS, ICICI Pru PMS, DSP PMS, Nippon India PMS):
+   - Status: Download centers / Centralized APMI reporting.
+   - Detail: Most institutional AMCs maintain dedicated PMS sections, but their factsheets
+     are published under complex dynamic SPA interfaces or consolidated under annual/half-yearly
+     statutory disclosures.
+
+6. APMI Portal Centralization (apmiindia.org):
+   - SEBI mandates that all registered PMS managers upload monthly performance data and
+     portfolio metrics to the Association of Portfolio Managers in India (APMI).
+   - If building a comprehensive, multi-provider PMS tracker across 300+ SEBI registered
+     managers, aggregating from APMI directly complements scraping individual boutique sites.
