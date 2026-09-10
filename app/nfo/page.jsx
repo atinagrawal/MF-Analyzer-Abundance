@@ -58,7 +58,7 @@ export default async function NfoPage() {
           'Track every mutual fund and SIF New Fund Offer (NFO) currently open for subscription in India — launch dates, closing dates, offer price ₹10 and minimum investment, sourced directly from AMFI.',
         url: 'https://mfcalc.getabundance.in/nfo',
         publisher: {
-          '@type': 'FinancialService',
+          '@type': 'Organization',
           name: 'Abundance Financial Services',
           url: 'https://mfcalc.getabundance.in',
           sameAs: [
@@ -107,10 +107,16 @@ export default async function NfoPage() {
         description:
           'Comprehensive dataset tracking active, upcoming, and recently closed New Fund Offers (NFOs) across Indian AMCs and Specialised Investment Funds (SIFs), synchronized directly from AMFI.',
         url: 'https://mfcalc.getabundance.in/nfo',
+        identifier: 'https://mfcalc.getabundance.in/nfo',
         license: 'https://creativecommons.org/licenses/by/4.0/',
         isAccessibleForFree: true,
         creator: {
-          '@type': 'FinancialService',
+          '@type': 'Organization',
+          name: 'Abundance Financial Services',
+          url: 'https://mfcalc.getabundance.in',
+        },
+        publisher: {
+          '@type': 'Organization',
           name: 'Abundance Financial Services',
           url: 'https://mfcalc.getabundance.in',
         },
@@ -119,8 +125,15 @@ export default async function NfoPage() {
           name: 'Association of Mutual Funds in India (AMFI)',
           url: 'https://www.amfiindia.com',
         },
-        spatialCoverage: 'IN',
+        spatialCoverage: 'India',
         temporalCoverage: '2026',
+        keywords: [
+          'New Fund Offers India',
+          'Mutual Fund NFO',
+          'Specialised Investment Fund',
+          'SIF NFO',
+          'AMFI NFO Data',
+        ],
         distribution: [
           {
             '@type': 'DataDownload',
