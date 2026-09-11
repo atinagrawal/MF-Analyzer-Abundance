@@ -1048,6 +1048,60 @@ async function fetchIncred() {
   return documents;
 }
 
+// ── Green Portfolio: 5 strategies, one page each, 3 of them currently
+// sharing a combined "Pitchbook" PDF ────────────────────────────────────
+// Verified live: 5 of Green Portfolio's 7 APMI-registered strategies have
+// their own page at /portfolio-management-services/{slug} (MNC Advantage
+// Fund and Fund of Funds have neither a page nor a factsheet -- excluded,
+// not guessed at). Each page carries exactly one non-boilerplate PDF link
+// (Terms/Privacy/Cookies are the other 3 .pdf links on every page,
+// filtered out by name). Special Fund's and Super 30's pages currently
+// link to byte-identical combined "Pitchbook" PDFs (different admin
+// panel file IDs, same content, confirmed live via checksum) covering
+// Special Fund + Super 30 + Dividend Yield together; Dividend Yield's own
+// page links to a newer, larger combined pitchbook covering the same 3
+// strategies plus more -- each strategy's document simply carries
+// whatever URL its own page currently links to (same "read what's really
+// there, don't guess" approach as every other multi-strategy provider in
+// this file), so this naturally self-corrects if/when all 3 pages start
+// pointing at the same current file. strategyName is APMI's exact
+// leaderboard form (verified live via IaInsight.htm against IAID 98, 99,
+// 100, 102, 1764).
+const GREEN_PORTFOLIO_STRATEGIES = [
+  { strategyName: 'GREEN PORTFOLIO SPECIAL FUND', slug: 'green-portfolio-special-fund' },
+  { strategyName: 'GREEN PORTFOLIO SUPER 30 DYNAMIC FUND', slug: 'super-30-fund' },
+  { strategyName: 'GREEN PORTFOLIO DIVIDEND YIELD FUND', slug: 'green-portfolio-dividend-yield-fund' },
+  { strategyName: 'GREEN PORTFOLIO THE IMPACT ESG FUND', slug: 'green-portfolio-impact-esg-fund' },
+  { strategyName: 'THE GREEN ETHICAL FUND', slug: 'green-ethical-fund' },
+];
+const GREEN_PORTFOLIO_BOILERPLATE = ['terms-of-services', 'privacy-policy', 'cookies-policies'];
+
+async function fetchGreenPortfolio() {
+  const documents = [];
+  for (const s of GREEN_PORTFOLIO_STRATEGIES) {
+    const res = await fetchWithRetry(`https://greenportfolio.co/portfolio-management-services/${s.slug}`);
+    if (!res.ok) {
+      console.warn(`[PMS Factsheets] Green Portfolio ${s.strategyName}: HTTP ${res.status}`);
+      continue;
+    }
+    const $ = cheerio.load(await res.text());
+    let url = null;
+    $('a[href$=".pdf" i]').each((_, el) => {
+      const href = $(el).attr('href');
+      if (!href || GREEN_PORTFOLIO_BOILERPLATE.some((b) => href.toLowerCase().includes(b))) return;
+      url = new URL(href, 'https://greenportfolio.co').href;
+      return false;
+    });
+    if (!url) {
+      console.warn(`[PMS Factsheets] Green Portfolio ${s.strategyName}: no factsheet link found`);
+      continue;
+    }
+    const period = extractPeriodFromFilename(url);
+    documents.push({ strategyName: s.strategyName, docType: 'factsheet', period, title: `${s.strategyName}${period ? ' – ' + period : ''}`, url });
+  }
+  return documents;
+}
+
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────
 // Links alone don't tell an investor what's actually in the strategy --
 // this reads each factsheet's real content (top holdings, sector and
@@ -1502,6 +1556,7 @@ const PROVIDERS = [
   { key: 'motilaloswal', displayName: 'Motilal Oswal Asset Management Company', matchFragments: ['motilal oswal'], fetch: fetchMotilalOswal },
   { key: 'invesco', displayName: 'Invesco Asset Management', matchFragments: ['invesco'], fetch: fetchInvesco },
   { key: 'incred', displayName: 'InCred Asset Management', matchFragments: ['incred'], fetch: fetchIncred },
+  { key: 'greenportfolio', displayName: 'Green Portfolio', matchFragments: ['green portfolio'], fetch: fetchGreenPortfolio },
 ];
 
 async function run() {
@@ -1857,6 +1912,7 @@ module.exports = {
   fetchMotilalOswal,
   fetchInvesco,
   fetchIncred,
+  fetchGreenPortfolio,
   PROVIDERS,
   extractFactsheetData,
   extractMultiStrategyFactsheetData,
