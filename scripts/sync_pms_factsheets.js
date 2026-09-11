@@ -426,11 +426,15 @@ async function fetchRenaissance() {
 // product, F.I.R.S.T. (a debt strategy), links to the same PDF too but
 // isn't covered by its content in any given month -- deliberately
 // excluded here since there's nothing to extract for it.
+// properName: the full name each abbreviation stands for, verified live
+// against the Table of Contents of Sundaram's own June 2026 combined
+// "SUNbeam" factsheet PDF -- surfaced on the detail page as a subtitle so
+// "SISOP" etc. isn't shown as an unexplained acronym.
 const SUNDARAM_PRODUCTS = [
-  { strategyName: 'SISOP', slug: 'sundaram-india-secular-opportunities-portfolio-sisop' },
-  { strategyName: 'S.E.L.F', slug: 'sundaram-emerging-leadership-fund-s-e-l-f' },
-  { strategyName: 'VOYAGER', slug: 'sundaram-voyager' },
-  { strategyName: 'RISING STAR', slug: 'sundaram-rising-stars' },
+  { strategyName: 'SISOP', slug: 'sundaram-india-secular-opportunities-portfolio-sisop', properName: 'Sundaram India Secular Opportunities Portfolio' },
+  { strategyName: 'S.E.L.F', slug: 'sundaram-emerging-leadership-fund-s-e-l-f', properName: 'Sundaram Emerging Leadership Fund Portfolio' },
+  { strategyName: 'VOYAGER', slug: 'sundaram-voyager', properName: 'Sundaram Voyager Portfolio' },
+  { strategyName: 'RISING STAR', slug: 'sundaram-rising-stars', properName: 'Sundaram Rising Stars' },
 ];
 
 async function fetchSundaram() {
@@ -455,6 +459,7 @@ async function fetchSundaram() {
       period,
       title: `${p.strategyName}${period ? ' – ' + period : ''}`,
       url,
+      properName: p.properName,
     });
   }
   return documents;
@@ -854,6 +859,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const EXTRACTION_SCHEMA_PROMPT = `Extract structured data from this PMS strategy factsheet PDF. Return ONLY valid JSON matching this exact shape, no markdown fences, no commentary:
 {
   "asOfDate": "YYYY-MM-DD or null",
+  "objective": "the strategy's own stated investment objective/philosophy, verbatim or lightly trimmed, or null",
   "marketCapAllocation": {"largeCap": number|null, "midCap": number|null, "smallCap": number|null, "cash": number|null},
   "sectorAllocation": [{"sector": string, "weightPct": number}],
   "topHoldings": [{"name": string, "weightPct": number|null, "capBucket": "Large Cap"|"Mid Cap"|"Small Cap"|null}],
@@ -865,11 +871,19 @@ const EXTRACTION_SCHEMA_PROMPT = `Extract structured data from this PMS strategy
     "netDebtEquity": {"strategy": number|null, "benchmark": number|null},
     "peg": {"strategy": number|null, "benchmark": number|null},
     "sharpeRatio": {"strategy": number|null, "benchmark": number|null},
-    "standardDeviation": {"strategy": number|null, "benchmark": number|null}
+    "standardDeviation": {"strategy": number|null, "benchmark": number|null},
+    "arithmeticMeanReturn": {"strategy": number|null, "benchmark": number|null},
+    "beta": {"strategy": number|null, "benchmark": number|null},
+    "correlation": {"strategy": number|null, "benchmark": number|null},
+    "alpha": {"strategy": number|null, "benchmark": number|null},
+    "trackingError": {"strategy": number|null, "benchmark": number|null},
+    "upCaptureRatio": {"strategy": number|null, "benchmark": number|null},
+    "downCaptureRatio": {"strategy": number|null, "benchmark": number|null}
   },
   "portfolioChanges": {"newEntrants": [string], "exits": [string]}
 }
-If a field genuinely is not present in the document, use null (for objects/numbers) or an empty array -- never invent a value.`;
+Beta/Correlation/Alpha/Tracking Error/Up capture Ratio/Down capture Ratio are relative-to-benchmark metrics -- they normally have only a "strategy" value; leave "benchmark" null for these unless the document genuinely shows a benchmark-side figure for them too.
+If a field genuinely is not present in the document, use null (for objects/numbers/strings) or an empty array -- never invent a value.`;
 
 // A 429 whose quotaId contains "PerDay" is a hard daily cap, not a
 // transient rate limit -- verified live during development against the
@@ -1001,8 +1015,30 @@ function validateAndCleanExtraction(raw) {
       peg: saneMetricPair(pa.peg),
       sharpeRatio: saneMetricPair(pa.sharpeRatio),
       standardDeviation: saneMetricPair(pa.standardDeviation),
+      // These 6 are relative-to-benchmark risk measures (see prompt comment) --
+      // schema still stores {strategy,benchmark} for uniformity with the rest
+      // of this object, but benchmark is null for the overwhelming majority
+      // of real factsheets, which report a strategy-only figure.
+      arithmeticMeanReturn: saneMetricPair(pa.arithmeticMeanReturn),
+      beta: saneMetricPair(pa.beta),
+      correlation: saneMetricPair(pa.correlation),
+      alpha: saneMetricPair(pa.alpha),
+      trackingError: saneMetricPair(pa.trackingError),
+      upCaptureRatio: saneMetricPair(pa.upCaptureRatio),
+      downCaptureRatio: saneMetricPair(pa.downCaptureRatio),
     };
     if (Object.values(cleaned).some((p) => p.strategy != null || p.benchmark != null)) portfolioAttributes = cleaned;
+  }
+
+  // Verbatim-ish objective/philosophy text sourced from the factsheet itself
+  // -- almost always a better description than APMI's own "Purpose" field
+  // (see lib/pmsScrapers.js), which is why the UI prefers this when present.
+  // Capped well above any real factsheet objective's length so a genuine
+  // paragraph survives, while a hallucinated wall of text still gets capped.
+  let objective = null;
+  if (typeof raw.objective === 'string') {
+    const trimmed = raw.objective.trim();
+    if (trimmed) objective = trimmed.length > 600 ? trimmed.slice(0, 600).trim() : trimmed;
   }
 
   let portfolioChanges = null;
@@ -1014,9 +1050,9 @@ function validateAndCleanExtraction(raw) {
 
   const asOfDate = typeof raw.asOfDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.asOfDate) ? raw.asOfDate : null;
 
-  if (!marketCapAllocation && !sectorAllocation && !topHoldings && !portfolioAttributes && !portfolioChanges) return null;
+  if (!marketCapAllocation && !sectorAllocation && !topHoldings && !portfolioAttributes && !portfolioChanges && !objective) return null;
 
-  return { asOfDate, marketCapAllocation, sectorAllocation, topHoldings, portfolioAttributes, portfolioChanges };
+  return { asOfDate, objective, marketCapAllocation, sectorAllocation, topHoldings, portfolioAttributes, portfolioChanges };
 }
 
 async function extractFactsheetData(pdfUrl) {
@@ -1053,6 +1089,7 @@ function buildMultiStrategySchemaPrompt(strategyNames) {
     {
       "strategyName": "<exactly one of: ${nameList}>",
       "asOfDate": "YYYY-MM-DD or null",
+      "objective": "the strategy's own stated investment objective/philosophy, verbatim or lightly trimmed, or null",
       "marketCapAllocation": {"largeCap": number|null, "midCap": number|null, "smallCap": number|null, "cash": number|null},
       "sectorAllocation": [{"sector": string, "weightPct": number}],
       "topHoldings": [{"name": string, "weightPct": number|null, "capBucket": "Large Cap"|"Mid Cap"|"Small Cap"|null}],
@@ -1064,13 +1101,21 @@ function buildMultiStrategySchemaPrompt(strategyNames) {
         "netDebtEquity": {"strategy": number|null, "benchmark": number|null},
         "peg": {"strategy": number|null, "benchmark": number|null},
         "sharpeRatio": {"strategy": number|null, "benchmark": number|null},
-        "standardDeviation": {"strategy": number|null, "benchmark": number|null}
+        "standardDeviation": {"strategy": number|null, "benchmark": number|null},
+        "arithmeticMeanReturn": {"strategy": number|null, "benchmark": number|null},
+        "beta": {"strategy": number|null, "benchmark": number|null},
+        "correlation": {"strategy": number|null, "benchmark": number|null},
+        "alpha": {"strategy": number|null, "benchmark": number|null},
+        "trackingError": {"strategy": number|null, "benchmark": number|null},
+        "upCaptureRatio": {"strategy": number|null, "benchmark": number|null},
+        "downCaptureRatio": {"strategy": number|null, "benchmark": number|null}
       },
       "portfolioChanges": {"newEntrants": [string], "exits": [string]}
     }
   ]
 }
-Return exactly one entry per strategy name listed above, using that exact strategyName string. If a field genuinely is not present for a given strategy, use null (for objects/numbers) or an empty array -- never invent a value.`;
+Beta/Correlation/Alpha/Tracking Error/Up capture Ratio/Down capture Ratio are relative-to-benchmark metrics -- they normally have only a "strategy" value; leave "benchmark" null for these unless the document genuinely shows a benchmark-side figure for them too.
+Return exactly one entry per strategy name listed above, using that exact strategyName string. If a field genuinely is not present for a given strategy, use null (for objects/numbers/strings) or an empty array -- never invent a value.`;
 }
 
 // One Gemini call, one PDF fetch -- returns a Map<strategyName, cleaned
@@ -1196,7 +1241,7 @@ async function enrichWithExtraction(documents, previousDocs, quotaState) {
     } catch (err) {
       if (err instanceof DailyQuotaExhaustedError) {
         quotaState.exhausted = true;
-        console.warn(`[PMS Factsheets] Daily Gemini quota exhausted -- stopping further extraction attempts for the rest of this run. Remaining documents will be picked up on a later run.`);
+        console.warn(`[PMS Factsheets] Daily Gemini quota exhausted -- stopping further extraction attempts for the rest of this run. Remaining documents will be picked up on a later run (or run scripts/pms_factsheet_manual_fill.js --list to extract them locally right now instead of waiting).`);
       } else {
         console.warn(`[PMS Factsheets] Extraction failed for ${group.map((d) => d.strategyName).join(', ')} (${group[0].url}): ${err.message}`);
       }
@@ -1416,6 +1461,43 @@ function selfTest() {
   assert.strictEqual(nullMetricsExtraction.portfolioAttributes.revenueCagr.benchmark, null);
   assert.strictEqual(nullMetricsExtraction.portfolioAttributes.epsCagr.strategy, null);
   assert.strictEqual(nullMetricsExtraction.portfolioAttributes.sharpeRatio.strategy, 0.7);
+
+  // objective: real, verified-against-source text from Sundaram SISOP's
+  // June 2026 SUNbeam factsheet -- trimmed of surrounding whitespace, kept
+  // even when nothing else in the response survived validation (an
+  // objective alone is still usable -- it's what replaces APMI's inferior
+  // "Purpose" field on the detail page).
+  const objectiveOnly = validateAndCleanExtraction({
+    objective: '  To generate capital appreciation across market cycles by investing in a concentrated set of high conviction stocks.  ',
+  });
+  assert.strictEqual(objectiveOnly.objective, 'To generate capital appreciation across market cycles by investing in a concentrated set of high conviction stocks.');
+  assert.strictEqual(objectiveOnly.marketCapAllocation, null);
+
+  // A blank/whitespace-only objective is the same as absent -- never store
+  // an empty string a UI would render as an empty "Purpose" card.
+  assert.strictEqual(validateAndCleanExtraction({ objective: '   ' }), null);
+  assert.strictEqual(validateAndCleanExtraction({ objective: 123 }), null);
+
+  // Real, verified-against-source values from Sundaram SISOP's June 2026
+  // "Performance Measures - Since Inception" table: Beta/Correlation/Alpha/
+  // Tracking Error/capture ratios are relative-to-benchmark measures with
+  // no benchmark-side figure of their own (benchmark stays null), while
+  // Arithmetic Mean/Sharpe Ratio genuinely have both sides.
+  const relativeMetrics = validateAndCleanExtraction({
+    portfolioAttributes: {
+      arithmeticMeanReturn: { strategy: 18.6, benchmark: 13.1 },
+      beta: { strategy: 0.8, benchmark: null },
+      correlation: { strategy: 0.8, benchmark: null },
+      alpha: { strategy: 6.6, benchmark: null },
+      trackingError: { strategy: 9.7, benchmark: null },
+      upCaptureRatio: { strategy: 105.2, benchmark: null },
+      downCaptureRatio: { strategy: 76.1, benchmark: null },
+    },
+  });
+  assert.strictEqual(relativeMetrics.portfolioAttributes.arithmeticMeanReturn.benchmark, 13.1);
+  assert.strictEqual(relativeMetrics.portfolioAttributes.beta.strategy, 0.8);
+  assert.strictEqual(relativeMetrics.portfolioAttributes.beta.benchmark, null);
+  assert.strictEqual(relativeMetrics.portfolioAttributes.downCaptureRatio.strategy, 76.1);
 
   // parseSundaramFactsheetUrl: the "Factsheet" download button's markup,
   // verified against the real live page (a <p>Factsheet</p> label whose

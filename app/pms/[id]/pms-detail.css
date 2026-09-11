@@ -56,6 +56,14 @@
   margin: 0 0 10px;
 }
 
+.pmsd-name:has(+ .pmsd-hero-proper-name) { margin-bottom: 2px; }
+
+.pmsd-hero-proper-name {
+  font-size: .78rem;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
 .pmsd-hero-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .pmsd-tag {
@@ -261,6 +269,16 @@
   color: var(--muted);
   font-family: 'JetBrains Mono', monospace;
   margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pmsd-fact-label-source {
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--accent, #2e7d32);
+  font-family: inherit;
 }
 .pmsd-fact-val { font-size: .82rem; font-weight: 700; color: var(--text); white-space: pre-line; }
 

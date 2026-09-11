@@ -152,6 +152,9 @@ export default function PMSDetailClient({ iaid }) {
             </div>
             <div className="pmsd-hero-info">
               <h1 className="pmsd-name">{displayName}</h1>
+              {d.factsheetData?.properName && d.factsheetData.properName !== displayName && (
+                <div className="pmsd-hero-proper-name">{d.factsheetData.properName}</div>
+              )}
               <div className="pmsd-hero-tags">
                 <span className="pmsd-tag">{d.providerName}</span>
                 <span className="pmsd-tag green">{d.strategyName}</span>
@@ -202,8 +205,11 @@ export default function PMSDetailClient({ iaid }) {
               <div className="pmsd-fact-val">{d.exitLoad || '—'}</div>
             </div>
             <div className="pmsd-fact-card">
-              <div className="pmsd-fact-label">Purpose</div>
-              <div className="pmsd-fact-val">{d.purpose || '—'}</div>
+              <div className="pmsd-fact-label">
+                Purpose
+                {d.factsheetData?.objective && <span className="pmsd-fact-label-source">from factsheet</span>}
+              </div>
+              <div className="pmsd-fact-val">{d.factsheetData?.objective || d.purpose || '—'}</div>
             </div>
           </div>
         </div>
@@ -303,8 +309,15 @@ export default function PMSDetailClient({ iaid }) {
             ['ROE', pa.roe, '%'],
             ['Net Debt/Equity', pa.netDebtEquity, 'x'],
             ['PEG Ratio', pa.peg, 'x'],
+            ['Ann. Return (Since Inception)', pa.arithmeticMeanReturn, '%'],
             ['Sharpe Ratio', pa.sharpeRatio, ''],
             ['Std. Deviation', pa.standardDeviation, '%'],
+            ['Beta', pa.beta, ''],
+            ['Correlation', pa.correlation, ''],
+            ['Alpha', pa.alpha, '%'],
+            ['Tracking Error', pa.trackingError, '%'],
+            ['Up Capture Ratio', pa.upCaptureRatio, '%'],
+            ['Down Capture Ratio', pa.downCaptureRatio, '%'],
           ].filter(([, v]) => v.strategy != null || v.benchmark != null);
 
           if (rows.length === 0) return null;
