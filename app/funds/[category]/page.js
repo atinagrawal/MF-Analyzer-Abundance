@@ -126,7 +126,7 @@ export default async function CategoryIndexPage({ params }) {
           <div className="pf-advisor-body">
             <div className="pf-advisor-title">Not sure which {entry.label.toLowerCase()} fund fits your goals?</div>
             <div className="pf-advisor-sub">
-              This directory is informational, not a recommendation — talk to an AMFI-registered advisor about what fits your portfolio.
+              This directory is informational, not a recommendation — talk to an AMFI-registered MFD about what fits your portfolio.
             </div>
           </div>
           <a href="/book-consultation" className="pf-advisor-btn">

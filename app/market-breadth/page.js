@@ -390,7 +390,7 @@ export default function BreadthPage() {
           <div className="pf-advisor-body">
             <div className="pf-advisor-title">Want help acting on what breadth is telling you?</div>
             <div className="pf-advisor-sub">
-              Regime shifts and rotation are context, not a trade plan — talk to an AMFI-registered advisor about what it means for your portfolio.
+              Regime shifts and rotation are context, not a trade plan — talk to an AMFI-registered MFD about what it means for your portfolio.
             </div>
           </div>
           <a href="/book-consultation" className="pf-advisor-btn">

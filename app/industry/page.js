@@ -1051,7 +1051,7 @@ export default function IndustryPage() {
               <div className="pf-advisor-body">
                 <div className="pf-advisor-title">Want help reading what these industry flows mean for your own portfolio?</div>
                 <div className="pf-advisor-sub">
-                  Category rotation is industry-wide context, not a personal recommendation — talk to an AMFI-registered advisor about your specific holdings.
+                  Category rotation is industry-wide context, not a personal recommendation — talk to an AMFI-registered MFD about your specific holdings.
                 </div>
               </div>
               <a href="/book-consultation" className="pf-advisor-btn">

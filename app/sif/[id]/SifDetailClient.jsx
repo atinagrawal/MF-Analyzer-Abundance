@@ -363,7 +363,7 @@ export default function SifDetailClient({ id }) {
           <div className="pf-advisor-body">
             <div className="pf-advisor-title">Considering {cleanName}?</div>
             <div className="pf-advisor-sub">
-              SIFs carry a ₹10L minimum and different risk/liquidity terms than a mutual fund — talk to an AMFI-registered advisor before you commit.
+              SIFs carry a ₹10L minimum and different risk/liquidity terms than a mutual fund — talk to an AMFI-registered MFD before you commit.
             </div>
           </div>
           <a href="/book-consultation" className="pf-advisor-btn">

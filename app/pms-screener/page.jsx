@@ -1323,7 +1323,7 @@ function PMSScreenerInner() {
                             })()}
 
                             <div className="pd-cta">
-                                <div className="pd-cta-text">Considering this strategy? Talk to an APMI-registered advisor before committing ₹50L+.</div>
+                                <div className="pd-cta-text">Considering this strategy? Talk to an APMI-registered PMS Distributor before committing ₹50L+.</div>
                                 <a href="/book-consultation" className="pd-cta-btn">Book a Call →</a>
                             </div>
 

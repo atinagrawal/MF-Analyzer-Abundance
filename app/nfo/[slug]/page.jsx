@@ -318,7 +318,7 @@ export default async function NfoDetailPage({ params }) {
         </div>
 
         <div style={{ marginTop: 24, marginBottom: 24, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <a href="/book-consultation" className="nfo-cta-button">Talk to an AMFI Registered Advisor</a>
+          <a href="/book-consultation" className="nfo-cta-button">Talk to an Expert</a>
           <a href="/nfo" className="nfo-external-link" style={{ background: 'transparent', display: 'flex', alignItems: 'center' }}>← Back to All NFOs</a>
         </div>
       </main>

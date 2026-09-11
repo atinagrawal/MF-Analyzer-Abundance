@@ -1120,7 +1120,7 @@ export default function SifScreener({ initialData }) {
           <div className="pf-advisor-body">
             <div className="pf-advisor-title">Not sure if a SIF fits your portfolio?</div>
             <div className="pf-advisor-sub">
-              SIFs carry a ₹10 lakh minimum and long-short/derivative exposure most mutual funds don't — talk to an AMFI-registered advisor before committing.
+              SIFs carry a ₹10 lakh minimum and long-short/derivative exposure most mutual funds don't — talk to an AMFI-registered MFD before committing.
             </div>
           </div>
           <a href="/book-consultation" className="pf-advisor-btn">

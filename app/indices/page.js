@@ -462,7 +462,7 @@ export default function IndicesPage() {
             <div className="pf-advisor-body">
               <div className="pf-advisor-title">Not sure which index or fund fits your goals?</div>
               <div className="pf-advisor-sub">
-                Index valuation is market context, not a buy signal — talk to an AMFI-registered advisor about your own allocation.
+                Index valuation is market context, not a buy signal — talk to an AMFI-registered MFD about your own allocation.
               </div>
             </div>
             <a href="/book-consultation" className="pf-advisor-btn">

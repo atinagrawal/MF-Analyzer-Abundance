@@ -927,7 +927,7 @@ export default function ScreenerClient({ initialCategory }) {
           <div className="pf-advisor-body">
             <div className="pf-advisor-title">Found a few funds worth a closer look?</div>
             <div className="pf-advisor-sub">
-              Talk to an AMFI-registered advisor before you commit — we'll factor in your goals, existing portfolio, and taxes.
+              Talk to an AMFI-registered MFD before you commit — we'll factor in your goals, existing portfolio, and taxes.
             </div>
           </div>
           <a href="/book-consultation" className="pf-advisor-btn">

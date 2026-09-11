@@ -610,7 +610,7 @@ export default function GeographyPage() {
           <div className="pf-advisor-body">
             <div className="pf-advisor-title">Curious where your own state ranks — or what it means for you?</div>
             <div className="pf-advisor-sub">
-              State-wise AUM is industry context, not personal advice — talk to an AMFI-registered advisor about your own portfolio.
+              State-wise AUM is industry context, not personal advice — talk to an AMFI-registered MFD about your own portfolio.
             </div>
           </div>
           <a href="/book-consultation" className="pf-advisor-btn">
