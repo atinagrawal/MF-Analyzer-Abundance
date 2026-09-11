@@ -105,7 +105,10 @@ function sleep(ms) {
 async function fetchWithRetry(url, options = {}, retries = 2, delayMs = 800) {
   for (let i = 0; i <= retries; i++) {
     try {
-      const res = await fetch(url, { ...options, headers: HEADERS, signal: AbortSignal.timeout(15000) });
+      // Merge (not overwrite): a caller's own options.headers -- e.g. InCred's
+      // WAF rejects any request with no Referer at all, verified live -- adds
+      // to the default HEADERS rather than silently losing them.
+      const res = await fetch(url, { ...options, headers: { ...HEADERS, ...options.headers }, signal: AbortSignal.timeout(15000) });
       if ((res.status === 429 || res.status >= 500) && i < retries) {
         await sleep(delayMs * (i + 1));
         continue;
@@ -266,9 +269,9 @@ async function fetchCarnelian() {
 }
 
 // ── Stallion: fixed static URLs, existence-checked each run ─────────────────
-async function urlExists(url) {
+async function urlExists(url, headers) {
   try {
-    const res = await fetchWithRetry(url, { method: 'HEAD' }, 1, 800);
+    const res = await fetchWithRetry(url, { method: 'HEAD', headers }, 1, 800);
     return res.ok;
   } catch {
     return false;
@@ -1002,6 +1005,49 @@ async function fetchInvesco() {
   return documents;
 }
 
+// ── InCred Asset Management: 3 equity strategies, each its own PDF ─────────
+// Verified live: incredassetmanagement.com sits behind a Cloudflare WAF
+// rule that rejects any request carrying no Referer header at all (HTTP
+// 403 on both the listing page and the PDFs themselves) -- NOT a real
+// bot/JS challenge (no cookie or script execution required), confirmed by
+// the exact same request succeeding the moment a Referer is added. This
+// fetcher is the one place in this file that passes a custom Referer
+// through fetchWithRetry's options for exactly that reason; every other
+// provider's plain HEADERS default (no Referer) is unaffected.
+// strategyName is APMI's exact leaderboard form (verified live via
+// IaInsight.htm against IAID 138/139/140). InCred markets several more
+// strategies (Ascend, Select Opportunities, Focused Healthcare Equity,
+// Active Momentum, Omni Alpha) that have no factsheet on this page --
+// left uncovered rather than guessed at.
+const INCRED_REFERER = { Referer: 'https://www.incredassetmanagement.com/' };
+const INCRED_STRATEGIES = [
+  { strategyName: 'InCred Multicap Portfolio', linkText: 'InCred Multicap Portfolio Factsheet' },
+  { strategyName: 'InCred Small and Midcap Portfolio', linkText: 'InCred Small and Mid Cap Portfolio Factsheet' },
+  { strategyName: 'InCred Healthcare Portfolio', linkText: 'InCred Healthcare Portfolio Factsheet' },
+];
+
+async function fetchIncred() {
+  const res = await fetchWithRetry('https://www.incredassetmanagement.com/insights/', { headers: INCRED_REFERER });
+  if (!res.ok) {
+    console.warn(`[PMS Factsheets] InCred: HTTP ${res.status}`);
+    return [];
+  }
+  const $ = cheerio.load(await res.text());
+  const documents = [];
+  for (const s of INCRED_STRATEGIES) {
+    const link = $('a').filter((_, el) => $(el).text().trim() === s.linkText).first();
+    const href = link.attr('href');
+    if (!href) {
+      console.warn(`[PMS Factsheets] InCred ${s.strategyName}: no link found for "${s.linkText}"`);
+      continue;
+    }
+    const url = new URL(href, 'https://www.incredassetmanagement.com').href;
+    const period = extractPeriodFromFilename(url);
+    documents.push({ strategyName: s.strategyName, docType: 'factsheet', period, title: `${s.strategyName}${period ? ' – ' + period : ''}`, url });
+  }
+  return documents;
+}
+
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────
 // Links alone don't tell an investor what's actually in the strategy --
 // this reads each factsheet's real content (top holdings, sector and
@@ -1223,7 +1269,12 @@ function validateAndCleanExtraction(raw) {
 }
 
 async function extractFactsheetData(pdfUrl) {
-  const pdfRes = await fetchWithRetry(pdfUrl);
+  // A same-origin Referer is a no-op for the overwhelming majority of
+  // providers but is the actual fix InCred's WAF needs (see fetchIncred's
+  // comment) -- sending it unconditionally here means any current or
+  // future provider with the same anti-hotlinking-style rule just works,
+  // without a per-provider special case in the extraction path.
+  const pdfRes = await fetchWithRetry(pdfUrl, { headers: { Referer: new URL(pdfUrl).origin + '/' } });
   if (!pdfRes.ok) throw new Error(`PDF fetch HTTP ${pdfRes.status}`);
   const buf = Buffer.from(await pdfRes.arrayBuffer());
   const base64 = buf.toString('base64');
@@ -1292,7 +1343,12 @@ Return exactly one entry per strategy name listed above, using that exact strate
 // key in the returned Map; the caller falls back to that strategy's
 // previous extraction, same as any other failure in this pipeline.
 async function extractMultiStrategyFactsheetData(pdfUrl, strategyNames) {
-  const pdfRes = await fetchWithRetry(pdfUrl);
+  // A same-origin Referer is a no-op for the overwhelming majority of
+  // providers but is the actual fix InCred's WAF needs (see fetchIncred's
+  // comment) -- sending it unconditionally here means any current or
+  // future provider with the same anti-hotlinking-style rule just works,
+  // without a per-provider special case in the extraction path.
+  const pdfRes = await fetchWithRetry(pdfUrl, { headers: { Referer: new URL(pdfUrl).origin + '/' } });
   if (!pdfRes.ok) throw new Error(`PDF fetch HTTP ${pdfRes.status}`);
   const buf = Buffer.from(await pdfRes.arrayBuffer());
   const base64 = buf.toString('base64');
@@ -1445,6 +1501,7 @@ const PROVIDERS = [
   { key: 'negen', displayName: 'Negen Capital', matchFragments: ['negen'], fetch: fetchNegen },
   { key: 'motilaloswal', displayName: 'Motilal Oswal Asset Management Company', matchFragments: ['motilal oswal'], fetch: fetchMotilalOswal },
   { key: 'invesco', displayName: 'Invesco Asset Management', matchFragments: ['invesco'], fetch: fetchInvesco },
+  { key: 'incred', displayName: 'InCred Asset Management', matchFragments: ['incred'], fetch: fetchIncred },
 ];
 
 async function run() {
@@ -1799,6 +1856,7 @@ module.exports = {
   fetchNegen,
   fetchMotilalOswal,
   fetchInvesco,
+  fetchIncred,
   PROVIDERS,
   extractFactsheetData,
   extractMultiStrategyFactsheetData,
