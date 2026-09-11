@@ -318,7 +318,7 @@ export default function PMSDetailClient({ iaid }) {
             ['Tracking Error', pa.trackingError, '%'],
             ['Up Capture Ratio', pa.upCaptureRatio, '%'],
             ['Down Capture Ratio', pa.downCaptureRatio, '%'],
-          ].filter(([, v]) => v.strategy != null || v.benchmark != null);
+          ].filter(([, v]) => v && (v.strategy != null || v.benchmark != null));
 
           if (rows.length === 0) return null;
 
