@@ -950,6 +950,58 @@ async function fetchMotilalOswal() {
   return [];
 }
 
+// ── Invesco Asset Management: 5 equity strategies, each its own PDF ────────
+// Verified live: invescomutualfund.com runs on Sitefinity CMS with a public
+// OData API (/api/default/pmsfactsheets) that lists every published
+// factsheet entry -- ordered by PMSFactsheetDate desc, the newest entries'
+// date tells us the latest published period across all 5 strategies (they
+// publish together). The entity's own PMSFactsheetDocument navigation
+// property came back empty on every entry tested (permission-filtered on
+// the public API, not a real gap), so rather than treat that as "no PDF",
+// the real PDF URL is constructed from Invesco's own verified-live, stable
+// filename convention (docs/default-source/pms-factsheet/invesco-india-
+// {slug}-portfolio---factsheet---{day}-{month}-{year}.pdf) and existence-
+// checked, same as every other predictable-URL provider in this file
+// (Stallion, Motilal Oswal). strategyName is APMI's exact leaderboard form
+// (verified live via IaInsight.htm against IAID 449-453).
+const INVESCO_STRATEGIES = [
+  { strategyName: 'Invesco India Large Cap Core Portfolio', slug: 'large-cap-core' },
+  { strategyName: 'Invesco India Caterpillar Portfolio', slug: 'caterpillar' },
+  { strategyName: 'Invesco India R.I.S.E Portfolio', slug: 'r-i-s-e' },
+  { strategyName: 'Invesco India DAWN Portfolio', slug: 'dawn' },
+  { strategyName: 'Invesco India Challengers Portfolio', slug: 'challengers' },
+];
+
+async function fetchInvesco() {
+  const res = await fetchWithRetry('https://www.invescomutualfund.com/api/default/pmsfactsheets?%24orderby=PMSFactsheetDate%20desc&%24top=1');
+  if (!res.ok) {
+    console.warn(`[PMS Factsheets] Invesco: HTTP ${res.status} listing latest factsheet date`);
+    return [];
+  }
+  const json = await res.json();
+  const latestDateRaw = json?.value?.[0]?.PMSFactsheetDate;
+  if (!latestDateRaw) {
+    console.warn('[PMS Factsheets] Invesco: no PMSFactsheetDate found in API response');
+    return [];
+  }
+  const d = new Date(latestDateRaw);
+  const day = d.getUTCDate();
+  const monthIdx = d.getUTCMonth();
+  const year = d.getUTCFullYear();
+  const period = `${MONTH_FULL[monthIdx]} ${year}`;
+
+  const documents = [];
+  for (const s of INVESCO_STRATEGIES) {
+    const url = `https://www.invescomutualfund.com/docs/default-source/pms-factsheet/invesco-india-${s.slug}-portfolio---factsheet---${day}-${MONTH_FULL[monthIdx].toLowerCase()}-${year}.pdf`;
+    if (await urlExists(url)) {
+      documents.push({ strategyName: s.strategyName, docType: 'factsheet', period, title: `${s.strategyName} – ${period}`, url });
+    } else {
+      console.warn(`[PMS Factsheets] Invesco ${s.strategyName}: expected URL does not resolve (${url})`);
+    }
+  }
+  return documents;
+}
+
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────
 // Links alone don't tell an investor what's actually in the strategy --
 // this reads each factsheet's real content (top holdings, sector and
@@ -1392,6 +1444,7 @@ const PROVIDERS = [
   { key: 'dezerv', displayName: 'Dezerv Investments', matchFragments: ['dezerv'], fetch: fetchDezerv },
   { key: 'negen', displayName: 'Negen Capital', matchFragments: ['negen'], fetch: fetchNegen },
   { key: 'motilaloswal', displayName: 'Motilal Oswal Asset Management Company', matchFragments: ['motilal oswal'], fetch: fetchMotilalOswal },
+  { key: 'invesco', displayName: 'Invesco Asset Management', matchFragments: ['invesco'], fetch: fetchInvesco },
 ];
 
 async function run() {
@@ -1745,6 +1798,7 @@ module.exports = {
   parseDezervDeckPdf,
   fetchNegen,
   fetchMotilalOswal,
+  fetchInvesco,
   PROVIDERS,
   extractFactsheetData,
   extractMultiStrategyFactsheetData,
