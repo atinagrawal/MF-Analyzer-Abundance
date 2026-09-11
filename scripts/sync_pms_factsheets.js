@@ -835,6 +835,121 @@ async function fetchDezerv() {
   return documents;
 }
 
+// ── Negen Capital: single strategy, factsheet + presentation ───────────────
+// Verified live: negenpms.com's own header nav carries a "Factsheets"
+// dropdown listing every past month newest-first, each `<a class="menu-
+// link">` labelled with its own `<span class="menu-text">Month YYYY</span>`
+// -- taking the first entry is far more reliable than guessing from the
+// PDF filename, whose word order has already changed once on this site
+// (older files: "Negen-PMS-<Month>-<Year>-Factsheet.pdf"; current:
+// "Negen-PMS-Factsheet-<Month>-<Year>.pdf"). A separate monthly
+// "Presentation" PDF is linked directly (no dropdown/archive) -- a
+// narrative deck, not data-dense, so it's stored as docType 'presentation'
+// (same reasoning as every other provider's presentation docs -- see the
+// Gemini-extraction comment below). strategyName is APMI's exact
+// leaderboard form (IAID 176, verified live) so downstream matching in
+// lib/pmsFactsheetsCache.js resolves cleanly. Negen has only this one
+// APMI-registered strategy.
+const NEGEN_STRATEGY_NAME = 'Negen Special Situations & Dynamic Allocation Strategy';
+
+async function fetchNegen() {
+  const res = await fetchWithRetry('https://negenpms.com/');
+  if (!res.ok) {
+    console.warn(`[PMS Factsheets] Negen: HTTP ${res.status}`);
+    return [];
+  }
+  const $ = cheerio.load(await res.text());
+  const documents = [];
+
+  const factsheetLink = $('a.menu-link[href*="Factsheet" i]')
+    .filter((_, el) => /\.pdf$/i.test($(el).attr('href') || ''))
+    .first();
+  const factsheetUrl = factsheetLink.attr('href');
+  const period = factsheetLink.find('.menu-text').text().trim() || null;
+  if (factsheetUrl) {
+    documents.push({
+      strategyName: NEGEN_STRATEGY_NAME,
+      docType: 'factsheet',
+      period,
+      title: `Negen PMS Factsheet${period ? ' – ' + period : ''}`,
+      url: factsheetUrl,
+    });
+  } else {
+    console.warn('[PMS Factsheets] Negen: no factsheet link found');
+  }
+
+  const presentationLink = $('a[href*="Presentation" i]')
+    .filter((_, el) => /\.pdf$/i.test($(el).attr('href') || ''))
+    .first();
+  const presentationUrl = presentationLink.attr('href');
+  if (presentationUrl) {
+    documents.push({
+      strategyName: NEGEN_STRATEGY_NAME,
+      docType: 'presentation',
+      period,
+      title: `Negen PMS Presentation${period ? ' – ' + period : ''}`,
+      url: presentationUrl,
+    });
+  }
+
+  return documents;
+}
+
+// ── Motilal Oswal AMC: 7 equity strategies, one combined "Monthly
+// Communique" PDF ───────────────────────────────────────────────────────
+// Verified live: motilaloswalamc.com/pms/downloads/monthly-communique
+// renders its file list client-side (no server-rendered <a href> to
+// scrape -- an Adobe AEM /content/dam/ asset path), but the URL itself
+// follows a strict, verified-live pattern: the communique for a given
+// DATA month is uploaded the FOLLOWING calendar month, e.g. August 2026's
+// data lives under the "sep" (September) upload directory --
+// ".../monthly-communique/2026/sep/PMS%20Communique%20August%202026.pdf".
+// Rather than hardcode this month's URL (which breaks every month), each
+// candidate (data month, upload month) pair is HEAD-checked newest-first
+// until one resolves -- same existence-checked-not-hardcoded approach
+// already used by fetchStallion(). strategyName values are APMI's exact
+// leaderboard form (verified live via IaInsight.htm against each IAID:
+// 364, 423, 431, 1517, 412, 425, 366) so downstream matching in
+// lib/pmsFactsheetsCache.js resolves cleanly; note "Founders Strategy" in
+// the communique itself vs APMI's "Motilal Oswal Founders Portfolio" --
+// that fuzzy gap is exactly what getFactsheetDataForStrategy()'s
+// significantWords scoring is for, so the communique's own heading text
+// is kept as `title` but APMI's exact name is used for `strategyName`.
+const MOTILAL_OSWAL_STRATEGIES = [
+  'Value Migration Strategy',
+  'Motilal Oswal Ethical Strategy',
+  'Motilal Oswal Founders Portfolio',
+  'Motilal Oswal India Growth Strategy',
+  'Motilal Oswal Mid to Mega Strategy',
+  'Motilal Oswal Multifactor Equity Strategy',
+  'Next Trillion Dollar Opportunity Strategy',
+];
+
+async function fetchMotilalOswal() {
+  const now = new Date();
+  for (let back = 0; back < 4; back++) {
+    const dataDate = new Date(now.getFullYear(), now.getMonth() - back, 1);
+    const uploadDate = new Date(dataDate.getFullYear(), dataDate.getMonth() + 1, 1);
+    const dataMonthName = MONTH_FULL[dataDate.getMonth()];
+    const dataYear = dataDate.getFullYear();
+    const uploadMonthAbbr = MONTH_FULL[uploadDate.getMonth()].slice(0, 3).toLowerCase();
+    const uploadYear = uploadDate.getFullYear();
+    const url = `https://www.motilaloswalamc.com/content/dam/motilal-mf/downloads/pms/monthly-communique/${uploadYear}/${uploadMonthAbbr}/PMS%20Communique%20${dataMonthName}%20${dataYear}.pdf`;
+    if (await urlExists(url)) {
+      const period = `${dataMonthName} ${dataYear}`;
+      return MOTILAL_OSWAL_STRATEGIES.map((strategyName) => ({
+        strategyName,
+        docType: 'factsheet',
+        period,
+        title: `Motilal Oswal PMS Monthly Communique – ${period}`,
+        url,
+      }));
+    }
+  }
+  console.warn('[PMS Factsheets] Motilal Oswal: no monthly communique found in the last 4 candidate months');
+  return [];
+}
+
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────
 // Links alone don't tell an investor what's actually in the strategy --
 // this reads each factsheet's real content (top holdings, sector and
@@ -1275,6 +1390,8 @@ const PROVIDERS = [
   { key: 'abakkus', displayName: 'Abakkus Investment Managers', matchFragments: ['abakkus'], fetch: fetchAbakkus },
   { key: 'buoyant', displayName: 'Buoyant Capital', matchFragments: ['buoyant'], fetch: fetchBuoyant },
   { key: 'dezerv', displayName: 'Dezerv Investments', matchFragments: ['dezerv'], fetch: fetchDezerv },
+  { key: 'negen', displayName: 'Negen Capital', matchFragments: ['negen'], fetch: fetchNegen },
+  { key: 'motilaloswal', displayName: 'Motilal Oswal Asset Management Company', matchFragments: ['motilal oswal'], fetch: fetchMotilalOswal },
 ];
 
 async function run() {
@@ -1626,7 +1743,11 @@ module.exports = {
   parseBuoyantLatestFactsheet,
   fetchDezerv,
   parseDezervDeckPdf,
+  fetchNegen,
+  fetchMotilalOswal,
   PROVIDERS,
+  extractFactsheetData,
+  extractMultiStrategyFactsheetData,
 };
 
 if (require.main === module) {
