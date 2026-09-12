@@ -203,7 +203,11 @@ function resolveIaid(candidate, leaderboardRows, matchFragments, { onReason } = 
   }
 
   const wantNorm = normalizeStrategyName(candidate.strategyName);
-  const exact = providerRows.find((row) => normalizeStrategyName(row.strategyName) === wantNorm);
+  const wantProperNorm = candidate.properName ? normalizeStrategyName(candidate.properName) : null;
+  const exact = providerRows.find((row) => {
+    const rNorm = normalizeStrategyName(row.strategyName);
+    return rNorm === wantNorm || (wantProperNorm && rNorm === wantProperNorm);
+  });
   if (exact) {
     const iaid = iaidFromRow(exact);
     say(`exact name match -> "${exact.strategyName}" (IAID ${iaid})`);
@@ -296,7 +300,7 @@ async function run() {
   for (const [providerKey, info] of Object.entries(factsheets.providers)) {
     for (const doc of info.documents || []) {
       if (doc.docType === 'factsheet' && doc.extracted) {
-        candidates.push({ providerKey, providerDisplayName: info.displayName, strategyName: doc.strategyName, extracted: doc.extracted });
+        candidates.push({ providerKey, providerDisplayName: info.displayName, strategyName: doc.strategyName, properName: doc.properName, extracted: doc.extracted });
       }
     }
   }
@@ -314,7 +318,7 @@ async function run() {
     if (!provider) continue;
     let reason = '';
     const iaid = resolveIaid(
-      { providerKey: c.providerKey, strategyName: c.strategyName },
+      { providerKey: c.providerKey, strategyName: c.strategyName, properName: c.properName },
       leaderboard,
       provider.matchFragments,
       { onReason: (m) => { reason = m; } },

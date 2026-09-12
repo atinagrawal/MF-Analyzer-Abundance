@@ -1140,6 +1140,73 @@ async function fetchEquitree() {
   ];
 }
 
+// ── Aditya Birla Sun Life AMC: 6 core domestic equity strategies ────────────
+// Verified live: alternateinvestments.adityabirlacapital.com/marketing-resources
+// serves all document uploads in its RSC payload, including the monthly combined
+// factsheet (ABSL Alternates Factsheet August 2026.pdf) and strategy pitch decks.
+const ABSL_EQUITY_STRATEGIES = [
+  { strategyName: 'Select Sector Portfolio', properName: 'ABSL Select Sector Portfolio', presRegex: /ABSL_SSP_.*\.pdf$/i },
+  { strategyName: 'India Special Opportunities Portfolio', properName: 'ABSL India Special Opportunities Portfolio', presRegex: /ABSL_ISOP_.*\.pdf$/i },
+  { strategyName: 'Innovation Portfolio', properName: 'ABSL Innovation Portfolio', presRegex: /ABSL_Innovation_.*\.pdf$/i },
+  { strategyName: 'Top 200 Core Equity Portfolio', properName: 'ABSL Top 200 Core Equity Portfolio', presRegex: /ABSL_Top_200_.*\.pdf$/i },
+  { strategyName: 'Core Equity Portfolio', properName: 'ABSL Core Equity Portfolio', presRegex: /ABSL_CEP_August_.*\.pdf$/i },
+  { strategyName: 'Next 100 Portfolio', properName: 'ABSL Next 100 Portfolio', presRegex: /ABSL_Next_100_.*\.pdf$/i },
+];
+
+async function fetchAdityaBirla() {
+  const res = await fetchWithRetry('https://alternateinvestments.adityabirlacapital.com/marketing-resources');
+  if (!res.ok) {
+    console.warn(`[PMS Factsheets] Aditya Birla: HTTP ${res.status}`);
+    return [];
+  }
+  const html = await res.text();
+  const pdfMatches = [...html.matchAll(/\/uploads\/([a-zA-Z0-9_-]+\.pdf)/g)];
+  const uniqueUrls = [...new Set(pdfMatches.map((m) => m[0]))];
+  const BASE_URL = 'https://alternateinvestments.adityabirlacapital.com';
+
+  const factsheetPath = uniqueUrls.find((u) => /ABSL_Alternates_Factsheet/i.test(u));
+  const period = factsheetPath ? extractPeriodFromFilename(factsheetPath) : null;
+
+  const documents = [];
+  for (const s of ABSL_EQUITY_STRATEGIES) {
+    if (factsheetPath) {
+      documents.push({
+        strategyName: s.strategyName,
+        docType: 'factsheet',
+        period,
+        title: `${s.properName}${period ? ' – ' + period : ''}`,
+        url: BASE_URL + factsheetPath,
+        properName: s.properName,
+      });
+    }
+    const presPath = uniqueUrls.find((u) => s.presRegex.test(u) && !/observer/i.test(u));
+    if (presPath) {
+      const presPeriod = extractPeriodFromFilename(presPath);
+      documents.push({
+        strategyName: s.strategyName,
+        docType: 'presentation',
+        period: presPeriod,
+        title: `${s.properName} Presentation${presPeriod ? ' – ' + presPeriod : ''}`,
+        url: BASE_URL + presPath,
+      });
+    }
+  }
+
+  const iespPath = uniqueUrls.find((u) => /ABSL_IESP_.*\.pdf$/i.test(u));
+  if (iespPath) {
+    const iespPeriod = extractPeriodFromFilename(iespPath);
+    documents.push({
+      strategyName: 'ABSL India Equity Services',
+      docType: 'presentation',
+      period: iespPeriod,
+      title: `ABSL India Equity Services Portfolio Presentation${iespPeriod ? ' – ' + iespPeriod : ''}`,
+      url: BASE_URL + iespPath,
+    });
+  }
+
+  return documents;
+}
+
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────
 // Links alone don't tell an investor what's actually in the strategy --
 // this reads each factsheet's real content (top holdings, sector and
@@ -1596,6 +1663,7 @@ const PROVIDERS = [
   { key: 'incred', displayName: 'InCred Asset Management', matchFragments: ['incred'], fetch: fetchIncred },
   { key: 'greenportfolio', displayName: 'Green Portfolio', matchFragments: ['green portfolio'], fetch: fetchGreenPortfolio },
   { key: 'equitree', displayName: 'Equitree Capital Advisors', matchFragments: ['equitree'], fetch: fetchEquitree },
+  { key: 'adityabirla', displayName: 'Aditya Birla Sun Life AMC Limited', matchFragments: ['aditya birla'], fetch: fetchAdityaBirla },
 ];
 
 async function run() {
@@ -1954,6 +2022,7 @@ module.exports = {
   fetchIncred,
   fetchGreenPortfolio,
   fetchEquitree,
+  fetchAdityaBirla,
   PROVIDERS,
   extractFactsheetData,
   extractMultiStrategyFactsheetData,
