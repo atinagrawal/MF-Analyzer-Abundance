@@ -190,6 +190,158 @@ function fmtCr(n) {
   return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.round(v))} Cr`;
 }
 
+// Display-only rounding for ratios (Sharpe, Beta, P/E, alpha) -- some
+// factsheets' own figures carry 3-4 decimal places (e.g. a raw "1.1419"),
+// which reads as noise next to every other card's clean 2-decimal values.
+// Never mutates the stored data, only what's shown.
+function fmtRatio(n) {
+  if (n == null || !Number.isFinite(n)) return n;
+  return Math.round(n * 100) / 100;
+}
+
+// Turns a factsheet's real sectorAllocation into a fixed "top 5 + Other"
+// series that always sums to ~100% -- so a sector-DNA bar's width is
+// always the whole portfolio, honestly, even when the factsheet itself
+// only discloses partial sector coverage. `swatch` is a 0-4 palette index
+// (darkest = biggest sector, a deliberate readability cue) or 'other'.
+// Returns null when there's nothing real to show (never a fabricated bar).
+function buildSectorDna(sectorAllocation) {
+  if (!Array.isArray(sectorAllocation) || sectorAllocation.length === 0) return null;
+  const sorted = [...sectorAllocation]
+    .filter((s) => s?.sector && Number.isFinite(s.weightPct) && s.weightPct > 0)
+    .sort((a, b) => b.weightPct - a.weightPct);
+  if (sorted.length === 0) return null;
+  const top = sorted.slice(0, 5);
+  const segments = top.map((s, i) => ({ sector: s.sector, weightPct: s.weightPct, swatch: i }));
+  const shown = top.reduce((sum, s) => sum + s.weightPct, 0);
+  const other = Math.round((100 - shown) * 10) / 10;
+  if (other > 0.5) segments.push({ sector: 'Other', weightPct: other, swatch: 'other' });
+  return segments;
+}
+
+function SectorDnaBar({ segments, size = 'sm' }) {
+  if (!segments) return null;
+  return (
+    <div className={`pmspref-dna-bar pmspref-dna-bar--${size}`}>
+      {segments.map((seg, i) => (
+        <span
+          // Index, not seg.sector: several real factsheets (ICICI Prudential's)
+          // already disclose a sector literally named "Other", which would
+          // otherwise collide with this array's own synthetic "Other" remainder.
+          key={i}
+          className={`pmspref-dna-seg pmspref-dna-seg--${seg.swatch}`}
+          style={{ width: `${seg.weightPct}%` }}
+          title={`${seg.sector} ${seg.weightPct}%`}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Resolves the single strategy to feature as this month's spotlight:
+// highest Sharpe ratio among all preferred strategies (falling back to
+// best 1-year alpha when no strategy has a disclosed Sharpe yet). Both
+// `insights.bestSharpe`/`bestAlpha` are only ever set from a real,
+// present number (see findBestSharpe/findBestAlpha in
+// compute_preferred_pms.js), so this never spotlights a fabricated pick.
+function resolveSpotlight(strategies, insights) {
+  const bySharpe = insights?.bestSharpe;
+  const byAlpha = insights?.bestAlpha;
+  const pick = bySharpe || byAlpha;
+  if (!pick?.iaid) return null;
+  const strategy = strategies.find((s) => s.iaid === pick.iaid);
+  if (!strategy) return null;
+  return { strategy, metric: bySharpe ? 'sharpe' : 'alpha' };
+}
+
+function SpotlightCard({ strategy, metric, totalCount }) {
+  const e = strategy.extracted || {};
+  const pa = e.portfolioAttributes || {};
+  const sharpe = fmtRatio(pa.sharpeRatio?.strategy);
+  const sharpeBench = fmtRatio(pa.sharpeRatio?.benchmark);
+  const stdDev = fmtRatio(pa.standardDeviation?.strategy);
+  const pe = fmtRatio(pa.portfolioPe?.strategy);
+  const peBench = fmtRatio(pa.portfolioPe?.benchmark);
+  const beta = fmtRatio(pa.beta?.strategy);
+  const alphaPct = fmtRatio(pa.alpha?.strategy);
+  const holdings = (e.topHoldings || []).filter((h) => h?.name).slice(0, 5);
+  const dna = buildSectorDna(e.sectorAllocation);
+  const logo = getPMSLogo(strategy.providerName);
+  const tagLabel = metric === 'sharpe'
+    ? `Best Sharpe Ratio of all ${totalCount} Preferred Strategies`
+    : `Best 1-Year Alpha of all ${totalCount} Preferred Strategies`;
+
+  return (
+    <section className="pmspref-spotlight" aria-label="This month's spotlight strategy">
+      <span className="pmspref-spotlight-tag">★ This Month&apos;s Spotlight · {tagLabel}</span>
+      <div className="pmspref-spotlight-body">
+        <div className="pmspref-spotlight-main">
+          <div className="pmspref-spotlight-head">
+            {logo
+              ? <img src={logo} alt="" className="pmspref-spotlight-logo" />
+              : <span className="pmspref-spotlight-logo pmspref-spotlight-logo-fallback">{strategy.providerName.charAt(0)}</span>}
+            <span className="pmspref-spotlight-provider">{strategy.providerName}</span>
+          </div>
+          <a href={`/pms/${strategy.iaid}`} className="pmspref-spotlight-name">{strategy.strategyName}</a>
+          {e.objective && <blockquote className="pmspref-spotlight-quote">&ldquo;{e.objective}&rdquo;</blockquote>}
+          {holdings.length > 0 && (
+            <>
+              <div className="pmspref-spotlight-holdings-lbl">Disclosed Top Holdings</div>
+              <div className="pmspref-spotlight-holdings">
+                {holdings.map((h) => <span key={h.name} className="pmspref-holding-chip">{h.name}</span>)}
+              </div>
+            </>
+          )}
+        </div>
+        <div className="pmspref-spotlight-stats">
+          {metric === 'sharpe' && sharpe != null ? (
+            <div className="pmspref-spotlight-hero-stat">
+              <span className="pmspref-stat-lbl">Sharpe Ratio</span>
+              <div className="pmspref-spotlight-hero-num">{sharpe}</div>
+              <div className="pmspref-spotlight-hero-vs">
+                {sharpeBench != null && <>vs benchmark <b>{sharpeBench}</b></>}
+                {stdDev != null && <> · Std. Deviation <b>{stdDev}%</b></>}
+              </div>
+            </div>
+          ) : alphaPct != null ? (
+            <div className="pmspref-spotlight-hero-stat">
+              <span className="pmspref-stat-lbl">1-Year Alpha</span>
+              <div className="pmspref-spotlight-hero-num">+{alphaPct}pp</div>
+            </div>
+          ) : null}
+          <div className="pmspref-mini-stats">
+            <div><span className="pmspref-mini-lbl">AUM</span><div className="pmspref-mini-val">{strategy.aumCr != null ? fmtCr(strategy.aumCr) : '—'}</div></div>
+            <div><span className="pmspref-mini-lbl">Top Quartile</span><div className="pmspref-mini-val">{strategy.qualifyingPeriod || '—'}</div></div>
+            {pe != null && (
+              <div>
+                <span className="pmspref-mini-lbl">Portfolio P/E</span>
+                <div className="pmspref-mini-val">{pe}{peBench != null && <span className="pmspref-mini-val-muted"> / {peBench}</span>}</div>
+              </div>
+            )}
+            {beta != null && (
+              <div><span className="pmspref-mini-lbl">Beta</span><div className="pmspref-mini-val">{beta}</div></div>
+            )}
+          </div>
+          {dna && (
+            <div className="pmspref-dna-block">
+              <div className="pmspref-dna-lbl">Sector DNA</div>
+              <SectorDnaBar segments={dna} size="lg" />
+              <div className="pmspref-dna-legend">
+                {dna.slice(0, 4).map((seg, i) => (
+                  <span key={i} className="pmspref-dna-legend-item">
+                    <span className={`pmspref-dna-swatch pmspref-dna-swatch--${seg.swatch}`} />
+                    {seg.sector} {seg.weightPct}%
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // A single-strategy insight tile. Renders as a link to /pms/<iaid> when the
 // iaid is known, otherwise as a plain card (no hrefless anchor).
 function InsightTile({ iaid, label, value, sub, src }) {
@@ -237,6 +389,7 @@ export default async function PmsPreferredPage() {
   const fsRange = doc?.factsheetAsOfRange || null;
   const computedOn = doc?.computedAt ? fmtDate(doc.computedAt.slice(0, 10)) : null;
   const provenance = doc?.criteria?.dataSources || null;
+  const spotlight = insights ? resolveSpotlight(strategies, insights) : null;
 
   return (
     <>
@@ -376,11 +529,16 @@ export default async function PmsPreferredPage() {
                       src={asOn ? `APMI, as on ${asOn}` : 'APMI'}
                     />
                   )}
-                  {insights.bestSharpe && (
+                  {/* Best Sharpe already gets the full Spotlight feature below when
+                      it's the metric behind that pick -- shown here only when the
+                      Spotlight is instead running on Best Alpha (no strategy has a
+                      disclosed Sharpe yet), so the two sections never repeat the
+                      same strategy. */}
+                  {insights.bestSharpe && spotlight?.metric !== 'sharpe' && (
                     <InsightTile
                       iaid={insights.bestSharpe.iaid}
                       label="Best Sharpe Ratio"
-                      value={insights.bestSharpe.sharpeRatio}
+                      value={fmtRatio(insights.bestSharpe.sharpeRatio)}
                       sub={`${insights.bestSharpe.strategyName} (${insights.bestSharpe.providerName})`}
                       src="from latest factsheet"
                     />
@@ -389,30 +547,68 @@ export default async function PmsPreferredPage() {
               </section>
             )}
 
+            {spotlight && (
+              <SpotlightCard strategy={spotlight.strategy} metric={spotlight.metric} totalCount={strategies.length} />
+            )}
+
             <section className="pmspref-grid-section" aria-label="Preferred strategies">
               <h2 className="pmspref-h2">{strategies.length} Preferred Strategies</h2>
+              <p className="pmspref-h2-sub">Every card&apos;s Sharpe ratio and sector bar come straight from that strategy&apos;s latest factsheet — no two look alike because no two portfolios are alike.</p>
               <div className="pmspref-grid">
                 {strategies.map((s) => {
                   const logo = getPMSLogo(s.providerName);
+                  const e = s.extracted || {};
+                  const sharpe = fmtRatio(e.portfolioAttributes?.sharpeRatio?.strategy);
+                  const holdings = (e.topHoldings || []).filter((h) => h?.name);
+                  const dna = buildSectorDna(e.sectorAllocation);
                   return (
                     <a key={s.iaid} href={`/pms/${s.iaid}`} className="pmspref-card">
+                      {s.quartile && <span className="pmspref-card-ribbon">{s.quartile}</span>}
                       <div className="pmspref-card-head">
                         {logo
                           ? <img src={logo} alt="" className="pmspref-card-logo" />
                           : <span className="pmspref-card-logo pmspref-card-logo-fallback">{s.providerName.charAt(0)}</span>}
-                        <span className="pmspref-card-category">{s.category}</span>
+                        <span className="pmspref-card-provider">{s.providerName}</span>
                       </div>
                       <div className="pmspref-card-name">{s.strategyName}</div>
-                      <div className="pmspref-card-provider">{s.providerName}</div>
-                      <div className="pmspref-card-foot">
-                        <span className="pmspref-card-aum">
-                          <span className="pmspref-card-aum-lbl">AUM</span>
-                          {s.aumCr != null ? ` ₹${new Intl.NumberFormat('en-IN').format(s.aumCr)} Cr` : ' —'}
-                        </span>
-                        {s.qualifyingPeriod && (
-                          <span className="pmspref-card-badge">{s.qualifyingPeriod} · {s.quartile}</span>
+                      {e.objective
+                        ? <div className="pmspref-card-obj">&ldquo;{e.objective}&rdquo;</div>
+                        : <div className="pmspref-card-obj-spacer" aria-hidden="true" />}
+                      <div className="pmspref-card-stats">
+                        {sharpe != null && (
+                          <div>
+                            <span className="pmspref-card-stat-lbl">Sharpe</span>
+                            <span className="pmspref-card-stat-val pmspref-card-stat-val--hero">{sharpe}</span>
+                          </div>
                         )}
+                        <div>
+                          <span className="pmspref-card-stat-lbl">AUM</span>
+                          <span className="pmspref-card-stat-val">{s.aumCr != null ? fmtCr(s.aumCr) : '—'}</span>
+                        </div>
                       </div>
+                      {holdings.length > 0 ? (
+                        <div className="pmspref-card-holdings">
+                          {holdings.slice(0, 2).map((h) => (
+                            <span key={h.name} className="pmspref-holding-chip pmspref-holding-chip--sm">{h.name}</span>
+                          ))}
+                          {holdings.length > 2 && (
+                            <span className="pmspref-holding-chip pmspref-holding-chip--sm">+{holdings.length - 2} more</span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="pmspref-card-holdings-none">Holdings not disclosed this month</div>
+                      )}
+                      {dna ? (
+                        <div className="pmspref-card-dna-wrap">
+                          <div className="pmspref-card-dna-top">
+                            <span className="pmspref-card-dna-lbl">Top Sector</span>
+                            <span className="pmspref-card-dna-sector">{dna[0].sector} {dna[0].weightPct}%</span>
+                          </div>
+                          <SectorDnaBar segments={dna} size="sm" />
+                        </div>
+                      ) : (
+                        <div className="pmspref-card-dna-wrap pmspref-card-dna-wrap--empty" aria-hidden="true" />
+                      )}
                     </a>
                   );
                 })}

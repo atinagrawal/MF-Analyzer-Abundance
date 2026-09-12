@@ -277,38 +277,132 @@
 }
 .pmspref-insight-link:hover .pmspref-insight-arrow { color: var(--g1); transform: translateX(2px); }
 
+/* ── Sector DNA -- shared by the Spotlight and every grid card. Reuses the
+   site's own forest-green ramp (darkest = biggest sector, a deliberate
+   readability cue) rather than inventing a new palette; "other" recedes
+   into the page's own warm border tone. ── */
+.pmspref-dna-seg--0, .pmspref-dna-swatch--0 { background: var(--g1); }
+.pmspref-dna-seg--1, .pmspref-dna-swatch--1 { background: var(--g2); }
+.pmspref-dna-seg--2, .pmspref-dna-swatch--2 { background: var(--g3); }
+.pmspref-dna-seg--3, .pmspref-dna-swatch--3 { background: var(--g4); }
+.pmspref-dna-seg--4, .pmspref-dna-swatch--4 { background: var(--g-light); }
+.pmspref-dna-seg--other, .pmspref-dna-swatch--other { background: var(--pmsp-border-2); }
+.pmspref-dna-bar { display: flex; border-radius: 5px; overflow: hidden; width: 100%; }
+.pmspref-dna-bar--lg { height: 10px; }
+.pmspref-dna-bar--sm { height: 7px; border-radius: 4px; }
+.pmspref-dna-swatch { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+/* ── Spotlight ── */
+.pmspref-spotlight {
+  position: relative;
+  background: linear-gradient(155deg, var(--pmsp-surface) 0%, var(--pmsp-surface-2) 100%);
+  border: 1px solid var(--g-light);
+  border-radius: 16px;
+  padding: 24px 26px 22px;
+  margin-bottom: 32px;
+  box-shadow: 0 14px 36px -22px rgba(27, 94, 32, .32);
+}
+.pmspref-spotlight-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--g1);
+  background: var(--g-xlight, #e8f5e9);
+  border: 1px solid var(--g-light);
+  border-radius: 20px;
+  padding: 5px 12px 5px 10px;
+  margin-bottom: 16px;
+}
+.pmspref-spotlight-body { display: grid; grid-template-columns: 1.5fr 1fr; gap: 28px; }
+.pmspref-spotlight-head { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+.pmspref-spotlight-logo { height: 34px; width: auto; max-width: 150px; object-fit: contain; }
+.pmspref-spotlight-logo-fallback {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 8px;
+  background: var(--g-xlight, #e8f5e9); color: var(--g1);
+  font-family: var(--pmsp-serif); font-weight: 700; font-size: 1.1rem;
+}
+.pmspref-spotlight-provider { font-size: .82rem; color: var(--pmsp-muted-2); font-weight: 600; }
+.pmspref-spotlight-name {
+  display: block;
+  font-family: var(--pmsp-serif); font-size: 1.6rem; font-weight: 700; line-height: 1.15;
+  color: var(--pmsp-text); text-decoration: none; margin-bottom: 4px;
+}
+.pmspref-spotlight-name:hover { color: var(--g1); }
+.pmspref-spotlight-quote {
+  font-family: var(--pmsp-serif); font-style: italic; font-size: .96rem; line-height: 1.55;
+  color: var(--pmsp-text); border-left: 3px solid var(--g-light); padding-left: 15px;
+  margin: 14px 0 18px; max-width: 60ch;
+}
+.pmspref-spotlight-holdings-lbl {
+  font-size: .6rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--pmsp-muted); margin-bottom: 8px;
+}
+.pmspref-spotlight-holdings, .pmspref-card-holdings { display: flex; flex-wrap: wrap; gap: 7px; }
+.pmspref-holding-chip {
+  font-family: var(--pmsp-mono); font-size: .74rem; font-weight: 500;
+  background: var(--pmsp-surface); border: 1px solid var(--pmsp-border); border-radius: 7px;
+  padding: 5px 10px; color: var(--pmsp-text);
+}
+.pmspref-holding-chip--sm { font-size: .66rem; padding: 3px 8px; }
+
+.pmspref-spotlight-stats {
+  background: var(--pmsp-surface); border: 1px solid var(--pmsp-border); border-radius: 13px;
+  padding: 17px 19px; display: flex; flex-direction: column; gap: 15px;
+}
+.pmspref-spotlight-hero-num {
+  font-family: var(--pmsp-mono); font-weight: 700; font-size: 2.2rem; line-height: 1; color: var(--g1);
+  font-variant-numeric: tabular-nums;
+}
+.pmspref-spotlight-hero-vs { font-size: .76rem; color: var(--pmsp-muted); margin-top: 5px; }
+.pmspref-spotlight-hero-vs b { color: var(--pmsp-muted-2); font-family: var(--pmsp-mono); }
+.pmspref-mini-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 13px; border-top: 1px solid var(--pmsp-border); }
+.pmspref-mini-lbl { font-size: .58rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pmsp-muted); }
+.pmspref-mini-val { font-family: var(--pmsp-mono); font-weight: 700; font-size: .96rem; color: var(--pmsp-text); margin-top: 2px; }
+.pmspref-mini-val-muted { color: var(--pmsp-muted); font-weight: 500; }
+.pmspref-dna-block { padding-top: 3px; }
+.pmspref-dna-lbl { font-size: .6rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--pmsp-muted); margin-bottom: 8px; }
+.pmspref-dna-legend { display: flex; flex-wrap: wrap; gap: 7px 13px; margin-top: 9px; }
+.pmspref-dna-legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: .68rem; color: var(--pmsp-muted-2); }
+
 /* ── Strategy grid ── */
 .pmspref-grid-section { margin-bottom: 36px; }
+.pmspref-h2-sub { font-size: .78rem; color: var(--pmsp-muted); margin: -8px 0 16px; }
 .pmspref-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: 16px;
 }
 .pmspref-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   background: var(--pmsp-surface);
   border: 1px solid var(--pmsp-border);
-  border-radius: 12px;
-  padding: 16px 18px 14px;
+  border-radius: 13px;
+  padding: 16px 17px 0;
   text-decoration: none;
   color: inherit;
+  overflow: hidden;
   transition: border-color .15s, transform .15s, box-shadow .15s;
 }
 .pmspref-card:hover {
   border-color: var(--g1);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px -12px rgba(27, 94, 32, .3);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px -14px rgba(27, 94, 32, .32);
 }
-.pmspref-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
-  min-height: 26px;
+.pmspref-card-ribbon {
+  position: absolute; top: 12px; right: -30px;
+  background: var(--g1); color: #f3fbf1;
+  font-size: .56rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  padding: 3px 34px; transform: rotate(40deg);
 }
-.pmspref-card-logo { height: 26px; width: auto; max-width: 130px; object-fit: contain; }
+.pmspref-card-head { display: flex; align-items: center; gap: 9px; margin-bottom: 11px; padding-right: 28px; }
+.pmspref-card-logo { height: 26px; width: auto; max-width: 120px; object-fit: contain; flex-shrink: 0; }
 .pmspref-card-logo-fallback {
   display: inline-flex;
   align-items: center;
@@ -320,57 +414,39 @@
   font-family: var(--pmsp-serif);
   font-weight: 700;
   font-size: .9rem;
+  flex-shrink: 0;
 }
-.pmspref-card-category {
-  font-size: .58rem;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
+.pmspref-card-provider {
+  font-size: .68rem;
   color: var(--pmsp-muted);
-  white-space: nowrap;
+  font-weight: 600;
+  line-height: 1.25;
 }
 .pmspref-card-name {
   font-family: var(--pmsp-serif);
-  font-size: 1.06rem;
+  font-size: 1.02rem;
   font-weight: 700;
   line-height: 1.25;
   color: var(--pmsp-text);
-  margin-bottom: 3px;
+  margin-bottom: 5px;
 }
-.pmspref-card-provider {
-  font-size: .78rem;
-  color: var(--pmsp-muted);
-  margin-bottom: 12px;
+.pmspref-card-obj {
+  font-family: var(--pmsp-serif); font-style: italic; font-size: .76rem; line-height: 1.4;
+  color: var(--pmsp-muted-2); margin-bottom: 12px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.pmspref-card-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 11px;
-  border-top: 1px solid var(--pmsp-border);
-  font-size: .76rem;
-}
-.pmspref-card-aum { font-family: var(--pmsp-mono); font-weight: 700; color: var(--pmsp-text); }
-.pmspref-card-aum-lbl {
-  font-family: Raleway, system-ui, sans-serif;
-  font-size: .56rem;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--pmsp-muted);
-}
-.pmspref-card-badge {
-  font-size: .66rem;
-  font-weight: 700;
-  color: var(--g1);
-  background: var(--g-xlight, #e8f5e9);
-  border: 1px solid var(--g-light, #a5d6a7);
-  border-radius: 5px;
-  padding: 2px 8px;
-  white-space: nowrap;
-}
+.pmspref-card-obj-spacer { margin-bottom: 2px; }
+.pmspref-card-stats { display: flex; align-items: baseline; gap: 18px; margin-bottom: 12px; }
+.pmspref-card-stat-lbl { font-size: .58rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pmsp-muted); display: block; margin-bottom: 2px; }
+.pmspref-card-stat-val { font-family: var(--pmsp-mono); font-weight: 700; font-size: .9rem; color: var(--pmsp-text); }
+.pmspref-card-stat-val--hero { font-size: 1.08rem; color: var(--g1); }
+.pmspref-card-holdings { margin-bottom: 13px; }
+.pmspref-card-holdings-none { font-size: .7rem; color: var(--pmsp-muted); font-style: italic; margin-bottom: 13px; }
+.pmspref-card-dna-wrap { margin: 0 -17px; padding: 10px 17px 13px; background: var(--pmsp-surface-2); border-top: 1px solid var(--pmsp-border); }
+.pmspref-card-dna-wrap--empty { padding: 6px 17px; }
+.pmspref-card-dna-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.pmspref-card-dna-lbl { font-size: .58rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pmsp-muted); white-space: nowrap; }
+.pmspref-card-dna-sector { font-size: .68rem; color: var(--pmsp-muted-2); font-weight: 600; text-align: right; }
 
 /* ── Table ── */
 .pmspref-table-section { margin-bottom: 36px; }
@@ -527,6 +603,8 @@
   .pmspref-stat { flex-basis: 50%; border-right: none; margin-bottom: 12px; }
   .pmspref-stat:nth-child(3), .pmspref-stat:nth-child(4) { margin-bottom: 0; }
   .pmspref-brief-foot { flex-direction: column; align-items: flex-start; }
+  .pmspref-spotlight-body { grid-template-columns: 1fr; }
+  .pmspref-spotlight-name { font-size: 1.4rem; }
 }
 @media (max-width: 480px) {
   .pmspref-stat { flex-basis: 100%; }
