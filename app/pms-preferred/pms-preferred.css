@@ -442,8 +442,17 @@
 .pmspref-card-stat-val--hero { font-size: 1.08rem; color: var(--g1); }
 .pmspref-card-holdings { margin-bottom: 13px; }
 .pmspref-card-holdings-none { font-size: .7rem; color: var(--pmsp-muted); font-style: italic; margin-bottom: 13px; }
-.pmspref-card-dna-wrap { margin: 0 -17px; padding: 10px 17px 13px; background: var(--pmsp-surface-2); border-top: 1px solid var(--pmsp-border); }
-.pmspref-card-dna-wrap--empty { padding: 6px 17px; }
+.pmspref-card-dna-wrap {
+  margin: auto -17px 0;
+  padding: 10px 17px 13px;
+  background: var(--pmsp-surface-2);
+  border-top: 1px solid var(--pmsp-border);
+}
+/* margin-top: auto pins this to the bottom of the flex card regardless of
+   how short the content above it is (e.g. "Holdings not disclosed this
+   month" is one short line vs. two rows of chips) -- the gap it eats up
+   opens above the bar, in the blank middle, not as dead space below it. */
+.pmspref-card-dna-wrap--empty { margin: auto -17px 0; padding: 6px 17px; }
 .pmspref-card-dna-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
 .pmspref-card-dna-lbl { font-size: .58rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pmsp-muted); white-space: nowrap; }
 .pmspref-card-dna-sector { font-size: .68rem; color: var(--pmsp-muted-2); font-weight: 600; text-align: right; }
