@@ -98,7 +98,7 @@ export default function PmsPreferredTable({ strategies }) {
           <tbody>
             {rows.map((s) => (
               <tr key={s.iaid}>
-                <td><a href={`/pms/${s.iaid}`}>{s.strategyName}</a></td>
+                <td><a href={`/pms/${s.iaid}`} target="_blank" rel="noopener noreferrer">{s.strategyName}</a></td>
                 <td>{s.providerName}</td>
                 <td>{s.category}</td>
                 <td className="pmspref-num">{fmtAum(s.aumCr)}</td>
