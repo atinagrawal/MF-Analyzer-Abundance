@@ -160,7 +160,7 @@ function toTitleCase(raw) {
 // the real date. Returns null (never a fabricated period) if no
 // recognizable month+year is found.
 const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const MONTH_PATTERN = 'Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?';
+const MONTH_PATTERN = 'Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?';
 function extractPeriodFromFilename(urlOrFilename) {
   let decoded;
   try {
@@ -1102,6 +1102,44 @@ async function fetchGreenPortfolio() {
   return documents;
 }
 
+// ── Equitree Capital Advisors: 1 equity strategy (Emerging Opportunities) ──
+// Verified live: equitreecapital.com/pms/ links directly to the latest
+// factsheet ("Download factsheet→" linking to /documents/Equitree PMS Factsheet Sept'26.pdf).
+// strategyName is APMI's exact leaderboard form ("Equitree Emerging Opportunities",
+// IAID 407, verified live) so downstream matching in lib/pmsFactsheetsCache.js
+// resolves cleanly.
+async function fetchEquitree() {
+  const res = await fetchWithRetry('https://equitreecapital.com/pms/');
+  if (!res.ok) {
+    console.warn(`[PMS Factsheets] Equitree: HTTP ${res.status}`);
+    return [];
+  }
+  const $ = cheerio.load(await res.text());
+  let pdfHref = null;
+  $('a[href]').each((_, el) => {
+    const href = $(el).attr('href');
+    if (href && /PMS.*Factsheet/i.test(href) && /\.pdf$/i.test(href.trim())) {
+      pdfHref = href.trim();
+      return false;
+    }
+  });
+  if (!pdfHref) {
+    console.warn('[PMS Factsheets] Equitree: no factsheet link found');
+    return [];
+  }
+  const url = new URL(pdfHref, 'https://equitreecapital.com').href;
+  const period = extractPeriodFromFilename(url);
+  return [
+    {
+      strategyName: 'Equitree Emerging Opportunities',
+      docType: 'factsheet',
+      period,
+      title: `Equitree PMS Factsheet${period ? ' – ' + period : ''}`,
+      url,
+    },
+  ];
+}
+
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────
 // Links alone don't tell an investor what's actually in the strategy --
 // this reads each factsheet's real content (top holdings, sector and
@@ -1557,6 +1595,7 @@ const PROVIDERS = [
   { key: 'invesco', displayName: 'Invesco Asset Management', matchFragments: ['invesco'], fetch: fetchInvesco },
   { key: 'incred', displayName: 'InCred Asset Management', matchFragments: ['incred'], fetch: fetchIncred },
   { key: 'greenportfolio', displayName: 'Green Portfolio', matchFragments: ['green portfolio'], fetch: fetchGreenPortfolio },
+  { key: 'equitree', displayName: 'Equitree Capital Advisors', matchFragments: ['equitree'], fetch: fetchEquitree },
 ];
 
 async function run() {
@@ -1625,6 +1664,7 @@ function selfTest() {
   assert.strictEqual(extractPeriodFromFilename('Renaissance Opportunities PMS Factsheet - July 2026.pdf'), 'July 2026');
   assert.strictEqual(extractPeriodFromFilename('Renaissance India Next PMS Factsheet - April 2026 - with RMP.pdf'), 'April 2026');
   assert.strictEqual(extractPeriodFromFilename("Renaissance India Next PMS Factsheet - Mar'26.pdf"), 'March 2026');
+  assert.strictEqual(extractPeriodFromFilename("Equitree PMS Factsheet Sept'26.pdf"), 'September 2026');
   assert.strictEqual(extractPeriodFromFilename('no-date-here.pdf'), null);
   assert.strictEqual(toTitleCase('LARGE CAP'), 'Large Cap');
   assert.strictEqual(toTitleCase('MID & SMALL CAP'), 'Mid & Small Cap');
@@ -1913,6 +1953,7 @@ module.exports = {
   fetchInvesco,
   fetchIncred,
   fetchGreenPortfolio,
+  fetchEquitree,
   PROVIDERS,
   extractFactsheetData,
   extractMultiStrategyFactsheetData,
