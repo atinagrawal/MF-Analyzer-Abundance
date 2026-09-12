@@ -166,7 +166,19 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
       if (d.moved && Math.abs(endIdx - d.startIdx) > 2) {
         setSelection({ lo: Math.min(d.startIdx, endIdx), hi: Math.max(d.startIdx, endIdx) });
       } else {
+        // A plain tap/click (no real drag): clear any existing range
+        // selection and pin the hover tooltip (date + value, same as
+        // desktop hover) at the tapped point instead. Touch has no
+        // continuous "hover" state the way a mouse does -- onMove only
+        // ever sets hoverIdx while dragRef.current.dragging is false,
+        // which touchstart immediately flips to true, so a tap alone
+        // used to show nothing at all (or, on browsers that still fire a
+        // compatibility mousemove after touchend, a tooltip that could
+        // vanish again on the next stray event). Setting it explicitly
+        // here makes tap-for-the-date-and-value work the same on every
+        // device, not by accident of synthetic-event timing.
         setSelection(null);
+        setHoverIdx(endIdx);
       }
     }
     dragRef.current = { dragging: false, startIdx: null, moved: false };
@@ -327,7 +339,7 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
           </div>
         )}
       </div>
-      <div className="cmp-hint">Drag left→right to select a range · tap anywhere to clear</div>
+      <div className="cmp-hint">Tap a point for its date &amp; value · drag left→right to select a range</div>
       {validSelection && rangeRows && (
         <div className="cmp-range-summary show">
           <div className="cmp-range-summary-h">

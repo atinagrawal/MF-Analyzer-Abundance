@@ -395,6 +395,7 @@
   position: absolute;
   top: 8px;
   background: var(--surface);
+  color: var(--text);
   border: 1.5px solid var(--g3);
   border-radius: 10px;
   padding: 8px 12px;
