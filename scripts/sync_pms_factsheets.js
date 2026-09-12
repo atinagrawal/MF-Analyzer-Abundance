@@ -158,7 +158,12 @@ function toTitleCase(raw) {
 // the document's real period. Takes the LAST month+year match in the
 // string, since some filenames carry other numbers (CMS ids, etc.) before
 // the real date. Returns null (never a fabricated period) if no
-// recognizable month+year is found.
+// recognizable month+year is found. The year is terminated with a
+// negative lookahead (not \b): a trailing "_" after the year (e.g. a CMS
+// asset hash appended by Aditya Birla's uploader, "..._August_2026_7a3b8
+// ....pdf") is itself a word character, so \b never matched there and
+// silently returned null -- caught live when every ABSL document synced
+// with period: null.
 const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const MONTH_PATTERN = 'Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?';
 function extractPeriodFromFilename(urlOrFilename) {
@@ -168,7 +173,7 @@ function extractPeriodFromFilename(urlOrFilename) {
   } catch {
     decoded = urlOrFilename;
   }
-  const re = new RegExp(`(${MONTH_PATTERN})[\\s_'-]*(\\d{4}|\\d{2})\\b`, 'gi');
+  const re = new RegExp(`(${MONTH_PATTERN})[\\s_'-]*(\\d{4}|\\d{2})(?!\\d)`, 'gi');
   let match;
   let last = null;
   while ((match = re.exec(decoded)) !== null) last = match;
@@ -1734,6 +1739,11 @@ function selfTest() {
   assert.strictEqual(extractPeriodFromFilename("Renaissance India Next PMS Factsheet - Mar'26.pdf"), 'March 2026');
   assert.strictEqual(extractPeriodFromFilename("Equitree PMS Factsheet Sept'26.pdf"), 'September 2026');
   assert.strictEqual(extractPeriodFromFilename('no-date-here.pdf'), null);
+  // Regression: a CMS asset hash appended after the year with an
+  // underscore (real Aditya Birla filename shape) used to return null --
+  // underscore is a \w character, so a trailing \b never matched there.
+  assert.strictEqual(extractPeriodFromFilename('ABSL_Alternates_Factsheet_August_2026_7a3b81417a.pdf'), 'August 2026');
+  assert.strictEqual(extractPeriodFromFilename('ABSL_SSP_August_2026_295b0b4188.pdf'), 'August 2026');
   assert.strictEqual(toTitleCase('LARGE CAP'), 'Large Cap');
   assert.strictEqual(toTitleCase('MID & SMALL CAP'), 'Mid & Small Cap');
   assert.strictEqual(toTitleCase('5T X 5T'), '5T X 5T');
