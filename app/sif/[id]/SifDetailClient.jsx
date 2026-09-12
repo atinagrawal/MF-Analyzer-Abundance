@@ -18,6 +18,7 @@ const SIF_STRATEGY_LABELS = {
 };
 
 const BENCH_OPTIONS = [
+  { value: '',                                  label: 'No single-index match — pick one' },
   { value: 'BSE 500',                          label: 'BSE 500' },
   { value: 'BSE 400 MidSmallCap Index',        label: 'BSE 400 MidSmallCap' },
   { value: 'BSE MidSmallCap',                  label: 'BSE MidSmallCap' },
@@ -36,12 +37,36 @@ function sifStratShort(cat) {
   return SIF_STRATEGY_LABELS[cat] || cat?.split(' - ')[1] || cat || 'Specialised Strategy';
 }
 
+// Each SIF's own Investment Strategy Information Document (ISID) names its
+// benchmark -- verified live against several real ISIDs (not guessed):
+//  - Equity Long-Short Fund / Equity Ex-Top 100 Long-Short Fund / Sector
+//    Rotation Long-Short Fund all benchmark against a broad-market 500 TRI
+//    (BSE 500 TRI or NIFTY 500 TRI depending on AMC) -- a single index, and
+//    BSE 500 is the closest we track (see BENCH_OPTIONS/lib/bseIndex.js's
+//    own "price index, not literal TRI" caveat, already accepted site-wide).
+//  - Arbitrage / Liquid strategies benchmark against the matching BSE
+//    rate index -- also a single index, already handled below.
+//  - Hybrid Long-Short Fund and Active Asset Allocator Long-Short Fund are
+//    NOT single-index at all: every real ISID checked names a bespoke,
+//    per-scheme blend across index families we don't otherwise track --
+//    e.g. quant's qsif Active Asset Allocator (40% NSE 500 TRI + 30% CRISIL
+//    Short Term Bond Fund Index + 30% iCOMDEX Composite Index) vs ICICI's
+//    iSIF Active Asset Allocator (50% Nifty 500 TRI + 40% Nifty Composite
+//    Debt Index + 7% gold + 3% silver) -- two different AMCs, two entirely
+//    different composites, for the exact same SIF category. There is no
+//    single BSE index that's "the correct" benchmark for these to default
+//    to; returning null here (rather than picking any of BENCH_OPTIONS)
+//    means the chart shows NAV alone instead of a benchmark line that
+//    would just be wrong in a different way. Whether/how to build real
+//    composite-benchmark tracking is a separate decision -- flagged, not
+//    silently defaulted. '' (not null) so it matches BENCH_OPTIONS' own
+//    placeholder value and the <select> stays a normal controlled input.
 function sifDefaultBench(cat) {
   const c = (cat || '').toLowerCase();
-  if (c.includes('ex-top 100') || c.includes('ex top 100')) return 'BSE 500';
   if (c.includes('arbitrage')) return 'BSE Arbitrage Rate Index';
   if (c.includes('liquid'))    return 'BSE Liquid Rate Index';
-  return 'BSE 250 LargeMidCap 65:35 Index';
+  if (c.includes('hybrid') || c.includes('active asset allocator')) return '';
+  return 'BSE 500';
 }
 
 const pct = (v) => (v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%');
@@ -71,7 +96,10 @@ export default function SifDetailClient({ id }) {
   const [copied,        setCopied]        = useState(false);
   const [copyFailed,    setCopyFailed]    = useState(false);
   const [openFaq,       setOpenFaq]       = useState(null);
-  const [benchIdx,      setBenchIdx]      = useState('BSE 250 LargeMidCap 65:35 Index');
+  // '' until the scheme's category is known -- sifDefaultBench() then picks
+  // a real default (or leaves it '' for Hybrid/Active Asset Allocator
+  // strategies, which have no single-index match; see that function).
+  const [benchIdx,      setBenchIdx]      = useState('');
   const [chartPeriod,   setChartPeriod]   = useState('All');
   const [chartMode,     setChartMode]     = useState('reindexed');
 
@@ -119,6 +147,7 @@ export default function SifDetailClient({ id }) {
   useEffect(() => {
     if (!sif) return;
     setBenchPts(null);
+    if (!benchIdx) return; // no single-index match for this category -- NAV-only chart, no fetch
     fetch(`/api/nifty-tri?index=${encodeURIComponent(benchIdx)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
