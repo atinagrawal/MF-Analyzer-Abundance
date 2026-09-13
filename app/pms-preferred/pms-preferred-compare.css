@@ -125,6 +125,29 @@
 
 .pmspref-cmp-disclaimer { margin-top: 18px; font-size: .68rem; line-height: 1.6; color: var(--pmsp-muted); }
 
+/* ── Pro gate, replacing the returns/alpha/wealth sections for non-Pro
+   visitors -- same crown/upgrade-flow language as app/market-breadth's
+   ProGate and app/screener/HoldingsSection's ProHoldingsModal, sized to
+   sit inline inside the comparison grid rather than as a full page/modal
+   gate of its own. */
+.pmspref-cmp-gate {
+  padding: 26px 20px;
+  text-align: center;
+  background: var(--pmsp-surface-2);
+}
+.pmspref-cmp-gate-crown { font-size: 1.6rem; margin-bottom: 8px; }
+.pmspref-cmp-gate-title { font-family: var(--pmsp-serif); font-weight: 700; font-size: 1rem; color: var(--pmsp-text); margin-bottom: 8px; }
+.pmspref-cmp-gate-desc { font-size: .78rem; line-height: 1.55; color: var(--pmsp-muted-2); max-width: 480px; margin: 0 auto 16px; }
+.pmspref-cmp-gate-btn {
+  background: var(--g1); color: #f3fbf1; border: none; border-radius: 10px;
+  padding: 11px 22px; font-weight: 700; font-size: .84rem; cursor: pointer; transition: background .15s;
+}
+.pmspref-cmp-gate-btn:hover { background: var(--g2); }
+.pmspref-cmp-gate-btn:disabled { opacity: .6; cursor: not-allowed; }
+.pmspref-cmp-gate-err { color: #b3261e; font-size: .74rem; margin-top: 10px; }
+.pmspref-cmp-gate-link { display: block; margin-top: 12px; font-size: .72rem; color: var(--pmsp-muted); text-decoration: underline; }
+.pmspref-cmp-gate-link:hover { color: var(--g1); }
+
 @media (max-width: 720px) {
   .pmspref-cmp-modal { inset: 0; border-radius: 0; }
   .pmspref-cmp-grid { grid-template-columns: 110px repeat(var(--cols), minmax(120px, 1fr)); font-size: .9em; }

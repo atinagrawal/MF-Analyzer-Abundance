@@ -16,8 +16,11 @@
 // holdings, the full portfolioAttributes set). Both sides of every
 // period's return are already on hand, so alpha can be shown for every
 // period, not just 1Y the way the screener's live-fetch version manages.
+import { useState } from 'react';
+import { useSession, signIn } from 'next-auth/react';
 import { getPMSLogo } from '@/lib/providerLogos';
 import { fmtCr, fmtRatio, buildSectorDna } from './pmsPreferredFormat';
+import { startCheckout } from '@/lib/checkoutClient';
 import './pms-preferred-compare.css';
 
 export const MAX_COMPARE = 3;
@@ -94,8 +97,63 @@ export function PmsPrefCompareBar({ selected, onRemove, onClear, onCompare }) {
   );
 }
 
+// Same isPro determination already used client-side elsewhere (e.g.
+// app/screener/HoldingsSection.jsx) -- session-token fields only, no extra
+// fetch. Gates just the returns/alpha/wealth/verdict sections below (the
+// same category of data /pms/[id]'s own Pro gate covers -- full period
+// history), never the whole page: portfolio attributes, sector DNA and
+// holdings stay free for every visitor, matching that same page's split.
+function useIsPro() {
+  const { data: session } = useSession();
+  return Boolean(
+    session?.user?.role === 'admin' ||
+    session?.user?.role === 'distributor' ||
+    session?.user?.plan === 'pro' ||
+    session?.user?.plan === 'pro_lifetime' ||
+    session?.user?.plan === 'lifetime' ||
+    session?.user?.isPro
+  );
+}
+
+function CompareReturnsGate() {
+  const { data: session } = useSession();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const isAuthed = Boolean(session?.user);
+
+  async function handleUpgrade() {
+    if (!isAuthed) { signIn(); return; }
+    setLoading(true);
+    setError('');
+    try {
+      await startCheckout({ plan: 'annual', session, onSuccess() { window.location.reload(); }, onDismiss() { setLoading(false); } });
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="pmspref-cmp-gate">
+      <div className="pmspref-cmp-gate-crown">👑</div>
+      <div className="pmspref-cmp-gate-title">Full Return History is an Abundance Pro Feature</div>
+      <p className="pmspref-cmp-gate-desc">
+        Returns across every time horizon, alpha vs. each strategy&apos;s own benchmark, the wealth-creation
+        simulation and the overall-leader verdict are Pro features — the same as full performance history on
+        each strategy&apos;s own detail page. Portfolio attributes, sector allocation and holdings above stay free.
+      </p>
+      <button className="pmspref-cmp-gate-btn" onClick={handleUpgrade} disabled={loading}>
+        {loading ? 'Opening checkout…' : !isAuthed ? 'Sign in to Upgrade →' : 'Upgrade to Pro — ₹499/yr →'}
+      </button>
+      {error && <p className="pmspref-cmp-gate-err">{error}</p>}
+      <a className="pmspref-cmp-gate-link" href="/pricing" target="_blank" rel="noopener noreferrer">See all Pro features &amp; plans →</a>
+    </div>
+  );
+}
+
 export function PmsPrefCompareModal({ strategies, asOn, onClose, onRemove }) {
   const n = strategies.length;
+  const isPro = useIsPro();
   if (!n) return null;
 
   // Per-period "best cell" index (own IA return only -- not alpha, not
@@ -165,7 +223,7 @@ export function PmsPrefCompareModal({ strategies, asOn, onClose, onRemove }) {
                   <div className="pmspref-cmp-strat-name">{s.strategyName}</div>
                   <div className="pmspref-cmp-strat-mgr">{s.providerName}</div>
                   <div className="pmspref-cmp-strat-aum">{s.aumCr != null ? fmtCr(s.aumCr) : '—'}</div>
-                  {winCount[i] > 0 && (
+                  {isPro && winCount[i] > 0 && (
                     <span className="pmspref-cmp-win-badge">🏆 Best in {winCount[i]} period{winCount[i] > 1 ? 's' : ''}</span>
                   )}
                   <button className="pmspref-cmp-remove-btn" onClick={() => onRemove(s.iaid)}>✕ Remove</button>
@@ -173,75 +231,85 @@ export function PmsPrefCompareModal({ strategies, asOn, onClose, onRemove }) {
               );
             })}
 
-            {/* Returns */}
-            <div className="pmspref-cmp-section-head">📊 Returns Across All Time Horizons</div>
-            {PERIODS.map(({ label, key }) => {
-              const vals = strategies.map((s) => s.performance?.ia?.[key]);
-              if (vals.every((v) => v == null)) return null;
-              return (
-                <div className="pmspref-cmp-row" key={key}>
-                  <div className="pmspref-cmp-cell" style={{ fontWeight: 700 }}>{label}</div>
-                  {strategies.map((s, i) => {
-                    const v = s.performance?.ia?.[key];
-                    const isBest = winners[key][i];
-                    return (
-                      <div key={s.iaid} className={`pmspref-cmp-cell${isBest ? ' pmspref-cmp-ret-best' : ''}`}>
-                        <span className={`pmspref-cmp-ret ${retClass(v)}`}>{fmtRet(v) ?? '—'}</span>
-                        {isBest && n > 1 && <span className="pmspref-cmp-best-tag">↑ best</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-
-            {/* Alpha vs each strategy's own benchmark, every period -- both
-                sides already on hand, no live lookup needed (unlike the
-                screener's tool, which only manages 1Y via a live fetch). */}
-            <div className="pmspref-cmp-section-head">📈 Alpha vs Own Benchmark</div>
-            {PERIODS.map(({ label, key }) => {
-              const alphas = strategies.map((s) => {
-                const ia = s.performance?.ia?.[key];
-                const bm = s.performance?.benchmark?.[key];
-                return ia != null && bm != null ? +(ia - bm).toFixed(2) : null;
-              });
-              if (alphas.every((v) => v == null)) return null;
-              const valid = alphas.filter((v) => v != null);
-              const maxAlpha = valid.length ? Math.max(...valid) : null;
-              return (
-                <div className="pmspref-cmp-row" key={key}>
-                  <div className="pmspref-cmp-cell" style={{ fontWeight: 700 }}>{label}</div>
-                  {strategies.map((s, i) => {
-                    const a = alphas[i];
-                    const isBest = n > 1 && a != null && a === maxAlpha;
-                    return (
-                      <div key={s.iaid} className={`pmspref-cmp-cell${isBest ? ' pmspref-cmp-ret-best' : ''}`}>
-                        <span className={`pmspref-cmp-ret ${retClass(a)}`}>{fmtRet(a) ?? '—'}</span>
-                        {isBest && <span className="pmspref-cmp-best-tag">↑ best</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-
-            {/* Wealth simulation */}
-            <div className="pmspref-cmp-section-head">💰 Wealth Creation Simulation · ₹50 Lakh Invested</div>
-            {wealthYears.map((years) => {
-              const key = years === 1 ? 'year1' : years === 3 ? 'year3' : 'year5';
-              const vals = strategies.map((s) => fmtWealth(s.performance?.ia?.[key], years));
-              if (vals.every((v) => v == null)) return null;
-              return (
-                <div className="pmspref-cmp-row" key={key}>
-                  <div className="pmspref-cmp-cell" style={{ fontWeight: 700 }}>{years}Y Growth of ₹50L</div>
-                  {strategies.map((s, i) => (
-                    <div key={s.iaid} className="pmspref-cmp-cell">
-                      <span className={`pmspref-cmp-ret ${vals[i] ? (vals[i].isPos ? 'pos' : 'neg') : 'neu'}`}>{vals[i]?.value ?? '—'}</span>
+            {isPro ? (
+              <>
+                {/* Returns */}
+                <div className="pmspref-cmp-section-head">📊 Returns Across All Time Horizons</div>
+                {PERIODS.map(({ label, key }) => {
+                  const vals = strategies.map((s) => s.performance?.ia?.[key]);
+                  if (vals.every((v) => v == null)) return null;
+                  return (
+                    <div className="pmspref-cmp-row" key={key}>
+                      <div className="pmspref-cmp-cell" style={{ fontWeight: 700 }}>{label}</div>
+                      {strategies.map((s, i) => {
+                        const v = s.performance?.ia?.[key];
+                        const isBest = winners[key][i];
+                        return (
+                          <div key={s.iaid} className={`pmspref-cmp-cell${isBest ? ' pmspref-cmp-ret-best' : ''}`}>
+                            <span className={`pmspref-cmp-ret ${retClass(v)}`}>{fmtRet(v) ?? '—'}</span>
+                            {isBest && n > 1 && <span className="pmspref-cmp-best-tag">↑ best</span>}
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
+                  );
+                })}
+
+                {/* Alpha vs each strategy's own benchmark, every period --
+                    both sides already on hand, no live lookup needed (unlike
+                    the screener's tool, which only manages 1Y via a live fetch). */}
+                <div className="pmspref-cmp-section-head">📈 Alpha vs Own Benchmark</div>
+                {PERIODS.map(({ label, key }) => {
+                  const alphas = strategies.map((s) => {
+                    const ia = s.performance?.ia?.[key];
+                    const bm = s.performance?.benchmark?.[key];
+                    return ia != null && bm != null ? +(ia - bm).toFixed(2) : null;
+                  });
+                  if (alphas.every((v) => v == null)) return null;
+                  const valid = alphas.filter((v) => v != null);
+                  const maxAlpha = valid.length ? Math.max(...valid) : null;
+                  return (
+                    <div className="pmspref-cmp-row" key={key}>
+                      <div className="pmspref-cmp-cell" style={{ fontWeight: 700 }}>{label}</div>
+                      {strategies.map((s, i) => {
+                        const a = alphas[i];
+                        const isBest = n > 1 && a != null && a === maxAlpha;
+                        return (
+                          <div key={s.iaid} className={`pmspref-cmp-cell${isBest ? ' pmspref-cmp-ret-best' : ''}`}>
+                            <span className={`pmspref-cmp-ret ${retClass(a)}`}>{fmtRet(a) ?? '—'}</span>
+                            {isBest && <span className="pmspref-cmp-best-tag">↑ best</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+
+                {/* Wealth simulation */}
+                <div className="pmspref-cmp-section-head">💰 Wealth Creation Simulation · ₹50 Lakh Invested</div>
+                {wealthYears.map((years) => {
+                  const key = years === 1 ? 'year1' : years === 3 ? 'year3' : 'year5';
+                  const vals = strategies.map((s) => fmtWealth(s.performance?.ia?.[key], years));
+                  if (vals.every((v) => v == null)) return null;
+                  return (
+                    <div className="pmspref-cmp-row" key={key}>
+                      <div className="pmspref-cmp-cell" style={{ fontWeight: 700 }}>{years}Y Growth of ₹50L</div>
+                      {strategies.map((s, i) => (
+                        <div key={s.iaid} className="pmspref-cmp-cell">
+                          <span className={`pmspref-cmp-ret ${vals[i] ? (vals[i].isPos ? 'pos' : 'neg') : 'neu'}`}>{vals[i]?.value ?? '—'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </>
+            ) : (
+              <div className="pmspref-cmp-row">
+                <div className="pmspref-cmp-cell" style={{ gridColumn: `1 / span ${n + 1}`, padding: 0 }}>
+                  <CompareReturnsGate />
                 </div>
-              );
-            })}
+              </div>
+            )}
 
             {/* Portfolio attributes, straight from each strategy's factsheet */}
             <div className="pmspref-cmp-section-head">📐 Portfolio Attributes (Latest Factsheet)</div>
@@ -304,7 +372,7 @@ export function PmsPrefCompareModal({ strategies, asOn, onClose, onRemove }) {
             </div>
           </div>
 
-          {n > 1 && winner && (
+          {isPro && n > 1 && winner && (
             <div className="pmspref-cmp-verdict">
               <div className="pmspref-cmp-verdict-icon">🏆</div>
               <div>
