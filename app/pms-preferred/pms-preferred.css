@@ -800,6 +800,16 @@
 .pmspref-drawer-compare-btn:hover { border-color: var(--g1); color: var(--g1); }
 .pmspref-drawer-compare-btn.active { background: var(--g-xlight, #e8f5e9); border-color: var(--g1); color: var(--g1); }
 .pmspref-drawer-compare-btn:disabled { opacity: .5; cursor: not-allowed; }
+/* The top copy: smaller, no top margin (it opens the body, not closes a
+   section), so it doesn't read as a third "AUM/Top Quartile" stat. */
+.pmspref-drawer-compare-btn.compact {
+  width: auto;
+  display: inline-block;
+  margin: 0 0 20px;
+  padding: 7px 14px;
+  font-size: .74rem;
+  border-radius: 8px;
+}
 
 /* ── Responsive ── */
 @media (max-width: 720px) {

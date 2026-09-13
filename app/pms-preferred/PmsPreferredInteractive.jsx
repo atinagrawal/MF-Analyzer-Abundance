@@ -198,6 +198,24 @@ const MKTCAP_SEGMENTS = [
 // split, the complete holdings and sector lists, and portfolio changes.
 // All of this already lives in `strategy.extracted`; nothing here is a new
 // fetch, just more of what compute_preferred_pms.js already computed.
+
+// Rendered twice inside the drawer -- once right at the top (reachable
+// without scrolling past every section) and once near the bottom CTA (a
+// natural place to act after reading everything) -- both driving the same
+// compareList state, so toggling either one keeps them in sync.
+function CompareToggleButton({ isComparing, onToggle, disabled, compact }) {
+  return (
+    <button
+      type="button"
+      className={`pmspref-drawer-compare-btn${isComparing ? ' active' : ''}${compact ? ' compact' : ''}`}
+      onClick={onToggle}
+      disabled={disabled}
+      title={disabled ? `Max ${MAX_COMPARE} selected` : undefined}
+    >
+      {isComparing ? '✓ In Compare — Remove' : '⚖ Add to Compare'}
+    </button>
+  );
+}
 function PmsPreferredDrawer({ strategy, onClose, isComparing, onToggleCompare, compareFull }) {
   const open = !!strategy;
   const e = strategy?.extracted || {};
@@ -243,6 +261,11 @@ function PmsPreferredDrawer({ strategy, onClose, isComparing, onToggleCompare, c
                 <div><span className="pmspref-mini-lbl">AUM</span><div className="pmspref-mini-val">{strategy.aumCr != null ? fmtCr(strategy.aumCr) : '—'}</div></div>
                 <div><span className="pmspref-mini-lbl">Top Quartile</span><div className="pmspref-mini-val">{strategy.qualifyingPeriod || '—'}</div></div>
               </div>
+
+              {/* Also right at the top (not just after every section, past
+                  a full scroll) -- this is the button people actually want
+                  reachable without hunting for it. */}
+              <CompareToggleButton isComparing={isComparing} onToggle={() => onToggleCompare(strategy)} disabled={!isComparing && compareFull} compact />
 
               {mktCapSegs.length > 0 && (
                 <div className="pmspref-drawer-section">
@@ -331,15 +354,7 @@ function PmsPreferredDrawer({ strategy, onClose, isComparing, onToggleCompare, c
                 </div>
               )}
 
-              <button
-                type="button"
-                className={`pmspref-drawer-compare-btn${isComparing ? ' active' : ''}`}
-                onClick={() => onToggleCompare(strategy)}
-                disabled={!isComparing && compareFull}
-                title={!isComparing && compareFull ? `Max ${MAX_COMPARE} selected` : undefined}
-              >
-                {isComparing ? '✓ In Compare — Remove' : '⚖ Add to Compare'}
-              </button>
+              <CompareToggleButton isComparing={isComparing} onToggle={() => onToggleCompare(strategy)} disabled={!isComparing && compareFull} />
 
               <a href={`/pms/${strategy.iaid}`} target="_blank" rel="noopener noreferrer" className="pmspref-drawer-cta">
                 📄 View Fees, History &amp; Quartile Ranking →
