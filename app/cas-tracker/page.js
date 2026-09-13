@@ -1971,8 +1971,15 @@ function CasTrackerInner() {
   // import keeps SheetJS's full parser (large; already a dependency for
   // server-side MF Central report parsing) out of this page's normal JS
   // bundle and code-splits it into its own chunk.
-  async function exportExcel() {
-    const rows = getExportRows();
+  //
+  // `rows` is passed explicitly (not read from getExportRows() internally)
+  // so this same function serves both the toolbar's "export everything
+  // currently shown" buttons (passed getExportRows()) and the floating
+  // selection bar's "export just the checked funds" button (passed
+  // Object.values(redeemSelection)) -- same shape either way, since both
+  // ultimately come from buildAllHoldings(). `scope` only changes the
+  // sheet name and filename, so the two exports are distinguishable.
+  async function exportExcel(rows, scope = 'Holdings') {
     if (!rows.length) return;
     const XLSX = await import('xlsx');
     const sheetRows = rows.map(fund => {
@@ -1995,17 +2002,21 @@ function CasTrackerInner() {
     });
     const ws = XLSX.utils.json_to_sheet(sheetRows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Holdings');
+    XLSX.utils.book_append_sheet(wb, ws, scope);
     const safeName = (currentInfo.investorName || 'Portfolio').replace(/[^A-Za-z0-9]+/g, '-').slice(0, 40);
-    XLSX.writeFile(wb, `${safeName}-holdings-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    const scopeSlug = scope === 'Holdings' ? 'holdings' : 'selected-holdings';
+    XLSX.writeFile(wb, `${safeName}-${scopeSlug}-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
   // Branded print window, same pattern as app/backtest/page.js's doExport --
   // an isolated window with its own inline stylesheet prints/saves-as-PDF
   // cleanly without fighting this page's own @media print rules (which are
   // scoped to the Redemption Planner's fixed-position modal only).
-  function exportPdf() {
-    const rows = getExportRows();
+  //
+  // `rows`/`scope` follow the same explicit-parameter convention as
+  // exportExcel above -- the toolbar's "PDF" button passes getExportRows(),
+  // the selection bar's passes Object.values(redeemSelection).
+  function exportPdf(rows, scope = 'Holdings') {
     if (!rows.length) return;
     const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const totalInvested = rows.reduce((s, f) => s + (f.invested || 0), 0);
@@ -2062,7 +2073,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 @media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}
 </style></head><body>
 <div class="ph">
-  <div><div class="pt">${esc(currentInfo.investorName)}'s Portfolio — ${rows.length} Holding${rows.length > 1 ? 's' : ''}</div>
+  <div><div class="pt">${esc(currentInfo.investorName)}'s ${scope === 'Holdings' ? 'Portfolio' : 'Selected Holdings'} — ${rows.length} Holding${rows.length > 1 ? 's' : ''}</div>
   <div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds &amp; SIF Distributor</div></div>
   <img class="logo" src="/logo-og.png" onerror="this.style.display='none'">
 </div>
@@ -2469,10 +2480,10 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                 >
                   📊 Redemption Planner
                 </button>
-                <button onClick={exportPdf} className="new-upload-btn" title="Open a printable summary in a new tab (use your browser's Print → Save as PDF)">
+                <button onClick={() => exportPdf(getExportRows())} className="new-upload-btn" title="Open a printable summary in a new tab (use your browser's Print → Save as PDF)">
                   ⤓ PDF
                 </button>
-                <button onClick={exportExcel} className="new-upload-btn" title="Download holdings as an Excel spreadsheet">
+                <button onClick={() => exportExcel(getExportRows())} className="new-upload-btn" title="Download holdings as an Excel spreadsheet">
                   ⊞ Excel
                 </button>
                 <button onClick={handleNewUpload} className="new-upload-btn">
@@ -3130,6 +3141,28 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
               whiteSpace: 'nowrap',
             }}>
             📊 Plan Redemption
+          </button>
+          <button
+            onClick={() => exportPdf(Object.values(redeemSelection), 'Selected Holdings')}
+            title="Export just the checked funds as a printable PDF"
+            style={{
+              padding: '8px 12px', borderRadius: 9, border: '1.5px solid rgba(255,255,255,.4)', cursor: 'pointer',
+              background: 'none', color: '#fff',
+              fontFamily: 'Raleway, sans-serif', fontSize: '.72rem', fontWeight: 700,
+              whiteSpace: 'nowrap',
+            }}>
+            ⤓ PDF
+          </button>
+          <button
+            onClick={() => exportExcel(Object.values(redeemSelection), 'Selected Holdings')}
+            title="Export just the checked funds as an Excel spreadsheet"
+            style={{
+              padding: '8px 12px', borderRadius: 9, border: '1.5px solid rgba(255,255,255,.4)', cursor: 'pointer',
+              background: 'none', color: '#fff',
+              fontFamily: 'Raleway, sans-serif', fontSize: '.72rem', fontWeight: 700,
+              whiteSpace: 'nowrap',
+            }}>
+            ⊞ Excel
           </button>
           <button
             onClick={() => setRedeemSelection({})}
