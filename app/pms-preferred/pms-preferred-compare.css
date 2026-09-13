@@ -1,0 +1,132 @@
+/* ══════════════════════════════════════════════════════════
+   pms-preferred-compare.css — side-by-side strategy comparison
+   Adapted from /pms-screener's pms-compare.css (same floating-bar +
+   fixed-modal pattern, same z-index band to clear globals.css's .navbar
+   at z-index 9999), restyled with this page's own --pmsp-* warm-paper
+   tokens instead of pms-screener's --pms- and --g prefixed set.
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Floating compare bar ── */
+.pmspref-cmp-bar {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--g1);
+  border: 1.5px solid var(--g3);
+  border-radius: 50px;
+  padding: 10px 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 12px 40px rgba(27, 94, 32, .5);
+  z-index: 10000;
+  opacity: 0;
+  transition: transform .35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity .25s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.pmspref-cmp-bar.visible { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
+.pmspref-cmp-bar-chips { display: flex; gap: 8px; align-items: center; }
+.pmspref-cmp-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25);
+  border-radius: 20px; padding: 4px 10px; font-size: .68rem; font-weight: 700;
+  color: #fff; max-width: 160px; overflow: hidden; text-overflow: ellipsis;
+}
+.pmspref-cmp-chip-x { cursor: pointer; opacity: .7; font-size: .8rem; line-height: 1; transition: opacity .15s; flex-shrink: 0; }
+.pmspref-cmp-chip-x:hover { opacity: 1; }
+.pmspref-cmp-bar-label {
+  font-size: .65rem; color: rgba(255,255,255,.6); font-family: var(--pmsp-mono);
+  border-left: 1px solid rgba(255,255,255,.2); padding-left: 14px;
+}
+.pmspref-cmp-go-btn {
+  background: #fff; color: var(--g1); border: none; border-radius: 30px;
+  padding: 7px 20px; font-size: .75rem; font-weight: 800; cursor: pointer; transition: box-shadow .2s;
+}
+.pmspref-cmp-go-btn:hover { box-shadow: 0 4px 16px rgba(255,255,255,.3); }
+.pmspref-cmp-go-btn:disabled { opacity: .5; cursor: not-allowed; }
+.pmspref-cmp-clear-btn { background: none; border: none; color: rgba(255,255,255,.7); font-size: .68rem; cursor: pointer; text-decoration: underline; }
+.pmspref-cmp-clear-btn:hover { color: #fff; }
+
+/* ── Modal ──
+   z-index 10010+, deliberately above the quick-info drawer's 10000/10001
+   (pms-preferred.css) -- the drawer is closed programmatically when the
+   compare modal opens (see PmsPreferredInteractive's onCompare), but this
+   keeps the stacking unambiguous even if that ever changes. */
+.pmspref-cmp-overlay {
+  position: fixed; inset: 0; background: rgba(34, 28, 18, .55);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  z-index: 10010; opacity: 0; pointer-events: none; transition: opacity .3s;
+}
+.pmspref-cmp-overlay.open { opacity: 1; pointer-events: auto; }
+.pmspref-cmp-modal {
+  position: fixed; inset: 3vh 3vw; z-index: 10011;
+  background: var(--pmsp-bg); border: 1px solid var(--pmsp-border); border-radius: 16px;
+  box-shadow: 0 30px 90px rgba(0,0,0,.3);
+  opacity: 0; transform: scale(.97); pointer-events: none;
+  transition: opacity .3s, transform .3s;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.pmspref-cmp-modal.open { opacity: 1; transform: scale(1); pointer-events: auto; }
+.pmspref-cmp-modal-inner { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 24px 28px 32px; flex: 1; }
+.pmspref-cmp-modal-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding-bottom: 16px; margin-bottom: 8px; border-bottom: 1px solid var(--pmsp-border);
+}
+.pmspref-cmp-modal-title { font-family: var(--pmsp-serif); font-weight: 700; font-size: 1.3rem; color: var(--pmsp-text); }
+.pmspref-cmp-modal-sub { font-size: .74rem; color: var(--pmsp-muted); margin-top: 3px; }
+.pmspref-cmp-modal-close {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--pmsp-surface);
+  border: 1px solid var(--pmsp-border); font-size: 17px; color: var(--pmsp-muted);
+  cursor: pointer; display: flex; align-items: center; justify-content: center; transition: .15s; flex-shrink: 0;
+}
+.pmspref-cmp-modal-close:hover { border-color: var(--g1); color: var(--g1); }
+
+.pmspref-cmp-grid { display: grid; grid-template-columns: 170px repeat(var(--cols), 1fr); gap: 1px; background: var(--pmsp-border); border-radius: 10px; overflow: hidden; margin-top: 14px; }
+.pmspref-cmp-cell { background: var(--pmsp-surface); padding: 10px 13px; }
+.pmspref-cmp-row { display: contents; }
+.pmspref-cmp-section-head {
+  grid-column: 1 / -1; background: var(--pmsp-surface-2); padding: 8px 13px;
+  font-size: .66rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--pmsp-muted-2);
+}
+
+.pmspref-cmp-strat-header { padding: 14px 13px; }
+.pmspref-cmp-strat-name { font-family: var(--pmsp-serif); font-weight: 700; font-size: .92rem; color: var(--pmsp-text); line-height: 1.25; }
+.pmspref-cmp-strat-mgr { font-size: .68rem; color: var(--pmsp-muted); margin-top: 2px; }
+.pmspref-cmp-strat-aum { font-family: var(--pmsp-mono); font-size: .8rem; font-weight: 700; color: var(--pmsp-text); margin-top: 8px; }
+.pmspref-cmp-win-badge {
+  display: inline-block; margin-top: 7px; background: var(--g-xlight, #e8f5e9); color: var(--g1);
+  font-size: .6rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+}
+.pmspref-cmp-remove-btn {
+  display: block; margin-top: 9px; background: none; border: 1px solid var(--pmsp-border-2);
+  color: var(--pmsp-muted); font-size: .64rem; font-weight: 600; padding: 4px 9px; border-radius: 6px; cursor: pointer;
+}
+.pmspref-cmp-remove-btn:hover { border-color: #b3261e; color: #b3261e; }
+
+.pmspref-cmp-ret { font-family: var(--pmsp-mono); font-weight: 700; font-size: .82rem; }
+.pmspref-cmp-ret.pos { color: var(--g1); }
+.pmspref-cmp-ret.neg { color: #b3261e; }
+.pmspref-cmp-ret.neu { color: var(--pmsp-muted); }
+.pmspref-cmp-ret-best { background: var(--g-xlight, #e8f5e9); }
+.pmspref-cmp-best-tag { font-size: .55rem; margin-left: 4px; color: var(--g2); font-weight: 700; }
+
+.pmspref-cmp-holdings { display: flex; flex-wrap: wrap; gap: 5px; }
+.pmspref-cmp-holdings .pmspref-holding-chip { font-size: .64rem; padding: 3px 7px; }
+
+.pmspref-cmp-verdict {
+  display: flex; gap: 14px; align-items: flex-start; margin-top: 18px; padding: 16px 18px;
+  background: var(--pmsp-surface); border: 1px solid var(--g3); border-radius: 12px;
+}
+.pmspref-cmp-verdict-icon { font-size: 1.4rem; line-height: 1; }
+.pmspref-cmp-verdict-title { font-family: var(--pmsp-serif); font-weight: 700; font-size: .96rem; color: var(--pmsp-text); margin-bottom: 4px; }
+.pmspref-cmp-verdict-body { font-size: .78rem; line-height: 1.55; color: var(--pmsp-muted-2); }
+
+.pmspref-cmp-disclaimer { margin-top: 18px; font-size: .68rem; line-height: 1.6; color: var(--pmsp-muted); }
+
+@media (max-width: 720px) {
+  .pmspref-cmp-modal { inset: 0; border-radius: 0; }
+  .pmspref-cmp-grid { grid-template-columns: 110px repeat(var(--cols), minmax(120px, 1fr)); font-size: .9em; }
+  .pmspref-cmp-modal-inner { overflow-x: auto; }
+}

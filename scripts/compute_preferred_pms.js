@@ -272,6 +272,42 @@ function parseAsOnMonth(asOnMonth) {
   return { year: parseInt(yearStr, 10), month: MONTH_ABBR.indexOf(abbr) + 1 };
 }
 
+// APMI's getPerformanceChart endpoint (lib/pmsScrapers.js's fetchPmsMonthSnapshot)
+// returns a literal 0 -- not null, not an absent field -- for a period the
+// fund hasn't existed long enough to report yet (confirmed live: Motilal
+// Oswal Founders Portfolio, inception 16/03/2023, reports year4/year5 as
+// exactly 0 for BOTH itself and its benchmark simultaneously -- the
+// telltale sign of "not applicable yet", not a genuine 0% return coinciding
+// exactly on two independent series). numOrNull() only guards against
+// null/undefined, so this 0 passes straight through and would otherwise
+// render as a real "the fund returned 0% over 4 years" figure -- exactly
+// the "Number(null) === 0" class of bug validateAndCleanExtraction()
+// already guards against elsewhere in this codebase, just from a
+// different root cause (the source API's own placeholder, not a JS
+// coercion in code here). Nulls out any period the fund's real inception
+// date proves it can't have data for yet, in place, on both ia and
+// benchmark. sinceInception is never clipped -- it's valid by definition
+// at any age.
+const PERIOD_MIN_YEARS = { month1: 1 / 12, month3: 3 / 12, month6: 6 / 12, year1: 1, year2: 2, year3: 3, year4: 4, year5: 5 };
+function clipPerformanceToAge(performance, inceptionDateStr, asOfYear, asOfMonth) {
+  if (!performance || !inceptionDateStr) return performance;
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(inceptionDateStr.trim());
+  if (!m) return performance;
+  const [, dd, mm, yyyy] = m;
+  const inception = new Date(+yyyy, +mm - 1, +dd);
+  const asOf = new Date(asOfYear, asOfMonth - 1, 1);
+  const ageYears = (asOf - inception) / (365.25 * 86400000);
+  const clipSide = (side) => {
+    if (!side) return side;
+    const out = { ...side };
+    for (const [key, minYears] of Object.entries(PERIOD_MIN_YEARS)) {
+      if (out[key] != null && ageYears < minYears) out[key] = null;
+    }
+    return out;
+  };
+  return { ia: clipSide(performance.ia), benchmark: clipSide(performance.benchmark) };
+}
+
 // Recursively counts non-null primitive leaf values in an object/array tree --
 // used to pick the richest `extracted` payload when the same IAID resolves
 // from more than one factsheet document.
@@ -422,6 +458,14 @@ async function run() {
     const threeYear = quartile.find((r) => r.label === '3 Years' && r.quartile != null);
     const qualifyingRow = threeYear || [...quartile].reverse().find((r) => r.quartile === 'Top Quartile');
 
+    const rawPerformance = snapshot ? { ia: snapshot.ia, benchmark: snapshot.benchmark } : null;
+    const { year: perfYear, month: perfMonth } = snapshot?.asOnMonth
+      ? parseAsOnMonth(snapshot.asOnMonth)
+      : (runMonth || {});
+    const performance = perfYear && perfMonth
+      ? clipPerformanceToAge(rawPerformance, details.inceptionDate, perfYear, perfMonth)
+      : rawPerformance;
+
     qualifying.push({
       iaid: c.iaid,
       providerKey: c.providerKey,
@@ -442,7 +486,7 @@ async function run() {
       asOnMonth: snapshot?.asOnMonth ?? runMonth?.label ?? null,
       factsheetAsOf: c.extracted?.asOfDate ?? null,
       extracted: c.extracted,
-      performance: snapshot ? { ia: snapshot.ia, benchmark: snapshot.benchmark } : null,
+      performance,
     });
     console.log(`[compute_preferred_pms] Qualifies: ${c.providerDisplayName} / ${c.strategyName} (${qualifyingRow?.label}, ${qualifyingRow?.quartile}, as on ${snapshot?.asOnMonth ?? 'n/a'})`);
   }
@@ -472,8 +516,13 @@ async function run() {
       fallbackRule: 'Top Quartile in at least half of periods with real peer data, when 3-Year data isn\'t available yet',
       dataSources: 'AUM, returns and quartile ranking are live APMI data as on the month shown. Holdings, sector & market-cap allocation and portfolio ratios are from each strategy\'s most recently published factsheet, whose date can lag the APMI month.',
     },
-    strategies: qualifying.map(({ providerKey, iaid, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, asOnMonth, factsheetAsOf, extracted }) => ({
-      iaid, providerKey, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, asOnMonth, factsheetAsOf, extracted,
+    // `performance` (ia/benchmark period returns -- month1/3/6, year1-5,
+    // sinceInception) was already being fetched per strategy for the
+    // bestAlpha insight above, just never carried into the written-out
+    // document. Surfacing it here is free -- no new fetch -- and is what
+    // the page's compare tool needs for a real return-by-period table.
+    strategies: qualifying.map(({ providerKey, iaid, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, asOnMonth, factsheetAsOf, extracted, performance }) => ({
+      iaid, providerKey, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, asOnMonth, factsheetAsOf, extracted, performance,
     })),
     insights,
   };
@@ -505,6 +554,7 @@ async function run() {
 module.exports = {
   isPreferred, tallyMostHeldStock, tallyTopSector, findBestAlpha, findBestSharpe,
   resolveIaid, loadLatestLeaderboard, nameLooselyMatches, parseAsOnMonth, countNonNullPrimitives,
+  clipPerformanceToAge,
 };
 
 if (require.main === module) {
@@ -520,6 +570,35 @@ if (require.main === module) {
 
 function selfTest() {
   const assert = require('assert');
+
+  // clipPerformanceToAge: real case -- Motilal Oswal Founders Portfolio,
+  // inception 16/03/2023, as-on Aug-2026 (~3.4 years old). year4/year5
+  // (needing 4/5 years) get nulled on BOTH sides; year1-3 (which the fund
+  // genuinely has) survive untouched; sinceInception is never clipped.
+  const foundersRaw = {
+    ia: { month1: 6.45, year1: 14.37, year3: 20.19, year4: 0, year5: 0, sinceInception: 26.66 },
+    benchmark: { month1: -0.09, year1: 4.72, year3: 12.08, year4: 0, year5: 0, sinceInception: 16.05 },
+  };
+  const foundersClipped = clipPerformanceToAge(foundersRaw, '16/03/2023', 2026, 8);
+  assert.strictEqual(foundersClipped.ia.year4, null, 'year4 nulled -- fund is only ~3.4 years old');
+  assert.strictEqual(foundersClipped.ia.year5, null, 'year5 nulled -- same reason');
+  assert.strictEqual(foundersClipped.benchmark.year4, null, 'benchmark side nulled too -- APMI\'s own placeholder, not a real 0% coincidence');
+  assert.strictEqual(foundersClipped.ia.year1, 14.37, 'year1 untouched -- fund genuinely has 1-year data');
+  assert.strictEqual(foundersClipped.ia.year3, 20.19, 'year3 untouched -- fund genuinely has 3-year data');
+  assert.strictEqual(foundersClipped.ia.sinceInception, 26.66, 'sinceInception never clipped -- valid at any age');
+
+  // An old, established fund: nothing gets clipped even though every
+  // period is populated (age comfortably exceeds every period's minimum).
+  const oldFundRaw = { ia: { year1: 10, year3: 12, year5: 15, sinceInception: 20 }, benchmark: { year1: 8, year3: 9, year5: 11, sinceInception: 14 } };
+  const oldFundClipped = clipPerformanceToAge(oldFundRaw, '01/01/2010', 2026, 8);
+  assert.deepStrictEqual(oldFundClipped, oldFundRaw, 'a 16-year-old fund -- no period gets clipped');
+
+  // Missing inceptionDate or null performance -- passed through unchanged,
+  // never crashes.
+  assert.strictEqual(clipPerformanceToAge(null, '16/03/2023', 2026, 8), null);
+  assert.deepStrictEqual(clipPerformanceToAge(foundersRaw, null, 2026, 8), foundersRaw, 'no inception date known -- cannot clip, pass through as-is');
+  assert.deepStrictEqual(clipPerformanceToAge(foundersRaw, 'not-a-date', 2026, 8), foundersRaw, 'unparseable date -- pass through rather than throw');
+
   assert.strictEqual(
     isPreferred([
       { label: '1 Year', quartile: 'Top Quartile' },

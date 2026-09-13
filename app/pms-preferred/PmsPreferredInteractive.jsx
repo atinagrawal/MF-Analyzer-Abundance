@@ -17,6 +17,7 @@ import { useEffect } from 'react';
 import { useState } from 'react';
 import { getPMSLogo } from '@/lib/providerLogos';
 import { fmtCr, fmtRatio, buildSectorDna } from './pmsPreferredFormat';
+import { PmsPrefCompareBar, PmsPrefCompareModal, MAX_COMPARE } from './PmsPreferredCompare';
 
 // Only intercept a plain left-click. Anything carrying new-tab/new-window
 // intent (modifier keys, middle-click) is left alone so the browser's own
@@ -197,7 +198,7 @@ const MKTCAP_SEGMENTS = [
 // split, the complete holdings and sector lists, and portfolio changes.
 // All of this already lives in `strategy.extracted`; nothing here is a new
 // fetch, just more of what compute_preferred_pms.js already computed.
-function PmsPreferredDrawer({ strategy, onClose }) {
+function PmsPreferredDrawer({ strategy, onClose, isComparing, onToggleCompare, compareFull }) {
   const open = !!strategy;
   const e = strategy?.extracted || {};
   const pa = e.portfolioAttributes || {};
@@ -330,6 +331,16 @@ function PmsPreferredDrawer({ strategy, onClose }) {
                 </div>
               )}
 
+              <button
+                type="button"
+                className={`pmspref-drawer-compare-btn${isComparing ? ' active' : ''}`}
+                onClick={() => onToggleCompare(strategy)}
+                disabled={!isComparing && compareFull}
+                title={!isComparing && compareFull ? `Max ${MAX_COMPARE} selected` : undefined}
+              >
+                {isComparing ? '✓ In Compare — Remove' : '⚖ Add to Compare'}
+              </button>
+
               <a href={`/pms/${strategy.iaid}`} target="_blank" rel="noopener noreferrer" className="pmspref-drawer-cta">
                 📄 View Fees, History &amp; Quartile Ranking →
               </a>
@@ -343,17 +354,37 @@ function PmsPreferredDrawer({ strategy, onClose }) {
 
 export default function PmsPreferredInteractive({ strategies, insights, spotlight, asOn }) {
   const [selected, setSelected] = useState(null);
+  const [compareList, setCompareList] = useState([]);
+  const [showCompareModal, setShowCompareModal] = useState(false);
 
-  // Escape closes the drawer, same as the close button/backdrop click --
-  // matches the site's existing modal/drawer keyboard convention.
+  // Escape closes whichever overlay is open (drawer or compare modal), same
+  // as their own close button/backdrop click -- matches the site's
+  // existing modal/drawer keyboard convention.
   useEffect(() => {
-    if (!selected) return;
-    function onKey(ev) { if (ev.key === 'Escape') setSelected(null); }
+    if (!selected && !showCompareModal) return;
+    function onKey(ev) {
+      if (ev.key !== 'Escape') return;
+      setSelected(null);
+      setShowCompareModal(false);
+    }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected]);
+  }, [selected, showCompareModal]);
 
   const findStrategy = (iaid) => strategies.find((s) => s.iaid === iaid) || null;
+
+  const toggleCompare = (strategy) => {
+    setCompareList((prev) => {
+      if (prev.some((s) => s.iaid === strategy.iaid)) return prev.filter((s) => s.iaid !== strategy.iaid);
+      if (prev.length >= MAX_COMPARE) return prev;
+      return [...prev, strategy];
+    });
+  };
+  const removeFromCompare = (iaid) => setCompareList((prev) => {
+    const next = prev.filter((s) => s.iaid !== iaid);
+    if (next.length < 2) setShowCompareModal(false);
+    return next;
+  });
 
   return (
     <>
@@ -486,7 +517,28 @@ export default function PmsPreferredInteractive({ strategies, insights, spotligh
         </div>
       </section>
 
-      <PmsPreferredDrawer strategy={selected} onClose={() => setSelected(null)} />
+      <PmsPreferredDrawer
+        strategy={selected}
+        onClose={() => setSelected(null)}
+        isComparing={selected ? compareList.some((s) => s.iaid === selected.iaid) : false}
+        onToggleCompare={toggleCompare}
+        compareFull={compareList.length >= MAX_COMPARE}
+      />
+
+      <PmsPrefCompareBar
+        selected={compareList}
+        onRemove={removeFromCompare}
+        onClear={() => { setCompareList([]); setShowCompareModal(false); }}
+        onCompare={() => { setSelected(null); setShowCompareModal(true); }}
+      />
+      {showCompareModal && compareList.length >= 2 && (
+        <PmsPrefCompareModal
+          strategies={compareList}
+          asOn={asOn}
+          onClose={() => setShowCompareModal(false)}
+          onRemove={removeFromCompare}
+        />
+      )}
     </>
   );
 }

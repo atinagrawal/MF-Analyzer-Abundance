@@ -782,6 +782,25 @@
 }
 .pmspref-drawer-cta:hover { background: var(--g2); }
 
+.pmspref-drawer-compare-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: 8px;
+  padding: 12px 16px;
+  background: var(--pmsp-surface);
+  border: 1.5px solid var(--pmsp-border-2);
+  color: var(--pmsp-text);
+  font-weight: 700;
+  font-size: .84rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.pmspref-drawer-compare-btn:hover { border-color: var(--g1); color: var(--g1); }
+.pmspref-drawer-compare-btn.active { background: var(--g-xlight, #e8f5e9); border-color: var(--g1); color: var(--g1); }
+.pmspref-drawer-compare-btn:disabled { opacity: .5; cursor: not-allowed; }
+
 /* ── Responsive ── */
 @media (max-width: 720px) {
   .pmspref-main { padding: 22px 18px 32px; margin: 8px 10px 32px; border-radius: 12px; }
