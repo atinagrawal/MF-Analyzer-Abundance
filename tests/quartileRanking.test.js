@@ -234,6 +234,34 @@ const assert = require('assert');
     assert.strictEqual(maCat.categoryMedian.ret_1y, 10.5);
   });
 
+  test('buildQuartileReport ranks a Direct-plan holding using its Regular-plan counterpart\'s real returns, flagged via matchedViaName', () => {
+    // "ICICI Prudential Gold ETF FOF - Direct - Growth" has its own AMFI
+    // code (not in FOF_SCREENER at all, since that's Direct), but
+    // normalizes to the same scheme identity as GOLD1's Regular plan.
+    const holdings = [
+      { name: 'ICICI Prudential Gold ETF FOF - Direct - Growth', amfiCode: 'DIRECT-GOLD1-NOT-IN-SCREENER', value: 60000 },
+    ];
+    const report = buildQuartileReport(holdings, FOF_SCREENER);
+    assert.strictEqual(report.unranked.length, 0);
+    const goldCat = report.categories.find(c => c.category === 'Gold FoF');
+    assert.ok(goldCat, 'expected the Direct-plan holding to land under Gold FoF via its Regular-plan match');
+    const fund = goldCat.funds[0];
+    assert.strictEqual(fund.matchedViaName, true);
+    // GOLD1 (20%) beats GOLD2 (22%)? No -- GOLD2 is higher, so GOLD1 is Q2
+    // of 2 (bottom half) for ret_1y -- assert the REAL computed value
+    // rather than assuming, proving actual GOLD1 data was used, not nulls.
+    const directGoldQuartiles = quartilesForPeriod(FOF_SCREENER.filter(f => f.code === 'GOLD1' || f.code === 'GOLD2'), 'ret_1y');
+    assert.strictEqual(fund.quartiles.ret_1y, directGoldQuartiles.get('GOLD1'));
+    assert.notStrictEqual(fund.quartiles.ret_1y, null);
+  });
+
+  test('buildQuartileReport never sets matchedViaName when the holding matched by its own amfiCode', () => {
+    const holdings = [{ name: 'ICICI Prudential Gold ETF FOF', amfiCode: 'GOLD1', value: 100000 }];
+    const report = buildQuartileReport(holdings, FOF_SCREENER);
+    const goldCat = report.categories.find(c => c.category === 'Gold FoF');
+    assert.strictEqual(goldCat.funds[0].matchedViaName, false);
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);
 })();
