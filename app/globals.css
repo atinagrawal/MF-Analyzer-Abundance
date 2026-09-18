@@ -5513,6 +5513,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   /* Font size */
   body { font-size: 11pt; }
 
+  /* Browsers drop background-color/box-shadow when printing by default (to
+     save ink) unless told otherwise -- without this, every colored badge
+     (quartile Q1-Q4, LTCG/STCG, gain/loss pills, etc.) prints as invisible
+     white-on-white text instead of its on-screen color. Applies to every
+     printed drawer via inheritance, not just one. */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
   /* Fund cards: keep together */
   div[style*="border: 1.5px solid var(--border)"][style*="border-radius: 12px"] {
     page-break-inside: avoid;
