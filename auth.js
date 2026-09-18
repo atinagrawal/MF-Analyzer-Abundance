@@ -291,6 +291,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // viewing a CLIENT's family CAS fetches THAT client's default_pan
         // via the API instead, since it's not on the admin's own session.
         session.user.defaultPan = user.default_pan ?? null;
+        // User-editable multi-PAN family label -- see
+        // app/api/cas/family-name/route.js. Included here so the common
+        // case (viewing your own account) needs no extra fetch; an admin
+        // viewing a CLIENT's family CAS fetches THAT client's family_name
+        // via the API instead, since it's not on the admin's own session.
+        session.user.familyName = user.family_name ?? null;
 
         // Fire-and-forget, throttled to at most once/hour per user — this
         // callback runs on essentially every useSession()/auth() check, so

@@ -350,7 +350,7 @@ function fundScore(holding, strategy, today) {
 // strategy picks funds/lots). 'selected' = user hand-picked specific funds
 // (via dashboard checkboxes) and each one redeems its own amount
 // independently — no shared "remaining target" counter across funds.
-function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorName, initialMode = 'target', onClose, masterFacts }) {
+function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorName, familyName, initialMode = 'target', onClose, masterFacts }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -562,6 +562,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
           lotBreakdown: [], hasSynthetic: lots.some(l => l.synthetic),
           hasTransmission: lots.some(l => l.isTransmission),
           locked: maxRedeemable < 0.0001,
+          ownerName: fund.__ownerName || null, // family view only -- see mergeFamilyView
         });
         continue;
       }
@@ -620,6 +621,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
         stcg: fundSTCG, ltcg: fundLTCG, stcgTax: fundStcgTax, ltcgTax: fundLtcgTax, tax: fundTax, net: fundNet,
         lotBreakdown, hasSynthetic: lots.some(l => l.synthetic),
         hasTransmission: lots.some(l => l.isTransmission), locked: false,
+        ownerName: fund.__ownerName || null, // family view only -- see mergeFamilyView
       });
 
       totalProceeds += fundProceeds;
@@ -646,6 +648,19 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
 
   const activePlan = mode === 'target' ? plan : planSelected;
 
+  // 'target' mode never runs against family-pooled holdings (its button is
+  // disabled whenever isFamilyView is true), so its rows carry no
+  // ownerName and this always falls through to `investorName` unchanged.
+  // 'selected' mode CAN span multiple family members (checkboxes work
+  // across the whole pooled dashboard) -- show the actual redeeming
+  // person's name when every selected fund belongs to one member, and
+  // only fall back to the family label when the selection is genuinely
+  // mixed. Fixes the planner (and its printed PDF, which shares this
+  // header) showing a generic family label even when redeeming a single
+  // person's funds.
+  const planOwners = [...new Set((activePlan?.rows || []).map(r => r.ownerName).filter(Boolean))];
+  const displayName = planOwners.length === 1 ? planOwners[0] : (familyName || investorName);
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}
       onClick={onClose}>
@@ -669,7 +684,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
                 Portfolio Redemption Planner
               </div>
               <div style={{ fontSize: '.9rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-.3px' }}>
-                {investorName}
+                {displayName}
               </div>
               <div style={{ fontSize: '.65rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginTop: 3 }}>
                 FIFO · Budget 2024 tax rates · Per-category exit load · Override per row
@@ -1110,6 +1125,11 @@ function CasTrackerInner() {
   const [defaultPan, setDefaultPan] = useState('');      // which PAN opens first in a multi-PAN family CAS
   const [savingDefaultPan, setSavingDefaultPan] = useState('');  // PAN currently being set as default, or ''
   const [defaultPanError, setDefaultPanError] = useState('');
+  const [familyName, setFamilyName] = useState('');   // user-editable label for a multi-PAN family CAS, see app/api/cas/family-name
+  const [editingFamilyName, setEditingFamilyName] = useState(false);
+  const [familyNameInput, setFamilyNameInput] = useState('');
+  const [savingFamilyName, setSavingFamilyName] = useState(false);
+  const [familyNameError, setFamilyNameError] = useState('');
   const [selectedIsXlsx, setSelectedIsXlsx] = useState(false); // MF Central .xlsx report vs CAMS/KFintech .pdf
   const [deletingId, setDeletingId] = useState('');   // saved-portfolio id showing delete confirm, or ''
   const [deleteInFlight, setDeleteInFlight] = useState(false);
@@ -1212,6 +1232,34 @@ function CasTrackerInner() {
       setDefaultPanError('Could not set this as the default -- check your connection and try again.');
     }
     setSavingDefaultPan('');
+  }
+
+  // Saves the user-editable label for this multi-PAN family CAS -- see
+  // app/api/cas/family-name/route.js. Mirrors savePanName's pattern:
+  // only exits edit mode on confirmed success, so a failed save doesn't
+  // silently revert to the old label with no feedback.
+  async function saveFamilyName() {
+    const name = familyNameInput.trim();
+    if (!name) { setEditingFamilyName(false); setFamilyNameError(''); return; }
+    setSavingFamilyName(true);
+    setFamilyNameError('');
+    try {
+      const res = await fetch('/api/cas/family-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, targetUserId: (isAdmin && viewedUserId) ? viewedUserId : undefined }),
+      });
+      if (res.ok) {
+        setFamilyName(name);
+        setEditingFamilyName(false);
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setFamilyNameError(body.error || 'Could not save this name.');
+      }
+    } catch {
+      setFamilyNameError('Could not save this name -- check your connection and try again.');
+    }
+    setSavingFamilyName(false);
   }
 
   // ── Auth + saved portfolios ──
@@ -1666,6 +1714,19 @@ function CasTrackerInner() {
     } catch { /* non-fatal — fall back to first PAN */ }
     setDefaultPan(resolvedDefaultPan);
 
+    // User-editable family label -- same self-view-vs-admin-view split as
+    // defaultPan above. Non-fatal: falls back to mergeFamilyView's generic
+    // "N Family Members" string when unset or the fetch fails.
+    try {
+      if (effectiveTargetUserId) {
+        const res = await fetch(`/api/cas/family-name?targetUserId=${effectiveTargetUserId}`);
+        const d = await res.json();
+        setFamilyName(d.familyName || '');
+      } else {
+        setFamilyName(session?.user?.familyName || '');
+      }
+    } catch { /* non-fatal — fall back to the generic label */ }
+
     setPortfolioDataByPan(portfolioData);
     setActivePan((resolvedDefaultPan && pans.includes(resolvedDefaultPan)) ? resolvedDefaultPan : pans[0]);
     setFromCache(cached);
@@ -1979,6 +2040,16 @@ function CasTrackerInner() {
   // Object.values(redeemSelection)) -- same shape either way, since both
   // ultimately come from buildAllHoldings(). `scope` only changes the
   // sheet name and filename, so the two exports are distinguishable.
+  // Prefers the real name of the single family member `rows` belongs to
+  // (even inside pooled family view) over the generic "N Family Members"
+  // fallback -- same rule as PortfolioRedemptionPlanner's own displayName,
+  // applied here so the export title/filename match what the planner shows.
+  function exportDisplayName(rows) {
+    if (!isFamilyView) return currentInfo.investorName;
+    const owners = [...new Set(rows.map(r => r.__ownerName).filter(Boolean))];
+    return owners.length === 1 ? owners[0] : (familyName || currentInfo.investorName);
+  }
+
   async function exportExcel(rows, scope = 'Holdings') {
     if (!rows.length) return;
     const XLSX = await import('xlsx');
@@ -2003,7 +2074,7 @@ function CasTrackerInner() {
     const ws = XLSX.utils.json_to_sheet(sheetRows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, scope);
-    const safeName = (currentInfo.investorName || 'Portfolio').replace(/[^A-Za-z0-9]+/g, '-').slice(0, 40);
+    const safeName = (exportDisplayName(rows) || 'Portfolio').replace(/[^A-Za-z0-9]+/g, '-').slice(0, 40);
     const scopeSlug = scope === 'Holdings' ? 'holdings' : 'selected-holdings';
     XLSX.writeFile(wb, `${safeName}-${scopeSlug}-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
@@ -2018,6 +2089,7 @@ function CasTrackerInner() {
   // the selection bar's passes Object.values(redeemSelection).
   function exportPdf(rows, scope = 'Holdings') {
     if (!rows.length) return;
+    const displayName = exportDisplayName(rows);
     const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const totalInvested = rows.reduce((s, f) => s + (f.invested || 0), 0);
     const totalValue    = rows.reduce((s, f) => s + (f.value || 0), 0);
@@ -2047,7 +2119,7 @@ function CasTrackerInner() {
     const win = window.open('', '_blank', 'width=960,height=760');
     if (!win) return;
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-<title>${esc(currentInfo.investorName)} Portfolio | Abundance Financial Services</title>
+<title>${esc(displayName)} Portfolio | Abundance Financial Services</title>
 <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -2073,7 +2145,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
 @media print{body{padding:16px 20px}@page{margin:.8cm;size:A4 portrait}}
 </style></head><body>
 <div class="ph">
-  <div><div class="pt">${esc(currentInfo.investorName)}'s ${scope === 'Holdings' ? 'Portfolio' : 'Selected Holdings'} — ${rows.length} Holding${rows.length > 1 ? 's' : ''}</div>
+  <div><div class="pt">${esc(displayName)}'s ${scope === 'Holdings' ? 'Portfolio' : 'Selected Holdings'} — ${rows.length} Holding${rows.length > 1 ? 's' : ''}</div>
   <div class="pa">Abundance Financial Services® · ARN-251838 · AMFI Registered Mutual Funds &amp; SIF Distributor</div></div>
   <img class="logo" src="/logo-og.png" onerror="this.style.display='none'">
 </div>
@@ -2454,10 +2526,41 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
           <section id="dashboard-section">
             <div className="dash-header">
               <div>
-                <h2 className="dash-title">
-                  {isFamilyView ? `👨‍👩‍👧‍👦 Combined Portfolio — ${currentInfo.investorName}` : `${currentInfo.investorName}'s Portfolio`}
+                <h2 className="dash-title" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  {isFamilyView ? (
+                    editingFamilyName ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        👨‍👩‍👧‍👦 Combined Portfolio —
+                        <input
+                          autoFocus
+                          value={familyNameInput}
+                          onChange={e => setFamilyNameInput(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') saveFamilyName(); if (e.key === 'Escape') { setEditingFamilyName(false); setFamilyNameError(''); } }}
+                          placeholder="Family name"
+                          maxLength={100}
+                          style={{ fontSize: '.85rem', fontWeight: 700, padding: '4px 8px', borderRadius: 6, border: '1.5px solid var(--border2)', fontFamily: 'Raleway, sans-serif' }}
+                        />
+                        <button onClick={saveFamilyName} disabled={savingFamilyName} className="pan-tab-rename-btn" title="Save">✓</button>
+                        <button onClick={() => { setEditingFamilyName(false); setFamilyNameError(''); }} className="pan-tab-rename-btn" title="Cancel">✕</button>
+                      </span>
+                    ) : (
+                      <>
+                        {`👨‍👩‍👧‍👦 Combined Portfolio — ${familyName || currentInfo.investorName}`}
+                        <button
+                          onClick={() => { setFamilyNameInput(familyName); setEditingFamilyName(true); setFamilyNameError(''); }}
+                          className="pan-tab-rename-btn"
+                          title="Rename family"
+                        >
+                          ✎
+                        </button>
+                      </>
+                    )
+                  ) : `${currentInfo.investorName}'s Portfolio`}
                   {fromCache && <span className="cache-badge">⚡ Cached</span>}
                 </h2>
+                {isFamilyView && familyNameError && (
+                  <div style={{ fontSize: '.68rem', fontWeight: 700, color: '#c62828', marginTop: 2 }}>⚠ {familyNameError}</div>
+                )}
                 <p className="dash-sub">Computed using FIFO accounting · Live NAVs from AMFI</p>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -3193,6 +3296,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
           selectedHoldings={Object.values(redeemSelection)}
           initialMode={plannerMode}
           investorName={currentInfo.investorName}
+          familyName={familyName}
           onClose={() => setPlanPortfolio(false)}
           masterFacts={masterFacts}
         />

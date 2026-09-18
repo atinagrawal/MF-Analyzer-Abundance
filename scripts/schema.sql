@@ -250,6 +250,14 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by         TEXT REFERENCES us
 -- this schema either, e.g. pan_investor_names.pan is also a bare TEXT key).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS default_pan        TEXT;
 
+-- User-editable label for a multi-PAN family CAS, e.g. "The Agarwal Family"
+-- -- shown in the CAS Tracker's combined/pooled family view header and the
+-- Portfolio Redemption Planner in place of the generic "N Family Members"
+-- fallback. Set via app/api/cas/family-name/route.js; same ownership model
+-- as default_pan above (an admin viewing a client via ?userId= reads/writes
+-- THAT client's row, never the admin's own). NULL until the user sets one.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS family_name         TEXT;
+
 -- Last time this user's session was checked by the app (throttled to at
 -- most once/hour per user in the auth.js session callback, so this is
 -- "active within the last hour" resolution, not exact). Powers "days since
