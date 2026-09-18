@@ -12,7 +12,7 @@ export default function CasTrackerLayout({ children }) {
     "name": "Abundance CAS Portfolio Tracker",
     "alternateName": "CAS Portfolio Tracker",
     "url": "https://mfcalc.getabundance.in/cas-tracker",
-    "description": "Parse CAMS or KFintech Consolidated Account Statements. Track all mutual fund holdings with live AMFI NAVs, FIFO capital gains, ELSS lock-in status, SIF holdings, per-transaction NAV rate history, and multi-PAN family support.",
+    "description": "Parse CAMS or KFintech Consolidated Account Statements. Track all mutual fund holdings with live AMFI NAVs, FIFO capital gains, ELSS lock-in status, SIF holdings, per-transaction NAV rate history, multi-PAN family support with an editable family name, and a Portfolio Review report ranking every holding into a performance quartile against its category peers.",
     "applicationCategory": "FinanceApplication",
     "applicationSubCategory": "Mutual Fund Portfolio Tracker",
     "operatingSystem": "Web Browser",
@@ -21,12 +21,13 @@ export default function CasTrackerLayout({ children }) {
     "featureList": [
       "CAMS and KFintech CAS PDF parsing",
       "Live AMFI NAV fetching",
-      "Multi-PAN family CAS support with combined family portfolio view",
+      "Multi-PAN family CAS support with combined family portfolio view and an editable family name",
       "FIFO capital gains calculation",
       "ELSS 3-year lock-in tracking",
       "Automatic SIF (Specialised Investment Fund) detection from your CAS, with live NAVs",
       "Per-transaction NAV rate chart for every holding",
       "Transmitted / inherited unit detection in transaction history",
+      "Portfolio Review report ranking every holding into a 1Yr/3Yr/5Yr performance quartile against its AMFI category peers",
       "PDF and Excel export of holdings",
       "Cloud-saved portfolio for registered clients",
       "Advisor and nominee extraction"
@@ -39,7 +40,7 @@ export default function CasTrackerLayout({ children }) {
       "description": "AMFI Registered Mutual Fund Distributor — ARN-251838, Haldwani, Uttarakhand"
     },
     "screenshot": "https://mfcalc.getabundance.in/og-cas.png",
-    "dateModified": "2026-08-18"
+    "dateModified": "2026-09-18"
   };
 
   const breadcrumbSchema = {

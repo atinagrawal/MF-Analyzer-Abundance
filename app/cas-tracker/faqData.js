@@ -29,6 +29,10 @@ export const CAS_FAQ = [
     a: 'Yes. Click the ✎ next to any PAN tab to label it with the investor’s name. We store that name against the PAN so it’s remembered the next time that PAN appears in a CAS upload — it’s only ever shown to you and your AMFI-registered distributor.',
   },
   {
+    q: 'Can I set a name for the whole family, not just each individual investor?',
+    a: 'Yes. When two or more members are checked together in the combined family view, click the ✎ next to "Combined Portfolio" to give the whole family a label (e.g. "The Agarwal Family") instead of the default generic count. This is separate from — and shown alongside — each individual investor\'s own name.',
+  },
+  {
     q: 'How is current value calculated?',
     a: 'Current Value = Units x Live NAV from AMFI official end-of-day data, fetched fresh on each page load.',
   },
@@ -47,6 +51,10 @@ export const CAS_FAQ = [
   {
     q: 'Does the redemption planner account for exit load?',
     a: 'Yes. Click "Redeem" on any fund and the planner checks its actual exit-load structure — verified scheme-level data where available, with a clear BSE-sourced fallback otherwise — and shows the exact amount deducted for each purchase lot based on how long it was held, alongside the FIFO capital-gains and tax breakdown, before you redeem.',
+  },
+  {
+    q: 'What is the Portfolio Review report and how is the quartile ranking calculated?',
+    a: 'Click "Portfolio Review" to see every holding grouped by its AMFI category (Large Cap, Small Cap, Gold FoF, Multi Asset FoF, and more) and ranked into a performance quartile — Quartile 1 is the top 25% of that category\'s funds by 1Yr/3Yr/5Yr return, Quartile 4 the bottom 25% — against every other AMFI-registered fund in the same category, not just what you hold. By default it excludes funds sold under Abundance\'s own ARN (251838), so it highlights holdings from elsewhere worth reviewing; a checkbox lets you include them too.',
   },
   {
     q: 'Can I export my portfolio to PDF or Excel?',
