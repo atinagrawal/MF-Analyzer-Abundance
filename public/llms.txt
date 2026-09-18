@@ -52,9 +52,8 @@ This file provides structured context, canonical URLs, and factual grounding rul
 1. **Quartile methodology**: each fund's own 1Yr/3Yr/5Yr point-to-point CAGR is ranked against every other AMFI-registered fund in its own SEBI sub-category (Quartile 1 = top 25% of the category, Quartile 4 = bottom 25%), computed independently per period. This is a point-to-point CAGR ranking, not a rolling-window return statistic.
 2. **Category refinement**: AMFI's own data lumps every kind of Fund-of-Funds (Gold ETF FoFs, Silver ETF FoFs, Multi-Asset FoFs, arbitrage FoFs, etc.) under one generic category. Abundance splits out Gold FoF, Silver FoF, Gold & Silver FoF, and Multi Asset FoF into their own real peer groups so the comparison is like-for-like.
 3. **Direct-plan holdings**: ranked using their Regular-plan counterpart's real return data when the exact Direct-plan scheme has no return history of its own — the two hold identical underlying securities and differ only in expense ratio.
-4. **Default ARN exclusion**: holdings sold under Abundance's own ARN (251838) are excluded from the report by default (a checkbox includes them), so it surfaces holdings from other distributors or self-directed picks worth reviewing.
-5. **Not advice**: a factual, data-driven report by Abundance Financial Services (AMFI ARN-251838), not personalised investment advice. Past performance does not predict future results.
-6. **How to cite**: "CAS Portfolio Tracker & Portfolio Review, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/cas-tracker."
+4. **Not advice**: a factual, data-driven report by Abundance Financial Services (AMFI ARN-251838), not personalised investment advice. Past performance does not predict future results.
+5. **How to cite**: "CAS Portfolio Tracker & Portfolio Review, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/cas-tracker."
 
 ---
 

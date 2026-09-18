@@ -54,7 +54,7 @@ export const CAS_FAQ = [
   },
   {
     q: 'What is the Portfolio Review report and how is the quartile ranking calculated?',
-    a: 'Click "Portfolio Review" to see every holding grouped by its AMFI category (Large Cap, Small Cap, Gold FoF, Multi Asset FoF, and more) and ranked into a performance quartile — Quartile 1 is the top 25% of that category\'s funds by 1Yr/3Yr/5Yr return, Quartile 4 the bottom 25% — against every other AMFI-registered fund in the same category, not just what you hold. By default it excludes funds sold under Abundance\'s own ARN (251838), so it highlights holdings from elsewhere worth reviewing; a checkbox lets you include them too.',
+    a: 'Click "Portfolio Review" to see every holding grouped by its AMFI category (Large Cap, Small Cap, Gold FoF, Multi Asset FoF, and more) and ranked into a performance quartile — Quartile 1 is the top 25% of that category\'s funds by 1Yr/3Yr/5Yr return, Quartile 4 the bottom 25% — against every other AMFI-registered fund in the same category, not just what you hold.',
   },
   {
     q: 'Can I export my portfolio to PDF or Excel?',
