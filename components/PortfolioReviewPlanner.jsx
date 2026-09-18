@@ -19,13 +19,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { resolveHoldingArn } from '@/lib/distributorResolution';
-import { buildQuartileReport } from '@/lib/quartileRanking';
+import { buildQuartileReport, PERIODS } from '@/lib/quartileRanking';
+import { resolveDisplayName } from '@/lib/casDisplayName';
 
 const ABUNDANCE_ARN = '251838';
-const PERIODS = ['ret_1y', 'ret_3y', 'ret_5y'];
 const PERIOD_LABELS = { ret_1y: '1 Yr', ret_3y: '3 Yr', ret_5y: '5 Yr' };
 
-export default function PortfolioReviewPlanner({ holdings, activePan, investorName, familyName, arnOverrides = {}, onClose }) {
+export default function PortfolioReviewPlanner({ holdings, activePan, investorName, familyName, isFamilyView, arnOverrides = {}, onClose }) {
   const [screenerFunds, setScreenerFunds] = useState(null); // null = still loading
   const [screenerError, setScreenerError] = useState('');
   const [includeOwnArn, setIncludeOwnArn] = useState(false); // "Include funds sold by Abundance" -- off by default
@@ -40,8 +40,8 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
         // ({ error, funds: [], benchmarks }) on failure -- fetch() doesn't
         // reject on a non-2xx status, so this has to be checked explicitly
         // or a real outage silently renders as "everything is Unranked".
-        if (!ok || d.error) { setScreenerError('Peer fund data unavailable — try again shortly.'); return; }
-        setScreenerFunds(d.funds || []);
+        if (!ok || d.error || !(d.funds || []).length) { setScreenerError('Peer fund data unavailable — try again shortly.'); return; }
+        setScreenerFunds(d.funds);
       })
       .catch(() => { if (!cancelled) setScreenerError('Peer fund data unavailable — try again shortly.'); });
     return () => { cancelled = true; };
@@ -66,17 +66,16 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
 
   const ownArnHoldings   = holdingsWithArn.filter(h => h.__resolvedArn === ABUNDANCE_ARN);
   const includedHoldings = includeOwnArn ? holdingsWithArn : holdingsWithArn.filter(h => h.__resolvedArn !== ABUNDANCE_ARN);
+  const totalIncludedValue = includedHoldings.reduce((s, h) => s + (h.value || 0), 0);
 
   const report = useMemo(() => {
     if (!screenerFunds) return null;
     return buildQuartileReport(includedHoldings, screenerFunds);
   }, [includedHoldings, screenerFunds]);
 
-  // Same single-vs-multi-owner rule as PortfolioRedemptionPlanner's own
-  // displayName (app/cas-tracker/page.js) -- real name when every included
-  // holding belongs to one family member, the Family Name otherwise.
-  const owners = [...new Set(includedHoldings.map(h => h.__ownerName).filter(Boolean))];
-  const displayName = owners.length === 1 ? owners[0] : (familyName || investorName);
+  // Uses the shared resolveDisplayName -- see lib/casDisplayName.js's own
+  // docstring for the isFamilyView guard rationale.
+  const displayName = resolveDisplayName(includedHoldings.map(h => h.__ownerName), { isFamilyView, familyName, investorName });
 
   const quartileColor = (q) =>
     q === 1 ? 'var(--g1)' : q === 2 ? '#f9a825' : q === 3 ? '#e65100' : q === 4 ? 'var(--neg)' : 'var(--muted)';
@@ -156,7 +155,7 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
 
           {report && report.categories.length === 0 && report.unranked.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--muted)', fontSize: '.78rem' }}>
-              No holdings to review{!includeOwnArn ? " (all holdings are sold under Abundance's own ARN — check the box above to include them)" : ''}.
+              No holdings to review{ownArnHoldings.length > 0 ? " (all holdings are sold under Abundance's own ARN — check the box above to include them)" : ''}.
             </div>
           )}
 
@@ -172,7 +171,7 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.65rem', minWidth: 480 }}>
                   <thead>
                     <tr style={{ background: 'var(--s2)' }}>
-                      {['Scheme', 'Value', ...PERIODS.map(p => `${PERIOD_LABELS[p]} Qtile`)].map(h => (
+                      {['Scheme', 'Value', 'Holding %', ...PERIODS.map(p => `${PERIOD_LABELS[p]} Qtile`)].map(h => (
                         <th key={h} style={{ padding: '8px 10px', textAlign: h === 'Scheme' ? 'left' : 'right', fontWeight: 800, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", fontSize: '.55rem', letterSpacing: '.5px', textTransform: 'uppercase', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' }}>{h}</th>
                       ))}
                     </tr>
@@ -187,6 +186,7 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
                           )}
                         </td>
                         <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>{fmt(fund.value)}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>{totalIncludedValue > 0 ? ((fund.value / totalIncludedValue) * 100).toFixed(2) + '%' : '-'}</td>
                         {PERIODS.map(p => (
                           <td key={p} style={{ padding: '8px 10px', textAlign: 'right' }}>
                             {fund.quartiles[p] != null ? (

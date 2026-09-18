@@ -17,6 +17,7 @@ import RedemptionPlanner from '@/components/RedemptionPlanner';
 import PortfolioReviewPlanner from '@/components/PortfolioReviewPlanner';
 import TransactionHistoryDrawer, { isTransmissionTxn, earliestTxnDate, navHistoryCacheKey } from '@/components/TransactionHistoryDrawer';
 import { resolveArns, formatDistributorName, resolveHoldingArn, overrideKey } from '@/lib/distributorResolution';
+import { resolveDisplayName } from '@/lib/casDisplayName';
 import CasMemberMerge from '@/components/CasMemberMerge';
 
 // isin-scheme-master.json (~8.4MB, ~26k entries) used to be statically
@@ -351,7 +352,7 @@ function fundScore(holding, strategy, today) {
 // strategy picks funds/lots). 'selected' = user hand-picked specific funds
 // (via dashboard checkboxes) and each one redeems its own amount
 // independently — no shared "remaining target" counter across funds.
-function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorName, familyName, initialMode = 'target', onClose, masterFacts }) {
+function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorName, familyName, isFamilyView, initialMode = 'target', onClose, masterFacts }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -649,18 +650,9 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
 
   const activePlan = mode === 'target' ? plan : planSelected;
 
-  // 'target' mode never runs against family-pooled holdings (its button is
-  // disabled whenever isFamilyView is true), so its rows carry no
-  // ownerName and this always falls through to `investorName` unchanged.
-  // 'selected' mode CAN span multiple family members (checkboxes work
-  // across the whole pooled dashboard) -- show the actual redeeming
-  // person's name when every selected fund belongs to one member, and
-  // only fall back to the family label when the selection is genuinely
-  // mixed. Fixes the planner (and its printed PDF, which shares this
-  // header) showing a generic family label even when redeeming a single
-  // person's funds.
-  const planOwners = [...new Set((activePlan?.rows || []).map(r => r.ownerName).filter(Boolean))];
-  const displayName = planOwners.length === 1 ? planOwners[0] : (familyName || investorName);
+  // Uses the shared resolveDisplayName -- see lib/casDisplayName.js's own
+  // docstring for the isFamilyView guard rationale.
+  const displayName = resolveDisplayName((activePlan?.rows || []).map(r => r.ownerName), { isFamilyView, familyName, investorName });
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}
@@ -2047,9 +2039,7 @@ function CasTrackerInner() {
   // fallback -- same rule as PortfolioRedemptionPlanner's own displayName,
   // applied here so the export title/filename match what the planner shows.
   function exportDisplayName(rows) {
-    if (!isFamilyView) return currentInfo.investorName;
-    const owners = [...new Set(rows.map(r => r.__ownerName).filter(Boolean))];
-    return owners.length === 1 ? owners[0] : (familyName || currentInfo.investorName);
+    return resolveDisplayName(rows.map(r => r.__ownerName), { isFamilyView, familyName, investorName: currentInfo.investorName });
   }
 
   async function exportExcel(rows, scope = 'Holdings') {
@@ -3315,6 +3305,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
           initialMode={plannerMode}
           investorName={currentInfo.investorName}
           familyName={familyName}
+          isFamilyView={isFamilyView}
           onClose={() => setPlanPortfolio(false)}
           masterFacts={masterFacts}
         />
@@ -3325,6 +3316,7 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
           activePan={activePan}
           investorName={currentInfo.investorName}
           familyName={familyName}
+          isFamilyView={isFamilyView}
           arnOverrides={arnOverrides}
           onClose={() => setShowPortfolioReview(false)}
         />
