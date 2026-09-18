@@ -11,7 +11,7 @@
 const assert = require('assert');
 
 (async () => {
-  const { median, quartilesForPeriod, buildQuartileReport } = await import('../lib/quartileRanking.js');
+  const { median, quartilesForPeriod, buildQuartileReport, refineCategory } = await import('../lib/quartileRanking.js');
 
   console.log('=== Running quartileRanking Unit Tests ===\n');
 
@@ -85,6 +85,56 @@ const assert = require('assert');
     assert.strictEqual(q.size, 0);
   });
 
+  // ── refineCategory ───────────────────────────────────────────────────
+  test('refineCategory splits a Gold ETF FoF out of the generic Domestic FoF bucket', () => {
+    assert.strictEqual(refineCategory('Other Scheme - FoF Domestic', 'ICICI Prudential Gold ETF FOF'), 'Gold FoF');
+  });
+
+  test('refineCategory splits a Silver ETF FoF out of the generic Domestic FoF bucket', () => {
+    assert.strictEqual(refineCategory('Other Scheme - FoF Domestic', 'HDFC Silver ETF Fund of Fund'), 'Silver FoF');
+  });
+
+  test('refineCategory detects a combined Gold & Silver FoF', () => {
+    assert.strictEqual(refineCategory('Other Scheme - FoF Domestic', 'Motilal Oswal Gold and Silver Passive Fund of Funds'), 'Gold & Silver FoF');
+    assert.strictEqual(refineCategory('Other Scheme - FoF Domestic', 'HDFC GOLD SILVER PASSIVE FOF'), 'Gold & Silver FoF');
+  });
+
+  test('refineCategory detects Multi-Asset FoFs across hyphen/space spelling variants', () => {
+    assert.strictEqual(refineCategory('Other Scheme - FoF Domestic', 'ICICI Prudential Multi-Asset Active FOF'), 'Multi Asset FoF');
+    assert.strictEqual(refineCategory('Other Scheme - FoF Domestic', 'HSBC Multi Asset Active FOF'), 'Multi Asset FoF');
+    assert.strictEqual(refineCategory('Other Scheme - FoF Domestic', 'Nippon India Multi - Asset Omni FoF'), 'Multi Asset FoF');
+  });
+
+  test('refineCategory normalizes AMFI\'s two differently-spelled Domestic FoF category strings to the same bucket before refining', () => {
+    const a = refineCategory('Other Scheme - FoF Domestic', 'Quantum Gold ETF FOF');
+    const b = refineCategory('Fund of Funds Scheme (Domestic) - Fund of Funds Scheme (Domestic)', 'Quantum Gold ETF FOF');
+    assert.strictEqual(a, b);
+    assert.strictEqual(a, 'Gold FoF');
+  });
+
+  test('refineCategory excludes gold-MINING equity funds from the Gold FoF bucket', () => {
+    assert.strictEqual(refineCategory('Other Scheme - FoF Overseas', 'DSP World Gold Mining Overseas Equity Omni FoF'), 'Other Scheme - FoF Overseas');
+  });
+
+  test('refineCategory leaves a real, already-correct category untouched even if the name contains "gold"', () => {
+    // Guards against a false positive: a fund isn't FoF-shaped just because
+    // its name has "gold" in it -- refinement only applies within the FoF
+    // categories themselves.
+    assert.strictEqual(refineCategory('Equity Scheme - Large Cap Fund', 'HDFC Gold Coast Opportunities Fund'), 'Equity Scheme - Large Cap Fund');
+  });
+
+  test('refineCategory leaves other FoF sub-types (out of scope for this pass) under the normalized generic label', () => {
+    assert.strictEqual(refineCategory('Other Scheme - FoF Domestic', 'HDFC Income Plus Arbitrage Active FOF'), 'Other Scheme - FoF Domestic');
+  });
+
+  test('refineCategory with no category at all (unmatched holding) still detects gold/silver/multi-asset by name alone', () => {
+    assert.strictEqual(refineCategory(null, 'ICICI Prudential Multi-Asset Active FOF - Growth'), 'Multi Asset FoF');
+  });
+
+  test('refineCategory returns null when there is no category and the name matches nothing recognizable', () => {
+    assert.strictEqual(refineCategory(null, 'Some Unrelated Scheme'), null);
+  });
+
   // ── buildQuartileReport ──────────────────────────────────────────────
   const SCREENER = [
     { code: 'LC1', category: 'Large Cap Fund', ret_1y: 12, ret_3y: 20, ret_5y: 22 },
@@ -127,6 +177,61 @@ const assert = require('assert');
     const holdings = [{ name: 'Delisted Fund', amfiCode: 'NOTFOUND', value: 1000 }];
     const report = buildQuartileReport(holdings, SCREENER);
     assert.strictEqual(report.unranked.length, 1);
+  });
+
+  // ── buildQuartileReport × refineCategory integration ────────────────
+  const FOF_SCREENER = [
+    { code: 'GOLD1', category: 'Other Scheme - FoF Domestic', name: 'ICICI Prudential Gold ETF FOF', ret_1y: 20, ret_3y: 18, ret_5y: 15 },
+    { code: 'GOLD2', category: 'Fund of Funds Scheme (Domestic) - Fund of Funds Scheme (Domestic)', name: 'Quantum Gold ETF FOF', ret_1y: 22, ret_3y: 19, ret_5y: 16 },
+    { code: 'MA1', category: 'Other Scheme - FoF Domestic', name: 'HSBC Multi Asset Active FOF', ret_1y: 10, ret_3y: 12, ret_5y: 11 },
+    { code: 'MA2', category: 'Other Scheme - FoF Domestic', name: 'HDFC Multi-Asset Active FOF', ret_1y: 11, ret_3y: 13, ret_5y: 12 },
+    { code: 'ARB1', category: 'Other Scheme - FoF Domestic', name: 'HDFC Income Plus Arbitrage Active FOF', ret_1y: 7, ret_3y: 8, ret_5y: 7 },
+  ];
+
+  test('buildQuartileReport groups a Gold FoF from BOTH differently-spelled AMFI category strings into one real peer set', () => {
+    const holdings = [{ name: 'ICICI Prudential Gold ETF FOF', amfiCode: 'GOLD1', value: 100000 }];
+    const report = buildQuartileReport(holdings, FOF_SCREENER);
+    const goldCat = report.categories.find(c => c.category === 'Gold FoF');
+    assert.ok(goldCat, 'expected a Gold FoF category to exist');
+    // Peer universe (used for the category median and quartile ranking)
+    // includes GOLD2 too, even though it isn't held -- proves the
+    // differently-spelled alias was normalized before refining.
+    assert.strictEqual(goldCat.categoryMedian.ret_1y, 21); // median of [20, 22]
+  });
+
+  test('buildQuartileReport keeps Multi-Asset FoFs and arbitrage FoFs in separate real categories, not lumped together', () => {
+    const holdings = [
+      { name: 'HSBC Multi Asset Active FOF', amfiCode: 'MA1', value: 50000 },
+      { name: 'HDFC Income Plus Arbitrage Active FOF', amfiCode: 'ARB1', value: 30000 },
+    ];
+    const report = buildQuartileReport(holdings, FOF_SCREENER);
+    const maCat = report.categories.find(c => c.category === 'Multi Asset FoF');
+    const arbCat = report.categories.find(c => c.category === 'Other Scheme - FoF Domestic');
+    assert.ok(maCat, 'expected a Multi Asset FoF category');
+    assert.ok(arbCat, 'expected the arbitrage FoF to stay under the generic label');
+    // The Multi Asset FoF's peer set is just MA1/MA2 -- not diluted by the
+    // arbitrage fund's very different return profile.
+    assert.strictEqual(maCat.categoryMedian.ret_1y, 10.5); // median of [10, 11], not all 5 funds
+  });
+
+  test('buildQuartileReport groups an unmatched Direct-plan holding by name into a real category (not Unranked), with no quartile of its own', () => {
+    // Models the exact real-world case that surfaced this: a client holds
+    // the Direct plan of a fund whose Regular-plan code IS in mf_screener
+    // under a different amfiCode -- the join fails, but the name still
+    // says what it is.
+    const holdings = [
+      { name: 'ICICI Prudential Multi-Asset Active FOF - Growth', amfiCode: 'DIRECT-CODE-NOT-IN-SCREENER', value: 75000 },
+    ];
+    const report = buildQuartileReport(holdings, FOF_SCREENER);
+    assert.strictEqual(report.unranked.length, 0);
+    const maCat = report.categories.find(c => c.category === 'Multi Asset FoF');
+    assert.ok(maCat, 'expected the unmatched holding to still land under Multi Asset FoF');
+    assert.strictEqual(maCat.funds[0].quartiles.ret_1y, null); // no data for this exact scheme
+    assert.strictEqual(maCat.funds[0].quartiles.ret_3y, null);
+    assert.strictEqual(maCat.funds[0].quartiles.ret_5y, null);
+    // But the category median still reflects the real MA1/MA2 peers, so
+    // the report isn't a total blank for this holding.
+    assert.strictEqual(maCat.categoryMedian.ret_1y, 10.5);
   });
 
   console.log(`\n${passed} passed, ${failed} failed`);
