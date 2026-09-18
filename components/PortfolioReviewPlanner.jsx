@@ -182,12 +182,6 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
                       <tr key={rowKey(fund)} style={{ borderBottom: i < cat.funds.length - 1 ? '1px solid var(--border)' : 'none' }}>
                         <td style={{ padding: '8px 10px' }}>
                           {fund.name}
-                          {fund.matchedViaName && (
-                            <div style={{ fontSize: '.5rem', color: 'var(--muted)', fontWeight: 700 }}
-                              title="This exact plan has no return history in our data (most likely a Direct plan -- our data covers Regular plans only). Ranked using its Regular-plan counterpart's real returns instead -- same underlying portfolio, only the expense ratio differs, and Direct plans typically return slightly MORE (no distributor commission), so this is a conservative estimate.">
-                              ≈ ranked via Regular plan
-                            </div>
-                          )}
                           {fund.__ownerName && (
                             <div style={{ fontSize: '.55rem', color: 'var(--muted)', fontWeight: 700 }}>{fund.__ownerName}</div>
                           )}
@@ -231,7 +225,7 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
           )}
 
           <div style={{ fontSize: '.6rem', color: 'var(--muted)', lineHeight: 1.6, padding: '12px 14px', background: 'var(--s2)', borderRadius: 10, border: '1.5px solid var(--border)', marginTop: 20 }}>
-            Quartile rank compares each fund's own 1Yr/3Yr/5Yr point-to-point return (CAGR) against every other AMFI-registered fund in its own SEBI sub-category, using the most recently published NAV data. Quartile 1 = top 25% of the category, Quartile 4 = bottom 25%. A fund marked "≈ ranked via Regular plan" (typically a Direct-plan holding) is ranked using its Regular-plan counterpart's actual returns, since our data tracks Regular plans only — the two hold identical underlying securities and differ only in expense ratio. This is not a rolling-return statistic and not investment advice — past performance does not guarantee future results. Mutual fund investments are subject to market risks; read all scheme-related documents carefully. | ARN-{ABUNDANCE_ARN} | Abundance Financial Services
+            Quartile rank compares each fund's own 1Yr/3Yr/5Yr point-to-point return (CAGR) against every other AMFI-registered fund in its own SEBI sub-category, using the most recently published NAV data. Quartile 1 = top 25% of the category, Quartile 4 = bottom 25%. This is not a rolling-return statistic and not investment advice — past performance does not guarantee future results. Mutual fund investments are subject to market risks; read all scheme-related documents carefully. | ARN-{ABUNDANCE_ARN} | Abundance Financial Services
           </div>
         </div>
       </div>
