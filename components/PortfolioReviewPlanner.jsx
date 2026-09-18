@@ -33,13 +33,28 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
   useEffect(() => {
     let cancelled = false;
     fetch('/api/screener')
-      .then(r => r.json())
-      .then(d => { if (!cancelled) setScreenerFunds(d.funds || []); })
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (cancelled) return;
+        // app/api/screener/route.js returns HTTP 503 with a valid JSON body
+        // ({ error, funds: [], benchmarks }) on failure -- fetch() doesn't
+        // reject on a non-2xx status, so this has to be checked explicitly
+        // or a real outage silently renders as "everything is Unranked".
+        if (!ok || d.error) { setScreenerError('Peer fund data unavailable — try again shortly.'); return; }
+        setScreenerFunds(d.funds || []);
+      })
       .catch(() => { if (!cancelled) setScreenerError('Peer fund data unavailable — try again shortly.'); });
     return () => { cancelled = true; };
   }, []);
 
   const fmt = (n) => '₹' + Math.round(n || 0).toLocaleString('en-IN');
+
+  // Same composite-id pattern app/cas-tracker/page.js's buildAllHoldings
+  // already uses (id: `cas-${__ownerPan||activePan}-${folio}-${amfiCode||name}`)
+  // -- amfiCode/name alone collide in pooled family view when two family
+  // members hold the same scheme, which is exactly the case this drawer's
+  // un-disabled-in-family-view button exists to support.
+  const rowKey = (fund) => `${fund.__ownerPan || activePan}-${fund.folio || ''}-${fund.amfiCode || fund.name}`;
 
   // Each holding's own ARN, resolved once so both the filter and the
   // excluded-count footer agree on the identical value. Mirrors the exact
@@ -164,7 +179,7 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
                   </thead>
                   <tbody>
                     {cat.funds.map((fund, i) => (
-                      <tr key={fund.amfiCode || fund.name} style={{ borderBottom: i < cat.funds.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                      <tr key={rowKey(fund)} style={{ borderBottom: i < cat.funds.length - 1 ? '1px solid var(--border)' : 'none' }}>
                         <td style={{ padding: '8px 10px' }}>
                           {fund.name}
                           {fund.__ownerName && (
@@ -200,7 +215,7 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
                 Not in the peer fund universe (Direct plan, SIF, or a scheme not currently tracked) — value still counted, no quartile available.
               </div>
               {report.unranked.map(fund => (
-                <div key={fund.amfiCode || fund.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '.65rem', borderBottom: '1px solid var(--border)' }}>
+                <div key={rowKey(fund)} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '.65rem', borderBottom: '1px solid var(--border)' }}>
                   <span>{fund.name}{fund.__ownerName ? ` · ${fund.__ownerName}` : ''}</span>
                   <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{fmt(fund.value)}</span>
                 </div>
