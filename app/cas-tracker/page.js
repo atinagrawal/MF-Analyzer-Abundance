@@ -18,6 +18,7 @@ import PortfolioReviewPlanner from '@/components/PortfolioReviewPlanner';
 import TransactionHistoryDrawer, { isTransmissionTxn, earliestTxnDate, navHistoryCacheKey } from '@/components/TransactionHistoryDrawer';
 import { resolveArns, formatDistributorName, resolveHoldingArn, overrideKey } from '@/lib/distributorResolution';
 import { resolveDisplayName } from '@/lib/casDisplayName';
+import { printWithTitle } from '@/lib/printWithTitle';
 import CasMemberMerge from '@/components/CasMemberMerge';
 
 // isin-scheme-master.json (~8.4MB, ~26k entries) used to be statically
@@ -686,7 +687,7 @@ function PortfolioRedemptionPlanner({ holdings, selectedHoldings = [], investorN
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
               <button
                 className="no-print"
-                onClick={() => window.print()}
+                onClick={() => printWithTitle(`Redemption Plan - ${displayName} - ${today.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '6px 13px', borderRadius: 8,

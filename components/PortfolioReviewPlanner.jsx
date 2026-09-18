@@ -21,6 +21,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { resolveHoldingArn } from '@/lib/distributorResolution';
 import { buildQuartileReport, PERIODS } from '@/lib/quartileRanking';
 import { resolveDisplayName } from '@/lib/casDisplayName';
+import { printWithTitle } from '@/lib/printWithTitle';
 
 const ABUNDANCE_ARN = '251838';
 const PERIOD_LABELS = { ret_1y: '1 Yr', ret_3y: '3 Yr', ret_5y: '5 Yr' };
@@ -110,7 +111,7 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
               <button
                 className="no-print"
-                onClick={() => window.print()}
+                onClick={() => printWithTitle(`Portfolio Review Report - ${displayName} - ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '6px 13px', borderRadius: 8,
