@@ -14,6 +14,7 @@ import { TAX, inferCategory, applyLossOffset } from '@/lib/taxCalc';
 import { getExitLoadInfo, calcLotExitLoad } from '@/lib/exitLoad';
 import LossAdjustmentPanel from '@/components/LossAdjustmentPanel';
 import RedemptionPlanner from '@/components/RedemptionPlanner';
+import PortfolioReviewPlanner from '@/components/PortfolioReviewPlanner';
 import TransactionHistoryDrawer, { isTransmissionTxn, earliestTxnDate, navHistoryCacheKey } from '@/components/TransactionHistoryDrawer';
 import { resolveArns, formatDistributorName, resolveHoldingArn, overrideKey } from '@/lib/distributorResolution';
 import CasMemberMerge from '@/components/CasMemberMerge';
@@ -1281,6 +1282,7 @@ function CasTrackerInner() {
   const [viewedUserId,   setViewedUserId]   = useState('');   // client userId when admin viewing
   const [planFund,       setPlanFund]       = useState(null);  // holding object for per-fund planner
   const [planPortfolio,  setPlanPortfolio]  = useState(false); // portfolio-level redemption planner
+  const [showPortfolioReview, setShowPortfolioReview] = useState(false); // quartile-ranking review report
   const [plannerMode,    setPlannerMode]    = useState('target'); // initial tab when planPortfolio opens
   const [redeemSelection, setRedeemSelection] = useState({}); // fund.id → fund object, checked via dashboard checkboxes
   const [txnDrawerFund,  setTxnDrawerFund]  = useState(null);  // holding object for the Transaction History drawer
@@ -2583,6 +2585,22 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
                 >
                   📊 Redemption Planner
                 </button>
+                <button
+                  onClick={() => setShowPortfolioReview(true)}
+                  style={{
+                    padding: '8px 16px', borderRadius: 9,
+                    border: '1.5px solid var(--g2)',
+                    background: 'var(--g-xlight)', cursor: 'pointer',
+                    fontSize: '.72rem', fontWeight: 800,
+                    color: 'var(--g1)', fontFamily: 'Raleway, sans-serif',
+                    letterSpacing: '-.2px', whiteSpace: 'nowrap',
+                    transition: 'all .15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background='var(--g1)'; e.currentTarget.style.color='#fff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background='var(--g-xlight)'; e.currentTarget.style.color='var(--g1)'; }}
+                >
+                  📊 Portfolio Review
+                </button>
                 <button onClick={() => exportPdf(getExportRows())} className="new-upload-btn" title="Open a printable summary in a new tab (use your browser's Print → Save as PDF)">
                   ⤓ PDF
                 </button>
@@ -3299,6 +3317,16 @@ body{font-family:"Raleway",sans-serif;background:#fff;color:#162616;padding:30px
           familyName={familyName}
           onClose={() => setPlanPortfolio(false)}
           masterFacts={masterFacts}
+        />
+      )}
+      {showPortfolioReview && (
+        <PortfolioReviewPlanner
+          holdings={currentInfo.holdings || []}
+          activePan={activePan}
+          investorName={currentInfo.investorName}
+          familyName={familyName}
+          arnOverrides={arnOverrides}
+          onClose={() => setShowPortfolioReview(false)}
         />
       )}
       {detailFund && (
