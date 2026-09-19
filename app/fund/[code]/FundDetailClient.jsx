@@ -11,6 +11,7 @@ import { getMFLogo } from '@/lib/providerLogos';
 import { shortCat, CURATED_CATEGORIES, categoryToSlug, matchCategory } from '@/app/screener/screenerContent';
 import { normalizeSchemeName } from '@/lib/normalizeSchemeName';
 import { startCheckout } from '@/lib/checkoutClient';
+import { sharpeRatio } from '@/lib/riskFreeRate';
 import '@/app/screener/mf-compare.css';
 import './fund-detail.css';
 
@@ -353,6 +354,7 @@ export default function FundDetailClient({ code }) {
 
   const f = fundData?.fund;
   const stress = fundData?.stress;
+  const marketRatios = fundData?.marketRatios;
   const isPro = Boolean(fundData?.isPro);
 
   const masterRec = schemeFacts && f
@@ -825,7 +827,7 @@ export default function FundDetailClient({ code }) {
         )}
 
         {/* ── ⑧ RISK ANALYTICS (Pro) ────────────────────────────────────── */}
-        {isPro && (f.vol != null || f.max_dd != null || stress?.beta != null) && (
+        {isPro && (f.vol_3y != null || f.vol != null || f.max_dd != null || stress?.beta != null) && (
           <div className="fd-section">
             <div className="fd-section-head">
               <div className="fd-section-icon">⚡</div>
@@ -833,10 +835,16 @@ export default function FundDetailClient({ code }) {
               <span className="fd-section-sub">3-year window</span>
             </div>
             <div className="fd-kpi-grid">
-              {f.vol != null && (
+              {(f.vol_3y ?? f.vol) != null && (
                 <div className="fd-kpi">
-                  <span className="fd-kpi-label">Annualised Volatility</span>
-                  <b>{f.vol.toFixed(1)}%</b>
+                  <span className="fd-kpi-label">Std Dev (3Y)</span>
+                  <b>{(f.vol_3y ?? f.vol).toFixed(1)}%</b>
+                </div>
+              )}
+              {sharpeRatio(f.ret_3y, f.vol_3y) != null && (
+                <div className={sharpeRatio(f.ret_3y, f.vol_3y) >= 0 ? 'fd-kpi green' : 'fd-kpi red'}>
+                  <span className="fd-kpi-label">Sharpe Ratio (3Y)</span>
+                  <b>{sharpeRatio(f.ret_3y, f.vol_3y).toFixed(2)}</b>
                 </div>
               )}
               {f.max_dd != null && (
@@ -981,6 +989,50 @@ export default function FundDetailClient({ code }) {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── ⑩b MARKET RATIOS via Tickertape (Pro) ───────────────────────
+            Only populated server-side when SEBI's own stress-test PE
+            disclosure above (mf_stress_test.pe_portfolio) doesn't already
+            cover this scheme -- that disclosure is small/mid-cap-only, so
+            most funds have nothing there. This is the one ratio this app
+            can't self-compute (needs individual holdings' stock
+            valuations); Std Dev/Sharpe above are self-computed from our
+            own AMFI NAV data, not sourced here. */}
+        {isPro && marketRatios && (marketRatios.pe != null || marketRatios.catPe != null || marketRatios.sortino != null || marketRatios.alpha != null) && (
+          <div className="fd-section">
+            <div className="fd-section-head">
+              <div className="fd-section-icon">📐</div>
+              <span className="fd-section-title">Market Ratios</span>
+              <span className="fd-section-sub">via Tickertape.in</span>
+            </div>
+            <div className="fd-kpi-grid">
+              {marketRatios.pe != null && (
+                <div className="fd-kpi">
+                  <span className="fd-kpi-label">Portfolio PE</span>
+                  <b>{marketRatios.pe.toFixed(1)}×</b>
+                </div>
+              )}
+              {marketRatios.catPe != null && (
+                <div className="fd-kpi">
+                  <span className="fd-kpi-label">Category PE</span>
+                  <b>{marketRatios.catPe.toFixed(1)}×</b>
+                </div>
+              )}
+              {marketRatios.sortino != null && (
+                <div className={marketRatios.sortino >= 0 ? 'fd-kpi green' : 'fd-kpi red'}>
+                  <span className="fd-kpi-label">Sortino Ratio</span>
+                  <b>{marketRatios.sortino.toFixed(2)}</b>
+                </div>
+              )}
+              {marketRatios.alpha != null && (
+                <div className={marketRatios.alpha >= 0 ? 'fd-kpi green' : 'fd-kpi red'}>
+                  <span className="fd-kpi-label">Alpha</span>
+                  <b>{marketRatios.alpha.toFixed(2)}</b>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

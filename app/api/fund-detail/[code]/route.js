@@ -3,6 +3,8 @@ import { getUserPlan } from '@/lib/plan';
 import pool from '@/lib/db';
 import { getHoldingsData, getAumInfo } from '@/lib/holdingsLookup';
 import { checkRateLimitSafe, rateLimitResponse } from '@/lib/rateLimit';
+import { sharpeRatio } from '@/lib/riskFreeRate';
+import { getTickertapeRatios } from '@/lib/tickertapeMfRatios';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +28,7 @@ export async function GET(req, { params }) {
     const SELECT_FUND_COLS = `code, name, amc, category, structure, isin, nav, nav_date,
               inception_date, age_years, flag, asof,
               ret_1m, ret_3m, ret_6m, ret_1y, ret_3y, ret_5y, ret_7y, ret_10y,
-              ret_inception, vol, max_dd, ret_per_risk`;
+              ret_inception, vol, max_dd, ret_per_risk, vol_1y, vol_3y, vol_5y`;
 
     const { rows: fundRows } = await pool.query(
       `SELECT ${SELECT_FUND_COLS} FROM mf_screener WHERE code = $1`,
@@ -113,23 +115,31 @@ export async function GET(req, { params }) {
     };
 
     if (!isPro) {
-      return Response.json({ fund: publicFields, stress: null, holdings: null, isPro: false });
+      return Response.json({ fund: publicFields, stress: null, holdings: null, marketRatios: null, isPro: false });
     }
+
+    const ret_1y = num(fund.ret_1y), ret_3y = num(fund.ret_3y), ret_5y = num(fund.ret_5y);
+    const vol_1y = num(fund.vol_1y), vol_3y = num(fund.vol_3y), vol_5y = num(fund.vol_5y);
 
     const proFields = {
       ...publicFields,
       ret_1m: num(fund.ret_1m),
       ret_3m: num(fund.ret_3m),
       ret_6m: num(fund.ret_6m),
-      ret_1y: num(fund.ret_1y),
-      ret_3y: num(fund.ret_3y),
-      ret_5y: num(fund.ret_5y),
+      ret_1y, ret_3y, ret_5y,
       ret_7y: num(fund.ret_7y),
       ret_10y: num(fund.ret_10y),
       ret_inception: num(fund.ret_inception),
       vol: num(fund.vol),
       max_dd: num(fund.max_dd),
       ret_per_risk: num(fund.ret_per_risk),
+      // Real Std Dev / Sharpe Ratio per period -- see lib/riskFreeRate.js.
+      // Distinct from ret_per_risk above (a disclosed, simpler proxy with
+      // no risk-free rate subtracted).
+      vol_1y, vol_3y, vol_5y,
+      sharpe_1y: sharpeRatio(ret_1y, vol_1y),
+      sharpe_3y: sharpeRatio(ret_3y, vol_3y),
+      sharpe_5y: sharpeRatio(ret_5y, vol_5y),
     };
 
     // Holdings for Pro users only -- fetched server-side (not via the public
@@ -163,7 +173,23 @@ export async function GET(req, { params }) {
       )
     ) : null;
 
-    return Response.json({ fund: proFields, stress, holdings, isPro: true });
+    // PE Ratio via Tickertape only when SEBI's own stress-test disclosure
+    // (mf_stress_test.pe_portfolio, above) doesn't already cover this
+    // scheme -- that disclosure only applies to small/mid-cap funds
+    // (SEBI's 2021 stress-test mandate), so most funds have nothing there.
+    // Never let a slow/failing third-party lookup block the response --
+    // getTickertapeRatios already degrades to null internally, but the
+    // await itself is wrapped too as defense in depth.
+    let marketRatios = null;
+    if (stress?.pe_portfolio == null) {
+      try {
+        marketRatios = await getTickertapeRatios(fund.name);
+      } catch (err) {
+        console.error('[api/fund-detail] Tickertape ratios lookup failed:', err.message);
+      }
+    }
+
+    return Response.json({ fund: proFields, stress, holdings, marketRatios, isPro: true });
 
   } catch (err) {
     console.error('[api/fund-detail]', err.message);
