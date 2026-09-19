@@ -174,7 +174,7 @@ const EQUITY_FEATURED = [
   { label: 'Value / Contra', m: (c) => /value|contra/i.test(c) },
 ];
 
-export default function ScreenerClient({ initialCategory }) {
+export default function ScreenerClient({ initialCategory, initialData }) {
   const { data: session } = useSession();
   const isProUser = Boolean(
     session?.user?.role === 'admin' ||
@@ -183,7 +183,7 @@ export default function ScreenerClient({ initialCategory }) {
     session?.user?.plan === 'lifetime' ||
     session?.user?.isPro
   );
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(initialData || null);
   const [err, setErr] = useState('');
   const [q, setQ] = useState('');
   const [group, setGroup] = useState(initialCategory ? assetClass(initialCategory) : 'Equity');
@@ -319,21 +319,25 @@ export default function ScreenerClient({ initialCategory }) {
   const [sifPage, setSifPage] = useState(0);
 
   // Stress test state
-  const [stressMap, setStressMap] = useState({});
+  const [stressMap, setStressMap] = useState(initialData?.stressMap || {});
 
   const isSIF = group === 'SIF';
 
   useEffect(() => {
-    fetch('/api/screener')
-      .then((r) => r.json())
-      .then((d) => { if (d.error) setErr(d.error); else setData(d); })
-      .catch(() => setErr('Could not load screener data.'));
+    if (!data) {
+      fetch('/api/screener')
+        .then((r) => r.json())
+        .then((d) => { if (d.error) setErr(d.error); else setData(d); })
+        .catch(() => setErr('Could not load screener data.'));
+    }
 
-    fetch('/api/stress-test')
-      .then((r) => r.json())
-      .then((d) => { if (d?.data) setStressMap(d.data); })
-      .catch(() => {});
-  }, []);
+    if (!initialData?.stressMap || Object.keys(stressMap).length === 0) {
+      fetch('/api/stress-test')
+        .then((r) => r.json())
+        .then((d) => { if (d?.data) setStressMap(d.data); })
+        .catch(() => {});
+    }
+  }, [initialData]);
 
   useEffect(() => {
     if (isSIF && !sifData && !sifLoading) {

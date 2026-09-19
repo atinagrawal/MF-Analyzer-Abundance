@@ -1,57 +1,19 @@
 // app/api/screener/route.js — fast read of the precomputed screener dataset.
 // The heavy compute runs nightly on GitHub Actions (scripts/build-screener.mjs);
-// this route just SELECTs, so it stays well within Hobby function limits.
+// this route delegates to lib/screenerData.js for in-memory caching and SSR parity.
 
-import pool from '@/lib/db';
-import { getBenchmarkDataset, FALLBACK_BENCHMARKS } from '@/lib/benchmarks';
-import { sharpeRatio } from '@/lib/riskFreeRate';
+import { getScreenerDataset } from '@/lib/screenerData';
+import { FALLBACK_BENCHMARKS } from '@/lib/benchmarks';
 
 // Cache the response for 6h (data is rebuilt once daily). This avoids hitting
 // Postgres — and the ~5s Neon cold-start — on every request.
 export const revalidate = 21600;
 
-const COLS = 'code,name,amc,category,structure,isin,nav,nav_date,ret_1m,ret_3m,ret_6m,ret_1y,ret_3y,ret_5y,ret_7y,ret_10y,vol,max_dd,ret_per_risk,age_years,vol_1y,vol_3y,vol_5y,inception_date,ret_inception,flag,asof';
-
 export async function GET() {
   try {
-    const { rows } = await pool.query(
-      `SELECT ${COLS} FROM mf_screener ORDER BY ret_3y DESC NULLS LAST`
-    );
-    // node-postgres returns NUMERIC columns as STRINGS (to preserve precision).
-    // The UI does math/.toFixed() on these, so coerce them to numbers here.
-    const num = (x) => (x === null || x === undefined || x === '' ? null : Number(x));
-    const funds = rows.map((r) => {
-      const ret_1y = num(r.ret_1y), ret_3y = num(r.ret_3y), ret_5y = num(r.ret_5y);
-      const vol_1y = num(r.vol_1y), vol_3y = num(r.vol_3y), vol_5y = num(r.vol_5y);
-      return {
-        code: r.code, name: r.name, amc: r.amc, category: r.category, structure: r.structure, isin: r.isin,
-        nav: num(r.nav), nav_date: r.nav_date,
-        ret_1m: num(r.ret_1m), ret_3m: num(r.ret_3m), ret_6m: num(r.ret_6m),
-        ret_1y, ret_3y, ret_5y,
-        ret_7y: num(r.ret_7y), ret_10y: num(r.ret_10y),
-        vol: num(r.vol), max_dd: num(r.max_dd), ret_per_risk: num(r.ret_per_risk),
-        age_years: num(r.age_years),
-        // Real Sharpe Ratio (return - risk-free rate, over volatility),
-        // computed here rather than stored -- see lib/riskFreeRate.js --
-        // so the risk-free assumption can change without a data backfill.
-        // Distinct from ret_per_risk above, which is a disclosed, simpler
-        // "return per unit of risk" proxy (no risk-free rate subtracted).
-        vol_1y, vol_3y, vol_5y,
-        sharpe_1y: sharpeRatio(ret_1y, vol_1y), sharpe_3y: sharpeRatio(ret_3y, vol_3y), sharpe_5y: sharpeRatio(ret_5y, vol_5y),
-        inception_date: r.inception_date || null,
-        ret_inception: num(r.ret_inception), flag: r.flag, asof: r.asof,
-      };
-    });
-    const asof = funds.length ? funds[0].asof : null;
+    const dataset = await getScreenerDataset();
 
-    let benchmarks = FALLBACK_BENCHMARKS;
-    try {
-      benchmarks = await getBenchmarkDataset();
-    } catch {
-      benchmarks = FALLBACK_BENCHMARKS;
-    }
-
-    return new Response(JSON.stringify({ asof, count: funds.length, funds, benchmarks }), {
+    return new Response(JSON.stringify(dataset), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
@@ -60,7 +22,7 @@ export async function GET() {
     });
   } catch (e) {
     return Response.json(
-      { error: 'screener data unavailable', detail: String(e.message || e), funds: [], benchmarks: FALLBACK_BENCHMARKS },
+      { error: 'screener data unavailable', detail: String(e.message || e), funds: [], benchmarks: FALLBACK_BENCHMARKS, stressMap: {} },
       { status: 503 }
     );
   }
