@@ -35,6 +35,8 @@ export const config = {
     '/',             // OG injection for share links
     '/admin',        // admin auth guard
     '/admin/:path*',
+    '/compare/:path*', // Markdown content negotiation & GEO feeds
+    '/fund/:path*',    // Markdown factsheet content negotiation
   ],
 };
 
@@ -61,6 +63,28 @@ export default function middleware(request) {
   const url = new URL(request.url);
   const pathname = url.pathname;
   const p = url.searchParams;
+
+  // ── 0. MARKDOWN CONTENT NEGOTIATION FOR /compare/[slug] ───
+  if (pathname.startsWith('/compare/') && pathname !== '/compare') {
+    const format = p.get('format');
+    const accept = request.headers.get('accept') || '';
+    if (format === 'md' || format === 'markdown' || accept.includes('text/markdown')) {
+      const slug = pathname.replace(/^\/compare\//, '');
+      const apiCompareUrl = new URL(`/api/compare/${slug}${url.search}`, request.url);
+      return NextResponse.rewrite(apiCompareUrl);
+    }
+  }
+
+  // ── 0b. MARKDOWN CONTENT NEGOTIATION FOR /fund/[code] ───
+  if (pathname.startsWith('/fund/')) {
+    const format = p.get('format');
+    const accept = request.headers.get('accept') || '';
+    if (format === 'md' || format === 'markdown' || accept.includes('text/markdown')) {
+      const code = pathname.replace(/^\/fund\//, '').split('/')[0];
+      const apiFundUrl = new URL(`/api/fund/${code}${url.search}`, request.url);
+      return NextResponse.rewrite(apiFundUrl);
+    }
+  }
 
   // ── 1. AUTH GUARD ────────────────────────────────────────────────────────
   const isProtected = PROTECTED_PATHS.some(path => pathname.startsWith(path));

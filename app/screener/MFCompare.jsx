@@ -11,6 +11,7 @@ import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
 import { normalizeFund, winCounts, applyDerivedStats, fetchNavSeries, categoryPeerRank, pickCommonRankPeriod, computeWealthSimulation, seriesAsOf, computeVerdictScores, overallWinner, hasMixedInceptionMethod } from './compareEngine';
 import { computeMCapAllocation } from '@/lib/portfolioAnalysis';
 import CompareGrowthChart from './CompareGrowthChart';
+import { getCanonicalCompareSlug } from '@/lib/compareSlug';
 import './mf-compare.css';
 
 const MAX_COMPARE = 3;
@@ -99,6 +100,17 @@ export function MFCompareBar({ selected, onRemove, onClear, onCompare }) {
       <button className="cmp-go-btn" onClick={onCompare} disabled={selected.length < 2} style={{ opacity: selected.length < 2 ? 0.5 : 1 }}>
         ⚖ Compare Now
       </button>
+      {selected.length >= 2 && selected.every((f) => f.type === 'mf') && (
+        <a
+          href={`/compare/${getCanonicalCompareSlug(selected)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'rgba(255,255,255,0.85)', fontSize: '.7rem', fontWeight: 700, textDecoration: 'none', padding: '4px 8px', borderRadius: '14px', background: 'rgba(255,255,255,0.1)' }}
+          title="Open in dedicated comparison page"
+        >
+          Dedicated Page ↗
+        </a>
+      )}
       <button className="cmp-clear-btn" onClick={onClear}>Clear</button>
     </div>
   );
@@ -107,27 +119,36 @@ export function MFCompareBar({ selected, onRemove, onClear, onCompare }) {
 /**
  * @param {Array} props.funds        - compareList entries, each { type: 'mf'|'sif', ...rawFund }
  * @param {Array} props.allMfFunds   - the screener's full `funds` array, for category peer-rank (Task 8)
- * @param {Function} props.onClose
- * @param {Function} props.onRemove
+ * @param {boolean} [props.isModal]  - whether rendering inside fixed modal overlay or on a standalone page
+ * @param {Function} [props.onClose]
+ * @param {Function} [props.onRemove]
+ * @param {Object} [props.initialHoldings]
+ * @param {Object|Map} [props.initialMCapMap]
  */
-export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
+export function MFCompareView({
+  funds,
+  allMfFunds,
+  isModal = false,
+  onClose,
+  onRemove,
+  initialHoldings = null,
+  initialMCapMap = null,
+}) {
   const normalized = useMemo(() => funds.map(normalizeFund), [funds]);
   const n = normalized.length;
 
   // SIF funds start with null return/risk fields (normalizeFund) — fetch
   // each SIF's real NAV history once on mount and derive its stats. MF
-  // funds are already fully populated, so this only ever touches SIF
-  // entries. Each fetch is independent; a failure leaves that one fund's
-  // fields null (rendered as "—"), never blocks the others.
+  // funds are already fully populated server-side, so if there are no SIF
+  // funds being compared, derivedLoading starts false immediately.
+  const hasSif = normalized.some((f) => f.type === 'sif');
   const [derived, setDerived] = useState(normalized);
-  // Tracks whether the SIF-derivation fetch below is still in flight, so the
-  // verdict banner (and win-badges) never render a confident conclusion from
-  // a mix of "real" MF stats and still-null SIF stats — see the loading
-  // branch in the verdict banner section below.
-  const [derivedLoading, setDerivedLoading] = useState(true);
+  const [derivedLoading, setDerivedLoading] = useState(hasSif);
+
   useEffect(() => {
     setDerived(normalized);
-    setDerivedLoading(true);
+    setDerivedLoading(hasSif);
+    if (!hasSif) return;
     let cancelled = false;
     Promise.all(normalized.map(async (f) => {
       if (f.type !== 'sif') return f;
@@ -140,7 +161,7 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
       }
     });
     return () => { cancelled = true; };
-  }, [normalized]);
+  }, [normalized, hasSif]);
 
   // Real NAV history per selected fund — used by both the Wealth Simulation
   // (SIP calculation) and the interactive chart (Task 10). Fetched once per
@@ -158,11 +179,17 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
   }, [normalized]);
 
   // Fetch holdings data per selected fund for overlap & stock breakdown
-  const [holdingsByFund, setHoldingsByFund] = useState({});
-  const [holdingsLoading, setHoldingsLoading] = useState(true);
-  const [mCapMap, setMCapMap] = useState(null);
+  const [holdingsByFund, setHoldingsByFund] = useState(initialHoldings || {});
+  const [holdingsLoading, setHoldingsLoading] = useState(
+    !initialHoldings || Object.keys(initialHoldings).length < normalized.length
+  );
+  const [mCapMap, setMCapMap] = useState(() => {
+    if (!initialMCapMap) return null;
+    return initialMCapMap instanceof Map ? initialMCapMap : new Map(Object.entries(initialMCapMap));
+  });
 
   useEffect(() => {
+    if (mCapMap) return;
     fetch('/data/amfi-cap-categorization.json')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -171,15 +198,20 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [mCapMap]);
 
   const fundIdsKey = useMemo(() => normalized.map((f) => f.id).join(','), [normalized]);
 
   useEffect(() => {
     let cancelled = false;
+    const missingFunds = normalized.filter((f) => !holdingsByFund[f.id]);
+    if (missingFunds.length === 0) {
+      setHoldingsLoading(false);
+      return;
+    }
     setHoldingsLoading(true);
     Promise.all(
-      normalized.map((f) => {
+      missingFunds.map((f) => {
         const code = f.type === 'sif' ? f.navFetchKey : f.navFetchKey;
         const name = f.name;
         return fetch(`/api/proposal-studio/holdings?amfiCode=${encodeURIComponent(code)}&schemeName=${encodeURIComponent(name)}`)
@@ -189,11 +221,13 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
       })
     ).then((results) => {
       if (cancelled) return;
-      const map = {};
-      results.forEach((r) => {
-        if (r.data) map[r.id] = r.data;
+      setHoldingsByFund((prev) => {
+        const next = { ...prev };
+        results.forEach((r) => {
+          if (r.data) next[r.id] = r.data;
+        });
+        return next;
       });
-      setHoldingsByFund(map);
       setHoldingsLoading(false);
     });
     return () => { cancelled = true; };
@@ -213,21 +247,50 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
 
   const counts = useMemo(() => winCounts(derived), [derived]);
 
+  const [copied, setCopied] = useState(false);
+  const handleShare = () => {
+    if (typeof window === 'undefined') return;
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const canonicalSlug = useMemo(() => getCanonicalCompareSlug(funds), [funds]);
+
   if (!funds.length) return null;
 
-  return (
-    <>
-      <div className="cmp-overlay open" onClick={onClose} />
-      <div className="cmp-modal open" role="dialog" aria-modal="true" aria-label="Fund Comparison">
-        <div className="cmp-modal-inner" style={{ '--cols': n }}>
-
-          <div className="cmp-modal-header">
-            <div>
-              <div className="cmp-modal-title">⚖ Fund Comparison</div>
-              <div className="cmp-modal-sub">Abundance Financial Services · ARN-251838</div>
-            </div>
-            <button className="cmp-modal-close" onClick={onClose} aria-label="Close comparison">×</button>
+  const innerContent = (
+    <div className={`cmp-modal-inner${isModal ? '' : ' is-standalone'}`} style={{ '--cols': n }}>
+      <div className="cmp-modal-header">
+        <div>
+          <div className="cmp-modal-title">
+            {isModal ? '⚖ Fund Comparison' : `⚖ ${normalized.map((f) => f.name).join(' vs ')}`}
           </div>
+          <div className="cmp-modal-sub">Abundance Financial Services · ARN-251838</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {!isModal ? (
+            <button className="cmp-share-btn" onClick={handleShare} aria-label="Copy comparison link">
+              {copied ? '✓ Copied Link' : '🔗 Share Comparison'}
+            </button>
+          ) : (
+            canonicalSlug && (
+              <a
+                href={`/compare/${canonicalSlug}`}
+                className="cmp-dedicated-link"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open in dedicated page"
+              >
+                Open Page ↗
+              </a>
+            )
+          )}
+          {isModal && onClose && (
+            <button className="cmp-modal-close" onClick={onClose} aria-label="Close comparison">×</button>
+          )}
+        </div>
+      </div>
 
           {(() => {
             // Align every fund's series to the same start date -- the LATEST
@@ -304,7 +367,9 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
                 {!derivedLoading && counts[i] > 0 && (
                   <span className="cmp-win-badge">🏆 Best in {counts[i]} metric{counts[i] > 1 ? 's' : ''}</span>
                 )}
-                <button className="cmp-remove-btn" onClick={() => onRemove(f.id)}>✕ Remove</button>
+                {isModal && onRemove && (
+                  <button className="cmp-remove-btn" onClick={() => onRemove(f.id)}>✕ Remove</button>
+                )}
               </div>
             ))}
 
@@ -704,7 +769,31 @@ export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
             Abundance Financial Services. Atin Kumar Agrawal · ARN-251838 · AMFI Registered Mutual Fund &amp; SIF Distributor.
           </div>
         </div>
-      </div>
-    </>
+  );
+
+  if (isModal) {
+    return (
+      <>
+        <div className="cmp-overlay open" onClick={onClose} />
+        <div className="cmp-modal open" role="dialog" aria-modal="true" aria-label="Fund Comparison">
+          {innerContent}
+        </div>
+      </>
+    );
+  }
+
+  return <div className="cmp-standalone-wrap">{innerContent}</div>;
+}
+
+export function MFCompareModal({ funds, allMfFunds, onClose, onRemove }) {
+  if (!funds || !funds.length) return null;
+  return (
+    <MFCompareView
+      funds={funds}
+      allMfFunds={allMfFunds}
+      isModal={true}
+      onClose={onClose}
+      onRemove={onRemove}
+    />
   );
 }
