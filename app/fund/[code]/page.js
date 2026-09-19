@@ -1,4 +1,4 @@
-import { redirect, notFound } from 'next/navigation';
+import { redirect, permanentRedirect, notFound } from 'next/navigation';
 import fs from 'fs';
 import path from 'path';
 import pool from '@/lib/db';
@@ -73,6 +73,39 @@ async function getFundMetadataRecord(code) {
     }
   }
 
+  // 4. Check if it's a Direct-plan or alternate variant in mf-scheme-list.json
+  try {
+    const masterPath = path.join(process.cwd(), 'data', 'mf-scheme-list.json');
+    if (fs.existsSync(masterPath)) {
+      const masterData = JSON.parse(fs.readFileSync(masterPath, 'utf8'));
+      const masterName = masterData?.schemes?.[strCode];
+      if (masterName) {
+        const clean = (s) =>
+          (s || '')
+            .toLowerCase()
+            .replace(/\s*-\s*(regular plan|direct plan|regular|direct|growth option|growth|idcw option|idcw|dividend|plan).*/i, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+        const targetSlug = clean(masterName);
+        const screenerPath = path.join(process.cwd(), 'data', 'screener.json');
+        if (fs.existsSync(screenerPath)) {
+          const raw = JSON.parse(fs.readFileSync(screenerPath, 'utf8'));
+          const found = (raw.funds || raw).find((f) => clean(f.name) === targetSlug);
+          if (found && String(found.code) !== strCode) {
+            return {
+              ...found,
+              canonicalCode: String(found.code),
+              isSuccessor: true,
+            };
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[getFundMetadataRecord] Master scheme variant check failed for code ${code}:`, err.message);
+  }
+
   return null;
 }
 
@@ -131,7 +164,12 @@ export async function generateMetadata({ params }) {
     title,
     description,
     keywords: `${f.name}, ${f.amc}, ${shortCat} mutual fund India, ISIN ${f.isin || ''}, portfolio holdings, exit load, NAV history`,
-    alternates: { canonical: canonicalUrl },
+    alternates: {
+      canonical: canonicalUrl,
+      types: {
+        'text/markdown': `${canonicalUrl}?format=md`,
+      },
+    },
     openGraph: {
       title,
       description,
@@ -242,8 +280,8 @@ export default async function FundDetailPage({ params }) {
   }
 
   if (f.isSuccessor && f.canonicalCode) {
-    // 308 Permanent Redirect to successor scheme
-    redirect(`/fund/${f.canonicalCode}`);
+    // 308 Permanent Redirect to successor/canonical scheme
+    permanentRedirect(`/fund/${f.canonicalCode}`);
   }
 
   return <FundDetailClient code={code} />;
