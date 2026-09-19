@@ -1,0 +1,312 @@
+/* app/swp-calculator/swp-calculator.css */
+.swp-page-wrap {
+  min-height: 100vh;
+  background: var(--bg);
+}
+.swp-main-content {
+  padding-top: 10px;
+  padding-bottom: 60px;
+  max-width: 1040px;
+}
+.swp-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+.swp-breadcrumbs .sep {
+  color: var(--border2);
+}
+.swp-breadcrumbs .cur {
+  color: var(--g1);
+  font-weight: 700;
+}
+.swp-hero-header {
+  margin-bottom: 24px;
+}
+.swp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--g1);
+  background: var(--g-xlight);
+  padding: 3px 10px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--g3);
+  box-shadow: 0 0 6px var(--g3);
+}
+.swp-page-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--g1);
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+.swp-page-subtitle {
+  font-size: 0.92rem;
+  color: var(--text2);
+  line-height: 1.5;
+  max-width: 820px;
+}
+.swp-guide-section {
+  margin-top: 40px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 2px 12px rgba(46, 125, 50, 0.04);
+}
+.swp-section-heading {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--g1);
+  margin-bottom: 12px;
+}
+.swp-guide-p {
+  font-size: 0.88rem;
+  color: var(--text2);
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+.swp-formula-card {
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+.formula-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--g1);
+  background: var(--g-xlight);
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+.formula-math {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--g1);
+  background: #fff;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+.formula-vars ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text2);
+  line-height: 1.6;
+}
+.formula-vars code {
+  background: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--g1);
+}
+.swp-example-box {
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.example-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media (max-width: 768px) {
+  .example-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.ex-item {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.ex-item.highlight {
+  background: var(--g-xlight);
+  border-color: var(--g-light);
+}
+.ex-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.ex-val {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.ex-val.bold {
+  font-weight: 800;
+  color: var(--g1);
+}
+.ex-val.gain {
+  font-weight: 800;
+  color: var(--g1);
+}
+.ex-note {
+  font-size: 0.82rem;
+  color: var(--text2);
+  margin: 0;
+  line-height: 1.5;
+}
+.swp-table-responsive {
+  overflow-x: auto;
+}
+.swp-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.swp-comparison-table th {
+  background: var(--g-xlight);
+  color: var(--g1);
+  padding: 12px;
+  text-align: left;
+  font-weight: 800;
+  border-bottom: 2px solid var(--border);
+}
+.swp-comparison-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  line-height: 1.5;
+}
+.text-good {
+  color: var(--g1);
+}
+.text-bad {
+  color: #c62828;
+}
+.swp-cas-funnel {
+  margin-top: 40px;
+  background: linear-gradient(135deg, #004d40 0%, #00695c 100%);
+  color: #fff;
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 4px 20px rgba(0, 77, 64, 0.2);
+}
+.funnel-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 3px 10px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+.funnel-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+.funnel-desc {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 800px;
+  margin-bottom: 20px;
+}
+.funnel-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.funnel-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.funnel-btn.primary {
+  background: #fff;
+  color: #004d40;
+}
+.funnel-btn.primary:hover {
+  background: var(--s2);
+}
+.funnel-btn.secondary {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.funnel-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+.swp-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.swp-faq-item {
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--s2);
+}
+.faq-q {
+  padding: 14px 18px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--g1);
+  cursor: pointer;
+  user-select: none;
+}
+.faq-a {
+  padding: 0 18px 16px;
+  font-size: 0.85rem;
+  color: var(--text2);
+  line-height: 1.6;
+}
+.swp-disclosure-box {
+  margin-top: 32px;
+  padding: 16px 20px;
+  background: #fffde7;
+  border-left: 4px solid #f9a825;
+  border-radius: 8px;
+}
+.disc-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #e65100;
+  margin-bottom: 4px;
+}
+.disc-text {
+  font-size: 0.75rem;
+  color: #5d4037;
+  line-height: 1.5;
+  margin: 0;
+}

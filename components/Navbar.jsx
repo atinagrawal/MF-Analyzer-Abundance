@@ -53,6 +53,9 @@ const NAV_GROUPS = [
   {
     key: 'tools', label: 'Tools',
     items: [
+      { key: 'sip-calculator',   label: '🧮 SIP Calculator',   href: '/sip-calculator',   desc: 'Monthly SIP, Step-Up & lumpsum returns' },
+      { key: 'swp-calculator',   label: '💸 SWP Calculator',   href: '/swp-calculator',   desc: 'Retirement payout & NAV backtester' },
+      { key: 'compare',          label: '⚔️ Fund Compare',      href: '/compare',          desc: 'Side-by-side mutual fund comparison' },
       { key: 'widgets',          label: '🪟 Desktop Widgets',  href: '/widgets',          desc: 'Live Windows desktop companion' },
       { key: 'rolling',          label: '📉 Rolling Returns',  href: '/rolling',          desc: 'Consistency across time windows' },
       { key: 'backtest',         label: '🧪 Backtester',       href: '/backtest',         desc: 'Simulate historical SIP/lumpsum' },
