@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS mf_screener (
   max_dd        NUMERIC,                    -- max drawdown %, month-end basis
   ret_per_risk  NUMERIC,                    -- ret_3y / vol
   age_years     NUMERIC,                    -- years of NAV history available (capped at lookback)
+  vol_1y        NUMERIC,                    -- annualised volatility %, trailing 1yr of monthly returns
+  vol_3y        NUMERIC,                    -- annualised volatility %, trailing 3yr of monthly returns
+  vol_5y        NUMERIC,                    -- annualised volatility %, trailing 5yr of monthly returns (~= vol above)
   flag          TEXT,                       -- 'check' = implausible move, review before display
   asof          TEXT                        -- snapshot date (latest AMFI NAV date)
 );

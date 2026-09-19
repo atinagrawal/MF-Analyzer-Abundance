@@ -175,6 +175,15 @@ function riskFrom(series) { // series: [{t,nav}] ascending, month-end
   return { vol, maxdd };
 }
 
+// Volatility over just the trailing `months` of a month-end series, so it's
+// comparable to ret_1y/ret_3y/ret_5y (each already period-specific) instead
+// of one blended up-to-5-year figure for every period. +1 because N months
+// of NAV levels produce N-1 returns -- e.g. 13 NAV points -> 12 monthly
+// returns for a "1 year" volatility, matching riskFrom's own >=13 floor.
+function volForPeriod(series, months) {
+  return riskFrom(series.slice(-(months + 1))).vol;
+}
+
 /* ---- 3. mfapi.in inception date fetcher (per fund, used only for new codes) ---- */
 async function fetchMfapiInception(code) {
   try {
@@ -412,8 +421,11 @@ async function main() {
       }
       ret[a.key] = then ? (a.yrs ? Math.pow(f.nav / then, 1 / a.yrs) - 1 : f.nav / then - 1) : null;
     }
-    const { vol, maxdd } = riskFrom((monthly[f.code] || []).sort((a, b) => a.t - b.t));
-    const ser = monthly[f.code] || [];
+    const ser = (monthly[f.code] || []).sort((a, b) => a.t - b.t);
+    const { vol, maxdd } = riskFrom(ser);
+    const vol1y = volForPeriod(ser, 12);
+    const vol3y = volForPeriod(ser, 36);
+    const vol5y = volForPeriod(ser, 60);
     const pc = (x) => (x == null ? null : +(x * 100).toFixed(2));
     const r3 = ret.ret_3y;
 
@@ -436,6 +448,13 @@ async function main() {
       vol: vol == null ? null : +(vol * 100).toFixed(2),
       max_dd: maxdd == null ? null : +(maxdd * 100).toFixed(2),
       ret_per_risk: vol && r3 != null ? +(r3 / vol).toFixed(2) : null,
+      // Period-specific volatility (standard deviation of monthly returns,
+      // annualised) -- alongside ret_1y/3y/5y so a Sharpe Ratio can be
+      // computed per-period at read time (see lib/riskFreeRate.js) instead
+      // of blending one 5-year vol figure across every period.
+      vol_1y: vol1y == null ? null : +(vol1y * 100).toFixed(2),
+      vol_3y: vol3y == null ? null : +(vol3y * 100).toFixed(2),
+      vol_5y: vol5y == null ? null : +(vol5y * 100).toFixed(2),
       age_years: ageYears == null ? null : +ageYears.toFixed(1),
       inception_date: inc?.date || null,
       ret_inception: retInception,
@@ -484,6 +503,7 @@ async function main() {
       ret_1m NUMERIC, ret_3m NUMERIC, ret_6m NUMERIC,
       ret_1y NUMERIC, ret_3y NUMERIC, ret_5y NUMERIC, ret_7y NUMERIC, ret_10y NUMERIC,
       vol NUMERIC, max_dd NUMERIC, ret_per_risk NUMERIC, age_years NUMERIC,
+      vol_1y NUMERIC, vol_3y NUMERIC, vol_5y NUMERIC,
       inception_date TEXT, ret_inception NUMERIC,
       flag TEXT, asof TEXT
     )`);
@@ -493,6 +513,7 @@ async function main() {
       ["ret_7y","NUMERIC"],["ret_10y","NUMERIC"],
       ["inception_date","TEXT"],["ret_inception","NUMERIC"],
       ["isin","TEXT"],["initial_nav","NUMERIC"],
+      ["vol_1y","NUMERIC"],["vol_3y","NUMERIC"],["vol_5y","NUMERIC"],
     ]) {
       await c.query(`ALTER TABLE mf_screener ADD COLUMN IF NOT EXISTS ${col} ${type}`);
     }
@@ -500,7 +521,7 @@ async function main() {
     await c.query(`CREATE INDEX IF NOT EXISTS idx_mf_screener_structure ON mf_screener (structure)`);
     await c.query(`CREATE INDEX IF NOT EXISTS idx_mf_screener_ret3y ON mf_screener (ret_3y)`);
 
-    const COLS = ["code","name","amc","category","structure","isin","nav","nav_date","ret_1m","ret_3m","ret_6m","ret_1y","ret_3y","ret_5y","ret_7y","ret_10y","vol","max_dd","ret_per_risk","age_years","inception_date","ret_inception","initial_nav","flag","asof"];
+    const COLS = ["code","name","amc","category","structure","isin","nav","nav_date","ret_1m","ret_3m","ret_6m","ret_1y","ret_3y","ret_5y","ret_7y","ret_10y","vol","max_dd","ret_per_risk","age_years","vol_1y","vol_3y","vol_5y","inception_date","ret_inception","initial_nav","flag","asof"];
     const N = COLS.length;
     await c.query("BEGIN");
     await c.query("DELETE FROM mf_screener");

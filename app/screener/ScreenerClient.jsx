@@ -116,6 +116,11 @@ const METRICS = [
   { key: 'vol', label: 'Vol', kind: 'risk' },
   { key: 'max_dd', label: 'Max DD', kind: 'dd' },
   { key: 'ret_per_risk', label: 'Ret/Risk', kind: 'ratio' },
+  // Real Std Dev / Sharpe Ratio (risk-free rate subtracted -- see
+  // lib/riskFreeRate.js), 3Yr figures -- distinct from the disclosed
+  // "Sharpe-like" ret_per_risk proxy above.
+  { key: 'vol_3y', label: 'Std Dev (3Y)', kind: 'risk' },
+  { key: 'sharpe_3y', label: 'Sharpe (3Y)', kind: 'ratio' },
   { key: 'ret_inception', label: 'Inception', kind: 'ret' },
 ];
 const DEFAULT_COLS = ['ret_1y', 'ret_3y', 'ret_5y', 'max_dd', 'ret_per_risk'];
@@ -470,7 +475,7 @@ export default function ScreenerClient({ initialCategory }) {
     return r;
   }, [funds, openOnly, group, cat, theme, q, sort]);
 
-  const setSortKey = (key) => setSort((s) => (s.key === key ? { key, dir: -s.dir } : { key, dir: key === 'vol' || key === 'max_dd' ? 1 : -1 }));
+  const setSortKey = (key) => setSort((s) => (s.key === key ? { key, dir: -s.dir } : { key, dir: key === 'vol' || key === 'max_dd' || key === 'vol_3y' ? 1 : -1 }));
 
   const leaders = useMemo(() => {
     const pool = funds.filter((f) => /open/i.test(f.structure || '') && f.flag !== 'check' && f.ret_3y != null);
