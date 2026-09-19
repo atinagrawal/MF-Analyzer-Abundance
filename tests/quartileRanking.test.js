@@ -262,6 +262,34 @@ const assert = require('assert');
     assert.strictEqual(goldCat.funds[0].matchedViaName, false);
   });
 
+  // ── vol3y / sharpe3y (real Std Dev / Sharpe Ratio, see lib/riskFreeRate.js) ──
+  const RATIO_SCREENER = [
+    { code: 'LC1', category: 'Large Cap Fund', name: 'Sample Large Cap Fund', ret_3y: 14.55, vol_3y: 13 },
+    { code: 'LC2', category: 'Large Cap Fund', name: 'Another Large Cap Fund', ret_3y: 8, vol_3y: null },
+  ];
+
+  test('buildQuartileReport attaches real vol3y/sharpe3y from the matched screener row', () => {
+    const holdings = [{ name: 'Sample Large Cap Fund', amfiCode: 'LC1', value: 100000 }];
+    const report = buildQuartileReport(holdings, RATIO_SCREENER);
+    const fund = report.categories[0].funds[0];
+    assert.strictEqual(fund.vol3y, 13);
+    assert.strictEqual(+fund.sharpe3y.toFixed(2), 0.62); // (14.55 - 6.5) / 13
+  });
+
+  test('buildQuartileReport leaves sharpe3y null when the matched row has no vol_3y', () => {
+    const holdings = [{ name: 'Another Large Cap Fund', amfiCode: 'LC2', value: 50000 }];
+    const report = buildQuartileReport(holdings, RATIO_SCREENER);
+    const fund = report.categories[0].funds[0];
+    assert.strictEqual(fund.vol3y, null);
+    assert.strictEqual(fund.sharpe3y, null);
+  });
+
+  test('buildQuartileReport leaves vol3y/sharpe3y null for a genuinely unmatched holding', () => {
+    const holdings = [{ name: 'Some Unrelated Scheme', amfiCode: 'NOTFOUND', value: 1000 }];
+    const report = buildQuartileReport(holdings, RATIO_SCREENER);
+    assert.strictEqual(report.unranked[0].vol3y, undefined); // unranked holdings pass through untouched, never annotated
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);
 })();

@@ -172,7 +172,7 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.65rem', minWidth: 480 }}>
                   <thead>
                     <tr style={{ background: 'var(--s2)' }}>
-                      {['Scheme', 'Value', 'Holding %', ...PERIODS.map(p => `${PERIOD_LABELS[p]} Qtile`)].map(h => (
+                      {['Scheme', 'Value', 'Holding %', ...PERIODS.map(p => `${PERIOD_LABELS[p]} Qtile`), 'Std Dev (3Y)', 'Sharpe (3Y)'].map(h => (
                         <th key={h} style={{ padding: '8px 10px', textAlign: h === 'Scheme' ? 'left' : 'right', fontWeight: 800, color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", fontSize: '.55rem', letterSpacing: '.5px', textTransform: 'uppercase', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' }}>{h}</th>
                       ))}
                     </tr>
@@ -199,6 +199,8 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
                             )}
                           </td>
                         ))}
+                        <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>{fund.vol3y != null ? fund.vol3y.toFixed(1) + '%' : '-'}</td>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>{fund.sharpe3y != null ? fund.sharpe3y.toFixed(2) : '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -225,7 +227,7 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
           )}
 
           <div style={{ fontSize: '.6rem', color: 'var(--muted)', lineHeight: 1.6, padding: '12px 14px', background: 'var(--s2)', borderRadius: 10, border: '1.5px solid var(--border)', marginTop: 20 }}>
-            Quartile rank compares each fund's own 1Yr/3Yr/5Yr point-to-point return (CAGR) against every other AMFI-registered fund in its own SEBI sub-category, using the most recently published NAV data. Quartile 1 = top 25% of the category, Quartile 4 = bottom 25%. This is not a rolling-return statistic and not investment advice — past performance does not guarantee future results. Mutual fund investments are subject to market risks; read all scheme-related documents carefully. | ARN-{ABUNDANCE_ARN} | Abundance Financial Services
+            Quartile rank compares each fund's own 1Yr/3Yr/5Yr point-to-point return (CAGR) against every other AMFI-registered fund in its own SEBI sub-category, using the most recently published NAV data. Quartile 1 = top 25% of the category, Quartile 4 = bottom 25%. Std Dev and Sharpe Ratio (3Yr) are computed from the same NAV data — Sharpe using a 6.5% risk-free rate assumption. This is not a rolling-return statistic and not investment advice — past performance does not guarantee future results. Mutual fund investments are subject to market risks; read all scheme-related documents carefully. | ARN-{ABUNDANCE_ARN} | Abundance Financial Services
           </div>
         </div>
       </div>
