@@ -568,6 +568,28 @@ CREATE TABLE IF NOT EXISTS rate_limit_counters (
   PRIMARY KEY (subject_key, route_key, window_secs, window_start)
 );
 
+-- ── CAS Portfolio Diagnostic (Public Shareable Links) ──────────────────────
+-- Stores redacted, PII-free mutual fund portfolio diagnostic snapshots for
+-- public sharing (/portfolio/diagnostic/[share_token]).
+-- Decouples internal id from the public share_token. Authenticated owner can
+-- revoke access anytime (revoked = true). Expired rows filtered at query time (90d).
+CREATE TABLE IF NOT EXISTS portfolio_diagnostics (
+  id                   TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id              TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  share_token          TEXT        UNIQUE NOT NULL,
+  title                TEXT        NOT NULL DEFAULT 'Mutual Fund Portfolio Diagnostic',
+  schemes_count        INT         NOT NULL,
+  weighted_overlap_pct NUMERIC(5, 2),
+  q1_equity_pct        NUMERIC(5, 2),
+  payload              JSONB       NOT NULL,
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at           TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '90 days'),
+  revoked              BOOLEAN     NOT NULL DEFAULT FALSE,
+  revoked_at           TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_portfolio_diag_user ON portfolio_diagnostics(user_id);
+CREATE INDEX IF NOT EXISTS idx_portfolio_diag_share_token ON portfolio_diagnostics(share_token) WHERE NOT revoked;
+
 -- =============================================================================
 -- Role values: 'client' | 'distributor' | 'admin'
 -- Promote a user manually:

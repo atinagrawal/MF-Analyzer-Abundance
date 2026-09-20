@@ -22,6 +22,7 @@ import { resolveHoldingArn } from '@/lib/distributorResolution';
 import { buildQuartileReport, PERIODS } from '@/lib/quartileRanking';
 import { resolveDisplayName } from '@/lib/casDisplayName';
 import { printWithTitle } from '@/lib/printWithTitle';
+import DiagnosticShareModal from '@/components/DiagnosticShareModal';
 
 const ABUNDANCE_ARN = '251838';
 const PERIOD_LABELS = { ret_1y: '1 Yr', ret_3y: '3 Yr', ret_5y: '5 Yr' };
@@ -30,6 +31,7 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
   const [screenerFunds, setScreenerFunds] = useState(null); // null = still loading
   const [screenerError, setScreenerError] = useState('');
   const [includeOwnArn, setIncludeOwnArn] = useState(false); // "Include funds sold by Abundance" -- off by default
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,6 +111,20 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+              <button
+                className="no-print"
+                onClick={() => setShareModalOpen(true)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '6px 13px', borderRadius: 8,
+                  border: '1.5px solid var(--g1)',
+                  background: 'var(--g1)', color: '#fff',
+                  fontFamily: 'Raleway, sans-serif', fontSize: '.72rem',
+                  fontWeight: 700, cursor: 'pointer', letterSpacing: '.3px',
+                }}
+              >
+                🔗 Share Diagnostic
+              </button>
               <button
                 className="no-print"
                 onClick={() => printWithTitle(`Portfolio Review Report - ${displayName} - ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`)}
@@ -231,6 +247,15 @@ export default function PortfolioReviewPlanner({ holdings, activePan, investorNa
           </div>
         </div>
       </div>
+
+      <DiagnosticShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        holdings={includedHoldings}
+        report={report}
+        investorName={investorName}
+        familyName={familyName}
+      />
     </div>
   );
 }
