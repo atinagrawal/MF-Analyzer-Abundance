@@ -1,0 +1,54 @@
+name: Reverse Holdings Engine Monthly Sync (§5.1)
+
+on:
+  schedule:
+    # Runs on the 11th and 18th of every month at 04:00 UTC
+    # (Giving buffer for AMCs' 10th-of-the-month portfolio disclosure deadline)
+    - cron: '0 4 11,18 * *'
+  workflow_dispatch:
+
+jobs:
+  sync-reverse-holdings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install aws4fetch pg --no-save
+
+      - name: Step 1 - Proactive Cache Population
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          POSTGRES_URL: ${{ secrets.DATABASE_URL }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        run: node scripts/sync-all-fund-holdings.mjs
+
+      - name: Step 2 - Batch Inversion & Postgres Sync
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          POSTGRES_URL: ${{ secrets.DATABASE_URL }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        run: node scripts/build-reverse-holdings-index.mjs
+
+      - name: Upload Review Audit Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reverse-holdings-needs-review
+          path: data/reverse-holdings-needs-review.json
+          retention-days: 30
+          if-no-files-found: ignore
