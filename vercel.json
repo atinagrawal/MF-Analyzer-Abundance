@@ -21,7 +21,7 @@
       ]
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!embed).*)",
       "headers": [
         {
           "key": "X-Content-Type-Options",
@@ -30,6 +30,19 @@
         {
           "key": "X-Frame-Options",
           "value": "SAMEORIGIN"
+        }
+      ]
+    },
+    {
+      "source": "/embed/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors *"
         }
       ]
     }
