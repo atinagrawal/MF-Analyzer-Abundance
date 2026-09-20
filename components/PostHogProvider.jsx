@@ -33,7 +33,9 @@ const POSTHOG_KEY  = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 
 let initialized = false;
-function ensureInit() {
+function ensureInit(pathname) {
+  if (pathname?.startsWith('/embed/')) return;
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/embed/')) return;
   if (initialized || !POSTHOG_KEY || typeof window === 'undefined') return;
   posthog.init(POSTHOG_KEY, {
     api_host: POSTHOG_HOST,
@@ -50,8 +52,8 @@ function PostHogPageview() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (!POSTHOG_KEY) return;
-    ensureInit();
+    if (!POSTHOG_KEY || pathname?.startsWith('/embed/')) return;
+    ensureInit(pathname);
     const query = searchParams?.toString();
     const url = query ? `${window.location.origin}${pathname}?${query}` : `${window.location.origin}${pathname}`;
     posthog.capture('$pageview', { $current_url: url });
@@ -61,12 +63,13 @@ function PostHogPageview() {
 }
 
 function PostHogIdentify() {
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const identifiedId = useRef(null);
 
   useEffect(() => {
-    if (!POSTHOG_KEY) return;
-    ensureInit();
+    if (!POSTHOG_KEY || pathname?.startsWith('/embed/')) return;
+    ensureInit(pathname);
 
     if (status === 'authenticated' && session?.user?.id) {
       if (identifiedId.current === session.user.id) return; // already identified this session
@@ -83,18 +86,25 @@ function PostHogIdentify() {
       posthog.reset();
       identifiedId.current = null;
     }
-  }, [status, session?.user?.id]);
+  }, [status, session?.user?.id, pathname]);
 
   return null;
 }
 
 export default function PostHogProvider({ children }) {
+  const pathname = usePathname();
+  const isEmbed = pathname?.startsWith('/embed/');
+
   return (
     <>
-      <Suspense fallback={null}>
-        <PostHogPageview />
-      </Suspense>
-      <PostHogIdentify />
+      {!isEmbed && (
+        <>
+          <Suspense fallback={null}>
+            <PostHogPageview />
+          </Suspense>
+          <PostHogIdentify />
+        </>
+      )}
       {children}
     </>
   );

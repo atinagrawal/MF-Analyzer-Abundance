@@ -1,11 +1,9 @@
 import './globals.css';
-import Script from 'next/script';
 import { SITE, SITE_NAME, THEME_COLOR } from '@/lib/metadata';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import AuthProvider from '@/components/AuthProvider';
 import ProfileCompletionGate from '@/components/ProfileCompletionGate';
 import PostHogProvider from '@/components/PostHogProvider';
-import ClosingBell from '@/components/ClosingBell';
+import SiteChrome from '@/components/SiteChrome';
 
 /**
  * app/layout.js — Root layout for the entire application
@@ -71,9 +69,6 @@ export const viewport = {
   initialScale: 1,
 };
 
-// Google Analytics ID
-const GA_ID = 'G-9KMZ8MS3M7';
-
 export default function RootLayout({ children }) {
   return (
     <html lang="en-IN" prefix="og: https://ogp.me/ns#">
@@ -99,31 +94,7 @@ export default function RootLayout({ children }) {
             {children}
           </PostHogProvider>
         </AuthProvider>
-        <SpeedInsights />
-        <ClosingBell />
-
-        {/* Razorpay checkout — used on pricing + market-breadth's upgrade gate.
-            afterInteractive (not lazyOnload) so it's ready by the time a user
-            reaches for the upgrade button; handleUpgrade() still guards against
-            window.Razorpay not existing yet on a very fast click / slow network. */}
-        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
-
-        {/* Google Analytics — must use next/script so the tag actually
-            executes on the client. Raw <script> JSX tags are inert. */}
-        <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-          strategy="afterInteractive"
-        />
-        <Script id="ga-init" strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer=window.dataLayer||[];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js',new Date());
-              gtag('config','${GA_ID}');
-            `,
-          }}
-        />
+        <SiteChrome />
       </body>
     </html>
   );
