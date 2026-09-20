@@ -37,6 +37,7 @@ export const config = {
     '/admin/:path*',
     '/compare/:path*', // Markdown content negotiation & GEO feeds
     '/fund/:path*',    // Markdown factsheet content negotiation
+    '/stocks-in-funds/:path*', // Stocks in funds markdown content negotiation
   ],
 };
 
@@ -83,6 +84,17 @@ export default function middleware(request) {
       const code = pathname.replace(/^\/fund\//, '').split('/')[0];
       const apiFundUrl = new URL(`/api/fund/${code}${url.search}`, request.url);
       return NextResponse.rewrite(apiFundUrl);
+    }
+  }
+
+  // ── 0c. MARKDOWN CONTENT NEGOTIATION FOR /stocks-in-funds/[ticker] ───
+  if (pathname.startsWith('/stocks-in-funds/') && pathname !== '/stocks-in-funds') {
+    const format = p.get('format');
+    const accept = request.headers.get('accept') || '';
+    if (format === 'md' || format === 'markdown' || accept.includes('text/markdown')) {
+      const ticker = pathname.replace(/^\/stocks-in-funds\//, '').split('/')[0];
+      const apiStocksUrl = new URL(`/api/stocks-in-funds/${ticker}${url.search}`, request.url);
+      return NextResponse.rewrite(apiStocksUrl);
     }
   }
 

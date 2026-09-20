@@ -31,10 +31,11 @@ const NAV_GROUPS = [
   {
     key: 'screeners', label: 'Screeners',
     items: [
-      { key: 'screener',      label: '🔎 MF Screener',     href: '/screener',      desc: 'Filter and rank mutual funds' },
-      { key: 'sifs',          label: '🔬 SIF Screener',    href: '/sifs',          desc: 'Specialised Investment Funds' },
-      { key: 'pms-screener',  label: '🏆 PMS Screener',    href: '/pms-screener',  desc: 'Portfolio Management Services' },
-      { key: 'pms-preferred', label: '⭐ Preferred PMS',   href: '/pms-preferred', desc: 'Top-Quartile PMS strategies + insights' },
+      { key: 'screener',          label: '🔎 MF Screener',         href: '/screener',          desc: 'Filter and rank mutual funds' },
+      { key: 'sifs',              label: '🔬 SIF Screener',        href: '/sifs',              desc: 'Specialised Investment Funds' },
+      { key: 'pms-screener',      label: '🏆 PMS Screener',        href: '/pms-screener',      desc: 'Portfolio Management Services' },
+      { key: 'pms-preferred',     label: '⭐ Preferred PMS',       href: '/pms-preferred',     desc: 'Top-Quartile PMS strategies + insights' },
+      { key: 'stocks-in-funds',   label: '🏢 Stocks in Funds',     href: '/stocks-in-funds',   desc: 'Who owns this stock across MFs & PMS' },
     ],
   },
   {
