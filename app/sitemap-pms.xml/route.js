@@ -12,6 +12,7 @@
  */
 
 import * as cheerio from 'cheerio';
+import { getAllPmsProvidersSummary } from '@/lib/pmsProviders';
 
 const STRATEGIES = ['Equity', 'Debt', 'Multi Asset', 'Hybrid'];
 const AUM_THRESHOLD = { Equity: 50, Debt: 10, 'Multi Asset': 10, Hybrid: 10 };
@@ -102,8 +103,25 @@ export async function GET() {
   </url>`);
     }).join('\n');
 
+    const providerSummaries = await getAllPmsProvidersSummary().catch(() => []);
+    const providerUrls = [
+      `  <url>
+    <loc>${BASE}/pms-provider</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>`,
+      ...providerSummaries.map((p) => `  <url>
+    <loc>${BASE}/pms-provider/${p.providerSlug}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>`),
+    ].join('\n');
+
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${providerUrls}
 ${urls}
 </urlset>`;
 

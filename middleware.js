@@ -38,6 +38,8 @@ export const config = {
     '/compare/:path*', // Markdown content negotiation & GEO feeds
     '/fund/:path*',    // Markdown factsheet content negotiation
     '/stocks-in-funds/:path*', // Stocks in funds markdown content negotiation
+    '/amc/:path*',     // AMC factsheet markdown content negotiation
+    '/pms-provider/:path*', // PMS provider factsheet markdown content negotiation
   ],
 };
 
@@ -95,6 +97,28 @@ export default function middleware(request) {
       const ticker = pathname.replace(/^\/stocks-in-funds\//, '').split('/')[0];
       const apiStocksUrl = new URL(`/api/stocks-in-funds/${ticker}${url.search}`, request.url);
       return NextResponse.rewrite(apiStocksUrl);
+    }
+  }
+
+  // ── 0d. MARKDOWN CONTENT NEGOTIATION FOR /amc/[slug] ───
+  if (pathname.startsWith('/amc/') && pathname !== '/amc') {
+    const format = p.get('format');
+    const accept = request.headers.get('accept') || '';
+    if (format === 'md' || format === 'markdown' || accept.includes('text/markdown')) {
+      const slug = pathname.replace(/^\/amc\//, '').split('/')[0];
+      const apiAmcUrl = new URL(`/api/amc/${slug}${url.search}`, request.url);
+      return NextResponse.rewrite(apiAmcUrl);
+    }
+  }
+
+  // ── 0e. MARKDOWN CONTENT NEGOTIATION FOR /pms-provider/[slug] ───
+  if (pathname.startsWith('/pms-provider/') && pathname !== '/pms-provider') {
+    const format = p.get('format');
+    const accept = request.headers.get('accept') || '';
+    if (format === 'md' || format === 'markdown' || accept.includes('text/markdown')) {
+      const slug = pathname.replace(/^\/pms-provider\//, '').split('/')[0];
+      const apiPmsUrl = new URL(`/api/pms-provider/${slug}${url.search}`, request.url);
+      return NextResponse.rewrite(apiPmsUrl);
     }
   }
 
