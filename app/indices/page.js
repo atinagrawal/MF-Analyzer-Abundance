@@ -49,6 +49,7 @@ export default function IndicesPage() {
   const [searchFilter, setSearchFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [partialError, setPartialError] = useState(null);
   const [metadata, setMetadata] = useState({ month: '', year: '', count: 0, asOf: '', bseCount: 0 });
   const [toast, setToast] = useState('');
 
@@ -115,6 +116,18 @@ export default function IndicesPage() {
         setError(nseRes.status === 'rejected' ? nseRes.reason.message : 'No index data in response');
         setLoading(false);
         return;
+      }
+
+      // One source can fail while the other succeeds -- Promise.allSettled
+      // swallows that individual rejection, so without this the page would
+      // silently render a BSE-only (or NSE-only) table with no indication
+      // the other source is down. Surface it as a non-blocking notice
+      // rather than the full-page error box, since the table itself is
+      // still usable.
+      if (!nseData && bseData) {
+        setPartialError(`NSE index data unavailable right now (${nseRes.status === 'rejected' ? nseRes.reason.message : 'no indices returned'}) — showing BSE indices only.`);
+      } else if (!bseData && nseData) {
+        setPartialError(`BSE index data unavailable right now (${bseRes.status === 'rejected' ? bseRes.reason.message : 'no indices returned'}) — showing NSE indices only.`);
       }
 
       const nseIndices = (nseData?.indices || []).map(r => ({ ...r, exchange: r.exchange || 'NSE' }));
@@ -378,6 +391,21 @@ export default function IndicesPage() {
             fontWeight: 600 
           }}>
             ⚠ Could not load index data: {error}. Please try again in a moment.
+          </div>
+        )}
+
+        {!loading && !error && partialError && (
+          <div id="partialErrorBox" style={{
+            padding: '12px 16px',
+            marginBottom: 14,
+            background: 'var(--warn-bg, #fff8e1)',
+            border: '1.5px solid var(--warn, #f9a825)',
+            borderRadius: 'var(--r)',
+            color: 'var(--warn-text, #8a6100)',
+            fontWeight: 600,
+            fontSize: '.85rem',
+          }}>
+            ⚠ {partialError}
           </div>
         )}
 

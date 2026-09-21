@@ -1,6 +1,6 @@
 // api/index-dashboard.js
 // Fetches and parses the monthly NSE Index Dashboard PDF from niftyindices.com
-// PDF URL pattern: https://niftyindices.com/Index_Dashboard/Index_Dashboard_MAR2026.pdf
+// PDF URL pattern: https://www.niftyindices.com/Index_Dashboard/Index%20Dashboard_MAR2026.pdf
 //
 // Returns: { month, asOf, indices: [{name, category, returns:{1m,3m,1y,3y,5y}, risk:{vol,beta,corr,r2}, val:{pe,pb,dy}}] }
 //
@@ -338,7 +338,13 @@ async function fetchFiHybrid(year, month) {
 
 function getPdfUrl(year, month) {
   // month: 0-11
-  return `https://niftyindices.com/Index_Dashboard/Index_Dashboard_${MONTH_NAMES[month]}${year}.pdf`;
+  // niftyindices.com restructured this path at some point: the old
+  // non-www, underscore-only URL now 200s with an HTML redirect/error page
+  // (wrong content-type, so fetchPdfText's isPdf check correctly rejects
+  // it) instead of the PDF. Verified live 2026-09-22: this www + %20-space
+  // form resolves to the real application/pdf dashboard; the old form does
+  // not. Matches the pattern already used by getFiPdfUrl() below.
+  return `https://www.niftyindices.com/Index_Dashboard/Index%20Dashboard_${MONTH_NAMES[month]}${year}.pdf`;
 }
 
 function getFiPdfUrl(year, month) {
