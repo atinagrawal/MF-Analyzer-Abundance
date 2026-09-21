@@ -70,8 +70,23 @@ export default function CompareGrowthChart({ series, showLegend = true }) {
   const effectiveTo = customTo ?? defaultTo;
   const hasCustomRange = customFrom != null || customTo != null;
 
+  // Re-rebase every series to a shared ₹1,00,000 start value at whatever the
+  // effective window's first point is -- filtering alone would leave each
+  // series' v carrying its ORIGINAL rebasing (anchored to the full-range
+  // start), so picking a later "From" date used to slice the array without
+  // resetting the baseline, making the two lines start at whatever value
+  // they'd drifted to under the old baseline instead of together.
   const filteredSeries = useMemo(
-    () => series.map((s) => ({ ...s, data: s.data.filter((p) => p.t >= effectiveFrom && p.t <= effectiveTo) })),
+    () =>
+      series.map((s) => {
+        const sliced = s.data.filter((p) => p.t >= effectiveFrom && p.t <= effectiveTo);
+        const baseV = sliced[0]?.v;
+        if (baseV == null || !isFinite(baseV) || baseV === 0) return { ...s, data: sliced };
+        return {
+          ...s,
+          data: sliced.map((p) => (p.v == null ? p : { ...p, v: (p.v / baseV) * 100000 })),
+        };
+      }),
     [series, effectiveFrom, effectiveTo]
   );
 

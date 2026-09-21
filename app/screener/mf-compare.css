@@ -430,9 +430,13 @@
   gap: 12px;
   flex-wrap: wrap;
 }
-.cmp-launcher-select {
+.cmp-launcher-combo {
+  position: relative;
   flex: 1;
   min-width: 240px;
+}
+.cmp-launcher-search {
+  width: 100%;
   padding: 10px 14px;
   background: var(--s2);
   border: 1px solid var(--border);
@@ -442,9 +446,57 @@
   color: var(--text);
   outline: none;
   transition: border-color 0.15s;
+  box-sizing: border-box;
 }
-.cmp-launcher-select:focus {
+.cmp-launcher-search:focus {
   border-color: var(--g3);
+}
+.cmp-launcher-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+}
+.cmp-launcher-dropdown-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: .8rem;
+}
+.cmp-launcher-dropdown-item:hover {
+  background: var(--s2);
+}
+.cmp-launcher-dropdown-name {
+  color: var(--text);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmp-launcher-dropdown-amc {
+  color: var(--muted);
+  font-size: .72rem;
+  flex-shrink: 0;
+}
+.cmp-launcher-dropdown-empty {
+  padding: 10px;
+  color: var(--muted);
+  font-size: .78rem;
+  text-align: center;
 }
 .cmp-launcher-vs {
   font-size: .85rem;
