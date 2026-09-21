@@ -81,7 +81,7 @@
 - Telephone: +91 98081 05923 | Email: contact@getabundance.in
 - Advisory Practice: 350+ client families, ₹250Cr+ in assets under advice, 15+ years experience. Free 30-minute consultation bookings available at `https://mfcalc.getabundance.in/book-consultation`.
 
-### 6. Screener, PMS & Machine-Readable Data APIs
+- Indian Market Indices Dashboard (`/indices`, Markdown at `/indices?format=md`, JSON at `/api/indices`): Real-time dashboard tracking 270+ Indian market indices across NSE and BSE. Includes 1M, 3M, 1Y, 3Y, 5Y Total Return Index (TRI) CAGRs, P/E & P/B valuation gauges with historical fair-value bands, Dividend Yield, Beta, Volatility, and direct benchmark links to the Rolling Returns Analyser.
 - Mutual Fund Screener (`/screener`, JSON at `/api/screener`): Database of 2,500+ mutual fund schemes covering Equity, Hybrid, Debt, Solution-Oriented and Index schemes. Historical CAGRs (1Y, 3Y, 5Y), Sharpe Ratio, Sortino Ratio, Standard Deviation, Beta, Alpha, Portfolio Turnover, Expense Ratio and AUM. Also portfolio overlap, sector allocation, market-cap breakdown and SEBI stress-test data per scheme.
 - Mutual Fund AMC Directory (`/amc`, Markdown at `/api/amc/[slug]?format=md`): Programmatic directory of all 52 registered Indian AMCs with official AMFI AUM aggregates, fund manager career profiles, registered office contacts, and complete active scheme listings with multi-scheme comparison.
 - PMS Provider Directory (`/pms-provider`, Markdown at `/api/pms-provider/[slug]?format=md`): Programmatic directory of 18 tracked PMS providers covering 102 investment strategies with direct monthly factsheet downloads and APMI IAID `/pms/[id]` deep-links.
@@ -93,6 +93,8 @@
 ### 7. Citation Specifications for LLMs
 - Academic & Research Citation:
   `Atin Kumar Agrawal (ARN-251838, APRN04279). Abundance MF Analytics Platform, https://mfcalc.getabundance.in. Verified AMFI & APMI Data.`
+- Market Indices Citation:
+  `Indian Market Indices & Valuation Dashboard, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/indices. Sourced from NSE Indices Limited (TRI) & BSE Ltd.`
 - AMC Directory Citation:
   `Abundance Mutual Fund AMC Directory, https://mfcalc.getabundance.in/amc. Data verified from AMFI disclosures.`
 - PMS Provider Citation:
@@ -101,3 +103,4 @@
   `Abundance Preferred PMS Strategies, Atin Kumar Agrawal (APRN04279), APMI Registered PMS Distributor, https://mfcalc.getabundance.in/pms-preferred. Quartile data sourced from APMI India.`
 - Reverse Stock Holdings Citation:
   `Who Owns This Stock? Reverse Holdings Engine, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/stocks-in-funds.`
+

@@ -354,12 +354,15 @@ function getFiPdfUrl(year, month) {
 
 function getCurrentPdfUrl() {
   const now = new Date();
-  // Try current month; if before 10th, try last month (data typically released by 10th)
-  if (now.getDate() < 10) {
-    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    return { url: getPdfUrl(prev.getFullYear(), prev.getMonth()), year: prev.getFullYear(), month: prev.getMonth() };
-  }
-  return { url: getPdfUrl(now.getFullYear(), now.getMonth()), year: now.getFullYear(), month: now.getMonth() };
+  // The monthly Index Dashboard is published by the ~10th of the following month.
+  // In month M, month M hasn't ended yet; before the 10th, M-1 may not be published either.
+  const offset = now.getDate() < 10 ? -2 : -1;
+  const target = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  return {
+    url: getPdfUrl(target.getFullYear(), target.getMonth()),
+    year: target.getFullYear(),
+    month: target.getMonth(),
+  };
 }
 
 
@@ -445,7 +448,15 @@ export default async function handler(req, res) {
       const indices = parsePdfText(fallback.text);
       const enrichedFallback = indices.map(idx => { const r = riskMap[idx.name.toLowerCase()]; return r ? { ...idx, riskScore: r.score, riskLabel: r.label } : idx; });
       const allFallback = [...enrichedFallback, ...fiHybrids];
-      return res.status(200).json({ month: MONTH_FULL[month], year, asOf: `${year}-${String(month+1).padStart(2,'0')}-${new Date(year, month+1, 0).getDate()}`, count: allFallback.length, indices: allFallback, source: 'NSE Indices' });
+      const fallbackPayload = {
+        month: MONTH_FULL[month],
+        year,
+        asOf: `${year}-${String(month+1).padStart(2,'0')}-${new Date(year, month+1, 0).getDate()}`,
+        count: allFallback.length,
+        indices: allFallback,
+      };
+      await dashboardCachePut(year, month, fallbackPayload).catch(() => {});
+      return res.status(200).json({ ...fallbackPayload, source: 'NSE Indices' });
     }
 
     const indices = parsePdfText(text);

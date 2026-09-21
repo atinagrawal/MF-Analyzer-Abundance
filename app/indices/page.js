@@ -1,507 +1,154 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import RiskGauge from '@/components/RiskGauge';
+import IndicesClient from './IndicesClient';
+import { getCombinedIndicesData } from '@/lib/indicesData';
+import { INDICES_FAQ } from './faqData';
+import Link from 'next/link';
 
-const CAT_LABELS = {
-  broad: 'Broad',
-  sectoral: 'Sectoral',
-  strategy: 'Strategy',
-  thematic: 'Thematic',
-  hybrid: 'Hybrid',
-  bond: 'Bonds',
-};
-
-function fmtRet(v) {
-  if (v === null || v === undefined || isNaN(v)) return <span>—</span>;
-  const cls = v > 0 ? 'ret-pos' : v < 0 ? 'ret-neg' : 'ret-neu';
-  const txt = (v > 0 ? '+' : '') + v.toFixed(2) + '%';
-  return <span className={cls}>{txt}</span>;
-}
-
-function fmtNum(v, dp = 2) {
-  if (v === null || v === undefined || isNaN(v)) return '—';
-  return v.toFixed(dp);
-}
+export const revalidate = 21600; // 6 hours — data refreshed with NSE monthly / BSE daily cycles
 
 function ordinal(n) {
   const v = n % 100;
   return n + (['th','st','nd','rd'][(v - 20) % 10] || ['th','st','nd','rd'][v] || 'th');
 }
 
-export default function IndicesPage() {
-  const { data: session } = useSession();
-  const isProUser = Boolean(
-    session?.user?.role === 'admin' ||
-    session?.user?.plan === 'pro' ||
-    session?.user?.plan === 'pro_lifetime' ||
-    session?.user?.plan === 'lifetime' ||
-    session?.user?.isPro
-  );
-  const [allData, setAllData] = useState([]);
-  const [sortKey, setSortKey] = useState('r1y');
-  const [sortDir, setSortDir] = useState(-1);
-  const [catFilter, setCatFilter] = useState('all');
-  const [exchFilter, setExchFilter] = useState('all');
-  const [searchFilter, setSearchFilter] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [partialError, setPartialError] = useState(null);
-  const [metadata, setMetadata] = useState({ month: '', year: '', count: 0, asOf: '', bseCount: 0 });
-  const [toast, setToast] = useState('');
-
-  function flashToast(msg) {
-    setToast(msg);
-    setTimeout(() => setToast(''), 2400);
-  }
-
-  function handleCopyLink() {
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
-    Promise.race([navigator.clipboard.writeText(window.location.href), timeout])
-      .then(() => flashToast('Link copied to clipboard'))
-      .catch(() => flashToast('Copy failed — select the address bar manually'));
-  }
-
-  // Exports the currently filtered/sorted `rows` (not just allData) — defined
-  // below in render scope, captured by closure; only ever invoked after this
-  // render's `rows` assignment has run, so it's always populated on click.
-  function handleExportCsv() {
-    if (!isProUser) { flashToast('Export CSV is a Pro feature — upgrade at /pricing'); return; }
-    if (!rows.length) return;
-    const cols = [
-      { key: 'name', label: 'Index' }, { key: 'exchange', label: 'Exchange' }, { key: 'cat', label: 'Category' },
-      { key: 'r1m', label: '1M %' }, { key: 'r3m', label: '3M %' }, { key: 'r1y', label: '1Y %' },
-      { key: 'r3y', label: '3Y %' }, { key: 'r5y', label: '5Y %' },
-      { key: 'vol', label: 'Volatility' }, { key: 'beta', label: 'Beta' },
-      { key: 'pe', label: 'P/E' }, { key: 'pb', label: 'P/B' }, { key: 'dy', label: 'Div Yield %' },
-      { key: 'riskLabel', label: 'Riskometer' },
-    ];
-    const get = (r, key) => {
-      if (key.startsWith('r') && r.returns && key in r.returns) return r.returns[key];
-      if (['pe', 'pb', 'dy'].includes(key)) return r.val?.[key];
-      if (['vol', 'beta'].includes(key)) return r.risk?.[key];
-      return r[key];
+export default async function IndicesPage() {
+  let data = null;
+  try {
+    data = await getCombinedIndicesData();
+  } catch (err) {
+    console.error('[IndicesPage] Server-side data fetch error:', err);
+    data = {
+      allData: [],
+      benchmarks: [],
+      metadata: { count: 0, bseCount: 0, totalCount: 0, month: '', year: '', asOf: '' },
     };
-    const esc = (v) => {
-      const s = v === null || v === undefined ? '' : String(v);
-      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-    };
-    const lines = [cols.map(c => esc(c.label)).join(','), ...rows.map(r => cols.map(c => esc(get(r, c.key))).join(','))];
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `mf-indices-${metadata.month || 'latest'}-${metadata.year || ''}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    flashToast(`Exported ${rows.length} indices`);
   }
 
-  useEffect(() => {
-    async function loadData() {
-      const [nseRes, bseRes] = await Promise.allSettled([
-        fetch('/api/index-dashboard').then(r => { if (!r.ok) throw new Error(`API returned ${r.status}`); return r.json(); }),
-        fetch('/api/bse-index-dashboard').then(r => { if (!r.ok) throw new Error(`API returned ${r.status}`); return r.json(); }),
-      ]);
-
-      const nseData = nseRes.status === 'fulfilled' && nseRes.value.indices?.length ? nseRes.value : null;
-      const bseData = bseRes.status === 'fulfilled' && bseRes.value.indices?.length ? bseRes.value : null;
-
-      if (!nseData && !bseData) {
-        setError(nseRes.status === 'rejected' ? nseRes.reason.message : 'No index data in response');
-        setLoading(false);
-        return;
-      }
-
-      // One source can fail while the other succeeds -- Promise.allSettled
-      // swallows that individual rejection, so without this the page would
-      // silently render a BSE-only (or NSE-only) table with no indication
-      // the other source is down. Surface it as a non-blocking notice
-      // rather than the full-page error box, since the table itself is
-      // still usable.
-      if (!nseData && bseData) {
-        setPartialError(`NSE index data unavailable right now (${nseRes.status === 'rejected' ? nseRes.reason.message : 'no indices returned'}) — showing BSE indices only.`);
-      } else if (!bseData && nseData) {
-        setPartialError(`BSE index data unavailable right now (${bseRes.status === 'rejected' ? bseRes.reason.message : 'no indices returned'}) — showing NSE indices only.`);
-      }
-
-      const nseIndices = (nseData?.indices || []).map(r => ({ ...r, exchange: r.exchange || 'NSE' }));
-      const bseIndices = bseData?.indices || [];
-
-      setAllData([...nseIndices, ...bseIndices]);
-      setMetadata({
-        month: nseData?.month || '', year: nseData?.year || '',
-        count: nseData?.count || 0, asOf: nseData?.asOf || '',
-        bseCount: bseData?.count || 0,
-      });
-      setLoading(false);
-    }
-    loadData();
-  }, []);
-
-  const sortTable = (key) => {
-    if (sortKey === key) {
-      setSortDir(sortDir * -1);
-    } else {
-      setSortKey(key);
-      setSortDir(-1);
-    }
-  };
-
-  const filterCat = (cat) => setCatFilter(cat);
-  const handleSearch = (e) => setSearchFilter(e.target.value.trim());
-
-  let rows = allData.slice();
-  if (catFilter !== 'all') rows = rows.filter(r => r.cat === catFilter);
-  if (exchFilter !== 'all') rows = rows.filter(r => r.exchange === exchFilter);
-  if (searchFilter) {
-    const q = searchFilter.toLowerCase();
-    rows = rows.filter(r => r.name.toLowerCase().includes(q));
-  }
-
-  rows.sort((a, b) => {
-    const kMap = {
-      name: r => r.name,
-      r1m:  r => r.returns.r1m,
-      r3m:  r => r.returns.r3m,
-      r1y:  r => r.returns.r1y,
-      r3y:  r => r.returns.r3y,
-      r5y:  r => r.returns.r5y,
-      vol:  r => r.risk.vol,
-      beta: r => r.risk.beta,
-      pe:   r => r.val.pe,
-      pb:   r => r.val.pb,
-      dy:   r => r.val.dy,
-      risk: r => r.riskScore ?? -1,
-    };
-    const fn = kMap[sortKey] || (r => r.name);
-    const aV = fn(a), bV = fn(b);
-    if (typeof aV === 'string') return sortDir * aV.localeCompare(bV);
-    return sortDir * ((aV ?? -999) - (bV ?? -999));
-  });
-
-  const getSortClass = (key) => {
-    if (sortKey !== key) return '';
-    return sortDir === -1 ? 'sorted-desc' : 'sorted-asc';
-  };
-
-  // ── Market Valuation Dashboard ──────────────────────────────────────────────
-  const BENCHMARK_INDICES = ['Nifty 50', 'Nifty Midcap 150', 'Nifty Smallcap 250'];
-
-  // PE thresholds per index for the valuation gauge
-  const PE_THRESHOLDS = {
-    'Nifty 50':           { low: 18, high: 24, max: 36 },
-    'Nifty Midcap 150':   { low: 25, high: 35, max: 52 },
-    'Nifty Smallcap 250': { low: 20, high: 30, max: 45 },
-  };
-
-  function getValuation(name, pe) {
-    const t = PE_THRESHOLDS[name];
-    if (!t || pe == null) return { label: 'N/A', color: 'var(--muted)', fill: '#ccc', pct: 0 };
-    const pct = Math.min((pe / t.max) * 100, 100);
-    if (pe < t.low)  return { label: 'Undervalued', color: '#1b5e20', fill: '#43a047', pct };
-    if (pe < t.high) return { label: 'Fair Value',  color: '#e65100', fill: '#fb8c00', pct };
-                     return { label: 'Overvalued',  color: '#b71c1c', fill: '#e53935', pct };
-  }
-
-  function renderValuationDashboard() {
-    const benchmarks = allData.filter(r => BENCHMARK_INDICES.includes(r.name));
-    if (!benchmarks.length || loading) return null;
-
-    return (
-      <div className="valuation-dashboard">
-        <div className="section-head" style={{ marginBottom: 16 }}>
-          <div className="section-title">🌡 Market Valuation — PE Gauge</div>
-          <div className="section-badge">BENCHMARK INDICES · LIVE</div>
-        </div>
-        <div className="val-cards">
-          {BENCHMARK_INDICES.map(name => {
-            const row = benchmarks.find(r => r.name === name);
-            if (!row) return null;
-            const pe   = row.val?.pe;
-            const pb   = row.val?.pb;
-            const dy   = row.val?.dy;
-            const v    = getValuation(name, pe);
-            const t    = PE_THRESHOLDS[name];
-            return (
-              <div key={name} className="val-card">
-                <div className="val-name">{name}</div>
-
-                {/* PE — primary metric */}
-                <div className="val-pe-row">
-                  <div className="val-pe-num" style={{ color: v.color }}>{pe ?? '—'}</div>
-                  <div className="val-badge" style={{ background: v.fill + '22', color: v.color, borderColor: v.fill + '55' }}>
-                    {v.label}
-                  </div>
-                </div>
-
-                {/* Gauge bar */}
-                <div className="val-gauge-track" title={`PE: ${pe} · Undervalued < ${t.low} · Fair ${t.low}–${t.high} · Overvalued > ${t.high}`}>
-                  {/* Zone markers */}
-                  <div className="val-gauge-zone val-zone-green"  style={{ width: `${(t.low  / t.max) * 100}%` }} />
-                  <div className="val-gauge-zone val-zone-yellow" style={{ width: `${((t.high - t.low) / t.max) * 100}%` }} />
-                  <div className="val-gauge-zone val-zone-red"    style={{ width: `${((t.max  - t.high) / t.max) * 100}%` }} />
-                  {/* Current PE needle */}
-                  {pe != null && (
-                    <div className="val-gauge-needle" style={{ left: `${Math.min(v.pct, 98)}%` }} />
-                  )}
-                </div>
-                <div className="val-gauge-labels">
-                  <span style={{ color: '#1b5e20' }}>{t.low}</span>
-                  <span style={{ color: '#e65100' }}>{t.high}</span>
-                  <span style={{ color: '#b71c1c' }}>{t.max}+</span>
-                </div>
-
-                {/* PB + DY */}
-                <div className="val-metrics">
-                  <div className="val-metric">
-                    <span className="val-metric-label">P/B</span>
-                    <span className="val-metric-val">{pb ?? '—'}</span>
-                  </div>
-                  <div className="val-metric">
-                    <span className="val-metric-label">Div. Yield</span>
-                    <span className="val-metric-val">{dy != null ? dy + '%' : '—'}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="val-disclaimer">
-          PE zones: Green = historically undervalued · Yellow = fair value range · Red = stretched valuations.
-          Thresholds based on historical averages. Not investment advice.
-        </div>
-      </div>
-    );
-  }
+  const { metadata } = data;
+  const day = metadata.asOf ? ordinal(parseInt(metadata.asOf.split('-')[2], 10)) : '';
+  const dateStr = day ? `${day} ${metadata.month} ${metadata.year}` : `${metadata.month} ${metadata.year}`;
+  const nsePart = metadata.count > 0 ? `${metadata.count} NSE indices (TRI basis as of ${dateStr})` : '';
+  const bsePart = metadata.bseCount > 0 ? `${metadata.bseCount} BSE indices` : '';
+  const subtitle = [nsePart, bsePart].filter(Boolean).join(' + ') + ' — returns, P/E, P/B, Beta, and Volatility.';
 
   return (
     <>
       <div className="container">
         <Navbar activePage="indices" />
 
-        <div className="page-header">
+        {/* Breadcrumbs Navigation */}
+        <nav aria-label="Breadcrumb" style={{ margin: '16px 0 8px', fontSize: '.78rem', color: 'var(--muted)' }}>
+          <ol style={{ listStyle: 'none', display: 'flex', gap: '8px', padding: 0, margin: 0, alignItems: 'center' }}>
+            <li><a href="https://www.getabundance.in" style={{ color: 'var(--muted)', textDecoration: 'none' }}>Home</a></li>
+            <li aria-hidden="true" style={{ color: 'var(--border2)' }}>/</li>
+            <li><Link href="/" style={{ color: 'var(--muted)', textDecoration: 'none' }}>Tools</Link></li>
+            <li aria-hidden="true" style={{ color: 'var(--border2)' }}>/</li>
+            <li aria-current="page" style={{ color: 'var(--text)', fontWeight: 700 }}>Index Dashboard</li>
+          </ol>
+        </nav>
+
+        {/* Page Header */}
+        <div className="page-header" style={{ marginBottom: 24 }}>
           <div className="page-eyebrow">
-            <div className="live-dot"></div>
-            <span className="eyebrow-text">NSE + BSE Index Dashboard</span>
+            <div className="live-dot" />
+            <span className="eyebrow-text">NSE + BSE Indian Market Indices</span>
           </div>
           <h1 className="page-title">
-            Index <span>Returns</span> & Valuation
+            Index <span>Returns</span> & Valuation Dashboard
           </h1>
-          <p className="page-subtitle">
-            {metadata.count > 0 || metadata.bseCount > 0
-              ? (() => {
-                  const day = metadata.asOf ? ordinal(parseInt(metadata.asOf.split('-')[2], 10)) : '';
-                  const dateStr = day ? `${day} ${metadata.month} ${metadata.year}` : `${metadata.month} ${metadata.year}`;
-                  const nsePart = metadata.count > 0 ? `${metadata.count} NSE indices as of ${dateStr}` : '';
-                  const bsePart = metadata.bseCount > 0 ? `${metadata.bseCount} BSE indices` : '';
-                  const both = [nsePart, bsePart].filter(Boolean).join(' + ');
-                  return `${both} — returns, P/E, P/B, Beta, Volatility. Sources: NSE Indices Limited, BSE Ltd.`;
-                })()
-              : 'Loading index dashboard...'}
+          <p className="page-subtitle" style={{ maxWidth: 840 }}>
+            {metadata.totalCount > 0 ? subtitle : 'Real-time performance, P/E valuation multiples, and risk profiles across 270+ Indian equity and debt benchmarks.'}
           </p>
         </div>
 
-        {renderValuationDashboard()}
+        {/* Interactive Client Surface with pre-populated SSR data */}
+        <IndicesClient initialData={data} />
 
-        <div id="controls" className="controls-bar" style={{ display: loading ? 'none' : 'flex' }}>
-          <button className={`cat-btn ${catFilter === 'all'      ? 'active' : ''}`} onClick={() => filterCat('all')}>All</button>
-          <button className={`cat-btn ${catFilter === 'broad'    ? 'active' : ''}`} onClick={() => filterCat('broad')}>Broad</button>
-          <button className={`cat-btn ${catFilter === 'sectoral' ? 'active' : ''}`} onClick={() => filterCat('sectoral')}>Sectoral</button>
-          <button className={`cat-btn ${catFilter === 'strategy' ? 'active' : ''}`} onClick={() => filterCat('strategy')}>Strategy</button>
-          <button className={`cat-btn ${catFilter === 'thematic' ? 'active' : ''}`} onClick={() => filterCat('thematic')}>Thematic</button>
-          <button className={`cat-btn ${catFilter === 'hybrid'   ? 'active' : ''}`} onClick={() => filterCat('hybrid')}>Hybrid</button>
-          <button className={`cat-btn ${catFilter === 'bond'     ? 'active' : ''}`} onClick={() => filterCat('bond')}>Bonds</button>
-          <span className="controls-divider" />
-          <button className={`cat-btn ${exchFilter === 'all' ? 'active' : ''}`} onClick={() => setExchFilter('all')}>All Exchanges</button>
-          <button className={`cat-btn ${exchFilter === 'NSE' ? 'active' : ''}`} onClick={() => setExchFilter('NSE')}>NSE</button>
-          <button className={`cat-btn ${exchFilter === 'BSE' ? 'active' : ''}`} onClick={() => setExchFilter('BSE')}>BSE</button>
-          <input
-            type="text"
-            className="search-box"
-            placeholder="Search indices..."
-            onChange={handleSearch}
-          />
-          <div className="data-badge">
-            {rows.length} of {allData.length} indices
+        {/* In-Depth Educational Guide & Macro Methodology (Crawlable Semantic Content) */}
+        <section className="idx-guide-section" style={{ marginTop: 48, paddingTop: 36, borderTop: '1.5px solid var(--border)' }}>
+          <div className="section-head" style={{ marginBottom: 20 }}>
+            <div className="section-title" style={{ fontSize: '1.3rem', fontWeight: 900 }}>
+              📘 Market Valuation & Index Methodology Guide
+            </div>
+            <div className="section-badge">ESSENTIAL INVESTOR CONTEXT</div>
           </div>
-          <span className="controls-divider" />
-          <button className="export-btn" onClick={handleCopyLink} title="Copy a link to this page" aria-label="Copy link">🔗 Copy Link</button>
-          <button className="export-btn" onClick={handleExportCsv} title={isProUser ? 'Export the currently filtered table as CSV' : 'Export CSV is a Pro feature'} aria-label="Export as CSV">⤓ Export CSV{!isProUser && ' 🔒'}</button>
-        </div>
 
-        {loading && (
-          <div id="skeleton" className="table-card">
-            <div className="table-wrap">
-              <table className="idx-table">
-                <thead>
-                  <tr>
-                    <th className="idx-name-th">Index Name</th>
-                    <th colSpan={5} className="th-group">TRI Returns</th>
-                    <th colSpan={2} className="th-group">Risk</th>
-                    <th colSpan={3} className="th-group">Valuation</th>
-                    <th>Riskometer</th>
-                    <th>Compare</th>
-                  </tr>
-                  <tr>
-                    <th>Name</th>
-                    <th>1M</th><th>3M</th><th>1Y</th><th>3Y</th><th>5Y</th>
-                    <th>Vol</th><th>Beta</th>
-                    <th>P/E</th><th>P/B</th><th>D.Y.</th>
-                    <th>Score</th>
-                    <th>Compare</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...Array(8)].map((_, i) => (
-                    <tr key={i}>
-                      <td><div className="sk" style={{ width: '180px', height: '14px' }}></div></td>
-                      <td><div className="sk" style={{ width: '50px', height: '14px' }}></div></td>
-                      <td><div className="sk" style={{ width: '50px', height: '14px' }}></div></td>
-                      <td><div className="sk" style={{ width: '50px', height: '14px' }}></div></td>
-                      <td><div className="sk" style={{ width: '50px', height: '14px' }}></div></td>
-                      <td><div className="sk" style={{ width: '50px', height: '14px' }}></div></td>
-                      <td><div className="sk" style={{ width: '40px', height: '14px' }}></div></td>
-                      <td><div className="sk" style={{ width: '40px', height: '14px' }}></div></td>
-                      <td><div className="sk" style={{ width: '40px', height: '14px' }}></div></td>
-                      <td><div className="sk" style={{ width: '40px', height: '14px' }}></div></td>
-                      <td><div className="sk" style={{ width: '40px', height: '14px' }}></div></td>
-                      <td><div className="sk" style={{ width: '68px', height: '40px' }}></div></td>
-                      <td><div className="sk" style={{ width: '80px', height: '14px' }}></div></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20, marginBottom: 32 }}>
+            <div style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', padding: 22 }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--g1)', marginBottom: 8 }}>
+                🌡 Understanding Nifty 50 P/E Bands
+              </h3>
+              <p style={{ fontSize: '.84rem', color: 'var(--text2)', lineHeight: 1.65, margin: 0 }}>
+                Historically, the Nifty 50 Index has traded in three recognizable valuation bands: <strong>Undervalued (&lt;18x P/E)</strong>, <strong>Fair Value (18x–24x P/E)</strong>, and <strong>Expensive (&gt;24x P/E)</strong>. Forward 3-to-5 year CAGR for Indian equities has historically been highest when entry points occur during sub-18 P/E regimes. Note that since early 2021, NSE computes P/E using <em>consolidated</em> corporate earnings, which structurally lowered trailing multiples by ~2.5 to 3 points compared to historical standalone metrics.
+              </p>
+            </div>
+
+            <div style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', padding: 22 }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--g1)', marginBottom: 8 }}>
+                📊 Total Return Index (TRI) vs Price Return
+              </h3>
+              <p style={{ fontSize: '.84rem', color: 'var(--text2)', lineHeight: 1.65, margin: 0 }}>
+                Standard Price Return (PR) indices only track capital appreciation from stock price movements, omitting dividends. Under SEBI regulations, all Indian mutual funds are mandated to benchmark against <strong>Total Return Indices (TRI)</strong>, which incorporate the immediate reinvestment of gross dividends. Over 5-to-10 year horizons, dividend reinvestment adds approximately <strong>1.2% to 1.8% annualised return</strong> to headline broad market benchmarks like Nifty 50 and BSE 500.
+              </p>
+            </div>
+
+            <div style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', padding: 22 }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--g1)', marginBottom: 8 }}>
+                🎯 Broad, Factor & Sectoral Dynamics
+              </h3>
+              <p style={{ fontSize: '.84rem', color: 'var(--text2)', lineHeight: 1.65, margin: 0 }}>
+                This dashboard categorizes 270+ indices into <strong>Broad Market</strong> (core capitalization tiers from Large to Microcap), <strong>Sectoral</strong> (pure industry exposures like Bank, IT, Pharma), <strong>Factor / Smart-Beta</strong> (rules-based alpha strategies including Momentum, Value 50, Quality 30, and Low Volatility), and <strong>Thematic</strong> (multi-industry trends like Defence, Manufacturing, and Consumption).
+              </p>
             </div>
           </div>
-        )}
 
-        {error && (
-          <div id="errorBox" style={{ 
-            padding: '20px', 
-            background: 'var(--neg-bg)', 
-            border: '1.5px solid var(--neg)', 
-            borderRadius: 'var(--r)', 
-            color: 'var(--neg)', 
-            fontWeight: 600 
+          {/* Accessible FAQ Section matching FAQPage JSON-LD */}
+          <div style={{ marginTop: 28, background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', padding: '24px 28px' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)', marginBottom: 18 }}>
+              Frequently Asked Questions (FAQ)
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {INDICES_FAQ.map(({ q, a }, i, arr) => (
+                <details key={i} style={{
+                  borderTop: i === 0 ? 'none' : '1px solid var(--border)',
+                  paddingTop: i === 0 ? 0 : 14,
+                  paddingBottom: 14,
+                }}>
+                  <summary style={{
+                    cursor: 'pointer', listStyle: 'none', fontSize: '.88rem',
+                    fontWeight: 800, color: 'var(--text)', display: 'flex',
+                    justifyContent: 'space-between', alignItems: 'center',
+                  }}>
+                    {q}
+                    <span style={{ fontSize: '1.1rem', color: 'var(--muted)', flexShrink: 0, marginLeft: 16 }}>+</span>
+                  </summary>
+                  <div style={{ padding: '10px 0 4px', fontSize: '.82rem', color: 'var(--text2)', lineHeight: 1.7 }}>
+                    {a}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+
+          {/* Dual Regulatory Disclosure */}
+          <div style={{
+            marginTop: 28,
+            padding: '16px 20px',
+            background: 'var(--s2)',
+            border: '1px solid var(--border)',
+            borderRadius: '10px',
+            fontSize: '.75rem',
+            color: 'var(--muted)',
+            lineHeight: 1.6,
           }}>
-            ⚠ Could not load index data: {error}. Please try again in a moment.
+            <strong>Regulatory Attribution & Disclaimers:</strong> Abundance Financial Services (ARN-251838, AMFI Registered Mutual Fund Distributor) · Atin Kumar Agrawal (APRN04279, APMI Registered PMS Distributor). Market index returns and valuation ratios are published for factual benchmarking, research, and comparative analytics. Index performance does not represent guaranteed future returns of any mutual fund scheme or portfolio strategy.
           </div>
-        )}
-
-        {!loading && !error && partialError && (
-          <div id="partialErrorBox" style={{
-            padding: '12px 16px',
-            marginBottom: 14,
-            background: 'var(--warn-bg, #fff8e1)',
-            border: '1.5px solid var(--warn, #f9a825)',
-            borderRadius: 'var(--r)',
-            color: 'var(--warn-text, #8a6100)',
-            fontWeight: 600,
-            fontSize: '.85rem',
-          }}>
-            ⚠ {partialError}
-          </div>
-        )}
-
-        {!loading && !error && (
-          <div id="tableCard" className="table-card">
-            <div className="table-wrap">
-              <table className="idx-table">
-                <thead>
-                  <tr>
-                    <th rowSpan={2} className={`idx-name-th ${getSortClass('name')}`} onClick={() => sortTable('name')}>
-                      Index Name
-                    </th>
-                    <th colSpan={5} className="th-group">TRI Returns</th>
-                    <th colSpan={2} className="th-group">Risk</th>
-                    <th colSpan={3} className="th-group">Valuation</th>
-                    <th rowSpan={2} className={getSortClass('risk')} onClick={() => sortTable('risk')}>Riskometer</th>
-                    <th rowSpan={2}>Compare</th>
-                  </tr>
-                  <tr>
-                    <th className={getSortClass('r1m')} onClick={() => sortTable('r1m')}>1M</th>
-                    <th className={getSortClass('r3m')} onClick={() => sortTable('r3m')}>3M</th>
-                    <th className={getSortClass('r1y')} onClick={() => sortTable('r1y')}>1Y</th>
-                    <th className={getSortClass('r3y')} onClick={() => sortTable('r3y')}>3Y</th>
-                    <th className={getSortClass('r5y')} onClick={() => sortTable('r5y')}>5Y</th>
-                    <th className={getSortClass('vol')} onClick={() => sortTable('vol')}>Vol</th>
-                    <th className={getSortClass('beta')} onClick={() => sortTable('beta')}>Beta</th>
-                    <th className={getSortClass('pe')} onClick={() => sortTable('pe')}>P/E</th>
-                    <th className={getSortClass('pb')} onClick={() => sortTable('pb')}>P/B</th>
-                    <th className={getSortClass('dy')} onClick={() => sortTable('dy')}>D.Y.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r, i) => {
-                    const encodedName = encodeURIComponent(r.name);
-                    const rollUrl = `/rolling?bench=${encodedName}`;
-
-                  
-  return (
-                      <tr key={i} data-cat={r.cat}>
-                        <td>
-                          <div className="idx-name-cell">
-                            {r.name}
-                            <span className={`exch-pill exch-${r.exchange}`}>{r.exchange}</span>
-                            <span className={`cat-pill cat-${r.cat}`}>
-                              {CAT_LABELS[r.cat] || r.cat}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="td-divider">{fmtRet(r.returns.r1m)}</td>
-                        <td>{fmtRet(r.returns.r3m)}</td>
-                        <td>{fmtRet(r.returns.r1y)}</td>
-                        <td>{fmtRet(r.returns.r3y)}</td>
-                        <td>{fmtRet(r.returns.r5y)}</td>
-                        <td className="td-divider">{fmtNum(r.risk.vol)}</td>
-                        <td>{fmtNum(r.risk.beta)}</td>
-                        <td className="td-divider">{fmtNum(r.val.pe)}</td>
-                        <td>{fmtNum(r.val.pb)}</td>
-                        <td>{fmtNum(r.val.dy)}</td>
-                        <td className="td-gauge">
-                          <RiskGauge label={r.riskLabel} score={r.riskScore} />
-                        </td>
-                        <td>
-                          <a className="roll-btn" href={rollUrl} title={`Compare vs ${r.name} on Rolling Returns`}>
-                            📉 Compare
-                          </a>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="src-text">
-              Data: NSE Indices ({metadata.month} {metadata.year}, TRI basis, {metadata.count} indices) + BSE Ltd. ({metadata.bseCount} indices, price basis)
-            </div>
-          </div>
-        )}
-
-        {!loading && !error && (
-          <div className="pf-advisor-card">
-            <div className="pf-advisor-icon">✦</div>
-            <div className="pf-advisor-body">
-              <div className="pf-advisor-title">Not sure which index or fund fits your goals?</div>
-              <div className="pf-advisor-sub">
-                Index valuation is market context, not a buy signal — talk to an AMFI-registered MFD about your own allocation.
-              </div>
-            </div>
-            <a href="/book-consultation" className="pf-advisor-btn">
-              Book a Call →
-            </a>
-          </div>
-        )}
+        </section>
       </div>
 
-      {toast && <div className="pf-toast">{toast}</div>}
       <Footer />
     </>
   );
 }
+
