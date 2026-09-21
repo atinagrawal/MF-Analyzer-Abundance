@@ -96,10 +96,18 @@ export default async function CompareHubPage() {
     console.error('[CompareHubPage] Failed to fetch screener dataset:', err.message);
   }
 
-  // Pre-sort funds by 3Y returns for the interactive launcher dropdown
-  const topFunds = (dataset?.funds || [])
+  // Full open-ended fund universe for the interactive launcher's search
+  // combobox -- previously capped at the top 300 (by whatever order
+  // getScreenerDataset() returns) because it fed a native <select> with
+  // one <option> per fund; now that selection is a client-side type-to-
+  // filter search (CompareLauncher), there's no DOM-size reason to cap
+  // it, so this is the same full list /screener searches against. Only
+  // the fields the launcher actually needs (search + slug/navigation) are
+  // kept per fund, not the full ~26-column screener row, so payload size
+  // stays reasonable even at the full ~1,700-fund universe.
+  const launcherFunds = (dataset?.funds || [])
     .filter((f) => /open/i.test(f.structure || ''))
-    .slice(0, 300);
+    .map((f) => ({ code: f.code, name: f.name, amc: f.amc }));
 
   const jsonLd = buildHubJsonLd();
 
@@ -125,7 +133,7 @@ export default async function CompareHubPage() {
           volatility, and SEBI liquidity stress tests.
         </p>
 
-        <CompareLauncher funds={topFunds} />
+        <CompareLauncher funds={launcherFunds} />
       </div>
 
       <div className="cmp-hub-content" style={{ maxWidth: 1280, margin: '0 auto' }}>
