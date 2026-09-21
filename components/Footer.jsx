@@ -165,11 +165,28 @@ export default function Footer({ variant = 'default', activePage, disclaimer }) 
           </p>
         </div>
 
+        {/* ── Directory Links Strip ── */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', justifyContent: 'center', alignItems: 'center', padding: '14px 0 6px', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: '12px', color: 'rgba(255,255,255,0.65)' }}>
+          <a href="/screener" style={{ color: 'inherit', textDecoration: 'none' }}>MF Screener</a>
+          <span>·</span>
+          <a href="/amc" style={{ color: 'inherit', textDecoration: 'none' }}>AMC Directory</a>
+          <span>·</span>
+          <a href="/pms-screener" style={{ color: 'inherit', textDecoration: 'none' }}>PMS Screener</a>
+          <span>·</span>
+          <a href="/pms-provider" style={{ color: 'inherit', textDecoration: 'none' }}>PMS Providers</a>
+          <span>·</span>
+          <a href="/stocks-in-funds" style={{ color: 'inherit', textDecoration: 'none' }}>Reverse Stock Holdings</a>
+          <span>·</span>
+          <a href="/sifs" style={{ color: 'inherit', textDecoration: 'none' }}>SIF Screener</a>
+          <span>·</span>
+          <a href="/nfo" style={{ color: 'inherit', textDecoration: 'none' }}>NFO Tracker</a>
+        </div>
+
         {/* ── Bottom bar (both variants) ── */}
         <div className="dark-footer-bottom">
           <span>© {year} Abundance Financial Services® · Atin Kumar Agrawal</span>
           <span className="dfb-arn">
-            ARN-251838 · AMFI Registered Mutual Funds Distributor &amp; SIF Distributor
+            ARN-251838 (AMFI Registered Mutual Fund &amp; SIF Distributor) · APRN04279 (APMI Registered PMS Distributor)
           </span>
           <span className="dfb-arn">GST: 05AXYPA6954G1Z3</span>
         </div>

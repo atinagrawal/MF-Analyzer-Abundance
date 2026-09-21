@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession, signIn } from 'next-auth/react';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
@@ -14,6 +15,10 @@ import { startCheckout } from '@/lib/checkoutClient';
 import { sharpeRatio } from '@/lib/riskFreeRate';
 import '@/app/screener/mf-compare.css';
 import './fund-detail.css';
+
+function amcSlug(name) {
+  return String(name || '').toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
 
 const BENCHMARK_OPTIONS = [
   'BSE 500',
@@ -492,7 +497,17 @@ export default function FundDetailClient({ code }) {
             <div className="fd-hero-info">
               <h1 className="fd-fund-name">{f.name}</h1>
               <div className="fd-hero-tags">
-                <span className="fd-tag">{f.amc}</span>
+                {f.amc && (
+                  <Link
+                    href={`/amc/${amcSlug(f.amc)}`}
+                    className="fd-tag"
+                    style={{ textDecoration: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    title={`View all ${f.amc} schemes & AMC profile`}
+                  >
+                    <span>🏛️</span>
+                    <span>{f.amc}</span>
+                  </Link>
+                )}
                 <span className="fd-tag green">{shortCat(f.category)}</span>
                 <span className="fd-tag">{f.structure}</span>
                 {f.isin && <span className="fd-tag mono">{f.isin}</span>}

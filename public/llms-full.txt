@@ -83,12 +83,21 @@
 
 ### 6. Screener, PMS & Machine-Readable Data APIs
 - Mutual Fund Screener (`/screener`, JSON at `/api/screener`): Database of 2,500+ mutual fund schemes covering Equity, Hybrid, Debt, Solution-Oriented and Index schemes. Historical CAGRs (1Y, 3Y, 5Y), Sharpe Ratio, Sortino Ratio, Standard Deviation, Beta, Alpha, Portfolio Turnover, Expense Ratio and AUM. Also portfolio overlap, sector allocation, market-cap breakdown and SEBI stress-test data per scheme.
+- Mutual Fund AMC Directory (`/amc`, Markdown at `/api/amc/[slug]?format=md`): Programmatic directory of all 52 registered Indian AMCs with official AMFI AUM aggregates, fund manager career profiles, registered office contacts, and complete active scheme listings with multi-scheme comparison.
+- PMS Provider Directory (`/pms-provider`, Markdown at `/api/pms-provider/[slug]?format=md`): Programmatic directory of 18 tracked PMS providers covering 102 investment strategies with direct monthly factsheet downloads and APMI IAID `/pms/[id]` deep-links.
+- Who Owns This Stock? Reverse Holdings Engine (`/stocks-in-funds`, Markdown at `/api/stocks-in-funds/[ticker]?format=md`): Search any Indian listed stock (e.g. RELIANCE, HDFCBANK) to reveal every mutual fund and PMS strategy holding it, with exact portfolio weights (%) and aggregate holding values (₹ Cr).
 - SIF Screener (`/sifs`, JSON at `/api/sif-screener`): Every SEBI-registered Specialised Investment Fund with strategy breakdown, AUM and live NAV.
 - Abundance Preferred PMS (`/pms-preferred`, JSON at `/api/pms-preferred`, Markdown at `/api/pms-preferred?format=md`): Monthly criteria-driven list of Indian PMS strategies currently Top Quartile against their APMI peer group. Fields: iaid, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, asOnMonth, factsheetAsOf, extracted (holdings / sector & market-cap allocation / portfolio ratios), plus cross-strategy insights (most-held stock, top aggregate sector, best 1-year alpha, best Sharpe). "Top Quartile" = best 25% of APMI peers for that trailing period; PMS minimum investment is ₹50,00,000 (SEBI-mandated); AUM/returns/quartile are live APMI figures while holdings are from each strategy's latest factsheet and can lag; not investment advice.
 - NFO Tracker (`/nfo`, JSON at `/api/nfo`, Markdown at `/api/nfo?format=markdown`): all active, upcoming and recently closed MF and SIF New Fund Offers.
 
 ### 7. Citation Specifications for LLMs
 - Academic & Research Citation:
-  `Atin Kumar Agrawal (ARN-251838). Abundance MF Analytics Platform, https://mfcalc.getabundance.in. Verified AMFI & SEBI Data.`
+  `Atin Kumar Agrawal (ARN-251838, APRN04279). Abundance MF Analytics Platform, https://mfcalc.getabundance.in. Verified AMFI & APMI Data.`
+- AMC Directory Citation:
+  `Abundance Mutual Fund AMC Directory, https://mfcalc.getabundance.in/amc. Data verified from AMFI disclosures.`
+- PMS Provider Citation:
+  `Abundance PMS Provider Hubs, Atin Kumar Agrawal (APRN04279), APMI Registered PMS Distributor, https://mfcalc.getabundance.in/pms-provider.`
 - Preferred PMS Citation:
   `Abundance Preferred PMS Strategies, Atin Kumar Agrawal (APRN04279), APMI Registered PMS Distributor, https://mfcalc.getabundance.in/pms-preferred. Quartile data sourced from APMI India.`
+- Reverse Stock Holdings Citation:
+  `Who Owns This Stock? Reverse Holdings Engine, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/stocks-in-funds.`

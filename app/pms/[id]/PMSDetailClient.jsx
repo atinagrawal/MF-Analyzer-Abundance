@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession, signIn } from 'next-auth/react';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
@@ -10,6 +11,36 @@ import { startCheckout } from '@/lib/checkoutClient';
 import { buildPmsDetailFaq } from '@/lib/pmsDetailFaq';
 import CompareGrowthChart from '@/app/screener/CompareGrowthChart';
 import './pms-detail.css';
+
+const PMS_PROVIDER_SLUGS = {
+  carnelian: 'carnelian',
+  stallion: 'stallion',
+  narnolia: 'narnolia',
+  renaissance: 'renaissance',
+  sundaram: 'sundaram',
+  greenlantern: 'greenlantern',
+  iciciprudential: 'iciciprudential',
+  alchemy: 'alchemy',
+  abakkus: 'abakkus',
+  buoyant: 'buoyant',
+  dezerv: 'dezerv',
+  negen: 'negen',
+  motilaloswal: 'motilaloswal',
+  invesco: 'invesco',
+  incred: 'incred',
+  greenportfolio: 'greenportfolio',
+  equitree: 'equitree',
+  adityabirla: 'adityabirla',
+};
+
+function getPmsProviderSlug(name) {
+  if (!name) return null;
+  const raw = name.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  for (const [key, slug] of Object.entries(PMS_PROVIDER_SLUGS)) {
+    if (raw.includes(key)) return slug;
+  }
+  return null;
+}
 
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -156,7 +187,22 @@ export default function PMSDetailClient({ iaid }) {
                 <div className="pmsd-hero-proper-name">{d.factsheetData.properName}</div>
               )}
               <div className="pmsd-hero-tags">
-                <span className="pmsd-tag">{d.providerName}</span>
+                {(() => {
+                  const pSlug = getPmsProviderSlug(d.providerName);
+                  return pSlug ? (
+                    <Link
+                      href={`/pms-provider/${pSlug}`}
+                      className="pmsd-tag"
+                      style={{ textDecoration: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      title={`View all ${d.providerName} strategies & factsheets`}
+                    >
+                      <span>🏛️</span>
+                      <span>{d.providerName}</span>
+                    </Link>
+                  ) : (
+                    <span className="pmsd-tag">{d.providerName}</span>
+                  );
+                })()}
                 <span className="pmsd-tag green">{d.strategyName}</span>
                 {d.benchmark && <span className="pmsd-tag">vs {d.benchmark}</span>}
               </div>
