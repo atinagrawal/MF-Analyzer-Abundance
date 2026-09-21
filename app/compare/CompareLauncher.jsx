@@ -34,13 +34,23 @@ function FundCombobox({ label, funds, excludeCode, selectedCode, onSelect }) {
     setQuery(selected ? `${selected.name} (${selected.amc})` : '');
   }, [selected?.code]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const q = query.trim().toLowerCase();
+  // Token AND-match rather than one whole-string substring: "icici multi
+  // asset" previously matched nothing, because "ICICI Prudential Multi
+  // Asset Allocation Fund" has "Prudential" sitting between "icici" and
+  // "multi asset" -- a single .includes(q) requires the query to appear
+  // verbatim and contiguous. Splitting into words and requiring each one
+  // to appear somewhere (order-independent, gaps allowed) matches the way
+  // people actually type a fund name from memory.
+  const qTokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const results =
-    q.length < 1
+    qTokens.length < 1
       ? []
       : funds
           .filter((f) => String(f.code) !== String(excludeCode))
-          .filter((f) => f.name.toLowerCase().includes(q) || (f.amc || '').toLowerCase().includes(q))
+          .filter((f) => {
+            const hay = `${f.name} ${f.amc || ''}`.toLowerCase();
+            return qTokens.every((tok) => hay.includes(tok));
+          })
           .slice(0, MAX_RESULTS);
 
   function handleFocus() {
@@ -75,7 +85,7 @@ function FundCombobox({ label, funds, excludeCode, selectedCode, onSelect }) {
         onBlur={handleBlur}
         autoComplete="off"
       />
-      {open && q.length >= 1 && (
+      {open && qTokens.length >= 1 && (
         <ul className="cmp-launcher-dropdown">
           {results.length === 0 ? (
             <li className="cmp-launcher-dropdown-empty">No matching funds</li>

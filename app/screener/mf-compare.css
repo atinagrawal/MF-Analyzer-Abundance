@@ -469,9 +469,9 @@
 }
 .cmp-launcher-dropdown-item {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   padding: 8px 10px;
   border-radius: 7px;
   cursor: pointer;
@@ -483,14 +483,12 @@
 .cmp-launcher-dropdown-name {
   color: var(--text);
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.3;
 }
 .cmp-launcher-dropdown-amc {
   color: var(--muted);
   font-size: .72rem;
-  flex-shrink: 0;
 }
 .cmp-launcher-dropdown-empty {
   padding: 10px;
