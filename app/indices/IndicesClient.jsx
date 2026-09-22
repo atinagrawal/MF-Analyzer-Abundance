@@ -232,8 +232,38 @@ export default function IndicesClient({ initialData }) {
     );
   }
 
+  const { nseOk, bseOk } = metadata;
+  // getCombinedIndicesData() runs NSE and BSE fetches through
+  // Promise.allSettled, which swallows an individual rejection -- without
+  // this, a source outage (or, if both are down, the SSR catch in page.js
+  // falling back to an empty payload) would render a normal-looking but
+  // silently incomplete or empty table with no indication anything is wrong.
+  const sourceNotice =
+    nseOk === false && bseOk === false
+      ? 'Both NSE and BSE index data are temporarily unavailable. Please try again shortly.'
+      : nseOk === false
+      ? 'NSE index data is temporarily unavailable — showing BSE indices only.'
+      : bseOk === false
+      ? 'BSE index data is temporarily unavailable — showing NSE indices only.'
+      : null;
+
   return (
     <>
+      {sourceNotice && (
+        <div id="sourceNoticeBox" style={{
+          padding: '12px 16px',
+          marginBottom: 14,
+          background: 'var(--warn-bg, #fff8e1)',
+          border: '1.5px solid var(--warn, #f9a825)',
+          borderRadius: 'var(--r)',
+          color: 'var(--warn-text, #8a6100)',
+          fontWeight: 600,
+          fontSize: '.85rem',
+        }}>
+          ⚠ {sourceNotice}
+        </div>
+      )}
+
       {renderValuationDashboard()}
 
       <div id="controls" className="controls-bar" style={{ display: 'flex' }}>

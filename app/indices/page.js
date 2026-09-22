@@ -21,7 +21,7 @@ export default async function IndicesPage() {
     data = {
       allData: [],
       benchmarks: [],
-      metadata: { count: 0, bseCount: 0, totalCount: 0, month: '', year: '', asOf: '' },
+      metadata: { count: 0, bseCount: 0, totalCount: 0, month: '', year: '', asOf: '', nseOk: false, bseOk: false },
     };
   }
 

@@ -128,7 +128,7 @@ export default function IndicesLayout({ children }) {
     "description": "Primary equity benchmarks for Indian mutual fund performance comparison and macroeconomic valuation.",
     "itemListElement": [
       { "@type": "ListItem", "position": 1, "name": "Nifty 50", "url": "https://mfcalc.getabundance.in/rolling?bench=NIFTY%2050" },
-      { "@type": "ListItem", "position": 2, "name": "S&P BSE SENSEX", "url": "https://mfcalc.getabundance.in/rolling?bench=S%26P%20BSE%20SENSEX" },
+      { "@type": "ListItem", "position": 2, "name": "BSE SENSEX", "url": "https://mfcalc.getabundance.in/rolling?bench=BSE%20SENSEX" },
       { "@type": "ListItem", "position": 3, "name": "Nifty Next 50", "url": "https://mfcalc.getabundance.in/rolling?bench=Nifty%20Next%2050" },
       { "@type": "ListItem", "position": 4, "name": "Nifty Midcap 150", "url": "https://mfcalc.getabundance.in/rolling?bench=Nifty%20Midcap%20150" },
       { "@type": "ListItem", "position": 5, "name": "Nifty Smallcap 250", "url": "https://mfcalc.getabundance.in/rolling?bench=Nifty%20Smallcap%20250" },
