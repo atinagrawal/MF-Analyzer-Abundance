@@ -281,16 +281,21 @@ Encapsulates all client-side interactivity:
 
 ## 7. Free vs. Pro Gating Specification
 
-Following the site's standard pattern (used in `app/indices/IndicesClient.jsx`, `app/geography/page.js`, `app/fund/[code]/FundDetailClient.jsx`, and `app/pms/[id]`):
+Free vs. Pro gating strictly uses the project's canonical authorization helper `isPaidUser(session)` imported from `lib/permissions.js` (or `@/lib/permissions`):
 
 ```jsx
-const isProUser = Boolean(
-  session?.user?.role === 'admin' ||
-  session?.user?.role === 'distributor' ||
-  session?.user?.isPro ||
-  (session?.user?.proTrialUntil && new Date(session.user.proTrialUntil) > new Date())
-);
+import { isPaidUser } from '@/lib/permissions';
+
+const isPro = isPaidUser(session);
 ```
+
+`isPaidUser(session)` checks:
+- `session.user.role === 'admin'`
+- `session.user.role === 'distributor'`
+- `session.user.plan === 'pro'`
+- `session.user.plan === 'pro_lifetime'`
+- `session.user.plan === 'lifetime'`
+- `session.user.isPro === true`
 
 ### 7.1 Free Tier (Public SEO & GEO Acquisition)
 * Full constituent roster table (all 50 to 500 stocks).

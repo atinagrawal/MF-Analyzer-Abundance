@@ -91,7 +91,7 @@
   - Sector filter pills.
   - Valuation gauge visualization with historical fair-value bands.
   - Table rows with active link to `/stocks-in-funds?stock=${symbol}`.
-  - Pro-gated CSV export button using `isProUser` check and upgrade toast.
+  - Pro-gated CSV export button using `isPaidUser(session)` from `@/lib/permissions` and upgrade toast.
   - Multi-Index Overlap Analyser teaser card.
 
 ### Task 10: Cross-Link from Main `/indices` Table (`app/indices/IndicesClient.jsx`)
