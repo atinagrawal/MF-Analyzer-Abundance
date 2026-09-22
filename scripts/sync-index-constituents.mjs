@@ -328,8 +328,8 @@ async function main() {
         const client = await pool.connect();
         try {
           await client.query('BEGIN');
-          // Purge any existing snapshot rows for this index on this date to prevent orphan rows
-          await client.query('DELETE FROM index_constituents WHERE index_slug = $1 AND as_of_date = $2', [idx.slug, asOfDate]);
+          // Purge previous snapshot for this index to maintain exactly one current snapshot in DB
+          await client.query('DELETE FROM index_constituents WHERE index_slug = $1', [idx.slug]);
           const chunkSize = 100;
           for (let i = 0; i < dbConstituents.length; i += chunkSize) {
             const chunk = dbConstituents.slice(i, i + chunkSize);
