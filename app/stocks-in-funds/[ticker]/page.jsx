@@ -60,30 +60,62 @@ async function getStockHoldingsData(rawParam) {
       };
     }
 
-    // 2. If not found in holdings, check stock_signals for graceful zero-holder state
+    // 2. If not found in holdings, check stock_signals (joined with index_constituents for sector)
     const signalRes = await pool.query(
       `
-      SELECT symbol, name, sector, isin
-      FROM stock_signals
-      WHERE UPPER(symbol) = UPPER($1) OR LOWER(symbol) = LOWER($1)
+      SELECT 
+        s.symbol, 
+        s.name, 
+        COALESCE(ic.industry, 'Equities') AS sector, 
+        COALESCE(s.isin, ic.isin) AS isin
+      FROM stock_signals s
+      LEFT JOIN (
+        SELECT DISTINCT ON (UPPER(symbol)) UPPER(symbol) AS sym, industry, isin 
+        FROM index_constituents 
+        WHERE industry IS NOT NULL AND industry != ''
+        ORDER BY UPPER(symbol), as_of_date DESC
+      ) ic ON UPPER(s.symbol) = ic.sym
+      WHERE UPPER(s.symbol) = UPPER($1) OR LOWER(s.symbol) = LOWER($1)
       LIMIT 1
       `,
       [decoded]
     );
 
-    if (signalRes.rows.length > 0) {
-      const s = signalRes.rows[0];
-      const canonicalTicker = s.symbol.toUpperCase().trim();
+    let stockMetaRow = signalRes.rows[0];
+
+    // 3. If not in stock_signals either, check index_constituents directly
+    if (!stockMetaRow) {
+      const idxRes = await pool.query(
+        `
+        SELECT 
+          symbol, 
+          company_name AS name, 
+          COALESCE(industry, 'Equities') AS sector, 
+          isin
+        FROM index_constituents
+        WHERE UPPER(symbol) = UPPER($1) OR LOWER(symbol) = LOWER($1)
+        ORDER BY as_of_date DESC
+        LIMIT 1
+        `,
+        [decoded]
+      );
+      if (idxRes.rows.length > 0) {
+        stockMetaRow = idxRes.rows[0];
+      }
+    }
+
+    if (stockMetaRow) {
+      const canonicalTicker = stockMetaRow.symbol.toUpperCase().trim();
       return {
         canonicalCode: canonicalTicker,
         canonicalTicker,
         canonicalSlug: canonicalTicker.toLowerCase(),
         stockMeta: {
-          companyName: s.name,
+          companyName: stockMetaRow.name,
           ticker: canonicalTicker,
           slug: canonicalTicker.toLowerCase(),
-          sector: s.sector || 'Equities',
-          isin: s.isin,
+          sector: stockMetaRow.sector || 'Equities',
+          isin: stockMetaRow.isin,
           asOfDate: null,
         },
         holdings: [],

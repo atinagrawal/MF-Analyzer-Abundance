@@ -60,20 +60,57 @@ export async function GET(request, { params }) {
         asOfDate: first.as_of_date,
       };
     } else {
-      // Check stock_signals for graceful zero-holder state
+      // Check stock_signals (joined with index_constituents for sector) or index_constituents directly
       const sigRes = await pool.query(
-        `SELECT symbol, name, sector, isin FROM stock_signals WHERE UPPER(symbol) = UPPER($1) OR LOWER(symbol) = LOWER($1) LIMIT 1`,
+        `
+        SELECT 
+          s.symbol, 
+          s.name, 
+          COALESCE(ic.industry, 'Equities') AS sector, 
+          COALESCE(s.isin, ic.isin) AS isin
+        FROM stock_signals s
+        LEFT JOIN (
+          SELECT DISTINCT ON (UPPER(symbol)) UPPER(symbol) AS sym, industry, isin 
+          FROM index_constituents 
+          WHERE industry IS NOT NULL AND industry != ''
+          ORDER BY UPPER(symbol), as_of_date DESC
+        ) ic ON UPPER(s.symbol) = ic.sym
+        WHERE UPPER(s.symbol) = UPPER($1) OR LOWER(s.symbol) = LOWER($1)
+        LIMIT 1
+        `,
         [rawParam]
       );
-      if (sigRes.rows.length > 0) {
-        const s = sigRes.rows[0];
-        const canonicalTicker = s.symbol.toUpperCase().trim();
+
+      let fallbackStock = sigRes.rows[0];
+
+      if (!fallbackStock) {
+        const idxRes = await pool.query(
+          `
+          SELECT 
+            symbol, 
+            company_name AS name, 
+            COALESCE(industry, 'Equities') AS sector, 
+            isin
+          FROM index_constituents
+          WHERE UPPER(symbol) = UPPER($1) OR LOWER(symbol) = LOWER($1)
+          ORDER BY as_of_date DESC
+          LIMIT 1
+          `,
+          [rawParam]
+        );
+        if (idxRes.rows.length > 0) {
+          fallbackStock = idxRes.rows[0];
+        }
+      }
+
+      if (fallbackStock) {
+        const canonicalTicker = fallbackStock.symbol.toUpperCase().trim();
         stock = {
-          companyName: s.name,
+          companyName: fallbackStock.name,
           ticker: canonicalTicker,
           slug: canonicalTicker.toLowerCase(),
-          sector: s.sector || 'Equities',
-          isin: s.isin,
+          sector: fallbackStock.sector || 'Equities',
+          isin: fallbackStock.isin,
           asOfDate: null,
         };
       }
