@@ -41,6 +41,7 @@ export const config = {
     '/amc/:path*',     // AMC factsheet markdown content negotiation
     '/pms-provider/:path*', // PMS provider factsheet markdown content negotiation
     '/indices',        // Market indices markdown content negotiation
+    '/indices/:path*', // Per-index constituent markdown content negotiation
   ],
 };
 
@@ -130,6 +131,17 @@ export default function middleware(request) {
     if (format === 'md' || format === 'markdown' || accept.includes('text/markdown')) {
       const apiIndicesUrl = new URL(`/api/indices${url.search}`, request.url);
       return NextResponse.rewrite(apiIndicesUrl);
+    }
+  }
+
+  // ── 0g. MARKDOWN CONTENT NEGOTIATION FOR /indices/[slug] ───
+  if (pathname.startsWith('/indices/') && pathname !== '/indices') {
+    const format = p.get('format');
+    const accept = request.headers.get('accept') || '';
+    if (format === 'md' || format === 'markdown' || accept.includes('text/markdown')) {
+      const slug = pathname.replace(/^\/indices\//, '').split('/')[0];
+      const apiIndexUrl = new URL(`/api/indices/${slug}${url.search}`, request.url);
+      return NextResponse.rewrite(apiIndexUrl);
     }
   }
 

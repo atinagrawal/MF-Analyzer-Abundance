@@ -1,0 +1,461 @@
+{
+  "slug": "nifty500-value-50",
+  "name": "Nifty500 Value 50",
+  "exchange": "NSE",
+  "category": "Strategy / Factor",
+  "description": "Selects 50 deeply valued stocks across the Nifty 500 offering margin of safety across price-to-earnings and price-to-book ratios.",
+  "asOf": "2026-09-22",
+  "count": 50,
+  "constituents": [
+    {
+      "symbol": "AWL",
+      "companyName": "AWL Agri Business Ltd.",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE699H01024",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "ASTERDM",
+      "companyName": "Aster DM Quality Care Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE914M01019",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "BANDHANBNK",
+      "companyName": "Bandhan Bank Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE545U01014",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "BANKBARODA",
+      "companyName": "Bank of Baroda",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE028A01039",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "BANKINDIA",
+      "companyName": "Bank of India",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE084A01016",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "MAHABANK",
+      "companyName": "Bank of Maharashtra",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE457A01014",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "BPCL",
+      "companyName": "Bharat Petroleum Corporation Ltd.",
+      "industry": "Oil Gas & Consumable Fuels",
+      "series": "EQ",
+      "isin": "INE029A01011",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "CESC",
+      "companyName": "CESC Ltd.",
+      "industry": "Power",
+      "series": "EQ",
+      "isin": "INE486A01021",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "CANBK",
+      "companyName": "Canara Bank",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE476A01022",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "CASTROLIND",
+      "companyName": "Castrol India Ltd.",
+      "industry": "Oil Gas & Consumable Fuels",
+      "series": "EQ",
+      "isin": "INE172A01027",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "CHAMBLFERT",
+      "companyName": "Chambal Fertilizers & Chemicals Ltd.",
+      "industry": "Chemicals",
+      "series": "EQ",
+      "isin": "INE085A01013",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "CHOLAHLDNG",
+      "companyName": "Cholamandalam Financial Holdings Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE149A01033",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "COALINDIA",
+      "companyName": "Coal India Ltd.",
+      "industry": "Oil Gas & Consumable Fuels",
+      "series": "EQ",
+      "isin": "INE522F01014",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "CYIENT",
+      "companyName": "Cyient Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE136B01020",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "FEDERALBNK",
+      "companyName": "Federal Bank Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE171A01029",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "GAIL",
+      "companyName": "GAIL (India) Ltd.",
+      "industry": "Oil Gas & Consumable Fuels",
+      "series": "EQ",
+      "isin": "INE129A01019",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "GRASIM",
+      "companyName": "Grasim Industries Ltd.",
+      "industry": "Construction Materials",
+      "series": "EQ",
+      "isin": "INE047A01021",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "GESHIP",
+      "companyName": "Great Eastern Shipping Co. Ltd.",
+      "industry": "Services",
+      "series": "EQ",
+      "isin": "INE017A01032",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "HINDALCO",
+      "companyName": "Hindalco Industries Ltd.",
+      "industry": "Metals & Mining",
+      "series": "EQ",
+      "isin": "INE038A01020",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "HINDPETRO",
+      "companyName": "Hindustan Petroleum Corporation Ltd.",
+      "industry": "Oil Gas & Consumable Fuels",
+      "series": "EQ",
+      "isin": "INE094A01015",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "IRB",
+      "companyName": "IRB Infrastructure Developers Ltd.",
+      "industry": "Construction",
+      "series": "EQ",
+      "isin": "INE821I01022",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "INDIANB",
+      "companyName": "Indian Bank",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE562A01011",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "IOC",
+      "companyName": "Indian Oil Corporation Ltd.",
+      "industry": "Oil Gas & Consumable Fuels",
+      "series": "EQ",
+      "isin": "INE242A01010",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "IGL",
+      "companyName": "Indraprastha Gas Ltd.",
+      "industry": "Oil Gas & Consumable Fuels",
+      "series": "EQ",
+      "isin": "INE203G01027",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "INDUSINDBK",
+      "companyName": "IndusInd Bank Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE095A01012",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "JPPOWER",
+      "companyName": "Jaiprakash Power Ventures Ltd.",
+      "industry": "Power",
+      "series": "EQ",
+      "isin": "INE351F01018",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "KARURVYSYA",
+      "companyName": "Karur Vysya Bank Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE036D01028",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "LICHSGFIN",
+      "companyName": "LIC Housing Finance Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE115A01026",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "NCC",
+      "companyName": "NCC Ltd.",
+      "industry": "Construction",
+      "series": "EQ",
+      "isin": "INE868B01028",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "NMDC",
+      "companyName": "NMDC Ltd.",
+      "industry": "Metals & Mining",
+      "series": "EQ",
+      "isin": "INE584A01023",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "NTPC",
+      "companyName": "NTPC Ltd.",
+      "industry": "Power",
+      "series": "EQ",
+      "isin": "INE733E01010",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "NATIONALUM",
+      "companyName": "National Aluminium Co. Ltd.",
+      "industry": "Metals & Mining",
+      "series": "EQ",
+      "isin": "INE139A01034",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "ONGC",
+      "companyName": "Oil & Natural Gas Corporation Ltd.",
+      "industry": "Oil Gas & Consumable Fuels",
+      "series": "EQ",
+      "isin": "INE213A01029",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "OIL",
+      "companyName": "Oil India Ltd.",
+      "industry": "Oil Gas & Consumable Fuels",
+      "series": "EQ",
+      "isin": "INE274J01014",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "PETRONET",
+      "companyName": "Petronet LNG Ltd.",
+      "industry": "Oil Gas & Consumable Fuels",
+      "series": "EQ",
+      "isin": "INE347G01014",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "PFC",
+      "companyName": "Power Finance Corporation Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE134E01011",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "POWERGRID",
+      "companyName": "Power Grid Corporation of India Ltd.",
+      "industry": "Power",
+      "series": "EQ",
+      "isin": "INE752E01010",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "PNB",
+      "companyName": "Punjab National Bank",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE160A01022",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "RBLBANK",
+      "companyName": "RBL Bank Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE976G01028",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "RECLTD",
+      "companyName": "REC Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE020B01018",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "REDINGTON",
+      "companyName": "Redington Ltd.",
+      "industry": "Services",
+      "series": "EQ",
+      "isin": "INE891D01026",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "RPOWER",
+      "companyName": "Reliance Power Ltd.",
+      "industry": "Power",
+      "series": "EQ",
+      "isin": "INE614G01033",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "SBIN",
+      "companyName": "State Bank of India",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE062A01020",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "SAIL",
+      "companyName": "Steel Authority of India Ltd.",
+      "industry": "Metals & Mining",
+      "series": "EQ",
+      "isin": "INE114A01011",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "TATACHEM",
+      "companyName": "Tata Chemicals Ltd.",
+      "industry": "Chemicals",
+      "series": "EQ",
+      "isin": "INE092A01019",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "TMPV",
+      "companyName": "Tata Motors Passenger Vehicles Ltd.",
+      "industry": "Automobile and Auto Components",
+      "series": "EQ",
+      "isin": "INE155A01022",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "UPL",
+      "companyName": "UPL Ltd.",
+      "industry": "Chemicals",
+      "series": "EQ",
+      "isin": "INE628A01036",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "UNIONBANK",
+      "companyName": "Union Bank of India",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE692A01016",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "VEDL",
+      "companyName": "Vedanta Ltd.",
+      "industry": "Metals & Mining",
+      "series": "EQ",
+      "isin": "INE205A01025",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "ZEEL",
+      "companyName": "Zee Entertainment Enterprises Ltd.",
+      "industry": "Media Entertainment & Publication",
+      "series": "EQ",
+      "isin": "INE256A01028",
+      "weight": null,
+      "source": "NSE_CSV"
+    }
+  ]
+}

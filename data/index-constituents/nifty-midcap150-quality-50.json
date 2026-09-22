@@ -1,0 +1,461 @@
+{
+  "slug": "nifty-midcap150-quality-50",
+  "name": "Nifty Midcap150 Quality 50",
+  "exchange": "NSE",
+  "category": "Strategy / Factor",
+  "description": "Selects 50 high-quality mid-cap companies with robust balance sheets and high Return on Equity.",
+  "asOf": "2026-09-22",
+  "count": 50,
+  "constituents": [
+    {
+      "symbol": "360ONE",
+      "companyName": "360 ONE WAM Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE466L01038",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "3MINDIA",
+      "companyName": "3M India Ltd.",
+      "industry": "Diversified",
+      "series": "EQ",
+      "isin": "INE470A01017",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "AIAENG",
+      "companyName": "AIA Engineering Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE212H01026",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "APLAPOLLO",
+      "companyName": "APL Apollo Tubes Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE702C01027",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "ABBOTINDIA",
+      "companyName": "Abbott India Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE358A01014",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "AJANTPHARM",
+      "companyName": "Ajanta Pharmaceuticals Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE031B01049",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "ALKEM",
+      "companyName": "Alkem Laboratories Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE540L01014",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "APARINDS",
+      "companyName": "Apar Industries Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE372A01015",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "ASTRAL",
+      "companyName": "Astral Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE006I01046",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "BSE",
+      "companyName": "BSE Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE118H01025",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "BALKRISIND",
+      "companyName": "Balkrishna Industries Ltd.",
+      "industry": "Automobile and Auto Components",
+      "series": "EQ",
+      "isin": "INE787D01026",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "MAHABANK",
+      "companyName": "Bank of Maharashtra",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE457A01014",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "BERGEPAINT",
+      "companyName": "Berger Paints India Ltd.",
+      "industry": "Consumer Durables",
+      "series": "EQ",
+      "isin": "INE463A01038",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "BDL",
+      "companyName": "Bharat Dynamics Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE171Z01026",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "CRISIL",
+      "companyName": "CRISIL Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE007A01025",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "COFORGE",
+      "companyName": "Coforge Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE591G01025",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "COLPAL",
+      "companyName": "Colgate Palmolive (India) Ltd.",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE259A01022",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "COROMANDEL",
+      "companyName": "Coromandel International Ltd.",
+      "industry": "Chemicals",
+      "series": "EQ",
+      "isin": "INE169A01031",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "DABUR",
+      "companyName": "Dabur India Ltd.",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE016A01026",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "DIXON",
+      "companyName": "Dixon Technologies (India) Ltd.",
+      "industry": "Consumer Durables",
+      "series": "EQ",
+      "isin": "INE935N01020",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "ENDURANCE",
+      "companyName": "Endurance Technologies Ltd.",
+      "industry": "Automobile and Auto Components",
+      "series": "EQ",
+      "isin": "INE913H01037",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "GLAXO",
+      "companyName": "Glaxosmithkline Pharmaceuticals Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE159A01016",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "GODFRYPHLP",
+      "companyName": "Godfrey Phillips India Ltd.",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE260B01028",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "HAVELLS",
+      "companyName": "Havells India Ltd.",
+      "industry": "Consumer Durables",
+      "series": "EQ",
+      "isin": "INE176B01034",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "HEROMOTOCO",
+      "companyName": "Hero MotoCorp Ltd.",
+      "industry": "Automobile and Auto Components",
+      "series": "EQ",
+      "isin": "INE158A01026",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "POWERINDIA",
+      "companyName": "Hitachi Energy India Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE07Y701011",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "HONAUT",
+      "companyName": "Honeywell Automation India Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE671A01010",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "INDIANB",
+      "companyName": "Indian Bank",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE562A01011",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "IRCTC",
+      "companyName": "Indian Railway Catering And Tourism Corporation Ltd.",
+      "industry": "Consumer Services",
+      "series": "EQ",
+      "isin": "INE335Y01020",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "KPRMILL",
+      "companyName": "K.P.R. Mill Ltd.",
+      "industry": "Textiles",
+      "series": "EQ",
+      "isin": "INE930H01031",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "KEI",
+      "companyName": "KEI Industries Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE878B01027",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "KPITTECH",
+      "companyName": "KPIT Technologies Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE04I401011",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "LTTS",
+      "companyName": "L&T Technology Services Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE010V01017",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "MARICO",
+      "companyName": "Marico Ltd.",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE196A01026",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "MOTILALOFS",
+      "companyName": "Motilal Oswal Financial Services Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE338I01027",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "MPHASIS",
+      "companyName": "MphasiS Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE356A01018",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "NMDC",
+      "companyName": "NMDC Ltd.",
+      "industry": "Metals & Mining",
+      "series": "EQ",
+      "isin": "INE584A01023",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "NAM-INDIA",
+      "companyName": "Nippon Life India Asset Management Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE298J01013",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "OFSS",
+      "companyName": "Oracle Financial Services Software Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE881D01027",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "PIIND",
+      "companyName": "PI Industries Ltd.",
+      "industry": "Chemicals",
+      "series": "EQ",
+      "isin": "INE603J01030",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "PAGEIND",
+      "companyName": "Page Industries Ltd.",
+      "industry": "Textiles",
+      "series": "EQ",
+      "isin": "INE761H01022",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "PERSISTENT",
+      "companyName": "Persistent Systems Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE262H01021",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "PETRONET",
+      "companyName": "Petronet LNG Ltd.",
+      "industry": "Oil Gas & Consumable Fuels",
+      "series": "EQ",
+      "isin": "INE347G01014",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "POLYCAB",
+      "companyName": "Polycab India Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE455K01017",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "SCHAEFFLER",
+      "companyName": "Schaeffler India Ltd.",
+      "industry": "Automobile and Auto Components",
+      "series": "EQ",
+      "isin": "INE513A01022",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "SUNDARMFIN",
+      "companyName": "Sundaram Finance Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE660A01013",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "SUPREMEIND",
+      "companyName": "Supreme Industries Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE195A01028",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "TATAELXSI",
+      "companyName": "Tata Elxsi Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE670A01012",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "TIINDIA",
+      "companyName": "Tube Investments of India Ltd.",
+      "industry": "Automobile and Auto Components",
+      "series": "EQ",
+      "isin": "INE974X01010",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "VOLTAS",
+      "companyName": "Voltas Ltd.",
+      "industry": "Consumer Durables",
+      "series": "EQ",
+      "isin": "INE226A01021",
+      "weight": null,
+      "source": "NSE_CSV"
+    }
+  ]
+}

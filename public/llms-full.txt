@@ -82,6 +82,7 @@
 - Advisory Practice: 350+ client families, ₹250Cr+ in assets under advice, 15+ years experience. Free 30-minute consultation bookings available at `https://mfcalc.getabundance.in/book-consultation`.
 
 - Indian Market Indices Dashboard (`/indices`, Markdown at `/indices?format=md`, JSON at `/api/indices`): Real-time dashboard tracking 270+ Indian market indices across NSE and BSE. Includes 1M, 3M, 1Y, 3Y, 5Y Total Return Index (TRI) CAGRs, P/E & P/B valuation gauges with historical fair-value bands, Dividend Yield, Beta, Volatility, and direct benchmark links to the Rolling Returns Analyser.
+- Benchmark Index Constituents & Valuation Pages (`/indices/[slug]`, Markdown at `/indices/[slug]?format=md`, JSON at `/api/indices/[slug]`): Dedicated per-index constituent roster and valuation profile for 64 core NSE & BSE benchmarks (Nifty 50, BSE Sensex, Nifty Midcap 150, etc.). Features complete stock listings, ISINs, sector weights, trailing TRI CAGRs, and deep-link integration into institutional mutual fund holdings.
 - Mutual Fund Screener (`/screener`, JSON at `/api/screener`): Database of 2,500+ mutual fund schemes covering Equity, Hybrid, Debt, Solution-Oriented and Index schemes. Historical CAGRs (1Y, 3Y, 5Y), Sharpe Ratio, Sortino Ratio, Standard Deviation, Beta, Alpha, Portfolio Turnover, Expense Ratio and AUM. Also portfolio overlap, sector allocation, market-cap breakdown and SEBI stress-test data per scheme.
 - Mutual Fund AMC Directory (`/amc`, Markdown at `/api/amc/[slug]?format=md`): Programmatic directory of all 52 registered Indian AMCs with official AMFI AUM aggregates, fund manager career profiles, registered office contacts, and complete active scheme listings with multi-scheme comparison.
 - PMS Provider Directory (`/pms-provider`, Markdown at `/api/pms-provider/[slug]?format=md`): Programmatic directory of 18 tracked PMS providers covering 102 investment strategies with direct monthly factsheet downloads and APMI IAID `/pms/[id]` deep-links.
@@ -95,6 +96,8 @@
   `Atin Kumar Agrawal (ARN-251838, APRN04279). Abundance MF Analytics Platform, https://mfcalc.getabundance.in. Verified AMFI & APMI Data.`
 - Market Indices Citation:
   `Indian Market Indices & Valuation Dashboard, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/indices. Sourced from NSE Indices Limited (TRI) & BSE Ltd.`
+- Index Constituents Citation:
+  `Index Constituents & Valuation Roster, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/indices/[slug]. Sourced from NSE Indices Limited & BSE India.`
 - AMC Directory Citation:
   `Abundance Mutual Fund AMC Directory, https://mfcalc.getabundance.in/amc. Data verified from AMFI disclosures.`
 - PMS Provider Citation:

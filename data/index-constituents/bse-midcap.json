@@ -1,0 +1,1581 @@
+{
+  "slug": "bse-midcap",
+  "name": "BSE MidCap",
+  "exchange": "BSE",
+  "category": "Broad Market",
+  "description": "Tracks the performance of companies with market capitalization immediately below the BSE 100 universe, representing mid-sized corporate India.",
+  "asOf": "2026-08-31",
+  "count": 157,
+  "constituents": [
+    {
+      "symbol": "360ONE",
+      "companyName": "360 ONE WAM Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE466L01038",
+      "weight": null,
+      "scripCode": "542772",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "3MINDIA",
+      "companyName": "3M India Ltd.",
+      "industry": "Diversified",
+      "series": "EQ",
+      "isin": "INE470A01017",
+      "weight": null,
+      "scripCode": "523395",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "AARTIIND",
+      "companyName": "Aarti Industries Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE769A01020",
+      "weight": null,
+      "scripCode": "524208",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "ABBOTINDIA",
+      "companyName": "Abbott India Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE358A01014",
+      "weight": null,
+      "scripCode": "500488",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "ACC",
+      "companyName": "ACC Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE012A01025",
+      "weight": null,
+      "scripCode": "500410",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "ABCAPITAL",
+      "companyName": "Aditya Birla Capital Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE674K01013",
+      "weight": null,
+      "scripCode": "540691",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "AEGISVOPAK",
+      "companyName": "Aegis Vopak Terminals Ltd.",
+      "industry": "Energy",
+      "series": "EQ",
+      "isin": "INE0INX01018",
+      "weight": null,
+      "scripCode": "544407",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "AIAENG",
+      "companyName": "AIA Engineering Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE212H01026",
+      "weight": null,
+      "scripCode": "532683",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "AJANTPHARM",
+      "companyName": "Ajanta Pharmaceuticals Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE031B01049",
+      "weight": null,
+      "scripCode": "532331",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "ALKEM",
+      "companyName": "Alkem Laboratories Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE540L01014",
+      "weight": null,
+      "scripCode": "539523",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "ANTHEM",
+      "companyName": "Anthem Biosciences Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE0CZ201020",
+      "weight": null,
+      "scripCode": "544449",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "APARINDS",
+      "companyName": "Apar Industries Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE372A01015",
+      "weight": null,
+      "scripCode": "532259",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "APLAPOLLO",
+      "companyName": "APL Apollo Tubes Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE702C01027",
+      "weight": null,
+      "scripCode": "533758",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "ASTRAL",
+      "companyName": "Astral Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE006I01046",
+      "weight": null,
+      "scripCode": "532830",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "AUBANK",
+      "companyName": "AU Small Finance Bank Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE949L01017",
+      "weight": null,
+      "scripCode": "540611",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "AUROPHARMA",
+      "companyName": "Aurobindo Pharma Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE406A01037",
+      "weight": null,
+      "scripCode": "524804",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "AIIL",
+      "companyName": "Authum Investment & Infrastructure Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE206F01022",
+      "weight": null,
+      "scripCode": "539177",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "AWL",
+      "companyName": "AWL Agri Business Ltd.",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE699H01024",
+      "weight": null,
+      "scripCode": "543458",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "544758",
+      "companyName": "Bagmane Prime Office REIT",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": null,
+      "weight": null,
+      "scripCode": "544758",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "BALKRISIND",
+      "companyName": "Balkrishna Industries Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE787D01026",
+      "weight": null,
+      "scripCode": "502355",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "BANDHANBNK",
+      "companyName": "Bandhan Bank Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE545U01014",
+      "weight": null,
+      "scripCode": "541153",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "BANKINDIA",
+      "companyName": "Bank of India",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE084A01016",
+      "weight": null,
+      "scripCode": "532149",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "MAHABANK",
+      "companyName": "Bank of Maharashtra",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE457A01014",
+      "weight": null,
+      "scripCode": "532525",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "BAYERCROP",
+      "companyName": "Bayer Cropscience Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE462A01022",
+      "weight": null,
+      "scripCode": "506285",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "BDL",
+      "companyName": "Bharat Dynamics Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE171Z01026",
+      "weight": null,
+      "scripCode": "541143",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "BHARATFORG",
+      "companyName": "Bharat Forge Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE465A01025",
+      "weight": null,
+      "scripCode": "500493",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "BHARTIHEXA",
+      "companyName": "Bharti Hexacom Ltd.",
+      "industry": "Telecommunication",
+      "series": "EQ",
+      "isin": "INE343G01021",
+      "weight": null,
+      "scripCode": "544162",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "BIOCON",
+      "companyName": "Biocon Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE376G01013",
+      "weight": null,
+      "scripCode": "532523",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "BLUESTARCO",
+      "companyName": "Blue Star Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE472A01039",
+      "weight": null,
+      "scripCode": "500067",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "FIRSTCRY",
+      "companyName": "Brainbees Solutions Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE02RE01045",
+      "weight": null,
+      "scripCode": "544226",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "543261",
+      "companyName": "Brookfield India Real Estate T",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": null,
+      "weight": null,
+      "scripCode": "543261",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "CASTROLIND",
+      "companyName": "Castrol India Ltd.",
+      "industry": "Energy",
+      "series": "EQ",
+      "isin": "INE172A01027",
+      "weight": null,
+      "scripCode": "500870",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "CENTRALBK",
+      "companyName": "Central Bank of India",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE483A01010",
+      "weight": null,
+      "scripCode": "532885",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "COCHINSHIP",
+      "companyName": "Cochin Shipyard Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE704P01025",
+      "weight": null,
+      "scripCode": "540678",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "COFORGE",
+      "companyName": "Coforge Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE591G01025",
+      "weight": null,
+      "scripCode": "532541",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "COLPAL",
+      "companyName": "Colgate Palmolive (India) Ltd.",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE259A01022",
+      "weight": null,
+      "scripCode": "500830",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "CONCOR",
+      "companyName": "Container Corporation of India Ltd.",
+      "industry": "Services",
+      "series": "EQ",
+      "isin": "INE111A01025",
+      "weight": null,
+      "scripCode": "531344",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "COROMANDEL",
+      "companyName": "Coromandel International Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE169A01031",
+      "weight": null,
+      "scripCode": "506395",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "CRISIL",
+      "companyName": "CRISIL Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE007A01025",
+      "weight": null,
+      "scripCode": "500092",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "CROMPTON",
+      "companyName": "Crompton Greaves Consumer Electricals Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE299U01018",
+      "weight": null,
+      "scripCode": "539876",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "DALBHARAT",
+      "companyName": "Dalmia Bharat Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE00R701025",
+      "weight": null,
+      "scripCode": "542216",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "DEEPAKNTR",
+      "companyName": "Deepak Nitrite Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE288B01029",
+      "weight": null,
+      "scripCode": "506401",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "DELHIVERY",
+      "companyName": "Delhivery Ltd.",
+      "industry": "Services",
+      "series": "EQ",
+      "isin": "INE148O01028",
+      "weight": null,
+      "scripCode": "543529",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "DIXON",
+      "companyName": "Dixon Technologies (India) Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE935N01020",
+      "weight": null,
+      "scripCode": "540699",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "EMAMILTD",
+      "companyName": "Emami Ltd.",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE548C01032",
+      "weight": null,
+      "scripCode": "531162",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "542602",
+      "companyName": "Embassy Office Parks REIT",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": null,
+      "weight": null,
+      "scripCode": "542602",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "EMCURE",
+      "companyName": "Emcure Pharmaceuticals Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE168P01015",
+      "weight": null,
+      "scripCode": "544210",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "ENDURANCE",
+      "companyName": "Endurance Technologies Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE913H01037",
+      "weight": null,
+      "scripCode": "540153",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "ESCORTS",
+      "companyName": "Escorts Kubota Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE042A01014",
+      "weight": null,
+      "scripCode": "500495",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "EXIDEIND",
+      "companyName": "Exide Industries Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE302A01020",
+      "weight": null,
+      "scripCode": "500086",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "FEDERALBNK",
+      "companyName": "Federal Bank Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE171A01029",
+      "weight": null,
+      "scripCode": "500469",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "590024",
+      "companyName": "FERTILIZERS & CHEMICALS TRAVAN",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": null,
+      "weight": null,
+      "scripCode": "590024",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "FORTIS",
+      "companyName": "Fortis Healthcare Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE061F01013",
+      "weight": null,
+      "scripCode": "532843",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "NYKAA",
+      "companyName": "FSN E-Commerce Ventures Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE388Y01029",
+      "weight": null,
+      "scripCode": "543384",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "GICRE",
+      "companyName": "General Insurance Corporation of India",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE481Y01014",
+      "weight": null,
+      "scripCode": "540755",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "GILLETTE",
+      "companyName": "Gillette India Ltd.",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE322A01010",
+      "weight": null,
+      "scripCode": "507815",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "GLAND",
+      "companyName": "Gland Pharma Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE068V01023",
+      "weight": null,
+      "scripCode": "543245",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "GLAXO",
+      "companyName": "Glaxosmithkline Pharmaceuticals Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE159A01016",
+      "weight": null,
+      "scripCode": "500660",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "GLENMARK",
+      "companyName": "Glenmark Pharmaceuticals Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE935A01035",
+      "weight": null,
+      "scripCode": "532296",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "GODIGIT",
+      "companyName": "Go Digit General Insurance Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE03JT01014",
+      "weight": null,
+      "scripCode": "544179",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "GODFRYPHLP",
+      "companyName": "Godfrey Phillips India Ltd.",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE260B01028",
+      "weight": null,
+      "scripCode": "500163",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "GODREJIND",
+      "companyName": "Godrej Industries Ltd.",
+      "industry": "Diversified",
+      "series": "EQ",
+      "isin": "INE233A01035",
+      "weight": null,
+      "scripCode": "500164",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "GODREJPROP",
+      "companyName": "Godrej Properties Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE484J01027",
+      "weight": null,
+      "scripCode": "533150",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "544801",
+      "companyName": "GSPL Transmission Limited",
+      "industry": "",
+      "series": "EQ",
+      "isin": null,
+      "weight": null,
+      "scripCode": "544801",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "539336",
+      "companyName": "Gujarat Energy Limited",
+      "industry": "Energy",
+      "series": "EQ",
+      "isin": null,
+      "weight": null,
+      "scripCode": "539336",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "FLUOROCHEM",
+      "companyName": "Gujarat Fluorochemicals Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE09N301011",
+      "weight": null,
+      "scripCode": "542812",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "HDBFS",
+      "companyName": "HDB Financial Services Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE756I01012",
+      "weight": null,
+      "scripCode": "544429",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "HEXT",
+      "companyName": "Hexaware Technologies Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE093A01041",
+      "weight": null,
+      "scripCode": "544362",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "HINDCOPPER",
+      "companyName": "Hindustan Copper Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE531E01026",
+      "weight": null,
+      "scripCode": "513599",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "HINDPETRO",
+      "companyName": "Hindustan Petroleum Corporation Ltd.",
+      "industry": "Energy",
+      "series": "EQ",
+      "isin": "INE094A01015",
+      "weight": null,
+      "scripCode": "500104",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "HONAUT",
+      "companyName": "Honeywell Automation India Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE671A01010",
+      "weight": null,
+      "scripCode": "517174",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "HUDCO",
+      "companyName": "Housing & Urban Development Corporation Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE031A01017",
+      "weight": null,
+      "scripCode": "540530",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "IDFCFIRSTB",
+      "companyName": "IDFC First Bank Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE092T01019",
+      "weight": null,
+      "scripCode": "539437",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "IRCTC",
+      "companyName": "Indian Railway Catering And Tourism Corporation Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE335Y01020",
+      "weight": null,
+      "scripCode": "542830",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "IREDA",
+      "companyName": "Indian Renewable Energy Development Agency Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE202E01016",
+      "weight": null,
+      "scripCode": "544026",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "IGL",
+      "companyName": "Indraprastha Gas Ltd.",
+      "industry": "Energy",
+      "series": "EQ",
+      "isin": "INE203G01027",
+      "weight": null,
+      "scripCode": "532514",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "IKS",
+      "companyName": "Inventurus Knowledge Solutions Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE115Q01022",
+      "weight": null,
+      "scripCode": "544309",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "IPCALAB",
+      "companyName": "Ipca Laboratories Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE571A01038",
+      "weight": null,
+      "scripCode": "524494",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "ITCHOTELS",
+      "companyName": "ITC Hotels Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE379A01028",
+      "weight": null,
+      "scripCode": "544325",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "JKCEMENT",
+      "companyName": "J.K. Cement Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE823G01014",
+      "weight": null,
+      "scripCode": "532644",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "JSL",
+      "companyName": "Jindal Stainless Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE220G01021",
+      "weight": null,
+      "scripCode": "532508",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "JSWINFRA",
+      "companyName": "JSW Infrastructure Ltd.",
+      "industry": "Services",
+      "series": "EQ",
+      "isin": "INE880J01026",
+      "weight": null,
+      "scripCode": "543994",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "JUBLFOOD",
+      "companyName": "Jubilant Foodworks Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE797F01020",
+      "weight": null,
+      "scripCode": "533155",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "KALYANKJIL",
+      "companyName": "Kalyan Jewellers India Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE303R01014",
+      "weight": null,
+      "scripCode": "543278",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "KANSAINER",
+      "companyName": "Kansai Nerolac Paints Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE531A01024",
+      "weight": null,
+      "scripCode": "500165",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "KARURVYSYA",
+      "companyName": "Karur Vysya Bank Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE036D01028",
+      "weight": null,
+      "scripCode": "590003",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "KAYNES",
+      "companyName": "Kaynes Technology India Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE918Z01012",
+      "weight": null,
+      "scripCode": "543664",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "KEI",
+      "companyName": "KEI Industries Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE878B01027",
+      "weight": null,
+      "scripCode": "517569",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "544481",
+      "companyName": "KNOWLEDGE REALTY TRUST",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": null,
+      "weight": null,
+      "scripCode": "544481",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "KPITTECH",
+      "companyName": "KPIT Technologies Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE04I401011",
+      "weight": null,
+      "scripCode": "542651",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "LTF",
+      "companyName": "L&T Finance Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE498L01015",
+      "weight": null,
+      "scripCode": "533519",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "LTTS",
+      "companyName": "L&T Technology Services Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE010V01017",
+      "weight": null,
+      "scripCode": "540115",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "LAURUSLABS",
+      "companyName": "Laurus Labs Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE947Q01028",
+      "weight": null,
+      "scripCode": "540222",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "LICHSGFIN",
+      "companyName": "LIC Housing Finance Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE115A01026",
+      "weight": null,
+      "scripCode": "500253",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "LINDEINDIA",
+      "companyName": "Linde India Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE473A01011",
+      "weight": null,
+      "scripCode": "523457",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "LLOYDSME",
+      "companyName": "Lloyds Metals And Energy Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE281B01032",
+      "weight": null,
+      "scripCode": "512455",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "M&M",
+      "companyName": "Mahindra & Mahindra Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE101A01026",
+      "weight": null,
+      "scripCode": "532720",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "MFSL",
+      "companyName": "Max Financial Services Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE180A01020",
+      "weight": null,
+      "scripCode": "500271",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "543217",
+      "companyName": "Mindspace Business Parks REIT",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": null,
+      "weight": null,
+      "scripCode": "543217",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "MOTILALOFS",
+      "companyName": "Motilal Oswal Financial Services Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE338I01027",
+      "weight": null,
+      "scripCode": "532892",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "MPHASIS",
+      "companyName": "MphasiS Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE356A01018",
+      "weight": null,
+      "scripCode": "526299",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "MRF",
+      "companyName": "MRF Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE883A01011",
+      "weight": null,
+      "scripCode": "500290",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "MCX",
+      "companyName": "Multi Commodity Exchange of India Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE745G01043",
+      "weight": null,
+      "scripCode": "534091",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "NH",
+      "companyName": "Narayana Hrudayalaya Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE410P01011",
+      "weight": null,
+      "scripCode": "539551",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "NATIONALUM",
+      "companyName": "National Aluminium Co. Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE139A01034",
+      "weight": null,
+      "scripCode": "532234",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "544467",
+      "companyName": "National Securities Depository",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": null,
+      "weight": null,
+      "scripCode": "544467",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "543913",
+      "companyName": "Nexus Select Trust",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": null,
+      "weight": null,
+      "scripCode": "543913",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "NHPC",
+      "companyName": "NHPC Ltd.",
+      "industry": "Utilities",
+      "series": "EQ",
+      "isin": "INE848E01016",
+      "weight": null,
+      "scripCode": "533098",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "NAM-INDIA",
+      "companyName": "Nippon Life India Asset Management Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE298J01013",
+      "weight": null,
+      "scripCode": "540767",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "NLCINDIA",
+      "companyName": "NLC India Ltd.",
+      "industry": "Utilities",
+      "series": "EQ",
+      "isin": "INE589A01014",
+      "weight": null,
+      "scripCode": "513683",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "NMDC",
+      "companyName": "NMDC Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE584A01023",
+      "weight": null,
+      "scripCode": "526371",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "OBEROIRLTY",
+      "companyName": "Oberoi Realty Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE093I01010",
+      "weight": null,
+      "scripCode": "533273",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "OIL",
+      "companyName": "Oil India Ltd.",
+      "industry": "Energy",
+      "series": "EQ",
+      "isin": "INE274J01014",
+      "weight": null,
+      "scripCode": "533106",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "OLAELEC",
+      "companyName": "Ola Electric Mobility Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE0LXG01040",
+      "weight": null,
+      "scripCode": "544225",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "PAYTM",
+      "companyName": "One 97 Communications Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE982J01020",
+      "weight": null,
+      "scripCode": "543396",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "OFSS",
+      "companyName": "Oracle Financial Services Software Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE881D01027",
+      "weight": null,
+      "scripCode": "532466",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "PIIND",
+      "companyName": "PI Industries Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE603J01030",
+      "weight": null,
+      "scripCode": "523642",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "PAGEIND",
+      "companyName": "Page Industries Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE761H01022",
+      "weight": null,
+      "scripCode": "532827",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "PATANJALI",
+      "companyName": "Patanjali Foods Ltd.",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE619A01035",
+      "weight": null,
+      "scripCode": "500368",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "POLICYBZR",
+      "companyName": "PB Fintech Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE417T01026",
+      "weight": null,
+      "scripCode": "543390",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "PERSISTENT",
+      "companyName": "Persistent Systems Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE262H01021",
+      "weight": null,
+      "scripCode": "533179",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "PETRONET",
+      "companyName": "Petronet LNG Ltd.",
+      "industry": "Energy",
+      "series": "EQ",
+      "isin": "INE347G01014",
+      "weight": null,
+      "scripCode": "532522",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "PWL",
+      "companyName": "Physicswallah Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE0LP301011",
+      "weight": null,
+      "scripCode": "544609",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "PINELABS",
+      "companyName": "Pine Labs Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE15B701018",
+      "weight": null,
+      "scripCode": "544606",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "PIRAMALFIN",
+      "companyName": "Piramal Finance Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE202B01038",
+      "weight": null,
+      "scripCode": "544597",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "POONAWALLA",
+      "companyName": "Poonawalla Fincorp Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE511C01022",
+      "weight": null,
+      "scripCode": "524000",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "PREMIERENE",
+      "companyName": "Premier Energies Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE0BS701011",
+      "weight": null,
+      "scripCode": "544238",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "PRESTIGE",
+      "companyName": "Prestige Estates Projects Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE811K01011",
+      "weight": null,
+      "scripCode": "533274",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "PGHH",
+      "companyName": "Procter & Gamble Hygiene & Health Care Ltd.",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE179A01014",
+      "weight": null,
+      "scripCode": "500459",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "533295",
+      "companyName": "PUNJAB & SIND BANK",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": null,
+      "weight": null,
+      "scripCode": "533295",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "RADICO",
+      "companyName": "Radico Khaitan Ltd",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE944F01028",
+      "weight": null,
+      "scripCode": "532497",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "RVNL",
+      "companyName": "Rail Vikas Nigam Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE415G01027",
+      "weight": null,
+      "scripCode": "542649",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "SCHAEFFLER",
+      "companyName": "Schaeffler India Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE513A01022",
+      "weight": null,
+      "scripCode": "505790",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "SJVN",
+      "companyName": "SJVN Ltd.",
+      "industry": "Utilities",
+      "series": "EQ",
+      "isin": "INE002L01015",
+      "weight": null,
+      "scripCode": "533206",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "SONACOMS",
+      "companyName": "Sona BLW Precision Forgings Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE073K01018",
+      "weight": null,
+      "scripCode": "543300",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "STARHEALTH",
+      "companyName": "Star Health and Allied Insurance Company Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE575P01011",
+      "weight": null,
+      "scripCode": "543412",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "SAIL",
+      "companyName": "Steel Authority of India Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE114A01011",
+      "weight": null,
+      "scripCode": "500113",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "SUNTV",
+      "companyName": "Sun TV Network Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE424H01027",
+      "weight": null,
+      "scripCode": "532733",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "SUNDARMFIN",
+      "companyName": "Sundaram Finance Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE660A01013",
+      "weight": null,
+      "scripCode": "590071",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "SUPREMEIND",
+      "companyName": "Supreme Industries Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE195A01028",
+      "weight": null,
+      "scripCode": "509930",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "SUZLON",
+      "companyName": "Suzlon Energy Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE040H01021",
+      "weight": null,
+      "scripCode": "532667",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "TATACOMM",
+      "companyName": "Tata Communications Ltd.",
+      "industry": "Telecommunication",
+      "series": "EQ",
+      "isin": "INE151A01013",
+      "weight": null,
+      "scripCode": "500483",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "TATAELXSI",
+      "companyName": "Tata Elxsi Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE670A01012",
+      "weight": null,
+      "scripCode": "500408",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "TATATECH",
+      "companyName": "Tata Technologies Ltd.",
+      "industry": "Information Technology",
+      "series": "EQ",
+      "isin": "INE142M01025",
+      "weight": null,
+      "scripCode": "544028",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "NIACL",
+      "companyName": "The New India Assurance Company Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE470Y01017",
+      "weight": null,
+      "scripCode": "540769",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "503100",
+      "companyName": "THE PHOENIX MILLS LTD",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": null,
+      "weight": null,
+      "scripCode": "503100",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "RAMCOCEM",
+      "companyName": "The Ramco Cements Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE331A01037",
+      "weight": null,
+      "scripCode": "500260",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "THERMAX",
+      "companyName": "Thermax Ltd.",
+      "industry": "Industrials",
+      "series": "EQ",
+      "isin": "INE152A01029",
+      "weight": null,
+      "scripCode": "500411",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "TORNTPOWER",
+      "companyName": "Torrent Power Ltd.",
+      "industry": "Utilities",
+      "series": "EQ",
+      "isin": "INE813H01021",
+      "weight": null,
+      "scripCode": "532779",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "TIINDIA",
+      "companyName": "Tube Investments of India Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE974X01010",
+      "weight": null,
+      "scripCode": "540762",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "UCOBANK",
+      "companyName": "UCO Bank",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE691A01018",
+      "weight": null,
+      "scripCode": "532505",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "UBL",
+      "companyName": "United Breweries Ltd.",
+      "industry": "Fast Moving Consumer Goods",
+      "series": "EQ",
+      "isin": "INE686F01025",
+      "weight": null,
+      "scripCode": "532478",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "UNOMINDA",
+      "companyName": "UNO Minda Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE405E01023",
+      "weight": null,
+      "scripCode": "532539",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "UPL",
+      "companyName": "UPL Ltd.",
+      "industry": "Commodities",
+      "series": "EQ",
+      "isin": "INE628A01036",
+      "weight": null,
+      "scripCode": "512070",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "VMM",
+      "companyName": "Vishal Mega Mart Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE01EA01019",
+      "weight": null,
+      "scripCode": "544307",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "VOLTAS",
+      "companyName": "Voltas Ltd.",
+      "industry": "Consumer Discretionary",
+      "series": "EQ",
+      "isin": "INE226A01021",
+      "weight": null,
+      "scripCode": "500575",
+      "source": "BSE_JSON"
+    },
+    {
+      "symbol": "YESBANK",
+      "companyName": "Yes Bank Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE528G01035",
+      "weight": null,
+      "scripCode": "532648",
+      "source": "BSE_JSON"
+    }
+  ]
+}

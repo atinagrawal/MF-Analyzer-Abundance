@@ -1,0 +1,281 @@
+{
+  "slug": "nifty100-alpha-30",
+  "name": "Nifty100 Alpha 30",
+  "exchange": "NSE",
+  "category": "Strategy / Factor",
+  "description": "Single-factor strategy index selecting 30 high-alpha stocks with highest Jensen’s Alpha over a 1-year trailing period from the Nifty 100 universe.",
+  "asOf": "2026-09-22",
+  "count": 30,
+  "constituents": [
+    {
+      "symbol": "ADANIENSOL",
+      "companyName": "Adani Energy Solutions Ltd.",
+      "industry": "Power",
+      "series": "EQ",
+      "isin": "INE931S01010",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "ADANIENT",
+      "companyName": "Adani Enterprises Ltd.",
+      "industry": "Metals & Mining",
+      "series": "EQ",
+      "isin": "INE423A01024",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "ADANIGREEN",
+      "companyName": "Adani Green Energy Ltd.",
+      "industry": "Power",
+      "series": "EQ",
+      "isin": "INE364U01010",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "ADANIPORTS",
+      "companyName": "Adani Ports and Special Economic Zone Ltd.",
+      "industry": "Services",
+      "series": "EQ",
+      "isin": "INE742F01042",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "ADANIPOWER",
+      "companyName": "Adani Power Ltd.",
+      "industry": "Power",
+      "series": "EQ",
+      "isin": "INE814H01029",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "BANKBARODA",
+      "companyName": "Bank of Baroda",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE028A01039",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "BEL",
+      "companyName": "Bharat Electronics Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE263A01024",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "CGPOWER",
+      "companyName": "CG Power and Industrial Solutions Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE067A01029",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "CANBK",
+      "companyName": "Canara Bank",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE476A01022",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "CUMMINSIND",
+      "companyName": "Cummins India Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE298A01020",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "EICHERMOT",
+      "companyName": "Eicher Motors Ltd.",
+      "industry": "Automobile and Auto Components",
+      "series": "EQ",
+      "isin": "INE066A01021",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "GRASIM",
+      "companyName": "Grasim Industries Ltd.",
+      "industry": "Construction Materials",
+      "series": "EQ",
+      "isin": "INE047A01021",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "HINDALCO",
+      "companyName": "Hindalco Industries Ltd.",
+      "industry": "Metals & Mining",
+      "series": "EQ",
+      "isin": "INE038A01020",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "HINDZINC",
+      "companyName": "Hindustan Zinc Ltd.",
+      "industry": "Metals & Mining",
+      "series": "EQ",
+      "isin": "INE267A01025",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "JSWSTEEL",
+      "companyName": "JSW Steel Ltd.",
+      "industry": "Metals & Mining",
+      "series": "EQ",
+      "isin": "INE019A01038",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "JINDALSTEL",
+      "companyName": "Jindal Steel Ltd.",
+      "industry": "Metals & Mining",
+      "series": "EQ",
+      "isin": "INE749A01030",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "M&M",
+      "companyName": "Mahindra & Mahindra Ltd.",
+      "industry": "Automobile and Auto Components",
+      "series": "EQ",
+      "isin": "INE101A01026",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "MARUTI",
+      "companyName": "Maruti Suzuki India Ltd.",
+      "industry": "Automobile and Auto Components",
+      "series": "EQ",
+      "isin": "INE585B01010",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "MUTHOOTFIN",
+      "companyName": "Muthoot Finance Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE414G01012",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "MOTHERSON",
+      "companyName": "Samvardhana Motherson International Ltd.",
+      "industry": "Automobile and Auto Components",
+      "series": "EQ",
+      "isin": "INE775A01035",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "SHRIRAMFIN",
+      "companyName": "Shriram Finance Ltd.",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE721A01047",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "SIEMENS",
+      "companyName": "Siemens Ltd.",
+      "industry": "Capital Goods",
+      "series": "EQ",
+      "isin": "INE003A01024",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "SOLARINDS",
+      "companyName": "Solar Industries India Ltd.",
+      "industry": "Chemicals",
+      "series": "EQ",
+      "isin": "INE343H01029",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "SBIN",
+      "companyName": "State Bank of India",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE062A01020",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "TVSMOTOR",
+      "companyName": "TVS Motor Company Ltd.",
+      "industry": "Automobile and Auto Components",
+      "series": "EQ",
+      "isin": "INE494B01023",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "TATASTEEL",
+      "companyName": "Tata Steel Ltd.",
+      "industry": "Metals & Mining",
+      "series": "EQ",
+      "isin": "INE081A01020",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "TITAN",
+      "companyName": "Titan Company Ltd.",
+      "industry": "Consumer Durables",
+      "series": "EQ",
+      "isin": "INE280A01028",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "TORNTPHARM",
+      "companyName": "Torrent Pharmaceuticals Ltd.",
+      "industry": "Healthcare",
+      "series": "EQ",
+      "isin": "INE685A01028",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "UNIONBANK",
+      "companyName": "Union Bank of India",
+      "industry": "Financial Services",
+      "series": "EQ",
+      "isin": "INE692A01016",
+      "weight": null,
+      "source": "NSE_CSV"
+    },
+    {
+      "symbol": "VEDL",
+      "companyName": "Vedanta Ltd.",
+      "industry": "Metals & Mining",
+      "series": "EQ",
+      "isin": "INE205A01025",
+      "weight": null,
+      "source": "NSE_CSV"
+    }
+  ]
+}

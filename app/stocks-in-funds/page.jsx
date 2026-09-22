@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import pool from '@/lib/db';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -29,7 +30,11 @@ export const metadata = {
   },
 };
 
-export default async function StocksInFundsHubPage() {
+export default async function StocksInFundsHubPage(props) {
+  const resolvedSearchParams = await props?.searchParams;
+  if (resolvedSearchParams?.stock) {
+    redirect(`/stocks-in-funds/${encodeURIComponent(resolvedSearchParams.stock.trim().toLowerCase())}`);
+  }
   let topStocks = [];
   let stats = { uniqueStocks: 0, totalHoldings: 0, totalValueCr: 0 };
 

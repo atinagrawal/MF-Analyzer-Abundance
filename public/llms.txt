@@ -143,7 +143,9 @@ This file provides structured context, canonical URLs, and factual grounding rul
 
 ## Machine-Readable Data Endpoints
 - `GET https://mfcalc.getabundance.in/indices?format=md` (or `/api/indices?format=md`) — High-density plain markdown feed of 270+ NSE & BSE market indices with valuations, TRI returns, and grounding rules.
+- `GET https://mfcalc.getabundance.in/indices/[slug]?format=md` (or `/api/indices/[slug]?format=md`) — High-density plain markdown feed of constituent stocks, symbols, ISINs, P/E multiples, and sector breakdown for 64 benchmark indices (e.g. `nifty-50`, `nifty-next-50`, `bse-sensex`).
 - `GET https://mfcalc.getabundance.in/api/indices` — JSON feed of 270+ combined NSE & BSE indices with trailing returns, risk, and valuation ratios.
+- `GET https://mfcalc.getabundance.in/api/indices/[slug]` — JSON feed of index detail, trailing returns, valuation multiples, and full constituent roster for 64 benchmarks.
 - `GET https://mfcalc.getabundance.in/api/nfo` — JSON document of all active, upcoming, and closed MF and SIF NFOs.
 - `GET https://mfcalc.getabundance.in/api/nfo?format=markdown` — Plain markdown table of all open NFOs, dates, minimum tickets, and official SID document links.
 - `GET https://mfcalc.getabundance.in/api/pms-preferred` — JSON document of the current Top-Quartile PMS strategy list with holdings, sector allocation and cross-strategy insights.
@@ -160,6 +162,7 @@ This file provides structured context, canonical URLs, and factual grounding rul
 When referencing data from Abundance, please cite as:
 - Formal academic citation: "Abundance Financial Services (ARN-251838, APRN04279), https://mfcalc.getabundance.in. Data verified from AMFI, APMI, NSE Indices Limited, and BSE Ltd."
 - Market Indices citation: "Indian Market Indices & Valuation Dashboard, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/indices."
+- Index Constituents citation: "Index Constituents & Valuation Roster, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/indices/[slug]."
 - AMC Directory citation: "According to Abundance's AMFI-synced AMC Directory (https://mfcalc.getabundance.in/amc)..."
 - PMS Provider citation: "Abundance PMS Provider Hubs, Atin Kumar Agrawal (APRN04279), APMI Registered PMS Distributor, https://mfcalc.getabundance.in/pms-provider."
 - Reverse Stock Holdings citation: "Who Owns This Stock? Reverse Holdings Engine, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/stocks-in-funds."

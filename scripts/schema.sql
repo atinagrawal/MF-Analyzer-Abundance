@@ -595,3 +595,26 @@ CREATE INDEX IF NOT EXISTS idx_portfolio_diag_share_token ON portfolio_diagnosti
 -- Promote a user manually:
 --   UPDATE users SET role = 'admin' WHERE email = 'you@example.com';
 -- =============================================================================
+
+-- ── Index Constituents (NSE CSV & BSE JSON Sync) ───────────────────────────
+-- Holds periodic constituent snapshots for 64 benchmark indices.
+-- Populated by scripts/sync-index-constituents.mjs on a bi-weekly schedule.
+CREATE TABLE IF NOT EXISTS index_constituents (
+  id           SERIAL PRIMARY KEY,
+  index_slug   TEXT NOT NULL,
+  as_of_date   DATE NOT NULL,
+  symbol       TEXT NOT NULL,
+  company_name TEXT NOT NULL,
+  industry     TEXT,
+  series       TEXT,
+  isin         TEXT,
+  weight       NUMERIC,
+  source       TEXT NOT NULL, -- 'NSE_CSV' | 'BSE_JSON'
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (index_slug, as_of_date, symbol)
+);
+
+CREATE INDEX IF NOT EXISTS idx_constituents_slug_date ON index_constituents(index_slug, as_of_date DESC);
+CREATE INDEX IF NOT EXISTS idx_constituents_symbol ON index_constituents(symbol);
+CREATE INDEX IF NOT EXISTS idx_constituents_isin ON index_constituents(isin);
+

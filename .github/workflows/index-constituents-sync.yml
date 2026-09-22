@@ -1,0 +1,40 @@
+name: Index Constituents Bi-Weekly Sync
+
+# Bi-weekly synchronization of 64 NSE & BSE index constituents
+# Populates PostgreSQL table index_constituents and Cloudflare R2 cache
+on:
+  schedule:
+    # 04:00 UTC (09:30 IST) on the 1st and 16th of every month
+    - cron: '0 4 1,16 * *'
+  workflow_dispatch:
+
+concurrency:
+  group: index-constituents-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-constituents:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install aws4fetch pg --no-save
+
+      - name: Sync Index Constituents (NSE CSV & BSE JSON)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL || secrets.DATABASE_URL }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        run: node scripts/sync-index-constituents.mjs

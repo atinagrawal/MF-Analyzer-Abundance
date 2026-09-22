@@ -1,8 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import RiskGauge from '@/components/RiskGauge';
+import { isPaidUser } from '@/lib/permissions';
+import { SLUG_TO_INDEX } from '@/lib/indexConstituentsConfig';
 
 const CAT_LABELS = {
   broad: 'Broad',
@@ -44,15 +47,22 @@ function getValuation(name, pe) {
                    return { label: 'Overvalued',  color: '#b71c1c', fill: '#e53935', pct };
 }
 
+function getConstituentsSlug(name) {
+  if (!name) return null;
+  const clean = String(name)
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[:\/]/g, '-')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  if (SLUG_TO_INDEX[clean]) return clean;
+  if (clean.includes('sensex') && SLUG_TO_INDEX['bse-sensex']) return 'bse-sensex';
+  return null;
+}
+
 export default function IndicesClient({ initialData }) {
   const { data: session } = useSession();
-  const isProUser = Boolean(
-    session?.user?.role === 'admin' ||
-    session?.user?.plan === 'pro' ||
-    session?.user?.plan === 'pro_lifetime' ||
-    session?.user?.plan === 'lifetime' ||
-    session?.user?.isPro
-  );
+  const isProUser = isPaidUser(session);
 
   const [allData] = useState(initialData?.allData || []);
   const [metadata] = useState(initialData?.metadata || {});
@@ -324,15 +334,47 @@ export default function IndicesClient({ initialData }) {
                 const encodedName = encodeURIComponent(r.name);
                 const rollUrl = `/rolling?bench=${encodedName}`;
 
+                const slug = getConstituentsSlug(r.name);
+
                 return (
                   <tr key={r.name + '_' + (r.exchange || 'idx') + '_' + i} data-cat={r.cat}>
                     <td>
                       <div className="idx-name-cell">
-                        {r.name}
+                        {slug ? (
+                          <Link
+                            href={`/indices/${slug}`}
+                            style={{ color: 'inherit', textDecoration: 'none', fontWeight: 700 }}
+                            title={`View full constituents and stock roster for ${r.name}`}
+                          >
+                            {r.name}
+                          </Link>
+                        ) : (
+                          r.name
+                        )}
                         <span className={`exch-pill exch-${r.exchange}`}>{r.exchange}</span>
                         <span className={`cat-pill cat-${r.cat}`}>
                           {CAT_LABELS[r.cat] || r.cat}
                         </span>
+                        {slug && (
+                          <Link
+                            href={`/indices/${slug}`}
+                            style={{
+                              fontSize: '.68rem',
+                              fontWeight: 700,
+                              color: 'var(--g1)',
+                              background: 'var(--g-light)',
+                              padding: '2px 7px',
+                              borderRadius: 4,
+                              textDecoration: 'none',
+                              border: '1px solid var(--border)',
+                              marginLeft: 6,
+                              display: 'inline-block',
+                            }}
+                            title={`View ${r.name} constituents and weights`}
+                          >
+                            Constituents ➔
+                          </Link>
+                        )}
                       </div>
                     </td>
                     <td className="td-divider">{fmtRet(r.returns?.r1m)}</td>
