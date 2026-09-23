@@ -67,6 +67,11 @@ const datasetSchema = {
     "url": "https://www.getabundance.in",
     "identifier": "ARN-251838"
   },
+  "license": [
+    "https://www.niftyindices.com/terms-of-use",
+    "https://www.bseindia.com/data_terms"
+  ],
+  "isAccessibleForFree": true,
   "distribution": [
     {
       "@type": "DataDownload",

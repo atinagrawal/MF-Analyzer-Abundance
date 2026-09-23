@@ -121,6 +121,10 @@ export default async function IndexDetailPage({ params }) {
       url: 'https://www.getabundance.in',
       identifier: 'ARN-251838',
     },
+    license: exchange === 'BSE'
+      ? 'https://www.bseindia.com/data_terms'
+      : 'https://www.niftyindices.com/terms-of-use',
+    isAccessibleForFree: true,
     distribution: [
       {
         '@type': 'DataDownload',
