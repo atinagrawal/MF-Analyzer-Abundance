@@ -7,15 +7,15 @@
  * lib/pmsFactsheetsCache.js and composed into
  * app/api/pms-detail/[id]/route.js's response.
  *
- * Covers 11 providers verified live during research (see
- * pms_factsheets_research.txt and this session's chat history for the
- * verification trail): Carnelian Capital, Stallion Asset, Narnolia
- * Financial Advisors, Renaissance Investment Managers, Sundaram Alternate
- * Assets, Green Lantern Capital, ICICI Prudential, Alchemy Capital,
- * Abakkus Investment Managers, Buoyant Capital, and Dezerv. Every other
- * PMS provider's detail page is unaffected -- lib/pmsFactsheetsCache.js's
- * matchProvider() simply returns no match for anything not in this list,
- * and the UI section doesn't render.
+ * Covers 19 providers verified live during research: Carnelian Capital,
+ * Stallion Asset, Narnolia Financial Advisors, Renaissance Investment Managers,
+ * Sundaram Alternate Assets, Green Lantern Capital, ICICI Prudential,
+ * Alchemy Capital, Abakkus Investment Managers, Buoyant Capital, Dezerv,
+ * Negen Capital, Motilal Oswal, Invesco Asset Management, InCred Asset
+ * Management, Green Portfolio, Equitree Capital Advisors, Aditya Birla Sun Life,
+ * and ValueQuest Investment Advisors. Every other PMS provider's detail page is
+ * unaffected -- lib/pmsFactsheetsCache.js's matchProvider() simply returns no
+ * match for anything not in this list, and the UI section doesn't render.
  *
  * Each provider has a genuinely different technical shape (verified, not
  * assumed):
@@ -1212,6 +1212,82 @@ async function fetchAdityaBirla() {
   return documents;
 }
 
+// ── ValueQuest Investment Advisors: fixed monthly factsheet URLs ─────────────
+// Verified live: ValueQuest hosts its monthly PMS factsheets on WordPress at
+// static, overwritten-in-place URLs (same operational model as Stallion Asset
+// and Abakkus). Despite the legacy /2022/07/ and /2022/08/ directory paths, both
+// PDFs are actively updated monthly with current portfolio composition, AMFI
+// market-cap splits, GICS industry weights, and BSE 500 TRI risk ratios.
+//
+// ValueQuest operates 4 APMI-registered equity strategies (IAIDs 105, 106, 108, 110),
+// of which Growth and Platinum have publicly-available standalone factsheets:
+//   - ValueQuest Growth (IAID 105)
+//   - ValueQuest Platinum (IAID 106)
+// Vision and Alpha are documented under the SEBI disclosure document but do not
+// have separate public monthly factsheets published on the website.
+const VALUEQUEST_STRATEGIES = [
+  {
+    strategyName: 'ValueQuest Growth',
+    properName: 'ValueQuest Growth Strategy',
+    url: 'https://www.valuequest.in/wp-content/uploads/2022/07/ValueQuest_Growth_Strategy.pdf',
+  },
+  {
+    strategyName: 'ValueQuest Platinum',
+    properName: 'ValueQuest Platinum Strategy',
+    url: 'https://www.valuequest.in/wp-content/uploads/2022/08/ValueQuest_Platinum_Strategy.pdf',
+  },
+];
+
+function parseValueQuestPeriod(text) {
+  if (!text || typeof text !== 'string') return null;
+  const m = /MONTHLY\s+FACTSHEET\s+([A-Za-z]+\s+\d{4})/i.exec(text);
+  if (m) return m[1].trim();
+  const m2 = /Data\s+as\s+on\s+([A-Za-z]+)\s+\d+,\s*(\d{4})/i.exec(text);
+  if (m2) return `${m2[1]} ${m2[2]}`;
+  return null;
+}
+
+async function fetchValueQuest() {
+  let pdf = null;
+  try {
+    pdf = require('pdf-parse');
+  } catch {
+    // pdf-parse optional fallback
+  }
+
+  const documents = [];
+  for (const s of VALUEQUEST_STRATEGIES) {
+    try {
+      const res = await fetchWithRetry(s.url, { headers: { Referer: 'https://www.valuequest.in/' } });
+      if (!res.ok) {
+        console.warn(`[PMS Factsheets] ValueQuest ${s.strategyName}: HTTP ${res.status}`);
+        continue;
+      }
+      let period = null;
+      if (pdf) {
+        try {
+          const buf = Buffer.from(await res.arrayBuffer());
+          const parsed = await pdf(buf);
+          period = parseValueQuestPeriod(parsed.text);
+        } catch (err) {
+          console.warn(`[PMS Factsheets] ValueQuest ${s.strategyName}: failed to parse period from PDF: ${err.message}`);
+        }
+      }
+      documents.push({
+        strategyName: s.strategyName,
+        docType: 'factsheet',
+        period,
+        title: `${s.properName}${period ? ' – ' + period : ''}`,
+        url: s.url,
+        properName: s.properName,
+      });
+    } catch (err) {
+      console.warn(`[PMS Factsheets] ValueQuest ${s.strategyName}: fetch failed -- ${err.message}`);
+    }
+  }
+  return documents;
+}
+
 // ── Gemini-based structured extraction from factsheet PDFs ─────────────────
 // Links alone don't tell an investor what's actually in the strategy --
 // this reads each factsheet's real content (top holdings, sector and
@@ -1669,6 +1745,7 @@ const PROVIDERS = [
   { key: 'greenportfolio', displayName: 'Green Portfolio', matchFragments: ['green portfolio'], fetch: fetchGreenPortfolio },
   { key: 'equitree', displayName: 'Equitree Capital Advisors', matchFragments: ['equitree'], fetch: fetchEquitree },
   { key: 'adityabirla', displayName: 'Aditya Birla Sun Life AMC Limited', matchFragments: ['aditya birla'], fetch: fetchAdityaBirla },
+  { key: 'valuequest', displayName: 'ValueQuest Investment Advisors', matchFragments: ['valuequest'], fetch: fetchValueQuest },
 ];
 
 async function run() {
@@ -1684,7 +1761,18 @@ async function run() {
 
   const providers = {};
   const quotaState = { exhausted: false };
-  for (const p of PROVIDERS) {
+  const providerArg = process.argv.find((a) => a.startsWith('--provider='))?.split('=')[1];
+  const targetProviders = providerArg ? PROVIDERS.filter((p) => p.key.toLowerCase() === providerArg.toLowerCase()) : PROVIDERS;
+
+  if (providerArg && existing?.providers) {
+    for (const [k, v] of Object.entries(existing.providers)) {
+      if (!targetProviders.some((p) => p.key === k)) {
+        providers[k] = v;
+      }
+    }
+  }
+
+  for (const p of targetProviders) {
     let documents = [];
     try {
       documents = await p.fetch();
@@ -1999,6 +2087,18 @@ function selfTest() {
   );
   assert.strictEqual(parseDezervDeckPdf('<a href="/decks/afs-factsheet/">back</a>'), null);
 
+  // parseValueQuestPeriod: extracts publication month/year from header or as-of date
+  assert.strictEqual(
+    parseValueQuestPeriod('MONTHLY FACTSHEET\nSeptember 2026\nGrowth Strategy\nPMS'),
+    'September 2026'
+  );
+  assert.strictEqual(
+    parseValueQuestPeriod('Some intro text... Data as on August 31, 2026 ...'),
+    'August 2026'
+  );
+  assert.strictEqual(parseValueQuestPeriod('Random text without factsheet date'), null);
+  assert.strictEqual(parseValueQuestPeriod(null), null);
+
   console.log('[PMS Factsheets Sync] Self-test: ALL PASSED');
 }
 
@@ -2033,6 +2133,8 @@ module.exports = {
   fetchGreenPortfolio,
   fetchEquitree,
   fetchAdityaBirla,
+  fetchValueQuest,
+  parseValueQuestPeriod,
   PROVIDERS,
   extractFactsheetData,
   extractMultiStrategyFactsheetData,
