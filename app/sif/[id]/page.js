@@ -3,7 +3,11 @@ import pool from '@/lib/db';
 import SifDetailClient from './SifDetailClient';
 import { getSchemeFaq } from '@/lib/sifFaq';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- see app/fund/[code]/page.js's matching change
+// and lib/caching-pattern.md. SIF NAV/category data doesn't need a fresh
+// Postgres hit on every single page view; 6h matches the fund page and
+// the screener route's own revalidate window.
+export const revalidate = 21600;
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
@@ -12,12 +16,15 @@ export async function generateMetadata({ params }) {
   const rawId = String(id).trim();
   const normalizedId = rawId.startsWith('SIF-') ? rawId : !isNaN(Number(rawId)) ? `SIF-${String(rawId).padStart(2, '0')}` : rawId;
 
+  // No .catch() swallowing the error into an empty result: a genuine DB
+  // outage must NOT look identical to "this scheme ID was never real" --
+  // see the matching fix + comment on the default export below.
   const { rows } = await pool.query(
     `SELECT scheme_id, nav_name, sif_name, category, nav, nav_date, ret_1m, ret_3m, ret_6m, inception_date, asof
      FROM sif_screener
      WHERE UPPER(scheme_id) = UPPER($1) OR UPPER(scheme_id) = UPPER($2) LIMIT 1`,
     [rawId, normalizedId]
-  ).catch(() => ({ rows: [] }));
+  );
 
   if (!rows.length) {
     return {
@@ -107,10 +114,16 @@ export default async function SifPage({ params }) {
   const rawId = String(id).trim();
   const normalizedId = rawId.startsWith('SIF-') ? rawId : !isNaN(Number(rawId)) ? `SIF-${String(rawId).padStart(2, '0')}` : rawId;
 
+  // Same reasoning as generateMetadata above: a thrown DB error must
+  // propagate (letting a first-visit render error out, or letting ISR
+  // keep serving the last good cached render on revalidation) rather
+  // than being caught and re-presented as a confident "not found" --
+  // that's how a transient DB outage turned into every /sif/[id] page
+  // 404ing as if every scheme had simply stopped existing.
   const { rows } = await pool.query(
     'SELECT scheme_id FROM sif_screener WHERE UPPER(scheme_id) = UPPER($1) OR UPPER(scheme_id) = UPPER($2) LIMIT 1',
     [rawId, normalizedId]
-  ).catch(() => ({ rows: [] }));
+  );
 
   if (!rows.length) {
     notFound();

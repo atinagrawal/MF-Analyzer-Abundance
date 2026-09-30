@@ -5,7 +5,14 @@ import pool from '@/lib/db';
 import LINEAGE from '@/data/scheme-lineage.json';
 import FundDetailClient from './FundDetailClient';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic: was querying Postgres on every single page view
+// (including repeat visits and crawler traffic this site actively courts
+// for SEO), which is exactly the kind of load this app's own established
+// caching convention (see lib/caching-pattern.md's "revalidate = N for
+// read-only Postgres data") exists to avoid. 6h matches the screener
+// route's own revalidate window -- fund metadata (name/AMC/category/ISIN)
+// changes rarely enough that this is stale in name only.
+export const revalidate = 21600;
 
 /**
  * Robust fund record resolver with multi-layer fallback:
@@ -18,6 +25,14 @@ async function getFundMetadataRecord(code) {
   const numCode = Number(code);
   const strCode = String(code);
 
+  // Tracks whether step 1 actually FAILED (DB error) vs. genuinely found
+  // zero rows. Both used to fall through to the same fallback chain and,
+  // if every fallback also came up empty, the same `return null` --
+  // indistinguishable from "this code has never existed" to the caller,
+  // which turns any DB outage into a confident, wrong "Scheme Wound Up"
+  // 404 instead of "we don't know right now". See the throw at the end.
+  let dbErrored = false;
+
   // 1. Try PostgreSQL database first
   try {
     const { rows } = await pool.query(
@@ -29,6 +44,7 @@ async function getFundMetadataRecord(code) {
       return { ...rows[0], code: strCode, isSuccessor: false };
     }
   } catch (err) {
+    dbErrored = true;
     console.warn(`[getFundMetadataRecord] Database query failed for code ${code}:`, err.message);
   }
 
@@ -104,6 +120,19 @@ async function getFundMetadataRecord(code) {
     }
   } catch (err) {
     console.warn(`[getFundMetadataRecord] Master scheme variant check failed for code ${code}:`, err.message);
+  }
+
+  // The DB errored AND no fallback (file cache, lineage, master-list
+  // variant) resolved it either -- that's "we don't know", not "this
+  // fund doesn't exist". Throwing (rather than returning null, which the
+  // caller turns into notFound()) means: on first visit to an
+  // uncached path, the visitor sees an error, not a false "wound up"
+  // 404; on ISR revalidation of an already-cached path, Next.js keeps
+  // serving the last good render instead of replacing it with a 404 --
+  // same "stale beats broken" principle already used by this app's own
+  // Blob-cache routes (see lib/caching-pattern.md).
+  if (dbErrored) {
+    throw new Error(`Could not determine whether fund ${code} exists -- database unavailable and no fallback matched.`);
   }
 
   return null;
