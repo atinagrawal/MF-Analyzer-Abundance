@@ -1,0 +1,50 @@
+name: BSE Index Cache Sync
+
+# Keeps the benchmark-chart data warm (fund/SIF detail pages, Rolling
+# Returns, PMS compare modal alpha lookups) by fetching BSE's index symbol
+# list + every index's full daily history from a GitHub Actions runner and
+# writing it to R2, since api.bseindia.com now blocks Vercel's production
+# IPs (see lib/bseIndex.js's header comment for the full story) -- the
+# live routes read this cache instead of calling BSE directly.
+on:
+  schedule:
+    - cron: '30 13 * * 1-5'   # 13:30 UTC = 19:00 IST, weekdays -- after BSE's own index data for the day settles (also after market-breadth's 13:00 UTC bhavcopy run, so the two don't contend)
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Only sync the first N indices (smoke test) -- leave blank for all'
+        required: false
+
+concurrency:
+  group: bse-index-cache-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install deps
+        run: npm install aws4fetch --no-save
+
+      - name: Sync BSE index cache
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        run: |
+          if [ -n "${{ github.event.inputs.limit }}" ]; then
+            node scripts/sync_bse_index_cache.js --limit=${{ github.event.inputs.limit }}
+          else
+            node scripts/sync_bse_index_cache.js
+          fi

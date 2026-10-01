@@ -23,37 +23,25 @@
 // is a PRICE index, not a literal Total Return Index (BSE has no
 // separately-named TRI symbol per index) — same caveat as the BSE data
 // used elsewhere on the site.
+//
+// UPDATE (2026-10): the live BSE fetch below (inside fetchPromise) now
+// routinely fails in production -- api.bseindia.com blocks Vercel's IPs.
+// Reliability comes from the blob cache below staying warm via
+// scripts/sync_bse_index_cache.js on a schedule, not from this live path
+// succeeding. See lib/bseIndex.js's header comment for the full story.
 
-import { fetchBseSymbolList, findBseSymbol, fetchBseDailySeries } from '../../lib/bseIndex';
+import { findBseSymbol, fetchBseDailySeries, getCachedBseSymbolList, slugify, fmtBseDisplayDate } from '../../lib/bseIndex';
 import { r2Get, r2Put } from '../../lib/r2';
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const CACHE_PRE = 'bse-tri-cache/';
-const SYMBOL_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const SERIES_TTL_MS = 24 * 60 * 60 * 1000;      // 1 day
 
 function isFresh(ts, ttlMs) {
     return ts && Date.now() - ts < ttlMs;
 }
 
-function fmtDisplayDate(d) {
-    return `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-}
-
-function slugify(name) {
-    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
-
-let symbolListCache = null; // { list, ts }
 const seriesCache = new Map(); // symbol -> { data, ts }
 const inflight = new Map();
-
-async function getSymbolList() {
-    if (isFresh(symbolListCache?.ts, SYMBOL_TTL_MS)) return symbolListCache.list;
-    const list = await fetchBseSymbolList();
-    symbolListCache = { list, ts: Date.now() };
-    return list;
-}
 
 async function blobGet(slugName) {
     try {
@@ -93,7 +81,7 @@ export default async function handler(req, res) {
     const slugName = slugify(indexName);
 
     try {
-        const symbolList = await getSymbolList();
+        const symbolList = await getCachedBseSymbolList({ r2Get, r2Put });
         const matched = findBseSymbol(indexName, symbolList);
         if (!matched) {
             return res.status(404).json({ error: `No matching BSE index found for "${indexName}"` });
@@ -118,7 +106,7 @@ export default async function handler(req, res) {
 
         const fetchPromise = (async () => {
             const rows = await fetchBseDailySeries(symbol); // no range = full history since inception
-            const data = rows.map(r => ({ date: fmtDisplayDate(r.date), value: r.close }));
+            const data = rows.map(r => ({ date: fmtBseDisplayDate(r.date), value: r.close }));
             seriesCache.set(symbol, { data, ts: Date.now() });
             blobPut(slugName, matchedName, data); // fire-and-forget
             inflight.delete(symbol);

@@ -21,23 +21,26 @@
  * not a literal Total Return Index. 1Y is an absolute return; 3Y/5Y are
  * CAGR — same convention used everywhere else on the site.
  *
- * Two-layer cache (memory + Blob): the symbol list rarely changes (30-day
- * TTL, cached in lib/bseIndex.js's caller-side memory below); each
- * index's computed returns refresh daily (new trading day).
+ * Two-layer cache (memory + Blob) for computed returns, keyed by symbol;
+ * each refreshes daily (new trading day). The symbol list itself now
+ * comes from lib/bseIndex.js's getCachedBseSymbolList() -- a THIRD,
+ * R2-backed layer shared with pages/api/nifty-tri.js, kept warm by
+ * scripts/sync_bse_index_cache.js on a schedule since api.bseindia.com
+ * now 403s this endpoint from Vercel's production IPs (see
+ * lib/bseIndex.js's header comment for the full story).
  */
 
 import { NextResponse } from 'next/server';
-import { fetchBseSymbolList, findBseSymbol, fetchBseDailySeries } from '@/lib/bseIndex';
+import { findBseSymbol, fetchBseDailySeries, getCachedBseSymbolList, slugify } from '@/lib/bseIndex';
 import { r2Get, r2Put } from '@/lib/r2';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const SYMBOL_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const SERIES_TTL_MS = 24 * 60 * 60 * 1000;      // 1 day
 const BLOB_BASE = 'bse-index-cache';
+const SHARED_SERIES_PRE = 'bse-tri-cache/'; // same key prefix as pages/api/nifty-tri.js + the sync script
 
-let symbolListCache = null; // { list, ts }
 const seriesCache = new Map(); // symbol -> { returns, ts }
 const inflight = new Map();
 
@@ -45,11 +48,28 @@ function isFresh(ts, ttlMs) {
     return ts && Date.now() - ts < ttlMs;
 }
 
-async function getSymbolList() {
-    if (isFresh(symbolListCache?.ts, SYMBOL_TTL_MS)) return symbolListCache.list;
-    const list = await fetchBseSymbolList();
-    symbolListCache = { list, ts: Date.now() };
-    return list;
+const MONTH_IDX = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+
+/**
+ * Reads the SAME full-history raw series pages/api/nifty-tri.js and
+ * scripts/sync_bse_index_cache.js read/write (bse-tri-cache/{slug}.json),
+ * rather than maintaining a second, independently-fetched cache under
+ * this route's own bse-index-cache/{symbol}.json -- one shared series
+ * cache to keep warm instead of two, and both routes always agree on the
+ * same underlying data. Converts its {date: "09 Jul 2026", value} rows
+ * into the {date: Date, close} shape computeReturns() expects.
+ */
+async function readSharedSeries(matchedName) {
+    const payload = await r2Get(`${SHARED_SERIES_PRE}${slugify(matchedName)}.json`).catch(() => null);
+    if (!payload?.data?.length) return null;
+    const rows = payload.data
+        .map((r) => {
+            const [dd, mon, yy] = r.date.split(' ');
+            return { date: new Date(Date.UTC(+yy, MONTH_IDX[mon] ?? 0, +dd)), close: r.value };
+        })
+        .filter((r) => !isNaN(r.date.getTime()) && typeof r.close === 'number' && r.close > 0)
+        .sort((a, b) => a.date - b.date);
+    return { rows, ts: payload.ts };
 }
 
 /** Closest row at or before targetDate (nearest prior trading day). */
@@ -106,16 +126,33 @@ export async function GET(request) {
     }
 
     try {
-        const symbolList = await getSymbolList();
+        const symbolList = await getCachedBseSymbolList({ r2Get, r2Put });
         const matched = findBseSymbol(name, symbolList);
         if (!matched) {
             return NextResponse.json({ status: 'success', matched: false, returns: null });
         }
-        const { symbol } = matched;
+        const { symbol, name: matchedName } = matched;
 
         const mem = seriesCache.get(symbol);
         if (isFresh(mem?.ts, SERIES_TTL_MS)) {
             return NextResponse.json({ status: 'success', matched: true, symbol, returns: mem.returns });
+        }
+
+        // Primary source: the shared raw-series cache kept warm by the
+        // sync script (see this file's header comment) -- checked before
+        // this route's own older computed-returns blob, since that one
+        // only ever gets populated by organic live traffic hitting the
+        // fetch fallback below, which is exactly the path that's now
+        // unreliable in production.
+        const shared = await readSharedSeries(matchedName).catch((err) => {
+            console.warn('[bse-index] Shared series read failed:', err.message);
+            return null;
+        });
+        if (shared?.rows?.length) {
+            const returns = computeReturns(shared.rows);
+            seriesCache.set(symbol, { returns, ts: shared.ts });
+            writeToBlob(symbol, returns); // fire-and-forget, keeps the old cache warm too
+            return NextResponse.json({ status: 'success', matched: true, symbol, returns, source: 'shared-cache' });
         }
 
         const blob = await readFromBlob(symbol);
