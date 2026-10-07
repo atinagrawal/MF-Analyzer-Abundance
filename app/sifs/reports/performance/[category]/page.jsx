@@ -10,22 +10,12 @@ import { notFound } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { getSifCategoryPerformance, listSifCategories } from '@/lib/sifReports';
+import PerformanceTable from './PerformanceTable';
 import '../../sif-reports.css';
 
 export const revalidate = 21600;
 
 const SITE = 'https://mfcalc.getabundance.in';
-
-function fmtPct(n) {
-  if (n == null) return '—';
-  const sign = n > 0 ? '+' : '';
-  return `${sign}${n.toFixed(2)}%`;
-}
-
-function cellClass(n) {
-  if (n == null) return 'sifr-cell-null';
-  return n >= 0 ? 'sifr-cell-pos' : 'sifr-cell-neg';
-}
 
 function safeJsonLd(obj) {
   return JSON.stringify(obj).replace(/</g, '\\u003c');
@@ -42,26 +32,21 @@ export async function generateMetadata({ params }) {
     return { title: 'SIF Category Not Found | Abundance', robots: { index: false, follow: false } };
   }
   const title = `${report.label} SIFs — Performance Comparison | Abundance`;
-  const description = `Returns and volatility comparison across ${report.schemes.length} ${report.label} Specialized Investment Funds in India, as of ${report.asOf || 'latest NAV'}. Abundance Financial Services (ARN-251838).`;
+  const description = `Returns and volatility comparison across ${report.schemes.length} ${report.label} Specialized Investment Funds in India, as of ${report.asOf || 'latest NAV'}. Free report, downloadable and shareable. Abundance Financial Services (ARN-251838).`;
   const pageUrl = `${SITE}/sifs/reports/performance/${report.slug}`;
-  // No og image reference here -- /api/og-sif-performance currently 500s
-  // in production (see that route's header comment for the full
-  // investigation); a broken image URL in openGraph/twitter would show as
-  // a broken preview wherever this page gets shared, so omit it entirely
-  // rather than link to something known-broken. Falls back to the site's
-  // default OG image. Re-add once that route is fixed.
+  const ogImage = `${SITE}/api/og-sif-performance?category=${report.slug}`;
   return {
     title,
     description,
     alternates: { canonical: pageUrl },
-    openGraph: { title, description, url: pageUrl, siteName: 'Abundance', locale: 'en_IN', type: 'website' },
-    twitter: { card: 'summary_large_image', title, description },
+    openGraph: { title, description, url: pageUrl, siteName: 'Abundance', locale: 'en_IN', type: 'website', images: [{ url: ogImage, width: 1600, height: 900 }] },
+    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
   };
 }
 
 export default async function SifCategoryPerformancePage({ params }) {
   const { category } = await params;
-  const allCategories = listSifCategories();
+  const allCategories = await listSifCategories();
   if (!allCategories.some((c) => c.slug === category)) {
     notFound();
   }
@@ -75,6 +60,7 @@ export default async function SifCategoryPerformancePage({ params }) {
   }
 
   const pageUrl = `${SITE}/sifs/reports/performance/${report.slug}`;
+  const ogImage = `${SITE}/api/og-sif-performance?category=${report.slug}`;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -108,44 +94,16 @@ export default async function SifCategoryPerformancePage({ params }) {
         </div>
 
         <div className="sifr-download-row">
-          {/* Downloadable image temporarily unavailable -- see
-              app/api/og-sif-performance/route.js's header comment. */}
-          <span className="sifr-asof">Updated every 6 hours from AMFI NAV history. Downloadable image coming soon.</span>
+          <a className="sifr-download-btn" href={ogImage} target="_blank" rel="noopener noreferrer">
+            &#8681; Download shareable image
+          </a>
+          <span className="sifr-asof">Image regenerates daily &middot; table updates every 6 hours from AMFI NAV history</span>
         </div>
 
         {report.schemes.length === 0 ? (
           <p>No live SIFs are currently tracked in this category.</p>
         ) : (
-          <div className="sifr-perf-table-wrap">
-            <table className="sifr-perf-table">
-              <thead>
-                <tr>
-                  <th>SIF</th>
-                  <th>NAV</th>
-                  <th>1M</th>
-                  <th>3M</th>
-                  <th>6M</th>
-                  <th>1Y</th>
-                  <th>3Y (Ann.)</th>
-                  <th>Vol</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.schemes.map((s) => (
-                  <tr key={s.schemeId}>
-                    <td title={s.fullName}>{s.name}</td>
-                    <td>{s.nav != null ? s.nav.toFixed(2) : '—'}</td>
-                    <td className={cellClass(s.ret1m)}>{fmtPct(s.ret1m)}</td>
-                    <td className={cellClass(s.ret3m)}>{fmtPct(s.ret3m)}</td>
-                    <td className={cellClass(s.ret6m)}>{fmtPct(s.ret6m)}</td>
-                    <td className={cellClass(s.ret1y)}>{fmtPct(s.ret1y)}</td>
-                    <td className={cellClass(s.ret3y)}>{fmtPct(s.ret3y)}</td>
-                    <td>{s.vol != null ? `${s.vol.toFixed(2)}%` : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PerformanceTable schemes={report.schemes} />
         )}
 
         <p className="sifr-disclaimer">

@@ -1,0 +1,51 @@
+name: SIF Report Images
+
+# Pre-generates the SIF category performance report images and writes
+# them to R2 -- app/api/og-sif-performance/route.js serves whatever this
+# wrote, rather than rendering live (that 500s deterministically in
+# production for reasons that remain unresolved; see that route's header
+# comment). Runs after screener.yml's nightly SIF screener rebuild
+# (18:30 UTC) so each day's images reflect that day's NAVs/returns.
+on:
+  schedule:
+    - cron: '15 19 * * *'   # 19:15 UTC daily, 45 min after screener.yml's 18:30 UTC run
+  workflow_dispatch:
+    inputs:
+      category:
+        description: 'Only regenerate one category (slug) -- leave blank for all'
+        required: false
+
+concurrency:
+  group: sif-report-images
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate SIF report images
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        run: |
+          if [ -n "${{ github.event.inputs.category }}" ]; then
+            node scripts/generate_sif_report_images.js --category=${{ github.event.inputs.category }}
+          else
+            node scripts/generate_sif_report_images.js
+          fi

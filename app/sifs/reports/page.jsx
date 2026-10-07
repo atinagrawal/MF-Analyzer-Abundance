@@ -3,10 +3,9 @@
  *
  * Hub for the shareable SIF report series: the AUM leaderboard and one
  * performance-comparison report per AMFI category. Each links to its own
- * page (real crawlable HTML). The AUM leaderboard also has a downloadable
- * branded PNG (app/api/og-sif-aum); the performance comparison's image
- * (app/api/og-sif-performance) currently 500s in production -- see that
- * route's header comment -- so its download button is hidden until fixed.
+ * page (real crawlable HTML) and its own downloadable branded PNG --
+ * app/api/og-sif-aum renders live, app/api/og-sif-performance serves a
+ * pre-generated image from R2 (see that route's header comment for why).
  * See lib/sifReports.js's header comment for scope/data-coverage notes.
  */
 
@@ -42,14 +41,15 @@ export default async function SifReportsHubPage() {
     console.error('[SifReportsHubPage] AUM leaderboard fetch failed:', err.message);
     return null;
   });
+  const allCategories = await listSifCategories();
   const categoryResults = await Promise.allSettled(
-    listSifCategories().map(async (c) => {
+    allCategories.map(async (c) => {
       const perf = await getSifCategoryPerformance(c.slug);
       return { ...c, count: perf?.schemes.length || 0 };
     })
   );
   const categories = categoryResults.map((r, i) =>
-    r.status === 'fulfilled' ? r.value : { ...listSifCategories()[i], count: 0 }
+    r.status === 'fulfilled' ? r.value : { ...allCategories[i], count: 0 }
   );
 
   const jsonLd = {
@@ -69,8 +69,8 @@ export default async function SifReportsHubPage() {
         <div className="sifr-eyebrow">Specialized Investment Funds &middot; India</div>
         <h1 className="sifr-title">SIF Reports</h1>
         <p className="sifr-sub">
-          Data-backed reports on India&rsquo;s SIF industry &mdash; AMC-wise AUM leaderboard (downloadable) and
-          category-wise performance comparisons. Free to view and share.
+          Data-backed, downloadable reports on India&rsquo;s SIF industry &mdash; AMC-wise AUM leaderboard and
+          category-wise performance comparisons. Free to view, free to download, free to share.
         </p>
 
         <div className="sifr-grid">

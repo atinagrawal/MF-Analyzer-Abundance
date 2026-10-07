@@ -24,6 +24,25 @@
  * app/api/proposal-studio/holdings/route.js's fetchFresh(), which falls back
  * to this field.
  *
+ * UPDATE (2026-10): the response ALSO includes, per SIF, a synthetic
+ * summary row with SchemeCat_Desc "Total" and sifname "<Brand> SIF Total"
+ * (schemes: [], totalAUM.AverageAum = AMFI's own pre-summed total across
+ * every one of that SIF's category-groups), plus a single "Grand Total"
+ * row for the whole industry. Confirmed live: "Altiva SIF Total"'s
+ * AverageAum (946109.75) exactly equals the hand-summed total of Altiva's
+ * 3 category groups. These rows are captured below as `sifTotals` /
+ * `grandTotalCr` -- lib/sifReports.js's AUM leaderboard reads them
+ * directly instead of re-deriving a per-SIF total itself. (An earlier
+ * version of that leaderboard cross-referenced sif_screener to resolve
+ * each scheme's SIF brand name, since only ONE representative plan-variant
+ * per scheme lives there -- most plan-variants had no match, fell back to
+ * a crude "first word + SIF" guess, and for brands where that guess didn't
+ * reconstruct the real name character-for-character (WSIF -> "WSIF SIF",
+ * wrong), the group's total silently got counted under two different
+ * names -- a real double-counting bug, not just a display quirk. Reading
+ * AMFI's own pre-aggregated Total rows sidesteps name resolution
+ * entirely.)
+ *
  * fyId=1/periodId=1 is assumed to always mean "the most recently published
  * quarter" -- matches the page's dropdowns, which live-tested only offered
  * 2 FY options (newest first) and 1 period option for the current FY, the
@@ -34,6 +53,10 @@
  * The response has no explicit as-of date field, so it's derived from the
  * run date via the same "most recently completed calendar quarter"
  * convention this app's MF AUM data already displays (e.g. "June-2026").
+ * Note this is a MONTHLY AVERAGE (AMFI's field is literally named
+ * AverageAumForTheMonth / AverageAum), not a point-in-time snapshot -- see
+ * lib/sifReports.js's header comment for why that matters and how it's
+ * labeled to the user.
  *
  * Usage:
  *   node scripts/sync_sif_aum.js [--dry-run]
@@ -86,7 +109,7 @@ async function run() {
   const asOf = mostRecentQuarterEndLabel();
   try {
     const existingPeek = await r2Get(R2_KEY);
-    const existingAsOf = existingPeek ? Object.values(existingPeek)[0]?.asOf : null;
+    const existingAsOf = existingPeek?.asOf ?? null;
     if (existingAsOf === asOf) {
       console.log(`[SIF AUM Sync] Already have ${asOf} data from an earlier run this cycle -- skipping live fetch.`);
       return;
@@ -107,10 +130,34 @@ async function run() {
     process.exit(1);
   }
 
-  const result = {};
+  const schemes = {};
+  const sifTotals = [];
+  let grandTotalCr = null;
   let written = 0;
 
   for (const group of groups) {
+    const rawName = (group.sifname || '').trim();
+    const groupAumCr = group.totalAUM?.AverageAum != null
+      ? Math.round((group.totalAUM.AverageAum / 100) * 100) / 100
+      : null;
+
+    // Three kinds of row in this response, distinguished by SchemeCat_Desc:
+    // a per-(SIF, category) group (has real schemes[]), a per-SIF "<Brand>
+    // SIF Total" summary row (schemes: [], AMFI's own pre-summed total
+    // across that SIF's groups), and exactly one "Grand Total" row for the
+    // whole industry.
+    if (group.SchemeCat_Desc === 'Total') {
+      if (rawName === 'Grand Total') {
+        grandTotalCr = groupAumCr;
+      } else if (rawName && groupAumCr != null) {
+        // Display name: AMFI's own summary label minus the trailing
+        // " Total" (e.g. "Altiva SIF Total" -> "Altiva SIF", "WSIF Total"
+        // -> "WSIF") -- this IS the authoritative brand name, not a guess.
+        sifTotals.push({ sifName: rawName.replace(/\s+Total$/i, ''), aumCr: groupAumCr });
+      }
+      continue;
+    }
+
     // Each group is one SIF (group.sif_id/sifname), not a shared category --
     // group.totalAUM.AverageAum is AMFI's own pre-aggregated sum across every
     // plan-variant (Direct/Regular x Growth/IDCW) under it (verified live,
@@ -118,15 +165,12 @@ async function run() {
     // data is shown means the fund's total size, not one variant's slice --
     // use the group total for every variant instead of each scheme's own
     // AverageAumForTheMonth.
-    const totalAumCr = group.totalAUM?.AverageAum != null
-      ? Math.round((group.totalAUM.AverageAum / 100) * 100) / 100
-      : null;
     for (const scheme of (group.schemes || [])) {
-      if (!scheme.AMFI_Code || totalAumCr == null) continue;
-      result[scheme.AMFI_Code] = {
+      if (!scheme.AMFI_Code || groupAumCr == null) continue;
+      schemes[scheme.AMFI_Code] = {
         amfiCode: scheme.AMFI_Code,
         schemeName: scheme.SchemeNAVName,
-        aumCr: totalAumCr,
+        aumCr: groupAumCr,
         asOf,
         // The underlying holdings vendor has never classified SIFs into its
         // own category taxonomy (confirmed live, 2026-08: null for real
@@ -140,22 +184,26 @@ async function run() {
     }
   }
 
+  sifTotals.sort((a, b) => b.aumCr - a.aumCr);
+
   console.log(`\n=== Sync Results ===`);
   console.log(`SIF/category groups seen: ${groups.length}`);
   console.log(`Scheme plan-variants written: ${written}`);
+  console.log(`Per-SIF totals captured: ${sifTotals.length}`);
+  console.log(`Grand total: ${grandTotalCr != null ? `₹${grandTotalCr} Cr` : 'MISSING'}`);
   console.log(`As-of quarter: ${asOf}`);
 
   let existing = null;
   let existingCount = 0;
   try {
     existing = await r2Get(R2_KEY);
-    existingCount = Object.keys(existing || {}).length;
+    existingCount = Object.keys(existing?.schemes || existing || {}).length;
   } catch (e) {
     console.warn(`[SIF AUM Sync] Could not read existing R2 copy to compare record counts: ${e.message}`);
   }
 
-  if (written === 0) {
-    console.error('[SIF AUM Sync] Error: No AUM records could be resolved!');
+  if (written === 0 || sifTotals.length === 0 || grandTotalCr == null) {
+    console.error('[SIF AUM Sync] Error: Could not resolve scheme records, per-SIF totals, or the grand total!');
     if (existingCount > 0) {
       console.log('[SIF AUM Sync] Preserving existing R2 copy.');
       return;
@@ -172,9 +220,51 @@ async function run() {
     process.exit(1);
   }
 
+  const result = { asOf, grandTotalCr, sifTotals, schemes };
+
   if (!DRY_RUN) {
     await backupThenPut(r2Put, R2_KEY, existing, JSON.stringify(result));
-    console.log(`[SIF AUM Sync] Successfully wrote ${written} records to R2 (${R2_KEY})`);
+    console.log(`[SIF AUM Sync] Successfully wrote ${written} scheme records + ${sifTotals.length} SIF totals to R2 (${R2_KEY})`);
+    await recordHistory(r2Get, r2Put, asOf, grandTotalCr);
+  }
+}
+
+/**
+ * Appends one entry to the industry grand-total history
+ * (sif-aum-history.json), used by lib/sifReports.js's AUM leaderboard to
+ * show a period-over-period delta (AMFI's SIF AUM disclosure updates
+ * quarterly, not monthly, so "period" here means "the last time this
+ * figure actually changed", not a fixed calendar interval). Upserts by
+ * `asOf` so re-running this script within the same quarter (the 5th,
+ * 7th, 10th, 15th schedule -- see .github/workflows/sif-aum-sync.yml)
+ * never creates duplicate entries for one quarter.
+ */
+async function recordHistory(r2Get, r2Put, asOf, grandTotalCr) {
+  const HISTORY_KEY = 'sif-aum-history.json';
+  let history = [];
+  try {
+    const existing = await r2Get(HISTORY_KEY);
+    if (Array.isArray(existing)) history = existing;
+  } catch (e) {
+    console.warn(`[SIF AUM Sync] Could not read existing history, starting fresh: ${e.message}`);
+  }
+
+  const idx = history.findIndex((h) => h.asOf === asOf);
+  const entry = { asOf, grandTotalCr, capturedAt: new Date().toISOString() };
+  if (idx >= 0) {
+    history[idx] = entry; // same quarter re-synced with a (possibly revised) figure
+  } else {
+    history.push(entry);
+  }
+  history.sort((a, b) => new Date(a.capturedAt) - new Date(b.capturedAt));
+
+  try {
+    await r2Put(HISTORY_KEY, JSON.stringify(history));
+    console.log(`[SIF AUM Sync] Recorded history entry for ${asOf} (${history.length} total entries).`);
+  } catch (e) {
+    // Non-fatal: the main sif-aum.json write already succeeded above,
+    // and this only affects the MoM-delta display, not current figures.
+    console.warn(`[SIF AUM Sync] Failed to write history: ${e.message}`);
   }
 }
 

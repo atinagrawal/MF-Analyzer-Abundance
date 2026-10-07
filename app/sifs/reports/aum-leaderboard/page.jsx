@@ -84,8 +84,15 @@ export default async function SifAumLeaderboardPage() {
           <>
             <div className="sifr-kpis">
               <div className="sifr-kpi">
-                <div className="sifr-kpi-label">Total SIF AUM</div>
+                <div className="sifr-kpi-label">Average SIF AUM (Monthly)</div>
                 <div className="sifr-kpi-value">{fmtCr(board.totalAumCr)}</div>
+                {board.momDeltaCr != null && (
+                  <div className={`sifr-mom ${board.momDeltaCr >= 0 ? 'up' : 'down'}`}>
+                    {board.momDeltaCr >= 0 ? '▲' : '▼'} {fmtCr(Math.abs(board.momDeltaCr))}
+                    {board.momDeltaPct != null && ` (${board.momDeltaPct >= 0 ? '+' : ''}${board.momDeltaPct.toFixed(1)}%)`}
+                    {' '}since {board.previousAsOf}
+                  </div>
+                )}
               </div>
               <div className="sifr-kpi">
                 <div className="sifr-kpi-label">SIFs Tracked</div>
@@ -96,6 +103,11 @@ export default async function SifAumLeaderboardPage() {
                 <div className="sifr-kpi-value">{board.top5SharePct.toFixed(1)}%</div>
               </div>
             </div>
+            <p className="sifr-metric-note">
+              AUM figures are AMFI&rsquo;s disclosed <strong>average AUM for the month</strong>, not a
+              same-day snapshot &mdash; during periods of rapid growth (like now), this reads lower than a
+              point-in-time figure. AMFI does not publish a point-in-time AUM feed for SIFs.
+            </p>
 
             <div className="sifr-board">
               {board.rows.map((r, i) => (
