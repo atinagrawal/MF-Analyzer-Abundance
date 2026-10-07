@@ -4,11 +4,15 @@ name: SIF Report Images
 # them to R2 -- app/api/og-sif-performance/route.js serves whatever this
 # wrote, rather than rendering live (that 500s deterministically in
 # production for reasons that remain unresolved; see that route's header
-# comment). Runs after screener.yml's nightly SIF screener rebuild
-# (18:30 UTC) so each day's images reflect that day's NAVs/returns.
+# comment). Weekly, not daily -- these images aren't downloaded often
+# enough to justify daily regeneration (decided explicitly over the
+# "truly on-demand" alternative, which would mean rendering live in a
+# Vercel Function again -- the exact thing that doesn't work). Runs
+# Monday after screener.yml's nightly SIF screener rebuild (18:30 UTC
+# daily) so the week's images reflect that Monday's NAVs/returns.
 on:
   schedule:
-    - cron: '15 19 * * *'   # 19:15 UTC daily, 45 min after screener.yml's 18:30 UTC run
+    - cron: '15 19 * * 1'   # 19:15 UTC Monday, 45 min after screener.yml's 18:30 UTC run
   workflow_dispatch:
     inputs:
       category:

@@ -7,20 +7,21 @@
  * performance table. Server-rendered page.jsx passes the full scheme
  * list as a prop; everything below is pure client-side interaction, so
  * the real data/HTML is still there for crawlers/SEO before hydration.
+ *
+ * Period columns (1M..10Y) only render once real data exists for them --
+ * lib/sifReports.js's availableReturnPeriods(), same principle as
+ * app/screener/ScreenerClient.jsx's pickDefaultSifReturnCols for the MF
+ * screener. A brand-new category naturally shows just 1M/3M/6M/1Y today;
+ * 3Y/5Y/7Y/10Y appear on their own as funds age into them.
  */
 
 import { useMemo, useState } from 'react';
 
-const COLS = [
+const STATIC_COLS = [
   { key: 'name', label: 'SIF', numeric: false },
   { key: 'nav', label: 'NAV', numeric: true },
-  { key: 'ret1m', label: '1M', numeric: true },
-  { key: 'ret3m', label: '3M', numeric: true },
-  { key: 'ret6m', label: '6M', numeric: true },
-  { key: 'ret1y', label: '1Y', numeric: true },
-  { key: 'ret3y', label: '3Y (Ann.)', numeric: true },
-  { key: 'vol', label: 'Vol', numeric: true },
 ];
+const TRAILING_COL = { key: 'vol', label: 'Vol', numeric: true };
 
 function fmtPct(n) {
   if (n == null) return '—';
@@ -30,19 +31,20 @@ function fmtPct(n) {
 
 // Scaled heatmap intensity (not flat two-tone) -- magnitude capped at
 // +/-15% so one outlier scheme doesn't wash out every other cell, same
-// approach as the downloadable image (app/api/og-sif-performance).
+// approach as the downloadable image (lib/sifReportImages.js).
 function heatStyle(n) {
   if (n == null) return {};
   const capped = Math.max(-15, Math.min(15, n));
   const t = Math.abs(capped) / 15;
-  const alpha = 0.1 + t * 0.5;
+  const alpha = 0.14 + t * 0.5;
   return n >= 0
-    ? { background: `rgba(27,94,32,${alpha.toFixed(2)})`, color: 'var(--g1)' }
-    : { background: `rgba(183,28,28,${alpha.toFixed(2)})`, color: 'var(--neg)' };
+    ? { background: `rgba(102,187,106,${alpha.toFixed(2)})`, color: '#c8f5cc' }
+    : { background: `rgba(239,83,80,${alpha.toFixed(2)})`, color: '#ffd6d4' };
 }
 
-export default function PerformanceTable({ schemes }) {
-  const [sortKey, setSortKey] = useState('ret1y');
+export default function PerformanceTable({ schemes, periods }) {
+  const cols = useMemo(() => [...STATIC_COLS, ...periods, TRAILING_COL], [periods]);
+  const [sortKey, setSortKey] = useState(periods.find((p) => p.key === 'ret1y')?.key || periods[periods.length - 1]?.key || 'name');
   const [sortDir, setSortDir] = useState('desc');
 
   const sorted = useMemo(() => {
@@ -75,7 +77,7 @@ export default function PerformanceTable({ schemes }) {
       <table className="sifr-perf-table">
         <thead>
           <tr>
-            {COLS.map((c) => (
+            {cols.map((c) => (
               <th
                 key={c.key}
                 onClick={() => handleSort(c.key)}
@@ -83,22 +85,25 @@ export default function PerformanceTable({ schemes }) {
                 aria-sort={sortKey === c.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 {c.label}
-                {sortKey === c.key && <span className="sifr-sort-arrow">{sortDir === 'asc' ? ' ▲' : ' ▼'}</span>}
+                <span className="sifr-sort-arrow">{sortKey === c.key ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {sorted.map((s) => (
+          {sorted.map((s, i) => (
             <tr key={s.schemeId}>
-              <td title={s.fullName}>{s.name}</td>
-              <td>{s.nav != null ? s.nav.toFixed(2) : '—'}</td>
-              <td style={heatStyle(s.ret1m)}>{fmtPct(s.ret1m)}</td>
-              <td style={heatStyle(s.ret3m)}>{fmtPct(s.ret3m)}</td>
-              <td style={heatStyle(s.ret6m)}>{fmtPct(s.ret6m)}</td>
-              <td style={heatStyle(s.ret1y)}>{fmtPct(s.ret1y)}</td>
-              <td style={heatStyle(s.ret3y)}>{fmtPct(s.ret3y)}</td>
-              <td>{s.vol != null ? `${s.vol.toFixed(2)}%` : '—'}</td>
+              <td className="sifr-perf-name" title={s.fullName}>
+                {i === 0 && sortDir === 'desc' && sortKey !== 'name' && sortKey !== 'nav' && (
+                  <span className="sifr-rank-badge" title="Leading this metric">★</span>
+                )}
+                {s.name}
+              </td>
+              <td className="sifr-perf-num">{s.nav != null ? s.nav.toFixed(2) : '—'}</td>
+              {periods.map((p) => (
+                <td key={p.key} className="sifr-perf-num" style={heatStyle(s[p.key])}>{fmtPct(s[p.key])}</td>
+              ))}
+              <td className="sifr-perf-num sifr-perf-vol">{s.vol != null ? `${s.vol.toFixed(2)}%` : '—'}</td>
             </tr>
           ))}
         </tbody>

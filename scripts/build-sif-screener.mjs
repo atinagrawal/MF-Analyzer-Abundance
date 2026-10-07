@@ -22,8 +22,20 @@
  * here; age_years and inception both come directly from each scheme's own
  * first real NAV record.
  *
+ * UPDATE (2026-10): also persists the raw NAV history each scheme's fetch
+ * already returns, into sif_nav_history (scheme_id, date, nav) --
+ * previously computed into today's returns and discarded. Immutable
+ * append-only (ON CONFLICT DO NOTHING keyed on scheme_id+date), so this
+ * self-backfills a scheme's full history over its first few runs after
+ * this change shipped, then only appends each new day going forward.
+ * lib/sifReports.js's getSifCategoryPerformanceAsOf() reads this to
+ * answer "what did this category look like as of a past calendar
+ * month-end" without re-fetching anything from AMFI -- see
+ * lib/sifReturnMath.js's header comment for why that's a documented
+ * duplicate of this file's deriveSifReturns() rather than a shared import.
+ *
  * Env:
- *   POSTGRES_URL (optional) -> upsert into sif_screener
+ *   POSTGRES_URL (optional) -> upsert into sif_screener + sif_nav_history
  */
 import pg from 'pg';
 import { fileURLToPath } from 'url';
@@ -267,8 +279,50 @@ async function main() {
     await c.query(`INSERT INTO sif_screener (${COLS.join(',')}) VALUES ${ph.join(',')}`, vals);
   }
   await c.query('COMMIT');
-  await c.end();
   console.log(`[sif-screener] upserted ${rows.length} rows into Postgres`);
+
+  // Persist the raw NAV history this run already fetched -- previously
+  // computed-and-discarded (only today's derived returns were kept). This
+  // is what lib/sifReports.js's getSifCategoryPerformanceAsOf() reads to
+  // answer "what did this category look like as of a past calendar
+  // month-end" without re-fetching from AMFI. Immutable history, so
+  // ON CONFLICT DO NOTHING -- a date's NAV never changes once published,
+  // only new dates get appended run over run.
+  await c.query(`CREATE TABLE IF NOT EXISTS sif_nav_history (
+    scheme_id TEXT NOT NULL, date DATE NOT NULL, nav NUMERIC NOT NULL,
+    PRIMARY KEY (scheme_id, date)
+  )`);
+  await c.query(`CREATE INDEX IF NOT EXISTS idx_sif_nav_history_date ON sif_nav_history (date)`);
+
+  const historyPoints = [];
+  for (const { scheme: s, series } of results) {
+    if (!series) continue;
+    for (const p of series) {
+      if (!(p.nav > 0)) continue;
+      historyPoints.push({ scheme_id: s.scheme_id, date: new Date(p.t).toISOString().slice(0, 10), nav: p.nav });
+    }
+  }
+
+  const HCOLS = ['scheme_id', 'date', 'nav'];
+  const HN = HCOLS.length;
+  let written = 0;
+  await c.query('BEGIN');
+  for (let i = 0; i < historyPoints.length; i += 1000) {
+    const chunk = historyPoints.slice(i, i + 1000);
+    const vals = [], ph = [];
+    chunk.forEach((r, j) => {
+      ph.push('(' + HCOLS.map((_, k) => `$${j * HN + k + 1}`).join(',') + ')');
+      HCOLS.forEach((col) => vals.push(r[col]));
+    });
+    await c.query(
+      `INSERT INTO sif_nav_history (${HCOLS.join(',')}) VALUES ${ph.join(',')} ON CONFLICT (scheme_id, date) DO NOTHING`,
+      vals
+    );
+    written += chunk.length;
+  }
+  await c.query('COMMIT');
+  await c.end();
+  console.log(`[sif-screener] upserted ${written} NAV history points (new dates only, existing dates skipped) into sif_nav_history`);
 }
 // Only run main() when this file is executed directly (`node
 // scripts/build-sif-screener.mjs`), not when merely imported as a module --

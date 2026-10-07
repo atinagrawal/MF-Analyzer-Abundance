@@ -44,7 +44,7 @@ async function run() {
   if (DRY_RUN) console.log('[Dry Run Mode Active -- no R2 writes]');
 
   const { r2Put } = await import('../lib/r2.js');
-  const { listSifCategories, getSifCategoryPerformance } = await import('../lib/sifReports.js');
+  const { listSifCategories, getSifCategoryPerformance, availableReturnPeriods } = await import('../lib/sifReports.js');
   const { buildPerformanceImageElement } = await import('../lib/sifReportImages.js');
   const pool = (await import('../lib/db.js')).default;
 
@@ -70,7 +70,8 @@ async function run() {
         continue;
       }
 
-      const el = buildPerformanceImageElement(report);
+      const periods = availableReturnPeriods(report.schemes);
+      const el = buildPerformanceImageElement(report, periods);
       const imageResponse = new ImageResponse(el, { width: WIDTH, height: HEIGHT });
       const arrayBuffer = await imageResponse.arrayBuffer();
       const pngBase64 = Buffer.from(arrayBuffer).toString('base64');
