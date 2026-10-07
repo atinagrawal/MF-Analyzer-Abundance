@@ -14,17 +14,41 @@
  * directly via lib/sifReports.js -- see app/api/og-sif-aum/route.js's
  * header comment for why Node.js over Edge here.
  *
- * STATUS (2026-10): this route 500s in production -- deterministic, every
- * category, no JS stack trace anywhere in Vercel's runtime logs (only the
- * routine pg SSL warning), and NOT reproducible locally in next dev or
- * next start against the same database. Removing `export const
- * revalidate` (a real difference from og-sif-aum, which has no query
- * params) did NOT fix it, so that was a wrong first hypothesis, not the
- * root cause -- left removed since it's still the more correct caching
- * mechanism for a query-parameterized route regardless. The GET handler
- * below is now wrapped in try/catch returning the real error as text
- * instead of letting it crash silently, specifically to get a stack
- * trace out of the next production attempt rather than guess again.
+ * STATUS (2026-10): UNRESOLVED. This route 500s in production,
+ * deterministically, on every category, and the download button linking
+ * to it is hidden on the performance report page
+ * (app/sifs/reports/performance/[category]/page.jsx) until this is fixed.
+ * Ruled out, each confirmed by an actual production deploy+test, not
+ * guessed:
+ *   - Dynamic content / layout complexity: a version rendering ONE
+ *     hardcoded div (no data fetch, no styling beyond a background color)
+ *     failed identically.
+ *   - `request.url`/searchParams usage: a version with a zero-parameter
+ *     GET() -- matching og-sif-aum's exact working signature, no request
+ *     argument at all -- ALSO failed identically.
+ *   - `export const revalidate` combined with searchParams: removing it
+ *     did not fix anything (an earlier, wrong hypothesis).
+ *   - Platform-wide outage: og-sif-aum and every other route kept working
+ *     on the exact same deployment while this one failed.
+ *   - A Hobby function-count cap: this project has run 150+ functions for
+ *     months; not a new-today limit.
+ * No JS stack trace has ever appeared in Vercel's runtime logs for this
+ * route (only the routine pg SSL warning), and it has never reproduced
+ * locally in next dev or next start against the same production
+ * database -- the crash appears to happen below the level a JS try/catch
+ * can observe (process-level, not a thrown exception), specific to
+ * something about Vercel's actual build/runtime for THIS route versus
+ * app/api/og-sif-aum/route.js, which is otherwise nearly identical.
+ *
+ * The try/catch below and the ?debug=minimal path are left in place
+ * (harmless, return early) for whoever picks this investigation back up.
+ * Leading untested idea: sidestep live rendering entirely and generate
+ * these images on a schedule via a script writing to R2, the same
+ * pattern scripts/sync_bse_index_cache.js already uses for the BSE index
+ * data this session -- proven to work around unexplained Vercel-runtime-
+ * only failures once already (that one was IP blocking, not this, but
+ * the "don't render live in the Function" mitigation applies regardless
+ * of why live rendering fails).
  */
 
 import { ImageResponse } from '@vercel/og';

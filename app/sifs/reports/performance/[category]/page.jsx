@@ -42,15 +42,20 @@ export async function generateMetadata({ params }) {
     return { title: 'SIF Category Not Found | Abundance', robots: { index: false, follow: false } };
   }
   const title = `${report.label} SIFs — Performance Comparison | Abundance`;
-  const description = `Returns and volatility comparison across ${report.schemes.length} ${report.label} Specialized Investment Funds in India, as of ${report.asOf || 'latest NAV'}. Free report, downloadable and shareable. Abundance Financial Services (ARN-251838).`;
+  const description = `Returns and volatility comparison across ${report.schemes.length} ${report.label} Specialized Investment Funds in India, as of ${report.asOf || 'latest NAV'}. Abundance Financial Services (ARN-251838).`;
   const pageUrl = `${SITE}/sifs/reports/performance/${report.slug}`;
-  const ogImage = `${SITE}/api/og-sif-performance?category=${report.slug}`;
+  // No og image reference here -- /api/og-sif-performance currently 500s
+  // in production (see that route's header comment for the full
+  // investigation); a broken image URL in openGraph/twitter would show as
+  // a broken preview wherever this page gets shared, so omit it entirely
+  // rather than link to something known-broken. Falls back to the site's
+  // default OG image. Re-add once that route is fixed.
   return {
     title,
     description,
     alternates: { canonical: pageUrl },
-    openGraph: { title, description, url: pageUrl, siteName: 'Abundance', locale: 'en_IN', type: 'website', images: [{ url: ogImage, width: 1600, height: 900 }] },
-    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
+    openGraph: { title, description, url: pageUrl, siteName: 'Abundance', locale: 'en_IN', type: 'website' },
+    twitter: { card: 'summary_large_image', title, description },
   };
 }
 
@@ -70,7 +75,6 @@ export default async function SifCategoryPerformancePage({ params }) {
   }
 
   const pageUrl = `${SITE}/sifs/reports/performance/${report.slug}`;
-  const ogImage = `${SITE}/api/og-sif-performance?category=${report.slug}`;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -104,10 +108,9 @@ export default async function SifCategoryPerformancePage({ params }) {
         </div>
 
         <div className="sifr-download-row">
-          <a className="sifr-download-btn" href={ogImage} target="_blank" rel="noopener noreferrer">
-            &#8681; Download shareable image
-          </a>
-          <span className="sifr-asof">Updated every 6 hours from AMFI NAV history</span>
+          {/* Downloadable image temporarily unavailable -- see
+              app/api/og-sif-performance/route.js's header comment. */}
+          <span className="sifr-asof">Updated every 6 hours from AMFI NAV history. Downloadable image coming soon.</span>
         </div>
 
         {report.schemes.length === 0 ? (

@@ -3,9 +3,11 @@
  *
  * Hub for the shareable SIF report series: the AUM leaderboard and one
  * performance-comparison report per AMFI category. Each links to its own
- * page (real crawlable HTML) and its own downloadable branded PNG via
- * app/api/og-sif-aum and app/api/og-sif-performance. See
- * lib/sifReports.js's header comment for scope/data-coverage notes.
+ * page (real crawlable HTML). The AUM leaderboard also has a downloadable
+ * branded PNG (app/api/og-sif-aum); the performance comparison's image
+ * (app/api/og-sif-performance) currently 500s in production -- see that
+ * route's header comment -- so its download button is hidden until fixed.
+ * See lib/sifReports.js's header comment for scope/data-coverage notes.
  */
 
 import Navbar from '@/components/Navbar';
@@ -67,8 +69,8 @@ export default async function SifReportsHubPage() {
         <div className="sifr-eyebrow">Specialized Investment Funds &middot; India</div>
         <h1 className="sifr-title">SIF Reports</h1>
         <p className="sifr-sub">
-          Data-backed, downloadable reports on India&rsquo;s SIF industry &mdash; AMC-wise AUM leaderboard and
-          category-wise performance comparisons. Free to view, free to download, free to share.
+          Data-backed reports on India&rsquo;s SIF industry &mdash; AMC-wise AUM leaderboard (downloadable) and
+          category-wise performance comparisons. Free to view and share.
         </p>
 
         <div className="sifr-grid">
