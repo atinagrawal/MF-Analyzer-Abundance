@@ -13,13 +13,20 @@
  * Node.js runtime (App Router default) so this can query Postgres
  * directly via lib/sifReports.js -- see app/api/og-sif-aum/route.js's
  * header comment for why Node.js over Edge here.
+ *
+ * No `export const revalidate` here (unlike og-sif-aum, which has no
+ * query params) -- confirmed live (2026-10) that combining `revalidate`
+ * with reading request.url's searchParams throws a DynamicServerError at
+ * runtime in production (500, no stack trace in logs; didn't reproduce
+ * locally in either dev or `next start`, only on Vercel's actual
+ * environment). The ImageResponse's own Cache-Control header below
+ * already caches per full URL (including ?category=) at the CDN, which
+ * is the correct mechanism for a query-parameterized route anyway.
  */
 
 import { ImageResponse } from '@vercel/og';
 import { getSifCategoryPerformance, listSifCategories } from '@/lib/sifReports';
 import { OG_LOGO_MARK_URL } from '@/lib/ogAssets';
-
-export const revalidate = 21600;
 
 function fmtPct(n, { signed = true } = {}) {
   if (n == null) return '—';
