@@ -66,6 +66,16 @@ const COLS = [
 
 export async function GET(request) {
   try {
+    // Diagnostic bisection path -- ?debug=minimal skips the data fetch
+    // and complex layout entirely, to tell whether the production crash
+    // is in @vercel/og itself on this route, or specific to the dynamic
+    // content/layout below. Temporary, remove once root-caused.
+    if (new URL(request.url).searchParams.get('debug') === 'minimal') {
+      return new ImageResponse(
+        { type: 'div', props: { style: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a1f0a', color: '#fff', fontSize: 40 }, children: 'minimal render OK' } },
+        { width: 800, height: 400 }
+      );
+    }
     return await render(request);
   } catch (err) {
     // Deliberately NOT an ImageResponse -- this route has crashed
