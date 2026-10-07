@@ -21,7 +21,9 @@ import { NextResponse } from 'next/server';
 import { r2Get, r2Put } from '@/lib/r2';
 
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- bounded iaid query space, same data for every
+// caller.
+export const revalidate = 21600;
 
 const MEM_TTL_MS  = 30 * 24 * 60 * 60 * 1000;  // 30 days
 const BLOB_TTL_MS = 365 * 24 * 60 * 60 * 1000; // 1 year — benchmark rarely changes

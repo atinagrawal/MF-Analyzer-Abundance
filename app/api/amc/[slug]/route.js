@@ -12,7 +12,8 @@
 
 import { getAmcDetail } from '@/lib/amcProfiles';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- same per-AMC data for every caller.
+export const revalidate = 21600;
 
 function fmtCr(val) {
   const num = parseFloat(val) || 0;

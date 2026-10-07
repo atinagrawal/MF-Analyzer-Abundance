@@ -18,7 +18,10 @@ import CompareLauncher from './CompareLauncher';
 import Footer from '@/components/Footer';
 import '@/app/screener/mf-compare.css';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- getScreenerDataset() is already its own
+// in-memory/stale/file-fallback cache; this just stops re-invoking the
+// function (and re-walking its ~1,700-fund result) on every single visit.
+export const revalidate = 21600;
 
 function buildHubJsonLd() {
   const canonicalUrl = 'https://mfcalc.getabundance.in/compare';

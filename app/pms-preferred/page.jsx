@@ -28,7 +28,8 @@ import PmsPreferredInteractive from './PmsPreferredInteractive';
 import { fmtCr } from './pmsPreferredFormat';
 import './pms-preferred.css';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- same R2 doc for every visitor.
+export const revalidate = 21600;
 
 const SITE = 'https://mfcalc.getabundance.in';
 const PAGE_URL = `${SITE}/pms-preferred`;

@@ -12,7 +12,8 @@
 
 import { getPmsProviderDetail } from '@/lib/pmsProviders';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- same per-provider data for every caller.
+export const revalidate = 21600;
 
 export async function GET(request, { params }) {
   const { slug } = await params;

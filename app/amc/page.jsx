@@ -3,7 +3,8 @@ import Footer from '@/components/Footer';
 import { getAllAmcsSummary } from '@/lib/amcProfiles';
 import AmcDirectoryClient from './AmcDirectoryClient';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- same directory data for every visitor.
+export const revalidate = 21600;
 
 export const metadata = {
   title: 'All Mutual Fund AMCs in India — List, Total AUM & Schemes Directory | Abundance',

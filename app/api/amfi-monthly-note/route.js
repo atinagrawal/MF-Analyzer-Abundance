@@ -12,7 +12,9 @@
  */
 
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- bounded month/year query space, same data for
+// every caller.
+export const revalidate = 21600;
 
 const AMFI_NOTE_PAGE = 'https://www.amfiindia.com/otherdata/amfi-monthlynote';
 const PDF_RE = /href="(https:\/\/www\.amfiindia\.com\/(?:uploads|Themes\/Theme1\/downloads)\/[^"]+?Monthly_?Note[^"]+?\.pdf)"/gi;

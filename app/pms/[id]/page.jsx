@@ -3,7 +3,10 @@ import { getPmsDetailsCached, getStalePmsDetails } from '@/lib/pmsDetailsCache';
 import { buildPmsDetailFaq } from '@/lib/pmsDetailFaq';
 import PMSDetailClient from './PMSDetailClient';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- already has its own stale-cache fallback
+// (getStalePmsDetails) for when the live fetch fails; this just stops
+// re-invoking that whole chain on every single page view.
+export const revalidate = 21600;
 
 export async function generateMetadata({ params }) {
   const { id } = await params;

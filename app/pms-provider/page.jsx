@@ -3,7 +3,8 @@ import Footer from '@/components/Footer';
 import { getAllPmsProvidersSummary } from '@/lib/pmsProviders';
 import PmsProviderDirectoryClient from './PmsProviderDirectoryClient';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- same directory data for every visitor.
+export const revalidate = 21600;
 
 export const metadata = {
   title: 'Portfolio Management Services (PMS) Providers in India — Directory & Factsheets | Abundance',

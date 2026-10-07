@@ -4,7 +4,9 @@ import Footer from '@/components/Footer';
 import { getPmsProviderDetail } from '@/lib/pmsProviders';
 import PmsProviderDetailClient from './PmsProviderDetailClient';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- was re-fetching the same R2 factsheets doc +
+// leaderboard on every single page view across 18 providers.
+export const revalidate = 21600;
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;

@@ -23,7 +23,8 @@ import pool from '@/lib/db';
 import { r2Get, r2Put } from '@/lib/r2';
 
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- same per-sector data for every caller.
+export const revalidate = 21600;
 
 const TTL_MS = 5 * 60 * 1000;
 

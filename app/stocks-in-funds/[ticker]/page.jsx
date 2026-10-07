@@ -4,12 +4,19 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import StockHoldersClient from './StockHoldersClient';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- was querying Postgres 3x on every single page
+// view (884 distinct tickers, each with its own crawler-facing markdown
+// API too -- see app/api/stocks-in-funds/[ticker]/route.js). Same fix as
+// app/fund/[code]/page.js: a genuine DB error throws instead of being
+// swallowed into notFound(), so a transient outage can't get cached as a
+// permanent 404 for the revalidate window.
+export const revalidate = 21600;
 
 async function getStockHoldingsData(rawParam) {
   const decoded = decodeURIComponent(rawParam || '').trim();
   if (!decoded) return null;
 
+  let dbErrored = false;
   try {
     // 1. Query stock_fund_holdings by uppercase ticker OR lowercase slug
     const holdingsRes = await pool.query(
@@ -123,8 +130,12 @@ async function getStockHoldingsData(rawParam) {
     }
   } catch (err) {
     console.error('[StocksInFundsDetailPage] DB error:', err.message);
+    dbErrored = true;
   }
 
+  if (dbErrored) {
+    throw new Error(`Could not determine whether stock ${decoded} exists -- database unavailable and no fallback matched.`);
+  }
   return null;
 }
 

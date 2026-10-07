@@ -23,7 +23,9 @@
 import { r2Get, r2Put } from '@/lib/r2';
 
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- same data for every caller; ?bust still forces
+// a fresh fetch since it changes the cache key.
+export const revalidate = 21600;
 
 const BLOB_KEY = 'market-holidays/latest.json';
 const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours -- this list is published once a year

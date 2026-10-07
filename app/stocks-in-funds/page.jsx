@@ -4,7 +4,8 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import StocksInFundsHubClient from './StocksInFundsHubClient';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- aggregate query, same data for every visitor.
+export const revalidate = 21600;
 
 export const metadata = {
   title: 'Who Owns This Stock? Mutual Fund & PMS Holdings Screener | Abundance',

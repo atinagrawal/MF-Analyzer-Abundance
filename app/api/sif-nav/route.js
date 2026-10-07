@@ -18,7 +18,8 @@ import { r2Get, r2Put } from '@/lib/r2';
 import { getSifAumMap } from '@/lib/holdingsLookup';
 
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- same NAV data for every caller.
+export const revalidate = 21600;
 
 const BLOB_KEY = 'sif-nav/latest.json';
 const TTL_MS   = 4 * 60 * 60 * 1000;  // 4 hours

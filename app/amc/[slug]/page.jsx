@@ -4,7 +4,11 @@ import Footer from '@/components/Footer';
 import { getAmcDetail } from '@/lib/amcProfiles';
 import AmcDetailClient from './AmcDetailClient';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- was querying Postgres on every single page view
+// (52 AMCs). getAmcDetail() lets a real DB error throw naturally (no
+// try/catch around it here), so a transient outage surfaces as a genuine
+// error instead of getting cached as a false 404.
+export const revalidate = 21600;
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;

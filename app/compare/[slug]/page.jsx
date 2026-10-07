@@ -24,7 +24,14 @@ import { MFCompareView } from '@/app/screener/MFCompare';
 import Footer from '@/components/Footer';
 import '@/app/screener/mf-compare.css';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- was querying live on every single page view
+// across the full compare-pair space. getScreenerDataset() already tries
+// stale-cache and local-file fallbacks before ever throwing (see
+// lib/screenerData.js), so letting that throw propagate here (no
+// try/catch) means a real outage surfaces as a genuine error instead of
+// getting cached as a false 404 for the revalidate window -- same fix as
+// app/fund/[code]/page.js.
+export const revalidate = 21600;
 
 let cachedMasterSchemes = null;
 function getMasterSchemeList() {
@@ -232,16 +239,15 @@ export async function generateMetadata({ params }) {
   };
 }
 
-export default async function CompareDetailPage({ params, searchParams }) {
+export default async function CompareDetailPage({ params }) {
   const { slug } = await params;
-  const sp = await searchParams;
 
-  let dataset = null;
-  try {
-    dataset = await getScreenerDataset();
-  } catch (err) {
-    console.error('[CompareDetailPage] Failed to fetch screener dataset:', err.message);
-  }
+  // No try/catch: getScreenerDataset() only throws once its own
+  // stale-cache and local-file fallbacks are exhausted (see
+  // lib/screenerData.js), so by that point there's genuinely nothing to
+  // serve -- let it propagate as a real error rather than converting it
+  // to notFound(), which would get cached as a false 404 under ISR.
+  const dataset = await getScreenerDataset();
 
   if (!dataset?.funds?.length) {
     notFound();

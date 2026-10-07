@@ -11,7 +11,8 @@ import { NextResponse } from 'next/server';
 import { getPmsQuartileCached } from '@/lib/pmsQuartileCache';
 
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- same quartile data for every caller.
+export const revalidate = 21600;
 
 export async function GET(request) {
     const { searchParams } = new URL(request.url);

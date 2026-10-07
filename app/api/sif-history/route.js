@@ -13,7 +13,8 @@
 import { checkRateLimitSafe, rateLimitResponse, getClientIp } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- same historical data for every caller.
+export const revalidate = 21600;
 
 const AMFI_BASE = 'https://www.amfiindia.com/api';
 const HEADERS   = { 'User-Agent': 'Mozilla/5.0 (compatible; MFCalc/2.0)' };

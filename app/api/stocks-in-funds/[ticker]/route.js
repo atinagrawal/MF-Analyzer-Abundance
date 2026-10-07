@@ -12,7 +12,14 @@
 
 import pool from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
+// ISR, not force-dynamic -- this endpoint exists specifically to attract
+// AI crawler traffic (ChatGPT Search, Claude, Perplexity) across 884
+// distinct tickers; force-dynamic meant every crawl hit Postgres live.
+// Its own Cache-Control header below already asked the CDN to cache
+// responses, but force-dynamic can keep Next from honoring that -- this
+// makes the ISR layer and the header agree, matching the same fix applied
+// to the page at app/stocks-in-funds/[ticker]/page.jsx.
+export const revalidate = 21600;
 
 function fmtCr(val) {
   const num = parseFloat(val) || 0;
