@@ -1,0 +1,213 @@
+/* app/sifs/reports/sif-reports.css
+ * Shared styles for the SIF shareable-report pages (hub, AUM leaderboard,
+ * category performance). Uses the site-wide forest-green tokens already
+ * defined on :root in app/globals.css -- no new palette introduced.
+ */
+
+.sifr-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.sifr-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.sifr-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--g1);
+  margin-bottom: 8px;
+  line-height: 1.15;
+}
+
+.sifr-sub {
+  font-size: 15px;
+  color: var(--text2);
+  margin-bottom: 24px;
+  max-width: 68ch;
+}
+
+.sifr-download-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.sifr-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--g2);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  text-decoration: none;
+  box-shadow: var(--shadow);
+}
+.sifr-download-btn:hover { background: var(--g1); }
+
+.sifr-asof {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ── Hub cards ───────────────────────────────────────────────────── */
+.sifr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.sifr-card {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.sifr-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+
+.sifr-card-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.sifr-card-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--g1);
+  margin-bottom: 6px;
+}
+
+.sifr-card-meta {
+  font-size: 13px;
+  color: var(--text2);
+}
+
+/* ── AUM leaderboard ─────────────────────────────────────────────── */
+.sifr-kpis {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.sifr-kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  min-width: 180px;
+  flex: 1;
+}
+.sifr-kpi-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.sifr-kpi-value {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--g1);
+  font-family: "JetBrains Mono", monospace;
+}
+
+.sifr-board {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.sifr-row {
+  display: grid;
+  grid-template-columns: 30px 1fr minmax(120px, 2fr) 90px 56px;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--s2);
+}
+.sifr-row:last-child { border-bottom: none; }
+.sifr-rank { font-size: 13px; color: var(--muted); font-weight: 700; }
+.sifr-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.sifr-bar-track { height: 10px; background: var(--s2); border-radius: 5px; overflow: hidden; }
+.sifr-bar-fill { height: 100%; background: linear-gradient(90deg, var(--g3), var(--g1)); border-radius: 5px; }
+.sifr-bar-fill.top { background: linear-gradient(90deg, #ffd54f, #ffb300); }
+.sifr-aum { font-size: 14px; font-weight: 800; color: var(--text); text-align: right; font-family: "JetBrains Mono", monospace; }
+.sifr-share { font-size: 12px; color: var(--muted); text-align: right; }
+
+/* ── Category performance table ─────────────────────────────────── */
+.sifr-perf-table-wrap { overflow-x: auto; }
+.sifr-perf-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.sifr-perf-table th {
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.sifr-perf-table th:first-child { text-align: left; }
+.sifr-perf-table td {
+  text-align: right;
+  font-size: 13px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--s2);
+  font-family: "JetBrains Mono", monospace;
+  white-space: nowrap;
+}
+.sifr-perf-table td:first-child { text-align: left; font-family: "Raleway", sans-serif; font-weight: 700; color: var(--text); }
+.sifr-perf-table tr:last-child td { border-bottom: none; }
+.sifr-cell-pos { color: var(--g1); background: var(--g-xlight); border-radius: 6px; }
+.sifr-cell-neg { color: var(--neg); background: var(--neg-bg); border-radius: 6px; }
+.sifr-cell-null { color: var(--border2); }
+
+.sifr-cat-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.sifr-cat-tab {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border2);
+  color: var(--g2);
+  text-decoration: none;
+  background: var(--surface);
+}
+.sifr-cat-tab.active { background: var(--g2); color: #fff; border-color: var(--g2); }
+
+.sifr-disclaimer {
+  margin-top: 28px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
