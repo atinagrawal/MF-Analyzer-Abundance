@@ -14,14 +14,17 @@
  * directly via lib/sifReports.js -- see app/api/og-sif-aum/route.js's
  * header comment for why Node.js over Edge here.
  *
- * No `export const revalidate` here (unlike og-sif-aum, which has no
- * query params) -- confirmed live (2026-10) that combining `revalidate`
- * with reading request.url's searchParams throws a DynamicServerError at
- * runtime in production (500, no stack trace in logs; didn't reproduce
- * locally in either dev or `next start`, only on Vercel's actual
- * environment). The ImageResponse's own Cache-Control header below
- * already caches per full URL (including ?category=) at the CDN, which
- * is the correct mechanism for a query-parameterized route anyway.
+ * STATUS (2026-10): this route 500s in production -- deterministic, every
+ * category, no JS stack trace anywhere in Vercel's runtime logs (only the
+ * routine pg SSL warning), and NOT reproducible locally in next dev or
+ * next start against the same database. Removing `export const
+ * revalidate` (a real difference from og-sif-aum, which has no query
+ * params) did NOT fix it, so that was a wrong first hypothesis, not the
+ * root cause -- left removed since it's still the more correct caching
+ * mechanism for a query-parameterized route regardless. The GET handler
+ * below is now wrapped in try/catch returning the real error as text
+ * instead of letting it crash silently, specifically to get a stack
+ * trace out of the next production attempt rather than guess again.
  */
 
 import { ImageResponse } from '@vercel/og';
@@ -62,6 +65,22 @@ const COLS = [
 ];
 
 export async function GET(request) {
+  try {
+    return await render(request);
+  } catch (err) {
+    // Deliberately NOT an ImageResponse -- this route has crashed
+    // silently in production with no catchable stack trace anywhere in
+    // Vercel's logs. Returning the real error as plain text is the only
+    // way left to actually see what it is on the next occurrence.
+    console.error('[og-sif-performance] Render failed:', err.stack || err.message);
+    return new Response(`og-sif-performance error: ${err.stack || err.message}`, {
+      status: 500,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  }
+}
+
+async function render(request) {
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get('category') || '';
   const report = await getSifCategoryPerformance(slug);
@@ -107,11 +126,20 @@ export async function GET(request) {
         { type: 'div', props: { style: { width: 100, textAlign: 'right', color: 'rgba(255,255,255,0.75)', fontSize: 14, display: 'flex', justifyContent: 'flex-end' }, children: s.nav != null ? s.nav.toFixed(2) : '—' } },
         ...COLS.map((c) => {
           const v = s[c.key];
+          // One div per cell, not two -- background/padding applied
+          // directly instead of an inner "pill" wrapper, to cut the
+          // render tree's node count roughly in half across the ~12x5
+          // metric grid (a real difference from og-sif-aum's simpler
+          // leaderboard, and the leading theory for why this route
+          // crashes in production while that one doesn't).
           return {
             type: 'div',
             props: {
-              style: { width: c.width, display: 'flex', justifyContent: 'flex-end' },
-              children: { type: 'div', props: {
+              style: { width: c.width, textAlign: 'right', display: 'flex', justifyContent: 'flex-end' },
+              children: { type: 'span', props: {
+                // Satori requires every non-text node to declare display
+                // explicitly (no implicit block/inline layout) -- easy to
+                // drop by accident when flattening a wrapper like this.
                 style: { background: heatColor(v), color: textColor(v), fontSize: 14, fontWeight: 700, padding: '5px 10px', borderRadius: 6, display: 'flex' },
                 children: fmtPct(v),
               } },
