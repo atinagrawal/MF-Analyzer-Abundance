@@ -76,6 +76,25 @@ async function run() {
 
   const { r2Put, r2Get } = await import('../lib/r2.js');
 
+  // Quarterly data checked on a schedule that now runs several times a
+  // month (5th/7th/10th/15th -- see .github/workflows/sif-aum-sync.yml) to
+  // catch AMFI publishing early rather than always waiting for the last
+  // run. Once an earlier run in the cycle already picked up the current
+  // quarter, later runs that same month have nothing new to do -- skip
+  // the live AMFI fetch entirely rather than hitting their API on every
+  // scheduled run for a quarter we already have.
+  const asOf = mostRecentQuarterEndLabel();
+  try {
+    const existingPeek = await r2Get(R2_KEY);
+    const existingAsOf = existingPeek ? Object.values(existingPeek)[0]?.asOf : null;
+    if (existingAsOf === asOf) {
+      console.log(`[SIF AUM Sync] Already have ${asOf} data from an earlier run this cycle -- skipping live fetch.`);
+      return;
+    }
+  } catch (e) {
+    console.warn(`[SIF AUM Sync] Could not peek existing R2 copy to check for early-exit: ${e.message}`);
+  }
+
   const res = await fetch(URL, { headers: HEADERS, signal: AbortSignal.timeout(20000) });
   if (!res.ok) {
     console.error(`[SIF AUM Sync] AMFI API returned HTTP ${res.status} -- aborting, leaving existing R2 copy untouched.`);
@@ -88,7 +107,6 @@ async function run() {
     process.exit(1);
   }
 
-  const asOf = mostRecentQuarterEndLabel();
   const result = {};
   let written = 0;
 

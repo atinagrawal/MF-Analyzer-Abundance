@@ -2,13 +2,18 @@ name: Monthly SIF AUM Sync
 
 on:
   schedule:
-    # Run on the 15th of every month at 05:00 UTC -- staggered two hours
-    # after the AMFI AUM sync (03:00) and one hour after the scheme
-    # riskometer sync (04:00) so the three workflows don't hit AMFI's site
-    # concurrently. SIF Average AUM is a quarterly disclosure, but the exact
-    # publish day isn't documented, so a monthly run (matching this
-    # project's other AMFI syncs) picks up a new quarter within 15 days.
-    - cron: '0 5 15 * *'
+    # Run on the 5th, 7th, 10th and 15th of every month at 05:00 UTC --
+    # staggered two hours after the AMFI AUM sync (03:00) and one hour
+    # after the scheme riskometer sync (04:00) so the three workflows
+    # don't hit AMFI's site concurrently. SIF Average AUM is a quarterly
+    # disclosure with no documented publish day -- confirmed live (2026-10)
+    # that AMFI can have the new quarter ready well before the 15th, so
+    # checking earlier catches it sooner instead of always waiting for the
+    # last scheduled day. The script itself (sync_sif_aum.js) skips the
+    # live AMFI fetch entirely once an earlier run this cycle already
+    # picked up the current quarter, so the extra scheduled days cost
+    # nothing once the new data has already been found.
+    - cron: '0 5 5,7,10,15 * *'
   workflow_dispatch:
 
 jobs:
