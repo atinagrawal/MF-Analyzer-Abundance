@@ -49,7 +49,7 @@ export default function MonthlyHeatmap({ months, schemes }) {
           <tbody>
             {schemes.map((s) => (
               <tr key={s.schemeId}>
-                <td className="sifr-perf-name" title={s.fullName}>{s.name}</td>
+                <td className="sifr-perf-name" title={s.fullName}><a href={`/sif/${s.schemeId}`}>{s.name}</a></td>
                 {months.map((m) => (
                   <td key={m.value} className={`sifr-perf-num ${heatClass(s.returns[m.value])}`} style={heatStyle(s.returns[m.value])}>
                     {fmtPct(s.returns[m.value])}
