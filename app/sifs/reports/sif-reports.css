@@ -428,3 +428,68 @@
 .sifr-heatmap-section .sifr-perf-table th { cursor: default; text-align: right; }
 .sifr-heatmap-section .sifr-perf-table th:first-child { text-align: left; }
 .sifr-heatmap-section .sifr-perf-table th:hover { color: rgba(255, 255, 255, 0.5); }
+
+/* ── Print / Save as PDF ─────────────────────────────────────────
+ * The primary save/share action (app/sifs/reports/PrintButton.jsx) is
+ * the browser's own print-to-PDF, not a generated image -- so what the
+ * browser's print engine actually renders matters as much as the screen
+ * view. Two things need explicit handling here that don't come for free:
+ *   1. Chrome/most browsers skip background colors when printing unless
+ *      the user opts into "print background graphics" -- so the dark
+ *      terminal-style table would otherwise print as invisible light
+ *      text on white paper. `-webkit-print-color-adjust`/`print-color-
+ *      adjust: exact` forces backgrounds through; as a second line of
+ *      defense in case a viewer's setup still drops them, the dark
+ *      sections also get a plain light fallback below.
+ *   2. The heatmap cells' background/text color is set via inline style
+ *      (computed per-value in JS), which a stylesheet can't cleanly
+ *      override by pattern-matching an exact rgba() -- so those cells
+ *      also carry a `sifr-pos`/`sifr-neg` class (PerformanceTable.jsx,
+ *      MonthlyHeatmap.jsx) for print to target directly instead.
+ */
+.sifr-no-print { display: none !important; }
+
+@media print {
+  * { print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
+
+  .navbar, .dark-footer, .sifr-no-print,
+  .sifr-cat-tabs, .sifr-period-row, .sifr-download-row { display: none !important; }
+
+  body { background: #fff !important; }
+  .sifr-wrap { max-width: 100%; padding: 0; }
+  .sifr-title { color: #0d2818 !important; }
+
+  /* Dark terminal table -> light, ink-friendly table for paper. */
+  .sifr-perf-table-wrap {
+    background: #fff !important;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    padding: 0 !important;
+  }
+  .sifr-perf-table th {
+    color: #333 !important;
+    border-bottom: 1px solid #999 !important;
+    cursor: default !important;
+  }
+  .sifr-sort-arrow { display: none; }
+  .sifr-perf-table td { border-bottom: 1px solid #e0e0e0 !important; }
+  .sifr-perf-table tr:hover td { background: transparent !important; }
+  .sifr-perf-name { color: #111 !important; }
+  .sifr-perf-num { color: #333 !important; }
+  .sifr-perf-vol { color: #666 !important; }
+  .sifr-rank-badge { color: #b8860b !important; }
+
+  /* Heatmap cells: drop the inline fill, keep sign as bold colored text
+     -- reads correctly on a black & white printer too, not just color. */
+  .sifr-perf-table td[style] { background: transparent !important; }
+  .sifr-pos { color: #1b5e20 !important; font-weight: 700; }
+  .sifr-neg { color: #b71c1c !important; font-weight: 700; }
+
+  .sifr-leader-card, .sifr-kpi, .sifr-card, .sifr-board {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+
+  .sifr-perf-table-wrap, .sifr-heatmap-section { page-break-inside: avoid; }
+  .sifr-disclaimer { page-break-inside: avoid; }
+}

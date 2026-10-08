@@ -24,6 +24,13 @@ function heatStyle(n) {
     : { background: `rgba(239,83,80,${alpha.toFixed(2)})`, color: '#ffd6d4' };
 }
 
+// Paired with heatStyle's inline style -- see PerformanceTable.jsx's
+// identical helper for why print needs this instead of the inline style.
+function heatClass(n) {
+  if (n == null) return '';
+  return n >= 0 ? 'sifr-pos' : 'sifr-neg';
+}
+
 export default function MonthlyHeatmap({ months, schemes }) {
   if (!months.length || !schemes.length) return null;
 
@@ -44,7 +51,7 @@ export default function MonthlyHeatmap({ months, schemes }) {
               <tr key={s.schemeId}>
                 <td className="sifr-perf-name" title={s.fullName}>{s.name}</td>
                 {months.map((m) => (
-                  <td key={m.value} className="sifr-perf-num" style={heatStyle(s.returns[m.value])}>
+                  <td key={m.value} className={`sifr-perf-num ${heatClass(s.returns[m.value])}`} style={heatStyle(s.returns[m.value])}>
                     {fmtPct(s.returns[m.value])}
                   </td>
                 ))}

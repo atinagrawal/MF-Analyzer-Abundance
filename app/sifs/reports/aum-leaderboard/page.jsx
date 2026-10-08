@@ -1,14 +1,18 @@
 /**
  * app/sifs/reports/aum-leaderboard/page.jsx
  *
- * India's SIF AUM Leaderboard -- real HTML rendering of the same data
- * app/api/og-sif-aum/route.js turns into a downloadable branded PNG.
- * Data layer: lib/sifReports.js's getSifAumLeaderboard().
+ * India's SIF AUM Leaderboard -- real HTML rendering of this page's data.
+ * app/api/og-sif-aum/route.js still renders the same data as a branded
+ * PNG for link-preview thumbnails (openGraph/twitter meta below), but the
+ * user-facing save/share action is print-to-PDF (PrintButton.jsx) --
+ * zero server compute, always reflects live data, no generated-image
+ * fragility. Data layer: lib/sifReports.js's getSifAumLeaderboard().
  */
 
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { getSifAumLeaderboard } from '@/lib/sifReports';
+import PrintButton from '../PrintButton';
 import '../sif-reports.css';
 
 export const revalidate = 21600;
@@ -72,9 +76,7 @@ export default async function SifAumLeaderboardPage() {
         {board && <p className="sifr-sub">SIF-wise assets under management &middot; as of {board.asOf}</p>}
 
         <div className="sifr-download-row">
-          <a className="sifr-download-btn" href={OG_IMAGE} target="_blank" rel="noopener noreferrer">
-            &#8681; Download shareable image
-          </a>
+          <PrintButton />
           {board && <span className="sifr-asof">Updated quarterly from AMFI&rsquo;s SIF Average AUM disclosure</span>}
         </div>
 

@@ -1,9 +1,12 @@
 /**
  * app/sifs/reports/performance/[category]/page.jsx
  *
- * Category-wise SIF performance comparison -- real HTML rendering of the
- * same data app/api/og-sif-performance/route.js turns into a downloadable
- * branded PNG heatmap. Data layer: lib/sifReports.js.
+ * Category-wise SIF performance comparison -- real HTML rendering of this
+ * page's data. app/api/og-sif-performance/route.js still serves the same
+ * data as a branded PNG for link-preview thumbnails (openGraph/twitter
+ * meta below), but the user-facing save/share action is print-to-PDF
+ * (PrintButton.jsx) -- zero server compute, always reflects live data,
+ * no generated-image fragility. Data layer: lib/sifReports.js.
  *
  * ?month=YYYY-MM shows the report as of that calendar month's last
  * available NAV instead of today -- getSifCategoryPerformanceAsOf()
@@ -26,6 +29,7 @@ import {
 import PerformanceTable from './PerformanceTable';
 import PeriodSelect from './PeriodSelect';
 import MonthlyHeatmap from './MonthlyHeatmap';
+import PrintButton from '../../PrintButton';
 import '../../sif-reports.css';
 
 export const revalidate = 21600;
@@ -115,7 +119,6 @@ export default async function SifCategoryPerformancePage({ params, searchParams 
     : [];
 
   const pageUrl = `${SITE}/sifs/reports/performance/${report.slug}`;
-  const ogImage = `${SITE}/api/og-sif-performance?category=${report.slug}`;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -170,10 +173,8 @@ export default async function SifCategoryPerformancePage({ params, searchParams 
         )}
 
         <div className="sifr-download-row">
-          <a className="sifr-download-btn" href={ogImage} target="_blank" rel="noopener noreferrer">
-            &#8681; Download shareable image
-          </a>
-          <span className="sifr-asof">Image regenerates weekly &middot; table updates every 6 hours from AMFI NAV history</span>
+          <PrintButton />
+          <span className="sifr-asof">Table updates every 6 hours from AMFI NAV history</span>
         </div>
 
         {report.schemes.length === 0 ? (

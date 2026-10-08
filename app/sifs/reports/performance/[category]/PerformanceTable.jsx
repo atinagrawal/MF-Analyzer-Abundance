@@ -42,6 +42,15 @@ function heatStyle(n) {
     : { background: `rgba(239,83,80,${alpha.toFixed(2)})`, color: '#ffd6d4' };
 }
 
+// Paired with heatStyle's inline style: print stylesheets can't target an
+// exact rgba() value cleanly, so these sign-only classes give @media
+// print something stable to restyle (dark text, no background fill)
+// instead of trying to pattern-match the inline color.
+function heatClass(n) {
+  if (n == null) return '';
+  return n >= 0 ? 'sifr-pos' : 'sifr-neg';
+}
+
 export default function PerformanceTable({ schemes, periods }) {
   const cols = useMemo(() => [...STATIC_COLS, ...periods, TRAILING_COL], [periods]);
   const [sortKey, setSortKey] = useState(periods.find((p) => p.key === 'ret1y')?.key || periods[periods.length - 1]?.key || 'name');
@@ -101,7 +110,7 @@ export default function PerformanceTable({ schemes, periods }) {
               </td>
               <td className="sifr-perf-num">{s.nav != null ? s.nav.toFixed(2) : '—'}</td>
               {periods.map((p) => (
-                <td key={p.key} className="sifr-perf-num" style={heatStyle(s[p.key])}>{fmtPct(s[p.key])}</td>
+                <td key={p.key} className={`sifr-perf-num ${heatClass(s[p.key])}`} style={heatStyle(s[p.key])}>{fmtPct(s[p.key])}</td>
               ))}
               <td className="sifr-perf-num sifr-perf-vol">{s.vol != null ? `${s.vol.toFixed(2)}%` : '—'}</td>
             </tr>
