@@ -1,9 +1,9 @@
 # APMI VISTA — SEBI PMS Compliance Ingestion & Application Plan
 
-> **Document Version:** 2.0.0
-> **Author:** Antigravity / Gemini Engineering (v1.0.0), revised by Claude (v2.0.0)
+> **Document Version:** 2.1.0
+> **Author:** Antigravity / Gemini Engineering (v1.0.0), revised by Claude (v2.0.0, v2.1.0)
 > **Reviewer:** Claude / Engineering Team
-> **Status:** Revised — v1.0.0's core data-source assumption corrected after live verification
+> **Status:** Revised — v1.0.0's core data-source assumption corrected (v2.0.0); v2.1.0 adds EPFO AUM tracking before the first production backfill, caught from Gemini's own dry-run output
 > **Target Date:** October 2026
 > **Scope:** Full-industry Portfolio Management Services (PMS) compliance data ingestion, storage, scheduling, and UI integration in `MF-Analyzer-Abundance`.
 
@@ -22,7 +22,22 @@ Five smaller corrections, each verified against the live payload, not assumed:
 4. **Derivatives granularity**: the real data splits derivatives three ways (`DerivEquity`/`DerivCommodity`/`DerivOthers`); the v1.0.0 schema had one `aum_disc_derivatives` column. Fixed to sum explicitly rather than accidentally mapping to one of the three.
 5. **Duplicate month entries**: APMI's own source data has 2 providers (of 553) with a duplicated `monthId` in their series (`INP000006527`, `INP000005273`) — harmless under `ON CONFLICT DO UPDATE` but worth a log line so it's not silently invisible.
 
-One open item, not a bug: as of today (Oct 8), APMI's latest published month is **August 2026**, not September — meaning the plan's "September data appears in mid-October" claim is unverified and the real publication lag may run longer than one month. The early-exit flowchart already handles "not yet published" safely either way (exit 0, retry next scheduled day), so this needs watching, not a code change.
+One open item, not a bug: as of today (Oct 8), APMI's latest published month is **August 2026**, not September — meaning the plan's "September data appears in mid-October" claim is unverified and the real publication lag may run longer than one month. The early-exit flowchart already handles "not yet published" safely either way (exit 0, retry next scheduled day), so this needs watching, not a code change. (Independently confirmed by Gemini's own non-force dry-run: "Target month 2026-09 is not yet published... Clean exit." — exactly the expected behavior.)
+
+### 0.1 v2.1.0: EPFO AUM, caught from Gemini's own dry-run output before the first write
+
+Gemini implemented v2.0.0 correctly and ran `--dry-run --force` as asked. Reviewing that output (not just the summary line "8,792 snapshots validated cleanly") surfaced something v2.0.0 missed entirely. The dry-run's "Top 5 Providers by AUM" listed SBI Funds Management, UTI AMC, HDFC AMC, and Aditya Birla Sun Life AMC at the top — all mutual fund houses, not PMS boutiques — with figures like **"UTI Asset Management: ₹7,66,879 Cr AUM, 4 clients."**
+
+Cross-checked directly against the raw payload (not just Gemini's extraction) to confirm this is real data, not a bug: it is — those exact figures are in `providerDetails[]` verbatim. The explanation is **EPFO (Employees' Provident Fund) mandates**: India's PMS AUM statistics are well known to include a handful of large AMCs managing pooled provident-fund money, which dwarfs their actual PMS business. The payload has dedicated fields for this (`discPfEpfoAum`, `ndPfEpfoAum`, `advisoryPfEpfoAum`), and checking them confirms it directly:
+
+| Provider | EPFO AUM as % of `grandTotalAum` |
+| :--- | ---: |
+| SBI Funds Management | 86.9% |
+| UTI AMC | 88.3% |
+| HDFC AMC | 98.8% |
+| Aditya Birla Sun Life AMC | 99.5% |
+
+**Why this matters for the schema, not just the application layer:** v2.0.0 deliberately left PF/EPFO fields uncaptured ("available if a later phase needs them"). That was the wrong call. Without `aum_pf_epfo` stored per snapshot, there is no way to later compute an EPFO-excluded AUM figure without a second schema migration and a full historical re-backfill. Section 3.2 below now includes it from the start — cheaper to add one column now than to redo 8,792 rows later. This is a storage decision, not a UI one: store both the true regulatory total and the EPFO carve-out; Section 6 decides how the application actually uses them.
 
 ---
 
@@ -126,6 +141,15 @@ CREATE TABLE IF NOT EXISTS pms_provider_monthly_snapshots (
   clients_co_investment INT DEFAULT 0,
   clients_domestic INT DEFAULT 0,              -- source: totalDomesticClients
   clients_foreign INT DEFAULT 0,               -- source: totalForeignClients
+
+  -- EPFO / Provident Fund mandates -- added in v2.1.0, caught from Gemini's own dry-run output before the first
+  -- production write (see Section 0.1). A handful of large AMCs (SBI, UTI, HDFC, Aditya Birla Sun Life -- 87-99.5%
+  -- of their reported AUM confirmed EPFO in the live payload) manage pooled EPFO corpus money that otherwise
+  -- dominates any naive "Top PMS by AUM" ranking for reasons unrelated to actual PMS business. Store it
+  -- explicitly so the application layer CAN compute `grand_total_aum - aum_pf_epfo` for a ranking that means
+  -- what Section 6 wants it to mean, without a second migration + re-backfill to get this data back later.
+  aum_pf_epfo NUMERIC(14, 2) DEFAULT 0,        -- SUM of discPfEpfoAum + ndPfEpfoAum + advisoryPfEpfoAum
+  clients_pf_epfo INT DEFAULT 0,               -- SUM of discPfEpfoClients + ndPfEpfoClients + advisoryPfEpfoClients
 
   -- Asset Class Allocation -- providerDetails[].aumTotal* (combined disc+nd; use aumDisc*/aumNd* instead if the
   -- discretionary/non-discretionary split matters more than the combined total for a given use case)
@@ -232,7 +256,7 @@ node scripts/sync_apmi_vista.mjs --force
    * Read `monthEntry.report.providerDetails` — an array of ~510 objects, one per active provider for that month. **Not** `data.perProviderTimeSeries` (see Section 0 for why).
    * Run within a single database transaction.
    * Upsert master providers into `pms_providers` from this same array's `name`/`registrationNo`/`status` fields (`ON CONFLICT (registration_no) DO UPDATE ...`), scoped to providers present in `monthEntry.report.providerDetails` for this run — a provider that stopped reporting before the target month simply isn't touched, which correctly leaves its `latest_month`/`is_active` reflecting its real last appearance.
-   * Upsert the new month's snapshots into `pms_provider_monthly_snapshots` (`ON CONFLICT (registration_no, month_id) DO UPDATE ...`), computing `disc_turnover_ratio` as described in Section 3.2 rather than reading it.
+   * Upsert the new month's snapshots into `pms_provider_monthly_snapshots` (`ON CONFLICT (registration_no, month_id) DO UPDATE ...`), computing `disc_turnover_ratio` and `aum_pf_epfo`/`clients_pf_epfo` (v2.1.0) as described in Section 3.2 rather than reading a single field for either.
    * If a `registrationNo` appears more than once within `providerDetails` for the same month (APMI's own source has 2 such duplicates across the full dataset, see Section 0 point 5), log a warning naming the registration number rather than silently upserting twice.
    * Update `pms_sync_state` set `latest_synced_month = targetMonth`.
    * **`--force` backfill**: loop over all 18 entries in `data.months`, repeating this extraction for each one's `report.providerDetails` — confirmed live that every month (not just the latest) has this array fully populated (467 providers in March 2025, growing to 510 by August 2026), so a full 18-month backfill is viable in one run.
@@ -305,13 +329,15 @@ jobs:
     * 👥 *Active Investors: 12,117 clients*
     * 💼 *Asset Allocation: 97.4% Listed Equity, 2.6% Cash/Liquid*
     * 📊 *Portfolio Turnover: 0.18x (computed, see Section 3.2)*
+  * The strategies currently on `/pms-preferred` (Abakkus, Marcellus, ValueQuest, ASK) are genuine independent boutiques, not EPFO-mandate managers, so this phase is unaffected by the Section 0.1 finding in practice — flagged here only so a future addition of a large-AMC-affiliated strategy doesn't silently inherit an EPFO-inflated AUM badge without the same `grand_total_aum - aum_pf_epfo` treatment Phase 2 uses.
 
 ### Phase 2: PMS Industry Directory & Screener (`/pms-directory` or `/pms-pulse`)
 * A new public, SEO-optimized page listing all 510 currently-active SEBI PMS providers.
+* **EPFO handling (required, not optional — see Section 0.1):** default "Total AUM" shown and sorted on across this page is `grand_total_aum - aum_pf_epfo`, not the raw regulatory total. Four large AMCs (SBI, UTI, HDFC, Aditya Birla Sun Life — confirmed 87-99.5% EPFO) would otherwise top every "biggest PMS" ranking for reasons unrelated to what this page is for. Show the true regulatory `grand_total_aum` too, just not as the thing sorted on by default — e.g. a secondary "incl. institutional/EPFO mandates" figure or toggle, not hidden, just not the headline number.
 * **Sort & Filters:**
-  * By Total AUM, Discretionary AUM, Advisory AUM.
+  * By Total AUM (EPFO-excluded, see above), Discretionary AUM, Advisory AUM.
   * By Net Monthly Flows (₹ Cr) — see where HNI capital is flowing.
-  * By Investor Count & Average Ticket Size (`AUM / Total Clients`).
+  * By Investor Count & Average Ticket Size (`AUM / Total Clients`) — also EPFO-sensitive: UTI's 4 EPFO-mandate clients would otherwise produce a nonsensical multi-lakh-crore "average ticket size." Compute from EPFO-excluded AUM and client count both.
   * By computed Trading Turnover Ratio (Active vs Buy-and-Hold).
   * Filter providers with unlisted equity or structured debt exposure.
 
@@ -342,3 +368,4 @@ jobs:
 - [x] **SEBI Registration ID Consistency:** Confirmed live — 100% of 553 distinct providers match `INP\d+`, zero duplicates. Sound as a primary key.
 - [x] **Alignment with Existing Codebase:** Polling/early-exit/workflow structure correctly mirrors `scripts/sync_sif_aum.js` and `.github/workflows/sif-aum-sync.yml`. Script's own self-contained-vs-shared-lib conventions should follow whichever this codebase's other standalone sync scripts use (check `scripts/sync_sif_aum.js` and `scripts/build-sif-screener.mjs` for the established pattern before writing `sync_apmi_vista.mjs`).
 - [x] **Data source verified live, not assumed:** v1.0.0's schema and script spec were built against `perProviderTimeSeries`, which does not carry the fields the schema wants. Corrected to `months[i].report.providerDetails[]` throughout this revision — see Section 0.
+- [x] **EPFO/institutional AUM does not silently skew rankings (v2.1.0):** Caught from Gemini's own `--dry-run --force` output before the first production write, not after a misleading page shipped. `aum_pf_epfo`/`clients_pf_epfo` added to the schema (Section 3.2); Section 6's Phase 2 directory now sorts/displays EPFO-excluded AUM by default rather than the raw regulatory total. Cross-checked directly against the raw payload, not just Gemini's extraction — the figures are accurate; the finding is about what they represent, not a parsing bug.
