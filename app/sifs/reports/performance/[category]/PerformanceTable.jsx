@@ -12,7 +12,14 @@
  * lib/sifReports.js's availableReturnPeriods(), same principle as
  * app/screener/ScreenerClient.jsx's pickDefaultSifReturnCols for the MF
  * screener. A brand-new category naturally shows just 1M/3M/6M/1Y today;
- * 3Y/5Y/7Y/10Y appear on their own as funds age into them.
+ * 3Y/5Y/7Y/10Y appear on their own as funds age into them. Since
+ * Inception is always available once a scheme has any NAV history (it's
+ * not a fixed trailing window), so it's a separate column appended after
+ * the dynamic periods -- same reason Vol is handled this way already.
+ *
+ * Column visibility (activeCols) is a pure display toggle on top of the
+ * already-available columns, same UX pattern as the MF screener's
+ * "Columns:" bar (app/screener/ScreenerClient.jsx's scr-colbar).
  */
 
 import { useMemo, useState } from 'react';
@@ -21,7 +28,10 @@ const STATIC_COLS = [
   { key: 'name', label: 'SIF', numeric: false },
   { key: 'nav', label: 'NAV', numeric: true },
 ];
-const TRAILING_COL = { key: 'vol', label: 'Vol', numeric: true };
+const TRAILING_COLS = [
+  { key: 'retInception', label: 'Since Incep.', numeric: true },
+  { key: 'vol', label: 'Vol', numeric: true },
+];
 
 function fmtPct(n) {
   if (n == null) return '—';
@@ -52,9 +62,20 @@ function heatClass(n) {
 }
 
 export default function PerformanceTable({ schemes, periods }) {
-  const cols = useMemo(() => [...STATIC_COLS, ...periods, TRAILING_COL], [periods]);
+  const toggleable = useMemo(() => [...periods, ...TRAILING_COLS], [periods]);
+  const [activeCols, setActiveCols] = useState(() => toggleable.map((c) => c.key));
+  const cols = useMemo(
+    () => [...STATIC_COLS, ...toggleable.filter((c) => activeCols.includes(c.key))],
+    [toggleable, activeCols]
+  );
   const [sortKey, setSortKey] = useState(periods.find((p) => p.key === 'ret1y')?.key || periods[periods.length - 1]?.key || 'name');
   const [sortDir, setSortDir] = useState('desc');
+
+  function toggleCol(key) {
+    setActiveCols((cur) => (cur.includes(key)
+      ? (cur.length > 1 ? cur.filter((k) => k !== key) : cur)
+      : [...cur, key]));
+  }
 
   const sorted = useMemo(() => {
     const copy = [...schemes];
@@ -81,42 +102,64 @@ export default function PerformanceTable({ schemes, periods }) {
     }
   }
 
+  const dataCols = cols.filter((c) => c.key !== 'name' && c.key !== 'nav');
+
   return (
-    <div className="sifr-perf-table-wrap">
-      <table className="sifr-perf-table">
-        <thead>
-          <tr>
-            {cols.map((c) => (
-              <th
-                key={c.key}
-                onClick={() => handleSort(c.key)}
-                className={`sifr-sortable${sortKey === c.key ? ' sorted' : ''}`}
-                aria-sort={sortKey === c.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-              >
-                {c.label}
-                <span className="sifr-sort-arrow">{sortKey === c.key ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((s, i) => (
-            <tr key={s.schemeId}>
-              <td className="sifr-perf-name" title={s.fullName}>
-                {i === 0 && sortDir === 'desc' && sortKey !== 'name' && sortKey !== 'nav' && (
-                  <span className="sifr-rank-badge" title="Leading this metric">★</span>
-                )}
-                {s.name}
-              </td>
-              <td className="sifr-perf-num">{s.nav != null ? s.nav.toFixed(2) : '—'}</td>
-              {periods.map((p) => (
-                <td key={p.key} className={`sifr-perf-num ${heatClass(s[p.key])}`} style={heatStyle(s[p.key])}>{fmtPct(s[p.key])}</td>
+    <>
+      <div className="sifr-colbar sifr-no-print">
+        <span className="sifr-colbar-l">Columns:</span>
+        {toggleable.map((c) => {
+          const isOn = activeCols.includes(c.key);
+          return (
+            <button
+              key={c.key}
+              type="button"
+              className={`sifr-colchip${isOn ? ' on' : ''}`}
+              onClick={() => toggleCol(c.key)}
+              title={`Toggle ${c.label} column`}
+            >
+              {c.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="sifr-perf-table-wrap">
+        <table className="sifr-perf-table">
+          <thead>
+            <tr>
+              {cols.map((c) => (
+                <th
+                  key={c.key}
+                  onClick={() => handleSort(c.key)}
+                  className={`sifr-sortable${sortKey === c.key ? ' sorted' : ''}`}
+                  aria-sort={sortKey === c.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
+                  {c.label}
+                  <span className="sifr-sort-arrow">{sortKey === c.key ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                </th>
               ))}
-              <td className="sifr-perf-num sifr-perf-vol">{s.vol != null ? `${s.vol.toFixed(2)}%` : '—'}</td>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {sorted.map((s, i) => (
+              <tr key={s.schemeId}>
+                <td className="sifr-perf-name" title={s.fullName}>
+                  {i === 0 && sortDir === 'desc' && sortKey !== 'name' && sortKey !== 'nav' && (
+                    <span className="sifr-rank-badge" title="Leading this metric">★</span>
+                  )}
+                  <a href={`/sif/${s.schemeId}`}>{s.name}</a>
+                </td>
+                <td className="sifr-perf-num">{s.nav != null ? s.nav.toFixed(2) : '—'}</td>
+                {dataCols.map((c) => (
+                  c.key === 'vol'
+                    ? <td key="vol" className="sifr-perf-num sifr-perf-vol">{s.vol != null ? `${s.vol.toFixed(2)}%` : '—'}</td>
+                    : <td key={c.key} className={`sifr-perf-num ${heatClass(s[c.key])}`} style={heatStyle(s[c.key])}>{fmtPct(s[c.key])}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

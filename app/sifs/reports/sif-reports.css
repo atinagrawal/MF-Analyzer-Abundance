@@ -379,7 +379,15 @@
   align-items: center;
   gap: 7px;
 }
+.sifr-perf-name a { color: inherit; text-decoration: none; }
+.sifr-perf-name a:hover { text-decoration: underline; }
 .sifr-rank-badge { color: #ffca28; font-size: 12px; }
+
+.sifr-colbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; padding: 9px 11px; background: var(--s2); border: 1px solid var(--border); border-radius: 10px; }
+.sifr-colbar-l { font: 700 11px "JetBrains Mono", monospace; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-right: 2px; }
+.sifr-colchip { padding: 5px 10px; border: 1px solid var(--border); background: var(--surface); border-radius: 7px; font: 700 11.5px "JetBrains Mono", monospace; color: var(--muted); cursor: pointer; transition: all .12s ease; }
+.sifr-colchip:hover { border-color: var(--g3); color: var(--text2); }
+.sifr-colchip.on { background: var(--g-xlight, #e4f3e5); color: var(--g1); border-color: var(--g-light, #a9d6ab); }
 .sifr-perf-num {
   text-align: right;
   font-family: "JetBrains Mono", monospace;
