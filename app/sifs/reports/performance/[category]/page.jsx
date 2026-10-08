@@ -174,6 +174,16 @@ export default async function SifCategoryPerformancePage({ params, searchParams 
           </div>
         )}
 
+        {leaders.length >= 2 && (
+          <p className="sifr-insight">
+            Over the trailing {leaderPeriod.label.replace(' (Ann.)', ', annualized')}, <strong>{leaders[0].name}</strong> leads
+            the {report.label} SIF category with a {fmtPct(leaders[0][leaderPeriod.key])} return
+            {leaders[1] && <>, ahead of <strong>{leaders[1].name}</strong> ({fmtPct(leaders[1][leaderPeriod.key])})</>}
+            {leaders[2] && <> and <strong>{leaders[2].name}</strong> ({fmtPct(leaders[2][leaderPeriod.key])})</>}
+            {' '}among {report.schemes.length} tracked {report.label} strategies.
+          </p>
+        )}
+
         <div className="sifr-download-row">
           <PrintButton />
           <span className="sifr-asof">Table updates every 6 hours from AMFI NAV history</span>

@@ -113,6 +113,17 @@ export default async function SifAumLeaderboardPage() {
               point-in-time figure. AMFI does not publish a point-in-time AUM feed for SIFs.
             </p>
 
+            {board.rows.length >= 3 && (
+              <p className="sifr-insight">
+                As of {board.asOf}, <strong>{board.rows[0].sifName}</strong> leads India&rsquo;s SIF industry
+                with {fmtCr(board.rows[0].aumCr)} in average AUM ({board.rows[0].sharePct.toFixed(1)}% of the
+                tracked universe), ahead of <strong>{board.rows[1].sifName}</strong> ({fmtCr(board.rows[1].aumCr)})
+                and <strong>{board.rows[2].sifName}</strong> ({fmtCr(board.rows[2].aumCr)}). The top 5 SIFs
+                together hold {board.top5SharePct.toFixed(1)}% of the {fmtCr(board.totalAumCr)} tracked across
+                all {board.sifCount} SIFs.
+              </p>
+            )}
+
             <div className="sifr-board">
               {board.rows.map((r, i) => (
                 <div className="sifr-row" key={r.sifName}>
