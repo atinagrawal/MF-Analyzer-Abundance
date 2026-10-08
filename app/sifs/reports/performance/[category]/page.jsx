@@ -30,6 +30,7 @@ import PerformanceTable from './PerformanceTable';
 import PeriodSelect from './PeriodSelect';
 import MonthlyHeatmap from './MonthlyHeatmap';
 import PrintButton from '../../PrintButton';
+import PrintBranding, { PrintFooterBrand } from '../../PrintBranding';
 import '../../sif-reports.css';
 
 export const revalidate = 21600;
@@ -136,6 +137,7 @@ export default async function SifCategoryPerformancePage({ params, searchParams 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <Navbar />
       <main className="sifr-wrap">
+        <PrintBranding asOf={report.asOf} />
         <div className="sifr-eyebrow"><a href="/sifs/reports">SIF Reports</a> &middot; Performance Comparison</div>
         <h1 className="sifr-title">{report.label} SIFs</h1>
         <p className="sifr-sub">
@@ -185,6 +187,7 @@ export default async function SifCategoryPerformancePage({ params, searchParams 
 
         {heatmap && <MonthlyHeatmap months={heatmap.months} schemes={heatmap.schemes} />}
 
+        <PrintFooterBrand />
         <p className="sifr-disclaimer">
           Source: AMFI NAV history. Periods up to 1Y are absolute trailing returns; 3Y and longer are
           annualized (CAGR). A period only appears once real data exists for it &mdash; it will show

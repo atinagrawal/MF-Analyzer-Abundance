@@ -13,6 +13,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { getSifAumLeaderboard } from '@/lib/sifReports';
 import PrintButton from '../PrintButton';
+import PrintBranding, { PrintFooterBrand } from '../PrintBranding';
 import '../sif-reports.css';
 
 export const revalidate = 21600;
@@ -71,6 +72,7 @@ export default async function SifAumLeaderboardPage() {
       )}
       <Navbar />
       <main className="sifr-wrap">
+        <PrintBranding asOf={board?.asOf} />
         <div className="sifr-eyebrow"><a href="/sifs/reports">SIF Reports</a> &middot; AUM Leaderboard</div>
         <h1 className="sifr-title">India&rsquo;s SIF AUM Leaderboard</h1>
         {board && <p className="sifr-sub">SIF-wise assets under management &middot; as of {board.asOf}</p>}
@@ -130,6 +132,7 @@ export default async function SifAumLeaderboardPage() {
           </>
         )}
 
+        <PrintFooterBrand />
         <p className="sifr-disclaimer">
           Source: AMFI, SIF Average AUM disclosure (quarterly). Figures rolled up from each SIF&rsquo;s own
           Direct/Regular &times; Growth/IDCW plan-variants to a single AUM figure per SIF. Investments in

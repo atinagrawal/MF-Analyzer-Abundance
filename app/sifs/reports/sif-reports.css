@@ -408,6 +408,11 @@
   padding-top: 16px;
 }
 
+/* Print-only letterhead + footer brand strip -- irrelevant on screen (the
+   real navbar/footer are already visible there), shown only on paper/PDF
+   via @media print below. See PrintBranding.jsx. */
+.sifr-print-masthead, .sifr-print-footer-brand { display: none; }
+
 /* ── Monthly returns heatmap section ────────────────────────────── */
 .sifr-heatmap-section { margin: 36px 0 32px; }
 .sifr-section-title {
@@ -462,12 +467,42 @@
      `body > *` (bare element selector) on specificity, so this wins. */
   main.sifr-wrap { display: block !important; }
 
-  .navbar, .dark-footer, .sifr-no-print,
+  .navbar, .dark-footer, .sifr-no-print, .sifr-eyebrow,
   .sifr-cat-tabs, .sifr-period-row, .sifr-download-row { display: none !important; }
 
   body { background: #fff !important; }
   .sifr-wrap { max-width: 100%; padding: 0; }
   .sifr-title { color: #0d2818 !important; }
+
+  /* Letterhead: logo + site + "data as of", replaces the on-screen navbar
+     this report loses when printed, so a shared/printed copy still reads
+     as coming from Abundance rather than a bare table of numbers. */
+  .sifr-print-masthead {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+    border-bottom: 3px solid #1b5e20;
+  }
+  .sifr-print-logo { height: 40px; width: auto; }
+  .sifr-print-meta { text-align: right; }
+  .sifr-print-site { font: 700 12px Raleway, sans-serif; color: #1b5e20; letter-spacing: .3px; }
+  .sifr-print-asof { font: 500 10px Raleway, sans-serif; color: #555; margin-top: 2px; }
+
+  /* Footer brand strip, just above the regulatory disclaimer text. */
+  .sifr-print-footer-brand {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    margin-top: 28px;
+    padding-top: 10px;
+    border-top: 1px solid #ccc;
+    font: 600 10px Raleway, sans-serif;
+    color: #1b5e20;
+  }
+  .sifr-print-footer-logo { height: 18px; width: auto; opacity: .85; }
 
   /* Dark terminal table -> light, ink-friendly table for paper. */
   .sifr-perf-table-wrap {
