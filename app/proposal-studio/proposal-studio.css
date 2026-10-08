@@ -175,6 +175,15 @@
 .pfc-send-email-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: 4px; }
 
 @media print {
+  /* globals.css's sitewide Redemption Planner print rule
+     (`body > * { display: none !important; }`) isn't scoped to the
+     planner -- it hides main.pfc-page too, since Navbar/main/Footer are
+     direct children of body here. The actual branded PDF export
+     (ProposalSections.jsx) opens its own popup window and never loads
+     this stylesheet, so it's unaffected -- this only matters if someone
+     prints this page directly (Ctrl+P), which has no dedicated button
+     but is still a real browser action. Same fix as sif-reports.css. */
+  main.pfc-page { display: block !important; }
   .navbar, .dark-footer, .pfc-picker, .pfc-explainer, .pfc-faq, .pfc-actions, .brd-gate { display: none; }
 }
 
