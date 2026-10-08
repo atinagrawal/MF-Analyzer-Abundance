@@ -447,8 +447,6 @@
  *      also carry a `sifr-pos`/`sifr-neg` class (PerformanceTable.jsx,
  *      MonthlyHeatmap.jsx) for print to target directly instead.
  */
-.sifr-no-print { display: none !important; }
-
 @media print {
   * { print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
 
