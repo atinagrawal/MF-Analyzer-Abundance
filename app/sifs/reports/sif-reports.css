@@ -450,6 +450,18 @@
 @media print {
   * { print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
 
+  /* globals.css has its own sitewide @media print block for the Redemption
+     Planner ("show only planner panel, hide everything else" via
+     `body > * { display: none !important; }`) -- that rule isn't scoped to
+     the planner, it fires on every page. It was the actual cause of this
+     report printing as a truly blank page: main.sifr-wrap IS a direct
+     child of body here (Navbar/main/Footer render as siblings in a
+     Fragment under app/layout.js's <body>), so the planner's global rule
+     hid our entire content before any of this file's rules got a chance
+     to style it back in. `main.sifr-wrap` (class selector) beats
+     `body > *` (bare element selector) on specificity, so this wins. */
+  main.sifr-wrap { display: block !important; }
+
   .navbar, .dark-footer, .sifr-no-print,
   .sifr-cat-tabs, .sifr-period-row, .sifr-download-row { display: none !important; }
 
