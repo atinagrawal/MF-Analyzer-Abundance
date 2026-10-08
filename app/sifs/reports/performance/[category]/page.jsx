@@ -21,9 +21,11 @@ import {
   listSifCategories,
   listAvailableReportMonths,
   availableReturnPeriods,
+  getSifMonthlyReturnsHeatmap,
 } from '@/lib/sifReports';
 import PerformanceTable from './PerformanceTable';
 import PeriodSelect from './PeriodSelect';
+import MonthlyHeatmap from './MonthlyHeatmap';
 import '../../sif-reports.css';
 
 export const revalidate = 21600;
@@ -95,6 +97,10 @@ export default async function SifCategoryPerformancePage({ params, searchParams 
   if (!report) {
     notFound();
   }
+
+  // Independent of the ?month= selector above -- always the last 7
+  // complete months regardless of which "as of" view is showing.
+  const heatmap = await getSifMonthlyReturnsHeatmap(category);
 
   const periods = availableReturnPeriods(report.schemes);
   // Longest-available period is the most meaningful "who's leading" signal
@@ -175,6 +181,8 @@ export default async function SifCategoryPerformancePage({ params, searchParams 
         ) : (
           <PerformanceTable schemes={report.schemes} periods={periods} />
         )}
+
+        {heatmap && <MonthlyHeatmap months={heatmap.months} schemes={heatmap.schemes} />}
 
         <p className="sifr-disclaimer">
           Source: AMFI NAV history. Periods up to 1Y are absolute trailing returns; 3Y and longer are

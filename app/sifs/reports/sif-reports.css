@@ -407,3 +407,24 @@
   border-top: 1px solid var(--border);
   padding-top: 16px;
 }
+
+/* ── Monthly returns heatmap section ────────────────────────────── */
+.sifr-heatmap-section { margin: 36px 0 32px; }
+.sifr-section-title {
+  font-family: "Raleway", sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--g1);
+  margin-bottom: 4px;
+}
+.sifr-section-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+/* Reuses .sifr-perf-table's dark-card styling; its headers aren't
+   clickable here (chronological order, nothing to sort), so drop the
+   pointer affordance and hover tint that table's sortable headers use. */
+.sifr-heatmap-section .sifr-perf-table th { cursor: default; text-align: right; }
+.sifr-heatmap-section .sifr-perf-table th:first-child { text-align: left; }
+.sifr-heatmap-section .sifr-perf-table th:hover { color: rgba(255, 255, 255, 0.5); }
