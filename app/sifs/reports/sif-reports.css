@@ -488,6 +488,17 @@
     border: 1px solid #ccc !important;
   }
 
-  .sifr-perf-table-wrap, .sifr-heatmap-section { page-break-inside: avoid; }
-  .sifr-disclaimer { page-break-inside: avoid; }
+  /* No page-break-inside: avoid here, deliberately -- it was here in the
+     first version and caused every report to print as a single blank
+     page. A category table (up to 12 rows) plus the heatmap section
+     below it routinely exceeds one printable page's height; telling the
+     print engine "never split this" for a block taller than a page is a
+     well-known way to make Chrome's print pipeline produce a blank page
+     instead of just... printing it across two pages. Letting a table
+     split at a row boundary if it has to is a minor cosmetic wrinkle;
+     a blank page is a broken feature. Row-level hints (avoiding a split
+     between a <tr>'s cells, not the whole table) would be the safe
+     version of this, but aren't worth the risk until there's a concrete
+     case where the default flow actually looks bad.
+  */
 }
