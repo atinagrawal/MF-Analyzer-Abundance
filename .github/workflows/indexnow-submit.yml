@@ -1,0 +1,36 @@
+name: IndexNow Submit
+
+# Pings Bing/Yandex's IndexNow endpoint with every URL in this site's
+# sitemaps, so Bing doesn't have to wait for its own crawl schedule to
+# notice changed pages (Google ignores IndexNow -- it's a Bing/Yandex
+# thing, unrelated to /sitemap.xml submission in Search Console).
+# No secrets needed: scripts/submit_indexnow.js only reads the public
+# sitemap routes and POSTs to the public IndexNow API.
+#
+# Runs after screener.yml's nightly rebuild (18:30 UTC) so the submitted
+# URLs reflect that day's refreshed NAVs/returns, not yesterday's.
+on:
+  schedule:
+    - cron: '0 20 * * *'   # 20:00 UTC daily, ~90 min after screener.yml
+  workflow_dispatch:
+
+concurrency:
+  group: indexnow-submit
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Submit sitemap URLs to IndexNow
+        run: node scripts/submit_indexnow.js
