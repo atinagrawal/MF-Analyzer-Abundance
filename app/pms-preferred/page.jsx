@@ -23,6 +23,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { getPageMeta } from '@/lib/metadata';
 import { getPreferredStrategies } from '@/lib/pmsPreferredCache';
+import { getComplianceBadgeForProvider } from '@/lib/pmsCompliance';
 import PmsPreferredTable from './PmsPreferredTable';
 import PmsPreferredInteractive from './PmsPreferredInteractive';
 import { fmtCr } from './pmsPreferredFormat';
@@ -212,7 +213,23 @@ export async function generateMetadata() {
 
 export default async function PmsPreferredPage() {
   const doc = await getPreferredStrategies().catch(() => null);
-  const strategies = doc?.strategies || [];
+  const rawStrategies = doc?.strategies || [];
+
+  // Enrich strategies with verified SEBI compliance badges (Section 6, Phase 1)
+  const uniqueProviders = [...new Set(rawStrategies.map((s) => s.providerName).filter(Boolean))];
+  const badges = await Promise.all(
+    uniqueProviders.map(async (name) => {
+      const badge = await getComplianceBadgeForProvider(name).catch(() => null);
+      return [name, badge];
+    })
+  );
+  const badgeMap = Object.fromEntries(badges);
+
+  const strategies = rawStrategies.map((s) => ({
+    ...s,
+    compliance: badgeMap[s.providerName] || null,
+  }));
+
   const insights = doc?.insights || null;
 
   const providerCount = new Set(strategies.map((s) => s.providerKey)).size;

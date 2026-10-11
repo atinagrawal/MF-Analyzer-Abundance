@@ -13,6 +13,7 @@
 
 import * as cheerio from 'cheerio';
 import { getAllPmsProvidersSummary } from '@/lib/pmsProviders';
+import { getAllPmsDirectoryProviders } from '@/lib/pmsCompliance';
 
 const STRATEGIES = ['Equity', 'Debt', 'Multi Asset', 'Hybrid'];
 const AUM_THRESHOLD = { Equity: 50, Debt: 10, 'Multi Asset': 10, Hybrid: 10 };
@@ -104,6 +105,23 @@ export async function GET() {
     }).join('\n');
 
     const providerSummaries = await getAllPmsProvidersSummary().catch(() => []);
+    const complianceProviders = await getAllPmsDirectoryProviders({ includeInactive: false }).catch(() => []);
+
+    const directoryUrls = [
+      `  <url>
+    <loc>${BASE}/pms-directory</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.90</priority>
+  </url>`,
+      ...complianceProviders.slice(0, 100).map((p) => `  <url>
+    <loc>${BASE}/pms-directory/${p.slug}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>`),
+    ].join('\n');
+
     const providerUrls = [
       `  <url>
     <loc>${BASE}/pms-provider</loc>
@@ -121,6 +139,7 @@ export async function GET() {
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${directoryUrls}
 ${providerUrls}
 ${urls}
 </urlset>`;

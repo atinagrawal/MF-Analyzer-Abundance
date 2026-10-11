@@ -36,6 +36,7 @@ const NAV_GROUPS = [
       { key: 'sif-reports',       label: '📊 SIF Reports',         href: '/sifs/reports',      desc: 'AUM leaderboard & performance comparisons, downloadable' },
       { key: 'pms-screener',      label: '🏆 PMS Screener',        href: '/pms-screener',      desc: 'Portfolio Management Services' },
       { key: 'pms-preferred',     label: '⭐ Preferred PMS',       href: '/pms-preferred',     desc: 'Top-Quartile PMS strategies + insights' },
+      { key: 'pms-directory',     label: '🛡️ PMS Directory',       href: '/pms-directory',     desc: 'All 510 SEBI PMS providers & Core AUM' },
       { key: 'stocks-in-funds',   label: '🏢 Stocks in Funds',     href: '/stocks-in-funds',   desc: 'Who owns this stock across MFs & PMS' },
       { key: 'amc-directory',     label: '🏛️ AMC Directory',       href: '/amc',               desc: 'All 52 Mutual Fund AMCs & schemes' },
       { key: 'pms-providers',     label: '💼 PMS Providers',       href: '/pms-provider',      desc: 'Tracked PMS managers & factsheets' },

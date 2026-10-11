@@ -1,0 +1,104 @@
+{
+  "latestMonth": "2026-08",
+  "asOfDate": "2026-10-08T07:52:01.162Z",
+  "totalProvidersActive": 510,
+  "totalIndustryRawAumCr": 4434347,
+  "totalIndustryPfEpfoAumCr": 3307609,
+  "totalIndustryCoreAumCr": 1126737,
+  "totalIndustryClients": 226046,
+  "totalIndustryEpfoClients": 206,
+  "topProvidersCore": [
+    {
+      "name": "SBI FUNDS MANAGEMENT LIMITED",
+      "registrationNo": "INP000000852",
+      "coreAumCr": 144048,
+      "rawAumCr": 1288868,
+      "aumPfEpfoCr": 1144821,
+      "clients": 1841,
+      "netFlowMonthCr": -2800.238
+    },
+    {
+      "name": "Nippon Life India Asset Management Limited",
+      "registrationNo": "INP000007085",
+      "coreAumCr": 92946,
+      "rawAumCr": 92946,
+      "aumPfEpfoCr": 0,
+      "clients": 869,
+      "netFlowMonthCr": 8.27
+    },
+    {
+      "name": "UTI ASSET MANAGEMENT COMPANY PVT LTD",
+      "registrationNo": "INP000000860",
+      "coreAumCr": 90072,
+      "rawAumCr": 766879,
+      "aumPfEpfoCr": 676807,
+      "clients": 4,
+      "netFlowMonthCr": -1212.47158
+    },
+    {
+      "name": "KOTAK MAHINDRA ASSET MANAGEMENT COMPANY LTD",
+      "registrationNo": "INP000000837",
+      "coreAumCr": 49084,
+      "rawAumCr": 49084,
+      "aumPfEpfoCr": 0,
+      "clients": 1502,
+      "netFlowMonthCr": -13.93
+    },
+    {
+      "name": "DARASHAW & COMPANY LTD",
+      "registrationNo": "INP000000431",
+      "coreAumCr": 48034,
+      "rawAumCr": 151178,
+      "aumPfEpfoCr": 103144,
+      "clients": 243,
+      "netFlowMonthCr": -0.26827
+    }
+  ],
+  "topProvidersRaw": [
+    {
+      "name": "SBI FUNDS MANAGEMENT LIMITED",
+      "registrationNo": "INP000000852",
+      "rawAumCr": 1288868,
+      "coreAumCr": 144048,
+      "aumPfEpfoCr": 1144821,
+      "clients": 1841,
+      "netFlowMonthCr": -2800.238
+    },
+    {
+      "name": "UTI ASSET MANAGEMENT COMPANY PVT LTD",
+      "registrationNo": "INP000000860",
+      "rawAumCr": 766879,
+      "coreAumCr": 90072,
+      "aumPfEpfoCr": 676807,
+      "clients": 4,
+      "netFlowMonthCr": -1212.47158
+    },
+    {
+      "name": "HDFC ASSET MANAGEMENT COMPANY LIMITED",
+      "registrationNo": "INP000000506",
+      "rawAumCr": 685380,
+      "coreAumCr": 6741,
+      "aumPfEpfoCr": 678639,
+      "clients": 238,
+      "netFlowMonthCr": 4945.59
+    },
+    {
+      "name": "Aditya Birla Sun Life AMC Limited",
+      "registrationNo": "INP000000597",
+      "rawAumCr": 658188,
+      "coreAumCr": 3037,
+      "aumPfEpfoCr": 655151,
+      "clients": 2577,
+      "netFlowMonthCr": -850.96919
+    },
+    {
+      "name": "DARASHAW & COMPANY LTD",
+      "registrationNo": "INP000000431",
+      "rawAumCr": 151178,
+      "coreAumCr": 48034,
+      "aumPfEpfoCr": 103144,
+      "clients": 243,
+      "netFlowMonthCr": -0.26827
+    }
+  ]
+}

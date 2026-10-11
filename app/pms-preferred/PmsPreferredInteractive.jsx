@@ -80,6 +80,16 @@ function SpotlightCard({ strategy, metric, totalCount, onOpen }) {
           >
             {strategy.strategyName}
           </a>
+          {strategy.compliance && (
+            <div className="pmspref-spotlight-compliance">
+              <span className="pmspref-compliance-shield">🛡️ SEBI Verified</span>
+              <span className="pmspref-compliance-aum">₹{strategy.compliance.coreAumCr.toLocaleString('en-IN')} Cr AUM</span>
+              <span className="pmspref-compliance-dot">·</span>
+              <span className="pmspref-compliance-clients">{strategy.compliance.coreClients.toLocaleString('en-IN')} investors</span>
+              <span className="pmspref-compliance-dot">·</span>
+              <span className="pmspref-compliance-eq">{strategy.compliance.equityListedPct}% Listed Equity</span>
+            </div>
+          )}
           {e.objective && <blockquote className="pmspref-spotlight-quote">&ldquo;{e.objective}&rdquo;</blockquote>}
           {holdings.length > 0 && (
             <>
@@ -354,6 +364,51 @@ function PmsPreferredDrawer({ strategy, onClose, isComparing, onToggleCompare, c
                 </div>
               )}
 
+              {strategy.compliance && (
+                <div className="pmspref-drawer-section pmspref-drawer-compliance">
+                  <div className="pmspref-drawer-section-head">
+                    <span>🛡️ SEBI Compliance &amp; AMC Scale</span>
+                    <span className="pmspref-drawer-badge-tag">APMI VISTA · {strategy.compliance.asOfMonth}</span>
+                  </div>
+                  <div className="pmspref-drawer-compliance-grid">
+                    <div className="pmspref-drawer-compliance-item">
+                      <span className="pmspref-drawer-compliance-lbl">Verified Core AUM</span>
+                      <span className="pmspref-drawer-compliance-val">₹{strategy.compliance.coreAumCr.toLocaleString('en-IN')} Cr</span>
+                      {strategy.compliance.isEpfoDominant && (
+                        <span className="pmspref-drawer-compliance-sub">Excl. EPFO mandate (Raw ₹{strategy.compliance.grandTotalAumCr.toLocaleString('en-IN')} Cr)</span>
+                      )}
+                    </div>
+                    <div className="pmspref-drawer-compliance-item">
+                      <span className="pmspref-drawer-compliance-lbl">Active Investors</span>
+                      <span className="pmspref-drawer-compliance-val">{strategy.compliance.coreClients.toLocaleString('en-IN')} clients</span>
+                      <span className="pmspref-drawer-compliance-sub">Registration: {strategy.compliance.registrationNo}</span>
+                    </div>
+                    <div className="pmspref-drawer-compliance-item">
+                      <span className="pmspref-drawer-compliance-lbl">AMC Asset Allocation</span>
+                      <span className="pmspref-drawer-compliance-val">{strategy.compliance.equityListedPct}% Listed Equity</span>
+                      <span className="pmspref-drawer-compliance-sub">
+                        {strategy.compliance.debtPct > 0 ? `${strategy.compliance.debtPct}% Debt · ` : ''}{strategy.compliance.liquidCashPct}% Cash/Liquid
+                      </span>
+                    </div>
+                    <div className="pmspref-drawer-compliance-item">
+                      <span className="pmspref-drawer-compliance-lbl">Portfolio Turnover</span>
+                      <span className="pmspref-drawer-compliance-val">{strategy.compliance.turnoverDisplay || '—'}</span>
+                      <span className="pmspref-drawer-compliance-sub">Estimated computed proxy</span>
+                    </div>
+                  </div>
+                  {strategy.compliance.slug && (
+                    <a
+                      href={`/pms-directory/${strategy.compliance.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="pmspref-drawer-compliance-link"
+                    >
+                      View full AMC compliance profile &amp; 18-month trajectory →
+                    </a>
+                  )}
+                </div>
+              )}
+
               <CompareToggleButton isComparing={isComparing} onToggle={() => onToggleCompare(strategy)} disabled={!isComparing && compareFull} />
 
               <a href={`/pms/${strategy.iaid}`} target="_blank" rel="noopener noreferrer" className="pmspref-drawer-cta">
@@ -488,6 +543,13 @@ export default function PmsPreferredInteractive({ strategies, insights, spotligh
                   <span className="pmspref-card-provider">{s.providerName}</span>
                 </div>
                 <div className="pmspref-card-name">{s.strategyName}</div>
+                {s.compliance && (
+                  <div className="pmspref-card-compliance" title={`SEBI Registered PMS: ${s.compliance.registrationNo}`}>
+                    <span className="pmspref-compliance-shield">🛡️ Verified SEBI AUM</span>
+                    <span className="pmspref-compliance-val">₹{s.compliance.coreAumCr.toLocaleString('en-IN')} Cr</span>
+                    <span className="pmspref-compliance-clients">· {s.compliance.coreClients.toLocaleString('en-IN')} clients</span>
+                  </div>
+                )}
                 {e.objective
                   ? <div className="pmspref-card-obj">&ldquo;{e.objective}&rdquo;</div>
                   : <div className="pmspref-card-obj-spacer" aria-hidden="true" />}

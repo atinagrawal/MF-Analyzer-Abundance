@@ -370,6 +370,81 @@ export function PmsPrefCompareModal({ strategies, asOn, onClose, onRemove }) {
                 );
               })}
             </div>
+
+            {/* AMC Institutional Strength & SEBI Disclosures (APMI VISTA) */}
+            <div className="pmspref-cmp-section-head">🛡️ AMC Institutional Scale &amp; SEBI Compliance</div>
+            <div className="pmspref-cmp-row">
+              <div className="pmspref-cmp-cell" style={{ fontWeight: 700 }}>Verified Core AUM</div>
+              {strategies.map((s) => (
+                <div key={s.iaid} className="pmspref-cmp-cell">
+                  <span className="pmspref-cmp-ret pos" style={{ fontWeight: 700 }}>
+                    {s.compliance?.coreAumCr != null ? `₹${s.compliance.coreAumCr.toLocaleString('en-IN')} Cr` : '—'}
+                  </span>
+                  {s.compliance?.isEpfoDominant && (
+                    <div style={{ fontSize: '.64rem', color: 'var(--pmsp-muted-2)' }}>Excl. EPFO mandate</div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="pmspref-cmp-row">
+              <div className="pmspref-cmp-cell" style={{ fontWeight: 700 }}>Active Investors</div>
+              {strategies.map((s) => (
+                <div key={s.iaid} className="pmspref-cmp-cell">
+                  <span className="pmspref-cmp-ret neu">
+                    {s.compliance?.coreClients != null ? `${s.compliance.coreClients.toLocaleString('en-IN')} clients` : '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="pmspref-cmp-row">
+              <div className="pmspref-cmp-cell" style={{ fontWeight: 700 }}>Asset Allocation</div>
+              {strategies.map((s) => (
+                <div key={s.iaid} className="pmspref-cmp-cell">
+                  <span className="pmspref-cmp-ret neu" style={{ fontSize: '.76rem' }}>
+                    {s.compliance ? `${s.compliance.equityListedPct}% Equity · ${s.compliance.debtPct}% Debt` : '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="pmspref-cmp-row">
+              <div className="pmspref-cmp-cell" style={{ fontWeight: 700 }}>Est. Turnover Ratio</div>
+              {strategies.map((s) => (
+                <div key={s.iaid} className="pmspref-cmp-cell">
+                  <span className="pmspref-cmp-ret neu">
+                    {s.compliance?.turnoverDisplay || '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="pmspref-cmp-row">
+              <div className="pmspref-cmp-cell" style={{ fontWeight: 700 }}>Investor Complaints</div>
+              {strategies.map((s) => (
+                <div key={s.iaid} className="pmspref-cmp-cell">
+                  <span className={`pmspref-cmp-ret ${s.compliance?.complaintsPending === 0 ? 'pos' : 'neu'}`}>
+                    {s.compliance ? (s.compliance.complaintsPending === 0 ? '✓ 0 Pending' : `${s.compliance.complaintsPending} Pending`) : '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="pmspref-cmp-row">
+              <div className="pmspref-cmp-cell" style={{ fontWeight: 700 }}>SEBI Registration</div>
+              {strategies.map((s) => (
+                <div key={s.iaid} className="pmspref-cmp-cell">
+                  {s.compliance?.slug ? (
+                    <a
+                      href={`/pms-directory/${s.compliance.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '.72rem', color: 'var(--g1)', fontWeight: 700, textDecoration: 'none' }}
+                    >
+                      {s.compliance.registrationNo} ↗
+                    </a>
+                  ) : (
+                    <span className="pmspref-cmp-ret neu">{s.compliance?.registrationNo || '—'}</span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
           {isPro && n > 1 && winner && (

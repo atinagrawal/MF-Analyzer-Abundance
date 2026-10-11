@@ -8,6 +8,11 @@ const nextConfig = {
   // ── Allow network access for dev server ──
   allowedDevOrigins: ['192.168.29.64'],
 
+  // ── Limit build worker concurrency to avoid Postgres connection exhaustion ──
+  experimental: {
+    cpus: 2,
+  },
+
   // ── Rewrites: serve legacy HTML pages until they're ported ──────────────
   // HOW THIS WORKS:
   // - `beforeFiles` rewrites run BEFORE the App Router checks for pages.
@@ -74,6 +79,7 @@ const nextConfig = {
     return [
       { source: '/portfolio.html', destination: '/portfolio', permanent: true },
       { source: '/xls-pdf-extractor.html', destination: '/xls-pdf-extractor', permanent: true },
+      { source: '/pms-pulse', destination: '/pms-directory', permanent: true },
     ];
   },
 };

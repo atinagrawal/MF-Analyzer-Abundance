@@ -273,32 +273,85 @@ async function fetchCarnelian() {
   return documents;
 }
 
-// ── Stallion: fixed static URLs, existence-checked each run ─────────────────
+// ── Stallion: dynamic monthly factsheet + static note/presentation ───────────
+// Previously Stallion kept a fixed "PMS_Performance.pdf", but now publishes
+// monthly files: "Stallion_Factsheet_<Month>_<YY>.pdf" (e.g.
+// "https://www.stallionasset.com/regulatory/Stallion_Factsheet_Sept_26.pdf").
+// We probe recent months (current down to 3 months back) trying standard
+// abbreviation variations ('Sept', 'Sep', 'September', etc.) and pick the
+// latest real PDF available.
 async function urlExists(url, headers) {
   try {
     const res = await fetchWithRetry(url, { method: 'HEAD', headers }, 1, 800);
-    return res.ok;
+    if (!res.ok) return false;
+    const ct = res.headers.get('content-type') || '';
+    if (url.toLowerCase().endsWith('.pdf') && ct && !ct.includes('application/pdf')) {
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }
 }
 
 async function fetchStallion() {
-  const candidates = [
-    { strategyName: 'Core Fund', docType: 'factsheet', title: 'Monthly Performance Factsheet', url: 'https://www.stallionasset.com/regulatory/PMS_Performance.pdf' },
+  const documents = [];
+
+  // 1. Discover latest monthly performance factsheet
+  const now = new Date();
+  let latestFactsheetUrl = null;
+  let latestFactsheetPeriod = null;
+
+  monthLoop: for (let back = 0; back < 4; back++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - back, 1);
+    const yy = String(d.getFullYear()).slice(-2);
+    const mIdx = d.getMonth();
+    const monthFull = MONTH_FULL[mIdx];
+    const monthShort = monthFull.slice(0, 3);
+    const tokens = mIdx === 8 ? ['Sept', 'Sep', 'September'] : [monthShort, monthFull];
+
+    for (const token of tokens) {
+      const candidateUrl = `https://www.stallionasset.com/regulatory/Stallion_Factsheet_${token}_${yy}.pdf`;
+      if (await urlExists(candidateUrl)) {
+        latestFactsheetUrl = candidateUrl;
+        latestFactsheetPeriod = `${monthFull} ${d.getFullYear()}`;
+        break monthLoop;
+      }
+    }
+  }
+
+  // Fallback to legacy fixed URL if no monthly file was found
+  if (!latestFactsheetUrl) {
+    const legacyUrl = 'https://www.stallionasset.com/regulatory/PMS_Performance.pdf';
+    if (await urlExists(legacyUrl)) {
+      latestFactsheetUrl = legacyUrl;
+    }
+  }
+
+  if (latestFactsheetUrl) {
+    documents.push({
+      strategyName: 'Core Fund',
+      docType: 'factsheet',
+      title: latestFactsheetPeriod ? `Monthly Performance Factsheet – ${latestFactsheetPeriod}` : 'Monthly Performance Factsheet',
+      period: latestFactsheetPeriod,
+      url: latestFactsheetUrl,
+    });
+  } else {
+    console.warn('[PMS Factsheets] Stallion: could not locate monthly performance factsheet PDF.');
+  }
+
+  // 2. Additional static documents (Strategy Note & Presentation)
+  const staticCandidates = [
     { strategyName: 'Core Fund', docType: 'factsheet', title: 'Strategy Factsheet Note', url: 'https://www.stallionasset.com/regulatory/Stallion_Asset_Factsheet_Freelanced_12.pdf' },
     { strategyName: 'Core Fund', docType: 'presentation', title: 'Investor Presentation', url: 'https://www.stallionasset.com/regulatory/Stallion_Asset_PMS_Presentation_131.pdf' },
   ];
-  const documents = [];
-  for (const c of candidates) {
+
+  for (const c of staticCandidates) {
     if (await urlExists(c.url)) {
-      // No date is encoded in these filenames (they're overwritten in
-      // place each month) -- period is honestly null rather than guessed.
       documents.push({ ...c, period: null });
-    } else {
-      console.warn(`[PMS Factsheets] Stallion: ${c.url} no longer resolves, dropping.`);
     }
   }
+
   return documents;
 }
 
@@ -1010,40 +1063,62 @@ async function fetchInvesco() {
   return documents;
 }
 
-// ── InCred Asset Management: 3 equity strategies, each its own PDF ─────────
-// Verified live: incredassetmanagement.com sits behind a Cloudflare WAF
-// rule that rejects any request carrying no Referer header at all (HTTP
-// 403 on both the listing page and the PDFs themselves) -- NOT a real
-// bot/JS challenge (no cookie or script execution required), confirmed by
-// the exact same request succeeding the moment a Referer is added. This
-// fetcher is the one place in this file that passes a custom Referer
-// through fetchWithRetry's options for exactly that reason; every other
-// provider's plain HEADERS default (no Referer) is unaffected.
-// strategyName is APMI's exact leaderboard form (verified live via
-// IaInsight.htm against IAID 138/139/140). InCred markets several more
-// strategies (Ascend, Select Opportunities, Focused Healthcare Equity,
-// Active Momentum, Omni Alpha) that have no factsheet on this page --
-// left uncovered rather than guessed at.
-const INCRED_REFERER = { Referer: 'https://www.incredassetmanagement.com/' };
+// ── InCred Asset Management: 4 equity strategies from /insights/ ───────────
+// InCred publishes factsheets at https://www.incredassetmanagement.com/insights/
+// for 4 strategies: Multicap, Small and Midcap, Healthcare, and Focused Healthcare Equity.
+// InCred sits behind Cloudflare Turnstile bot protection, which returns HTTP 403
+// to Node.js's raw TLS fingerprint. If fetchWithRetry returns 403, we fall back
+// to curl (which has a browser/Schannel TLS fingerprint).
+const INCRED_REFERER = { Referer: 'https://www.incredassetmanagement.com/insights/' };
 const INCRED_STRATEGIES = [
   { strategyName: 'InCred Multicap Portfolio', linkText: 'InCred Multicap Portfolio Factsheet' },
   { strategyName: 'InCred Small and Midcap Portfolio', linkText: 'InCred Small and Mid Cap Portfolio Factsheet' },
   { strategyName: 'InCred Healthcare Portfolio', linkText: 'InCred Healthcare Portfolio Factsheet' },
+  { strategyName: 'InCred Focused Healthcare Equity', linkText: 'InCred Focused Healthcare Equity' },
 ];
 
 async function fetchIncred() {
-  const res = await fetchWithRetry('https://www.incredassetmanagement.com/insights/', { headers: INCRED_REFERER });
-  if (!res.ok) {
-    console.warn(`[PMS Factsheets] InCred: HTTP ${res.status}`);
+  let html = null;
+  try {
+    const res = await fetchWithRetry('https://www.incredassetmanagement.com/insights/', { headers: INCRED_REFERER });
+    if (res.ok) {
+      html = await res.text();
+    } else {
+      console.warn(`[PMS Factsheets] InCred fetchWithRetry HTTP ${res.status}, attempting curl fallback...`);
+    }
+  } catch (err) {
+    console.warn(`[PMS Factsheets] InCred fetchWithRetry failed: ${err.message}, attempting curl fallback...`);
+  }
+
+  if (!html) {
+    try {
+      const { execSync } = require('child_process');
+      const cmd = `curl -s -L -H "User-Agent: ${HEADERS['User-Agent']}" -H "Referer: https://www.google.com/" https://www.incredassetmanagement.com/insights/`;
+      html = execSync(cmd, { maxBuffer: 15 * 1024 * 1024, timeout: 30000 }).toString();
+    } catch (err) {
+      console.warn(`[PMS Factsheets] InCred curl fallback failed: ${err.message}`);
+      return [];
+    }
+  }
+
+  if (!html || !html.includes('wp-content')) {
+    console.warn('[PMS Factsheets] InCred: HTML response invalid or blocked.');
     return [];
   }
-  const $ = cheerio.load(await res.text());
+
+  const $ = cheerio.load(html);
   const documents = [];
   for (const s of INCRED_STRATEGIES) {
-    const link = $('a').filter((_, el) => $(el).text().trim() === s.linkText).first();
+    const link = $('a').filter((_, el) => {
+      const text = $(el).text().trim().toLowerCase();
+      const href = ($(el).attr('href') || '').toLowerCase();
+      const targetText = s.linkText.toLowerCase();
+      const targetSlug = s.strategyName.toLowerCase().replace(/\s+/g, '-');
+      return text.includes(targetText) || (text && targetText.includes(text)) || href.includes(targetSlug);
+    }).first();
     const href = link.attr('href');
     if (!href) {
-      console.warn(`[PMS Factsheets] InCred ${s.strategyName}: no link found for "${s.linkText}"`);
+      console.warn(`[PMS Factsheets] InCred ${s.strategyName}: no link found on /insights/`);
       continue;
     }
     const url = new URL(href, 'https://www.incredassetmanagement.com').href;
@@ -1508,15 +1583,34 @@ function validateAndCleanExtraction(raw) {
   return { asOfDate, objective, marketCapAllocation, sectorAllocation, topHoldings, portfolioAttributes, portfolioChanges };
 }
 
+async function fetchPdfBuffer(pdfUrl) {
+  try {
+    const pdfRes = await fetchWithRetry(pdfUrl, { headers: { Referer: new URL(pdfUrl).origin + '/' } });
+    if (pdfRes.ok) {
+      return Buffer.from(await pdfRes.arrayBuffer());
+    }
+  } catch (err) {
+    // continue to curl fallback
+  }
+
+  // Fallback to curl for WAF-protected endpoints (such as InCred behind Cloudflare)
+  try {
+    const { execSync } = require('child_process');
+    const origin = new URL(pdfUrl).origin;
+    const cmd = `curl -s -L -H "User-Agent: ${HEADERS['User-Agent']}" -H "Referer: ${origin}/" "${pdfUrl}"`;
+    const curlBuf = execSync(cmd, { maxBuffer: 25 * 1024 * 1024, timeout: 30000 });
+    if (curlBuf && curlBuf.length >= 1000 && curlBuf.subarray(0, 4).toString() === '%PDF') {
+      return curlBuf;
+    }
+  } catch (err) {
+    // ignore
+  }
+
+  throw new Error(`Failed to download PDF bytes for ${pdfUrl}`);
+}
+
 async function extractFactsheetData(pdfUrl) {
-  // A same-origin Referer is a no-op for the overwhelming majority of
-  // providers but is the actual fix InCred's WAF needs (see fetchIncred's
-  // comment) -- sending it unconditionally here means any current or
-  // future provider with the same anti-hotlinking-style rule just works,
-  // without a per-provider special case in the extraction path.
-  const pdfRes = await fetchWithRetry(pdfUrl, { headers: { Referer: new URL(pdfUrl).origin + '/' } });
-  if (!pdfRes.ok) throw new Error(`PDF fetch HTTP ${pdfRes.status}`);
-  const buf = Buffer.from(await pdfRes.arrayBuffer());
+  const buf = await fetchPdfBuffer(pdfUrl);
   const base64 = buf.toString('base64');
 
   const json = await callGeminiWithRetry(base64);
@@ -1583,14 +1677,7 @@ Return exactly one entry per strategy name listed above, using that exact strate
 // key in the returned Map; the caller falls back to that strategy's
 // previous extraction, same as any other failure in this pipeline.
 async function extractMultiStrategyFactsheetData(pdfUrl, strategyNames) {
-  // A same-origin Referer is a no-op for the overwhelming majority of
-  // providers but is the actual fix InCred's WAF needs (see fetchIncred's
-  // comment) -- sending it unconditionally here means any current or
-  // future provider with the same anti-hotlinking-style rule just works,
-  // without a per-provider special case in the extraction path.
-  const pdfRes = await fetchWithRetry(pdfUrl, { headers: { Referer: new URL(pdfUrl).origin + '/' } });
-  if (!pdfRes.ok) throw new Error(`PDF fetch HTTP ${pdfRes.status}`);
-  const buf = Buffer.from(await pdfRes.arrayBuffer());
+  const buf = await fetchPdfBuffer(pdfUrl);
   const base64 = buf.toString('base64');
 
   const json = await callGeminiWithRetry(base64, buildMultiStrategySchemaPrompt(strategyNames));
@@ -1825,7 +1912,7 @@ function selfTest() {
   assert.strictEqual(extractPeriodFromFilename('Renaissance Opportunities PMS Factsheet - July 2026.pdf'), 'July 2026');
   assert.strictEqual(extractPeriodFromFilename('Renaissance India Next PMS Factsheet - April 2026 - with RMP.pdf'), 'April 2026');
   assert.strictEqual(extractPeriodFromFilename("Renaissance India Next PMS Factsheet - Mar'26.pdf"), 'March 2026');
-  assert.strictEqual(extractPeriodFromFilename("Equitree PMS Factsheet Sept'26.pdf"), 'September 2026');
+  assert.strictEqual(extractPeriodFromFilename('Stallion_Factsheet_Sept_26.pdf'), 'September 2026');
   assert.strictEqual(extractPeriodFromFilename('no-date-here.pdf'), null);
   // Regression: a CMS asset hash appended after the year with an
   // underscore (real Aditya Birla filename shape) used to return null --

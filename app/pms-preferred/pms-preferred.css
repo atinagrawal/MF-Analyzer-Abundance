@@ -811,6 +811,123 @@
   border-radius: 8px;
 }
 
+/* ── SEBI Compliance Badges & Drawer Section (APMI VISTA) ── */
+.pmspref-card-compliance {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin: 6px 0 10px;
+  padding: 4px 8px;
+  background: rgba(27, 94, 32, .05);
+  border: 1px solid rgba(27, 94, 32, .16);
+  border-radius: 6px;
+  font-size: .68rem;
+  color: var(--pmsp-muted-2);
+}
+.pmspref-compliance-shield {
+  font-weight: 700;
+  color: var(--g1, #1b5e20);
+}
+.pmspref-compliance-val {
+  font-weight: 700;
+  font-family: var(--pmsp-mono);
+  color: var(--pmsp-text);
+}
+.pmspref-compliance-clients {
+  font-family: var(--pmsp-mono);
+  color: var(--pmsp-muted-2);
+}
+
+.pmspref-spotlight-compliance {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0 12px;
+  padding: 6px 12px;
+  background: rgba(27, 94, 32, .06);
+  border: 1px solid rgba(27, 94, 32, .2);
+  border-radius: 8px;
+  font-size: .75rem;
+  color: var(--pmsp-muted-2);
+}
+.pmspref-spotlight-compliance .pmspref-compliance-aum {
+  font-weight: 700;
+  font-family: var(--pmsp-mono);
+  color: var(--pmsp-text);
+}
+.pmspref-spotlight-compliance .pmspref-compliance-dot {
+  color: var(--pmsp-border-2);
+}
+
+.pmspref-drawer-compliance {
+  background: rgba(27, 94, 32, .03);
+  border: 1px solid rgba(27, 94, 32, .14);
+  border-radius: 12px;
+  padding: 14px;
+}
+.pmspref-drawer-compliance .pmspref-drawer-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pmspref-drawer-badge-tag {
+  font-size: .62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--g1, #1b5e20);
+  background: rgba(27, 94, 32, .08);
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: .04em;
+}
+.pmspref-drawer-compliance-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.pmspref-drawer-compliance-item {
+  background: var(--pmsp-surface);
+  border: 1px solid var(--pmsp-border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  display: flex;
+  flex-direction: column;
+}
+.pmspref-drawer-compliance-lbl {
+  font-size: .64rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--pmsp-muted);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.pmspref-drawer-compliance-val {
+  font-size: .92rem;
+  font-weight: 700;
+  font-family: var(--pmsp-mono);
+  color: var(--pmsp-text);
+}
+.pmspref-drawer-compliance-sub {
+  font-size: .64rem;
+  color: var(--pmsp-muted-2);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+.pmspref-drawer-compliance-link {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: .74rem;
+  font-weight: 700;
+  color: var(--g1, #1b5e20);
+  text-decoration: none;
+}
+.pmspref-drawer-compliance-link:hover {
+  text-decoration: underline;
+}
+
 /* ── Responsive ── */
 @media (max-width: 720px) {
   .pmspref-main { padding: 22px 18px 32px; margin: 8px 10px 32px; border-radius: 12px; }
@@ -820,6 +937,7 @@
   .pmspref-spotlight-body { grid-template-columns: 1fr; }
   .pmspref-spotlight-name { font-size: 1.4rem; }
   .pmspref-drawer { max-width: 100%; }
+  .pmspref-drawer-compliance-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 480px) {
   .pmspref-stat { flex-basis: 100%; }
