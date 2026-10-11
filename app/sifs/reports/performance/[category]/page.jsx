@@ -33,7 +33,9 @@ import PrintButton from '../../PrintButton';
 import PrintBranding, { PrintFooterBrand } from '../../PrintBranding';
 import '../../sif-reports.css';
 
-export const revalidate = 21600;
+// 1h, not 6h -- see app/api/sif-screener/route.js's comment on why SIFs
+// specifically need a tighter window than other revalidate=21600 pages.
+export const revalidate = 3600;
 
 const SITE = 'https://mfcalc.getabundance.in';
 const MONTH_RE = /^\d{4}-\d{2}$/;
