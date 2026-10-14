@@ -328,7 +328,7 @@ function SortTh({ label, sortKey, sort, onSort, align = 'center' }) {
 }
 
 /** CAS portfolio list — reused in both the desktop side panel and the mobile drill-down. */
-function PortfolioList({ selectedUser, portfolios, portsLoading, deletingId, setDeletingId, deleteInFlight, deletePortfolio, notifying, notifyMsg, notifyClient }) {
+function PortfolioList({ selectedUser, portfolios, portsLoading, deletingId, setDeletingId, deleteInFlight, deletePortfolio, notifyMsg, openCompose }) {
   return (
     <>
       <div style={{
@@ -404,6 +404,14 @@ function PortfolioList({ selectedUser, portfolios, portsLoading, deletingId, set
                     <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
                       {p.pan_count} PAN{p.pan_count !== 1 ? 's' : ''} · {fmtDate(p.uploaded_at)}
                     </div>
+                    {p.cas_email && p.cas_email !== (selectedUser.email || '').toLowerCase() && (
+                      <div
+                        title="Email registered on the CAS statement itself, different from this account's sign-up email"
+                        style={{ fontSize: '.58rem', color: 'var(--g2)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}
+                      >
+                        ✉ CAS email differs: {p.cas_email}
+                      </div>
+                    )}
                   </div>
 
                   <div style={{
@@ -412,18 +420,17 @@ function PortfolioList({ selectedUser, portfolios, portsLoading, deletingId, set
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                       <button
-                        onClick={e => { e.stopPropagation(); notifyClient(p); }}
-                        disabled={notifying === p.id}
-                        title="Send email notification to client"
+                        onClick={e => { e.stopPropagation(); openCompose(p); }}
+                        title="Email this client"
                         style={{
                           fontSize: '.62rem', fontWeight: 700, padding: '4px 9px', borderRadius: 6,
-                          border: '1.5px solid var(--border)', background: notifying === p.id ? 'var(--s3)' : 'var(--surface)',
-                          color: 'var(--g2)', cursor: notifying === p.id ? 'not-allowed' : 'pointer',
+                          border: '1.5px solid var(--border)', background: 'var(--surface)',
+                          color: 'var(--g2)', cursor: 'pointer',
                           display: 'inline-flex', alignItems: 'center', gap: 4,
                           whiteSpace: 'nowrap', fontFamily: 'Raleway, sans-serif',
                         }}
                       >
-                        {notifying === p.id ? 'Sending…' : '✉ Notify'}
+                        ✉ Email
                       </button>
                       {notifyMsg.id === p.id && (
                         <span style={{
@@ -477,6 +484,142 @@ function PortfolioList({ selectedUser, portfolios, portsLoading, deletingId, set
   );
 }
 
+/**
+ * Compose modal for emailing a client about one of their CAS uploads --
+ * either the existing fixed "portfolio ready" template, or a free-text
+ * custom message. One send handler (sendCompose, in UsersTab below)
+ * branches on mode to call the right API route -- the template path
+ * needs no admin-authored content at all, while the custom path needs a
+ * subject/message pair -- keeping them as one shared component here, not
+ * two near-duplicate modals, since everything else (overlay, header,
+ * mode toggle, footer buttons) is identical between them.
+ */
+function ComposeModal({ user, portfolio, mode, setMode, subject, setSubject, message, setMessage, sending, error, onSend, onClose }) {
+  const displayName = user.name || user.email;
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 10000, padding: 16,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--surface)', borderRadius: 14, width: '100%', maxWidth: 480,
+          maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.3)',
+          border: '1px solid var(--border)',
+        }}
+      >
+        <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '.95rem', fontWeight: 800, color: 'var(--text)' }}>
+            Email {displayName}
+          </div>
+          <div style={{ fontSize: '.68rem', color: 'var(--muted)', marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>
+            {user.email} · re: {portfolio.file_name}
+          </div>
+        </div>
+
+        <div style={{ padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[['template', 'Portfolio ready'], ['custom', 'Custom message']].map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setMode(key)}
+                style={{
+                  flex: 1, fontSize: '.68rem', fontWeight: 700, padding: '8px 10px', borderRadius: 8,
+                  border: '1.5px solid ' + (mode === key ? 'var(--g1)' : 'var(--border)'),
+                  background: mode === key ? 'var(--g1)' : 'var(--surface)',
+                  color: mode === key ? '#fff' : 'var(--text2)', cursor: 'pointer',
+                  fontFamily: 'Raleway, sans-serif',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {mode === 'template' ? (
+            <div style={{ fontSize: '.74rem', color: 'var(--muted)', lineHeight: 1.6 }}>
+              Sends the standard "your portfolio is ready" notification for this upload
+              ({portfolio.pan_count} PAN{portfolio.pan_count !== 1 ? 's' : ''}, uploaded {fmtDate(portfolio.uploaded_at)}).
+              No further input needed.
+            </div>
+          ) : (
+            <>
+              <div>
+                <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                  Subject
+                </label>
+                <input
+                  value={subject}
+                  onChange={e => setSubject(e.target.value)}
+                  style={{
+                    width: '100%', marginTop: 4, padding: '8px 10px', borderRadius: 8,
+                    border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)',
+                    fontSize: '.78rem', fontFamily: 'Raleway, sans-serif', boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                  Message
+                </label>
+                <textarea
+                  value={message}
+                  onChange={e => setMessage(e.target.value)}
+                  rows={7}
+                  placeholder="Write your message…"
+                  style={{
+                    width: '100%', marginTop: 4, padding: '10px', borderRadius: 8,
+                    border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)',
+                    fontSize: '.78rem', fontFamily: 'Raleway, sans-serif', resize: 'vertical', boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              <div style={{ fontSize: '.62rem', color: 'var(--muted)' }}>
+                Replies go to atin@getabundance.in.
+              </div>
+            </>
+          )}
+
+          {error && (
+            <div style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--neg)' }}>⚠ {error}</div>
+          )}
+        </div>
+
+        <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button
+            onClick={onClose}
+            disabled={sending}
+            style={{
+              fontSize: '.7rem', fontWeight: 700, padding: '8px 16px', borderRadius: 8,
+              border: '1.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text2)',
+              cursor: sending ? 'not-allowed' : 'pointer', fontFamily: 'Raleway, sans-serif',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSend}
+            disabled={sending || (mode === 'custom' && (!subject.trim() || !message.trim()))}
+            style={{
+              fontSize: '.7rem', fontWeight: 700, padding: '8px 18px', borderRadius: 8,
+              border: 'none', background: 'var(--g1)', color: '#fff',
+              cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.7 : 1,
+              fontFamily: 'Raleway, sans-serif',
+            }}
+          >
+            {sending ? 'Sending…' : 'Send'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function UsersTab({ session }) {
   const isAdmin = session.user.role === 'admin';
   const [users, setUsers]               = useState([]);
@@ -490,8 +633,13 @@ export default function UsersTab({ session }) {
   const [roleChanging, setRoleChanging] = useState('');
   const [planChanging, setPlanChanging] = useState('');
   const [distributorChanging, setDistributorChanging] = useState('');
-  const [notifying,    setNotifying]    = useState('');
   const [notifyMsg,    setNotifyMsg]    = useState({ id: '', type: '', text: '' });
+  const [composePortfolio, setComposePortfolio] = useState(null); // the CAS upload being emailed about, or null when the modal is closed
+  const [composeMode,      setComposeMode]      = useState('template');
+  const [composeSubject,   setComposeSubject]   = useState('');
+  const [composeMessage,   setComposeMessage]   = useState('');
+  const [composeSending,   setComposeSending]   = useState(false);
+  const [composeError,     setComposeError]     = useState('');
   const [deletingId,     setDeletingId]     = useState('');
   const [deleteInFlight, setDeleteInFlight] = useState(false);
   const [search,   setSearch]   = useState('');
@@ -604,26 +752,53 @@ export default function UsersTab({ session }) {
     finally { setDistributorChanging(''); }
   }
 
-  async function notifyClient(portfolio) {
-    setNotifying(portfolio.id);
-    setNotifyMsg({ id: '', type: '', text: '' });
+  // Opens the compose modal for a given CAS upload -- the "Portfolio
+  // ready" fixed template and the free-text "Custom message" mode share
+  // this one modal (see ComposeModal); which API route gets called is
+  // decided in sendCompose() below, by composeMode.
+  function openCompose(portfolio) {
+    setComposePortfolio(portfolio);
+    setComposeMode('template');
+    setComposeSubject(`Your mutual fund portfolio — ${selectedUser.name || selectedUser.email}`);
+    setComposeMessage('');
+    setComposeError('');
+  }
+
+  function closeCompose() {
+    setComposePortfolio(null);
+  }
+
+  async function sendCompose() {
+    const portfolio = composePortfolio;
+    setComposeSending(true);
+    setComposeError('');
     try {
-      const res = await fetch('/api/admin/notify', {
+      const url = composeMode === 'template' ? '/api/admin/notify' : '/api/admin/send-custom-email';
+      const body = composeMode === 'template'
+        ? {
+            userId: selectedUser.id, email: selectedUser.email,
+            name: selectedUser.name, fileName: portfolio.file_name,
+            blobKey: portfolio.blob_key, panCount: portfolio.pan_count,
+            uploadedAt: portfolio.uploaded_at,
+          }
+        : {
+            userId: selectedUser.id, email: selectedUser.email,
+            name: selectedUser.name, subject: composeSubject, message: composeMessage,
+          };
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: selectedUser.id, email: selectedUser.email,
-          name: selectedUser.name, fileName: portfolio.file_name,
-          blobKey: portfolio.blob_key, panCount: portfolio.pan_count,
-          uploadedAt: portfolio.uploaded_at,
-        }),
+        body: JSON.stringify(body),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Failed to send');
       setNotifyMsg({ id: portfolio.id, type: 'ok', text: 'Sent ✓' });
+      closeCompose();
     } catch (err) {
-      setNotifyMsg({ id: portfolio.id, type: 'err', text: err.message });
-    } finally { setNotifying(''); }
+      setComposeError(err.message);
+    } finally {
+      setComposeSending(false);
+    }
   }
 
   async function deletePortfolio(id) {
@@ -646,7 +821,7 @@ export default function UsersTab({ session }) {
 
   const detailProps = {
     selectedUser, portfolios, portsLoading, deletingId, setDeletingId,
-    deleteInFlight, deletePortfolio, notifying, notifyMsg, notifyClient,
+    deleteInFlight, deletePortfolio, notifyMsg, openCompose,
   };
 
   return (
@@ -912,6 +1087,23 @@ export default function UsersTab({ session }) {
           </div>
         )}
       </div>
+
+      {composePortfolio && (
+        <ComposeModal
+          user={selectedUser}
+          portfolio={composePortfolio}
+          mode={composeMode}
+          setMode={setComposeMode}
+          subject={composeSubject}
+          setSubject={setComposeSubject}
+          message={composeMessage}
+          setMessage={setComposeMessage}
+          sending={composeSending}
+          error={composeError}
+          onSend={sendCompose}
+          onClose={closeCompose}
+        />
+      )}
     </>
   );
 }
