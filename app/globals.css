@@ -10644,6 +10644,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   font-size: .68rem; font-weight: 800; padding: 3px 9px; border-radius: 20px;
   background: var(--g-xlight); color: var(--g1); white-space: nowrap;
 }
+.nfo-chip-invest {
+  display: inline-block; margin-top: 8px; background: var(--g1); color: #fff;
+}
 
 /* ── NFO Tracker — Detail Page ── */
 .nfo-back-link { display: inline-block; font-size: .8rem; font-weight: 700; color: var(--muted); text-decoration: none; margin-bottom: 16px; }
@@ -10673,6 +10676,21 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   display: inline-block; padding: 12px 24px; background: var(--g1); color: #fff;
   font-weight: 800; font-size: .85rem; text-decoration: none; border-radius: 10px;
 }
+
+.nfo-invest-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  flex-wrap: wrap; background: linear-gradient(135deg, var(--g1), var(--g2));
+  border-radius: 14px; padding: 16px 20px; margin-bottom: 18px; color: #fff;
+}
+.nfo-invest-banner strong { font-size: .95rem; display: block; margin-bottom: 2px; }
+.nfo-invest-banner p { font-size: .8rem; opacity: .92; margin: 0; }
+.nfo-invest-cta {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 12px 22px; background: #fff; color: var(--g1); font-weight: 800;
+  font-size: .85rem; text-decoration: none; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.12);
+  transition: transform .15s ease;
+}
+.nfo-invest-cta:hover { transform: translateY(-1px); }
 
 /* ── NFO Tracker — SEO & Educational Elements ── */
 .nfo-stats-bar {

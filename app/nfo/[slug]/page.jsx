@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getNfoBySlug } from '@/lib/nfoData';
 import { getProviderLogo } from '@/lib/providerLogos';
+import { getNfoInvestLink } from '@/lib/nfoInvestLinks';
 import pool from '@/lib/db';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -203,6 +204,7 @@ export default async function NfoDetailPage({ params }) {
 
   const logo = getProviderLogo(entry.type, entry.amcName);
   const liveLink = await findLiveFundLink(entry.schemeName, entry.type);
+  const investLink = entry.status === 'open' ? getNfoInvestLink(entry.slug) : null;
   const canonicalUrl = `https://mfcalc.getabundance.in/nfo/${entry.slug}`;
   const jsonLd = buildJsonLd(entry, canonicalUrl);
 
@@ -243,6 +245,18 @@ export default async function NfoDetailPage({ params }) {
         ) : (
           <div className="nfo-open-banner" style={{ background: 'var(--g-xlight)', border: '1px solid var(--g-light)', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: '.84rem', color: 'var(--g1)', fontWeight: 700 }}>
             🟢 Currently Open for Subscription · Closes on {formatDate(entry.closeDate) || 'announced date'}
+          </div>
+        )}
+
+        {investLink && (
+          <div className="nfo-invest-banner">
+            <div>
+              <strong>Ready to invest?</strong>
+              <p>Apply directly with {entry.amcName} using their secure online application.</p>
+            </div>
+            <a href={investLink} target="_blank" rel="noopener noreferrer" className="nfo-invest-cta">
+              Invest Now ↗
+            </a>
           </div>
         )}
 
@@ -318,7 +332,14 @@ export default async function NfoDetailPage({ params }) {
         </div>
 
         <div style={{ marginTop: 24, marginBottom: 24, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <a href="/book-consultation" className="nfo-cta-button">Talk to an Expert</a>
+          {investLink && (
+            <a href={investLink} target="_blank" rel="noopener noreferrer" className="nfo-cta-button">
+              💰 Invest Now ↗
+            </a>
+          )}
+          <a href="/book-consultation" className={investLink ? 'nfo-external-link' : 'nfo-cta-button'} style={investLink ? { display: 'flex', alignItems: 'center' } : undefined}>
+            Talk to an Expert
+          </a>
           <a href="/nfo" className="nfo-external-link" style={{ background: 'transparent', display: 'flex', alignItems: 'center' }}>← Back to All NFOs</a>
         </div>
       </main>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { getProviderLogo } from '@/lib/providerLogos';
+import { getNfoInvestLink } from '@/lib/nfoInvestLinks';
 
 // `todayStr` is computed ONCE, server-side, by app/nfo/page.jsx and threaded
 // down as a prop -- never call `new Date()` directly in this client
@@ -28,6 +29,7 @@ function formatRupees(n) {
 function NfoCard({ entry, today }) {
   const logo = getProviderLogo(entry.type, entry.amcName);
   const daysLeft = closesInDays(entry.closeDate, today);
+  const canInvestOnline = entry.status === 'open' && !!getNfoInvestLink(entry.slug);
 
   return (
     <a href={`/nfo/${entry.slug}`} className="nfo-card">
@@ -51,6 +53,7 @@ function NfoCard({ entry, today }) {
           <span className="nfo-chip">{daysLeft === 0 ? 'Closes today' : `Closes in ${daysLeft}d`}</span>
         )}
       </div>
+      {canInvestOnline && <span className="nfo-chip nfo-chip-invest">💰 Invest Online</span>}
     </a>
   );
 }
