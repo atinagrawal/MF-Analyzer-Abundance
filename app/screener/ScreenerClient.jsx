@@ -799,6 +799,18 @@ export default function ScreenerClient({ initialCategory, initialData }) {
                                 )}
                               </span>
                             </button>
+                            {f.investLink && (
+                              <a
+                                href={f.investLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="scr-invest-badge"
+                                onClick={(e) => e.stopPropagation()}
+                                title={`Invest directly in ${f.name}`}
+                              >
+                                💰 Invest
+                              </a>
+                            )}
                           </div>
                         </td>
                         {visibleCols.map((m) => (
@@ -1153,6 +1165,8 @@ const CSS = `
 .scr-fund-n{font:700 13px Raleway,sans-serif;color:var(--g1);line-height:1.25;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
 .scr-fundlink:hover .scr-fund-n{text-decoration:underline}
 .scr-fund-sub{font:500 11px JetBrains Mono,monospace;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scr-invest-badge{flex-shrink:0;font:700 10px Raleway,sans-serif;color:#fff;background:var(--g1);border-radius:12px;padding:3px 8px;text-decoration:none;white-space:nowrap}
+.scr-invest-badge:hover{background:var(--g2)}
 .scr-flag{color:var(--warn);margin-left:5px;font-size:12px}
 .scr-pos{color:var(--g2)}
 .scr-neg{color:var(--neg)}

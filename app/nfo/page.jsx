@@ -1,11 +1,21 @@
 import { getPageMeta } from '@/lib/metadata';
 import { getNfoData } from '@/lib/nfoData';
+import { getInvestLinkForNfo } from '@/lib/investLinksCache';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import NfoFilterTabs from './NfoFilterTabs';
 
 export const metadata = getPageMeta('nfo');
 export const revalidate = 3600;
+
+// Resolved server-side (R2-cached, see lib/investLinksCache.js) and
+// attached to each entry so NfoFilterTabs -- a client component -- never
+// needs to call the resolver itself; it just reads entry.investLink.
+async function withInvestLinks(entries) {
+  return Promise.all(
+    entries.map(async (e) => ({ ...e, investLink: await getInvestLinkForNfo(e) }))
+  );
+}
 
 export default async function NfoPage() {
   const data = await getNfoData();
@@ -16,8 +26,8 @@ export default async function NfoPage() {
   // recur around the UTC/IST date-rollover window.
   const today = new Date().toISOString().split('T')[0];
 
-  const openMf = (data.mf || []).filter((e) => e.status === 'open');
-  const openSif = (data.sif || []).filter((e) => e.status === 'open');
+  const openMf = await withInvestLinks((data.mf || []).filter((e) => e.status === 'open'));
+  const openSif = await withInvestLinks((data.sif || []).filter((e) => e.status === 'open'));
   const allOpen = [...openMf, ...openSif];
 
   const faqs = [

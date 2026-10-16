@@ -101,6 +101,11 @@ export function FundDetailPanel({ f, stress, holdings, holdingsLoading = false, 
         </div>
         <button className="scr-x" onClick={onClose} aria-label="Close">×</button>
       </div>
+      {f.investLink && (
+        <a href={f.investLink} target="_blank" rel="noopener noreferrer" className="scr-drawer-invest-cta">
+          💰 Invest Directly in {f.amc} ↗
+        </a>
+      )}
       {f.flag === 'check' && <div className="scr-warn">⚠ One or more returns look unusual for this fund — we're reviewing the source NAV. Treat with caution.</div>}
       {stress && stress.days_50pct > 20 && (
         <div className="scr-warn" style={{ backgroundColor: 'rgba(211, 47, 47, 0.08)', border: '1px solid rgba(211, 47, 47, 0.2)', color: '#d32f2f' }}>
@@ -435,6 +440,8 @@ const CSS = `
 .scr-tag{font:700 10px JetBrains Mono,monospace;background:var(--g-xlight);color:var(--g1);padding:3px 8px;border-radius:5px}
 .scr-tag.alt{background:var(--s3,#eef5ee);color:var(--text2)}
 .scr-x{width:34px;height:34px;border:1px solid var(--border);background:var(--surface);border-radius:9px;font-size:20px;color:var(--muted);cursor:pointer;flex:none}
+.scr-drawer-invest-cta{display:block;text-align:center;padding:10px 14px;margin-bottom:14px;background:var(--g1);color:#fff;font:700 13px Raleway,sans-serif;text-decoration:none;border-radius:9px}
+.scr-drawer-invest-cta:hover{background:var(--g2)}
 .scr-warn{background:var(--warn-bg,#fff3e0);border:1px solid #ffcc80;color:#8a4300;padding:9px 12px;border-radius:8px;font-size:12px;margin-bottom:14px}
 .scr-spark-load{font:500 11px JetBrains Mono,monospace;color:var(--muted);margin-top:5px;padding:34px 0;text-align:center}
 .scr-drawer-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}

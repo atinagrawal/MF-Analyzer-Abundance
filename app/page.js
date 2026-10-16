@@ -1,7 +1,26 @@
 import { getPageMeta } from '@/lib/metadata';
+import { getNfoData } from '@/lib/nfoData';
+import { getPromotableOpenNfos } from '@/lib/investLinksCache';
+import { getProviderLogo } from '@/lib/providerLogos';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import HomeScripts from './HomeScripts';
+import NfoPromoBanner from '@/components/NfoPromoBanner';
+
+// Picks the single most urgent open NFO that has a resolvable direct-invest
+// link (soonest-closing first) -- see lib/investLinksCache.js for how that
+// link is resolved (automated per-AMC sync, falling back to the hand
+// maintained map). Returns null when nothing currently qualifies, which is
+// the common case and simply renders no banner.
+async function getFeaturedNfoPromo() {
+  const data = await getNfoData();
+  const open = [...(data.mf || []), ...(data.sif || [])].filter((e) => e.status === 'open');
+  const promotable = await getPromotableOpenNfos(open);
+  if (promotable.length === 0) return null;
+  promotable.sort((a, b) => (a.closeDate || '9999').localeCompare(b.closeDate || '9999'));
+  const picked = promotable[0];
+  return { ...picked, logo: getProviderLogo(picked.type, picked.amcName) };
+}
 
 /**
  * app/page.js — Home page (MF Calculator)
@@ -1684,7 +1703,9 @@ const FAQ_HTML = `<section class="faq-section" aria-label="Frequently Asked Ques
 </section>
 `;
 
-export default function HomePage() {
+export default async function HomePage() {
+  const nfoPromo = await getFeaturedNfoPromo();
+
   return (
     <>
       {/* ── JSON-LD Structured Data ── */}
@@ -1708,6 +1729,7 @@ export default function HomePage() {
       {/* ── Page shell ── */}
       <div className="page">
         <Navbar activePage="calculator" variant="home" />
+        <NfoPromoBanner promo={nfoPromo} />
         {/* Calculator panels rendered as raw HTML so inline onclick= handlers
             work correctly with the vanilla JS from mfcalc-main.js */}
         <div dangerouslySetInnerHTML={{ __html: MAIN_HTML }} />

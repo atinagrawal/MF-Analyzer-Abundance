@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getNfoBySlug } from '@/lib/nfoData';
 import { getProviderLogo } from '@/lib/providerLogos';
-import { getNfoInvestLink } from '@/lib/nfoInvestLinks';
+import { getInvestLinkForNfo } from '@/lib/investLinksCache';
 import pool from '@/lib/db';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -204,7 +204,7 @@ export default async function NfoDetailPage({ params }) {
 
   const logo = getProviderLogo(entry.type, entry.amcName);
   const liveLink = await findLiveFundLink(entry.schemeName, entry.type);
-  const investLink = entry.status === 'open' ? getNfoInvestLink(entry.slug) : null;
+  const investLink = entry.status === 'open' ? await getInvestLinkForNfo(entry) : null;
   const canonicalUrl = `https://mfcalc.getabundance.in/nfo/${entry.slug}`;
   const jsonLd = buildJsonLd(entry, canonicalUrl);
 
