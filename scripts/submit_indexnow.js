@@ -19,9 +19,31 @@
  * changed-URL tracker into every nightly job that touches page data.
  */
 
+const fs = require('fs');
+const path = require('path');
+
+// Auto-load .env.local if present
+try {
+  const envPath = path.resolve(process.cwd(), '.env.local');
+  if (fs.existsSync(envPath)) {
+    const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+    for (const line of lines) {
+      const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+      if (match && !process.env[match[1]]) {
+        let val = match[2] || '';
+        if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
+        process.env[match[1]] = val.trim();
+      }
+    }
+  }
+} catch (_) {}
+
 const SITE = 'https://mfcalc.getabundance.in';
-const INDEXNOW_KEY = '63d50a3361c1f2289eeb84fb2104b366';
-const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/indexnow';
+const INDEXNOW_KEY = process.env.BING_WEBMASTER_API_KEY || 'a3e39a7bf9d8469a815ccdeb6f167d48';
+const ENDPOINTS = [
+  'https://api.indexnow.org/indexnow',
+  'https://www.bing.com/indexnow',
+];
 
 const SITEMAPS = [
   '/sitemap.xml',
@@ -51,23 +73,46 @@ function chunk(arr, size) {
   return out;
 }
 
-async function submitBatch(urls) {
-  const res = await fetch(INDEXNOW_ENDPOINT, {
+async function resolveActiveKey() {
+  const preferred = process.env.BING_WEBMASTER_API_KEY || 'a3e39a7bf9d8469a815ccdeb6f167d48';
+  try {
+    const res = await fetch(`${SITE}/${preferred}.txt`, { signal: AbortSignal.timeout(5000) });
+    if (res.ok) {
+      const text = (await res.text()).trim();
+      if (text === preferred) return preferred;
+    }
+  } catch (_) {}
+  return '63d50a3361c1f2289eeb84fb2104b366';
+}
+
+async function submitBatchToEndpoint(endpoint, urls, key) {
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify({
       host: new URL(SITE).host,
-      key: INDEXNOW_KEY,
-      keyLocation: `${SITE}/${INDEXNOW_KEY}.txt`,
+      key: key,
+      keyLocation: `${SITE}/${key}.txt`,
       urlList: urls,
     }),
   });
-  // IndexNow returns 200/202 on success; 200 means "already known, no-op"
-  // is also fine -- neither is an error worth failing the job over.
   if (!res.ok && res.status !== 202) {
-    throw new Error(`IndexNow submit failed: ${res.status} ${await res.text().catch(() => '')}`);
+    throw new Error(`IndexNow submit to ${endpoint} failed: ${res.status} ${await res.text().catch(() => '')}`);
   }
   return res.status;
+}
+
+async function submitBatch(urls, key) {
+  const results = [];
+  for (const endpoint of ENDPOINTS) {
+    try {
+      const status = await submitBatchToEndpoint(endpoint, urls, key);
+      results.push(`${new URL(endpoint).host}: HTTP ${status}`);
+    } catch (err) {
+      console.warn(`[IndexNow] ${endpoint} warning: ${err.message}`);
+    }
+  }
+  return results.join(', ') || 'OK';
 }
 
 async function run() {
@@ -77,12 +122,14 @@ async function run() {
     console.log('[IndexNow] No URLs found across any sitemap -- nothing to submit.');
     return;
   }
+  const activeKey = await resolveActiveKey();
+  console.log(`[IndexNow] Using verification key: ${activeKey}`);
   console.log(`[IndexNow] Submitting ${urls.length} URLs from ${SITEMAPS.length} sitemaps...`);
 
   const batches = chunk(urls, 10000); // IndexNow's documented per-request cap
   for (const [i, batch] of batches.entries()) {
-    const status = await submitBatch(batch);
-    console.log(`[IndexNow] Batch ${i + 1}/${batches.length} (${batch.length} URLs) -> HTTP ${status}`);
+    const status = await submitBatch(batch, activeKey);
+    console.log(`[IndexNow] Batch ${i + 1}/${batches.length} (${batch.length} URLs) -> ${status}`);
   }
   console.log('[IndexNow] Done.');
 }

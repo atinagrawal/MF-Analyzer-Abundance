@@ -1,27 +1,25 @@
-name: IndexNow Submit
+name: Bing SEO & GEO Automation (IndexNow, Priority Submit, Telemetry)
 
-# Pings Bing/Yandex's IndexNow endpoint with every URL in this site's
-# sitemaps, so Bing doesn't have to wait for its own crawl schedule to
-# notice changed pages (Google ignores IndexNow -- it's a Bing/Yandex
-# thing, unrelated to /sitemap.xml submission in Search Console).
-# No secrets needed: scripts/submit_indexnow.js only reads the public
-# sitemap routes and POSTs to the public IndexNow API.
+# Automates Bing SEO and Generative Engine Optimization (GEO):
+# 1. Pings IndexNow (api.indexnow.org & bing.com/indexnow) with every URL across all 6 sitemaps.
+# 2. Uses Bing Webmaster Tools REST API to submit daily priority URLs up to quota (SubmitUrlbatch).
+# 3. Synchronizes sitemap feeds in Bing Webmaster Tools.
+# 4. Pulls crawl diagnostics and search performance telemetry (GetCrawlStats, GetQueryStats).
 #
-# Runs after screener.yml's nightly rebuild (18:30 UTC) so the submitted
-# URLs reflect that day's refreshed NAVs/returns, not yesterday's.
+# Runs after screener.yml's nightly rebuild so the submitted URLs reflect that day's refreshed NAVs/returns.
 on:
   schedule:
-    - cron: '0 20 * * *'   # 20:00 UTC daily, ~90 min after screener.yml
+    - cron: '15 20 * * *'   # 20:15 UTC daily (~1:45 AM IST), ~105 min after screener.yml
   workflow_dispatch:
 
 concurrency:
-  group: indexnow-submit
+  group: bing-seo-geo-automation
   cancel-in-progress: false
 
 jobs:
-  submit:
+  bing-seo-geo:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -32,5 +30,18 @@ jobs:
         with:
           node-version: 24
 
-      - name: Submit sitemap URLs to IndexNow
+      - name: Submit All Sitemap URLs to IndexNow (Batch Fan-Out)
+        env:
+          BING_WEBMASTER_API_KEY: ${{ secrets.BING_WEBMASTER_API_KEY }}
         run: node scripts/submit_indexnow.js
+
+      - name: Submit Priority URLs & Sync Feeds to Bing Webmaster Tools API
+        env:
+          BING_WEBMASTER_API_KEY: ${{ secrets.BING_WEBMASTER_API_KEY }}
+        run: node scripts/bing_priority_submit.mjs
+
+      - name: Collect Bing Search & Crawl Diagnostics Telemetry
+        env:
+          BING_WEBMASTER_API_KEY: ${{ secrets.BING_WEBMASTER_API_KEY }}
+        run: node scripts/bing_telemetry.mjs
+

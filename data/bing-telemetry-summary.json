@@ -1,0 +1,112 @@
+{
+  "updatedAt": "2026-10-16T16:54:12.573Z",
+  "siteUrl": "https://mfcalc.getabundance.in/",
+  "crawl": {
+    "date": "2026-10-13",
+    "crawledPages": 138,
+    "inIndex": 1145,
+    "code2xx": 1179,
+    "code4xx": 1,
+    "code5xx": 0,
+    "blockedByRobotsTxt": 2,
+    "dnsFailures": 0,
+    "connectionTimeout": 0,
+    "crawlErrors": 1
+  },
+  "totals": {
+    "impressions": 344,
+    "clicks": 5
+  },
+  "topQueries": [
+    {
+      "query": "sif nav amfi",
+      "impressions": 114,
+      "clicks": 1,
+      "avgPosition": 8
+    },
+    {
+      "query": "amfi sif nav",
+      "impressions": 89,
+      "clicks": 0,
+      "avgPosition": 10
+    },
+    {
+      "query": "sif amfi nav",
+      "impressions": 17,
+      "clicks": 0,
+      "avgPosition": 9
+    },
+    {
+      "query": "sif performance tracker",
+      "impressions": 16,
+      "clicks": 0,
+      "avgPosition": 8
+    },
+    {
+      "query": "sif screener",
+      "impressions": 10,
+      "clicks": 0,
+      "avgPosition": 4
+    },
+    {
+      "query": "amfi nav sif",
+      "impressions": 7,
+      "clicks": 0,
+      "avgPosition": 8
+    },
+    {
+      "query": "mfcalc",
+      "impressions": 6,
+      "clicks": 2,
+      "avgPosition": 5
+    },
+    {
+      "query": "active asset allocator sifs list",
+      "impressions": 4,
+      "clicks": 0,
+      "avgPosition": 4
+    },
+    {
+      "query": "sif india list 2026 titanium qsif isif magnum",
+      "impressions": 4,
+      "clicks": 0,
+      "avgPosition": 5
+    },
+    {
+      "query": "sif performance in india",
+      "impressions": 4,
+      "clicks": 0,
+      "avgPosition": 9
+    },
+    {
+      "query": "sif fund performance",
+      "impressions": 4,
+      "clicks": 0,
+      "avgPosition": 10
+    },
+    {
+      "query": "sif amfi",
+      "impressions": 4,
+      "clicks": 0,
+      "avgPosition": 8
+    },
+    {
+      "query": "sif prime latest nav qsif active asset allocator qsif ex-top 100 long-short 15 august 2026",
+      "impressions": 3,
+      "clicks": 0,
+      "avgPosition": 6
+    },
+    {
+      "query": "amfi sif",
+      "impressions": 3,
+      "clicks": 0,
+      "avgPosition": 10
+    },
+    {
+      "query": "sifinixv ssecisagtmlma",
+      "impressions": 2,
+      "clicks": 0,
+      "avgPosition": 9
+    }
+  ]
+}
