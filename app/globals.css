@@ -3928,6 +3928,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .dur-row{display:flex;gap:8px}
 .dur-row .sip-input{flex:1;min-width:0}
 .dur-row .sip-select{width:106px;flex-shrink:0}
+/* A field holding a dur-row (number + Years/Months select) needs more
+   track width than a plain single input, or the number collapses to
+   ~1 visible digit inside auto-fit's 150-155px minmax columns. */
+.sip-field:has(.dur-row){grid-column:span 2}
 
 /* ── Big result display ── */
 .sip-big-result{

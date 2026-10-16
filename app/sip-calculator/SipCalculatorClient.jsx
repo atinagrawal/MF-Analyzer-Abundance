@@ -212,7 +212,20 @@ export default function SipCalculatorClient() {
               <div className="sip-input-group">
                 <div className="sip-input-header">
                   <label htmlFor="sip-amt">Monthly Investment</label>
-                  <span className="sip-val-pill">{fmtINRFull(sipAmt)}</span>
+                  <span className="sip-val-pill">
+                    ₹<input
+                      type="number"
+                      className="sip-val-input"
+                      style={{ width: '74px' }}
+                      value={sipAmt}
+                      min={500}
+                      max={200000}
+                      step={500}
+                      onChange={(e) => setSipAmt(e.target.value === '' ? '' : Number(e.target.value))}
+                      onBlur={() => setSipAmt((v) => Math.min(200000, Math.max(500, Number(v) || 500)))}
+                      aria-label="Monthly investment amount"
+                    />
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -244,7 +257,20 @@ export default function SipCalculatorClient() {
               <div className="sip-input-group">
                 <div className="sip-input-header">
                   <label htmlFor="lump-amt">Initial Lumpsum Amount</label>
-                  <span className="sip-val-pill">{fmtINRFull(lumpAmt)}</span>
+                  <span className="sip-val-pill">
+                    ₹<input
+                      type="number"
+                      className="sip-val-input"
+                      style={{ width: '84px' }}
+                      value={lumpAmt}
+                      min={10000}
+                      max={5000000}
+                      step={10000}
+                      onChange={(e) => setLumpAmt(e.target.value === '' ? '' : Number(e.target.value))}
+                      onBlur={() => setLumpAmt((v) => Math.min(5000000, Math.max(10000, Number(v) || 10000)))}
+                      aria-label="Initial lumpsum amount"
+                    />
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -276,7 +302,20 @@ export default function SipCalculatorClient() {
               <div className="sip-input-group">
                 <div className="sip-input-header">
                   <label htmlFor="stepup-pct">Annual Step-Up (% p.a.)</label>
-                  <span className="sip-val-pill">{stepupPct}%</span>
+                  <span className="sip-val-pill">
+                    <input
+                      type="number"
+                      className="sip-val-input"
+                      style={{ width: '40px' }}
+                      value={stepupPct}
+                      min={1}
+                      max={30}
+                      step={1}
+                      onChange={(e) => setStepupPct(e.target.value === '' ? '' : Number(e.target.value))}
+                      onBlur={() => setStepupPct((v) => Math.min(30, Math.max(1, Number(v) || 1)))}
+                      aria-label="Annual step-up percentage"
+                    />%
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -298,7 +337,20 @@ export default function SipCalculatorClient() {
             <div className="sip-input-group">
               <div className="sip-input-header">
                 <label htmlFor="annual-rate">Expected Return Rate (% p.a.)</label>
-                <span className="sip-val-pill">{annualRate}%</span>
+                <span className="sip-val-pill">
+                  <input
+                    type="number"
+                    className="sip-val-input"
+                    style={{ width: '40px' }}
+                    value={annualRate}
+                    min={1}
+                    max={30}
+                    step={0.5}
+                    onChange={(e) => setAnnualRate(e.target.value === '' ? '' : Number(e.target.value))}
+                    onBlur={() => setAnnualRate((v) => Math.min(30, Math.max(1, Number(v) || 1)))}
+                    aria-label="Expected annual return rate"
+                  />%
+                </span>
               </div>
               <input
                 type="range"
@@ -328,7 +380,20 @@ export default function SipCalculatorClient() {
             <div className="sip-input-group">
               <div className="sip-input-header">
                 <label htmlFor="duration-yrs">Investment Horizon</label>
-                <span className="sip-val-pill">{durationYears} Years</span>
+                <span className="sip-val-pill">
+                  <input
+                    type="number"
+                    className="sip-val-input"
+                    style={{ width: '36px' }}
+                    value={durationYears}
+                    min={1}
+                    max={35}
+                    step={1}
+                    onChange={(e) => setDurationYears(e.target.value === '' ? '' : Number(e.target.value))}
+                    onBlur={() => setDurationYears((v) => Math.min(35, Math.max(1, Number(v) || 1)))}
+                    aria-label="Investment horizon in years"
+                  /> Years
+                </span>
               </div>
               <input
                 type="range"
@@ -734,6 +799,29 @@ export default function SipCalculatorClient() {
           padding: 3px 8px;
           border-radius: 6px;
           border: 1px solid var(--border);
+          display: inline-flex;
+          align-items: center;
+          gap: 2px;
+        }
+        .sip-val-input {
+          border: none;
+          background: transparent;
+          outline: none;
+          font-family: inherit;
+          font-size: inherit;
+          font-weight: inherit;
+          color: inherit;
+          text-align: right;
+          padding: 0;
+          -moz-appearance: textfield;
+        }
+        .sip-val-input::-webkit-outer-spin-button,
+        .sip-val-input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        .sip-val-input:focus {
+          color: var(--g1);
         }
         .sip-slider {
           width: 100%;

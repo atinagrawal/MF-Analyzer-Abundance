@@ -279,7 +279,20 @@ export default function SwpCalculatorClient() {
                   <div className="swp-input-group">
                     <div className="swp-input-header">
                       <label htmlFor="swp-corpus">Initial Corpus Amount</label>
-                      <span className="swp-val-pill">{fmtINRFull(corpus)}</span>
+                      <span className="swp-val-pill">
+                        ₹<input
+                          type="number"
+                          className="swp-val-input"
+                          style={{ width: '90px' }}
+                          value={corpus}
+                          min={500000}
+                          max={50000000}
+                          step={100000}
+                          onChange={(e) => setCorpus(e.target.value === '' ? '' : Number(e.target.value))}
+                          onBlur={() => setCorpus((v) => Math.min(50000000, Math.max(500000, Number(v) || 500000)))}
+                          aria-label="Initial corpus amount"
+                        />
+                      </span>
                     </div>
                     <input
                       type="range"
@@ -308,7 +321,20 @@ export default function SwpCalculatorClient() {
                   <div className="swp-input-group">
                     <div className="swp-input-header">
                       <label htmlFor="swp-withdrawal">Monthly Withdrawal</label>
-                      <span className="swp-val-pill">{fmtINRFull(withdrawal)}/mo</span>
+                      <span className="swp-val-pill">
+                        ₹<input
+                          type="number"
+                          className="swp-val-input"
+                          style={{ width: '74px' }}
+                          value={withdrawal}
+                          min={5000}
+                          max={500000}
+                          step={2000}
+                          onChange={(e) => setWithdrawal(e.target.value === '' ? '' : Number(e.target.value))}
+                          onBlur={() => setWithdrawal((v) => Math.min(500000, Math.max(5000, Number(v) || 5000)))}
+                          aria-label="Monthly withdrawal amount"
+                        />/mo
+                      </span>
                     </div>
                     <input
                       type="range"
@@ -339,7 +365,20 @@ export default function SwpCalculatorClient() {
                 <div className="swp-input-group">
                   <div className="swp-input-header">
                     <label htmlFor="target-income">Target Monthly Income</label>
-                    <span className="swp-val-pill">{fmtINRFull(targetIncome)}/mo</span>
+                    <span className="swp-val-pill">
+                      ₹<input
+                        type="number"
+                        className="swp-val-input"
+                        style={{ width: '74px' }}
+                        value={targetIncome}
+                        min={10000}
+                        max={500000}
+                        step={2500}
+                        onChange={(e) => setTargetIncome(e.target.value === '' ? '' : Number(e.target.value))}
+                        onBlur={() => setTargetIncome((v) => Math.min(500000, Math.max(10000, Number(v) || 10000)))}
+                        aria-label="Target monthly income"
+                      />/mo
+                    </span>
                   </div>
                   <input
                     type="range"
@@ -370,7 +409,20 @@ export default function SwpCalculatorClient() {
               <div className="swp-input-group">
                 <div className="swp-input-header">
                   <label htmlFor="swp-rate">Expected Return Rate (% p.a.)</label>
-                  <span className="swp-val-pill">{rate}%</span>
+                  <span className="swp-val-pill">
+                    <input
+                      type="number"
+                      className="swp-val-input"
+                      style={{ width: '40px' }}
+                      value={rate}
+                      min={4}
+                      max={18}
+                      step={0.5}
+                      onChange={(e) => setRate(e.target.value === '' ? '' : Number(e.target.value))}
+                      onBlur={() => setRate((v) => Math.min(18, Math.max(4, Number(v) || 4)))}
+                      aria-label="Expected annual return rate"
+                    />%
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -388,7 +440,20 @@ export default function SwpCalculatorClient() {
               <div className="swp-input-group">
                 <div className="swp-input-header">
                   <label htmlFor="swp-duration">Payout Duration</label>
-                  <span className="swp-val-pill">{durationYears} Years</span>
+                  <span className="swp-val-pill">
+                    <input
+                      type="number"
+                      className="swp-val-input"
+                      style={{ width: '36px' }}
+                      value={durationYears}
+                      min={5}
+                      max={40}
+                      step={1}
+                      onChange={(e) => setDurationYears(e.target.value === '' ? '' : Number(e.target.value))}
+                      onBlur={() => setDurationYears((v) => Math.min(40, Math.max(5, Number(v) || 5)))}
+                      aria-label="Payout duration in years"
+                    /> Years
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -406,7 +471,20 @@ export default function SwpCalculatorClient() {
               <div className="swp-input-group">
                 <div className="swp-input-header">
                   <label htmlFor="swp-stepup">Annual Step-Up (% p.a.)</label>
-                  <span className="swp-val-pill">{stepup}%</span>
+                  <span className="swp-val-pill">
+                    <input
+                      type="number"
+                      className="swp-val-input"
+                      style={{ width: '36px' }}
+                      value={stepup}
+                      min={0}
+                      max={15}
+                      step={1}
+                      onChange={(e) => setStepup(e.target.value === '' ? '' : Number(e.target.value))}
+                      onBlur={() => setStepup((v) => Math.min(15, Math.max(0, Number(v) || 0)))}
+                      aria-label="Annual step-up percentage"
+                    />%
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -438,7 +516,24 @@ export default function SwpCalculatorClient() {
                   <div className="delay-controls">
                     <div className="swp-input-header">
                       <label>Delay Duration</label>
-                      <span className="swp-val-pill">{(delayMonths / 12).toFixed(1)} Years</span>
+                      <span className="swp-val-pill">
+                        <input
+                          type="number"
+                          className="swp-val-input"
+                          style={{ width: '40px' }}
+                          value={Math.round((delayMonths / 12) * 10) / 10}
+                          min={0.5}
+                          max={10}
+                          step={0.5}
+                          onChange={(e) =>
+                            setDelayMonths(e.target.value === '' ? '' : Math.round(Number(e.target.value) * 12))
+                          }
+                          onBlur={() =>
+                            setDelayMonths((v) => Math.min(120, Math.max(6, Number(v) || 6)))
+                          }
+                          aria-label="Delay duration in years"
+                        /> Years
+                      </span>
                     </div>
                     <input
                       type="range"
@@ -852,6 +947,29 @@ export default function SwpCalculatorClient() {
           padding: 3px 8px;
           border-radius: 6px;
           border: 1px solid var(--border);
+          display: inline-flex;
+          align-items: center;
+          gap: 2px;
+        }
+        .swp-val-input {
+          border: none;
+          background: transparent;
+          outline: none;
+          font-family: inherit;
+          font-size: inherit;
+          font-weight: inherit;
+          color: inherit;
+          text-align: right;
+          padding: 0;
+          -moz-appearance: textfield;
+        }
+        .swp-val-input::-webkit-outer-spin-button,
+        .swp-val-input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        .swp-val-input:focus {
+          color: var(--g1);
         }
         .swp-slider {
           width: 100%;
