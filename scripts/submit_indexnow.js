@@ -39,7 +39,9 @@ try {
 } catch (_) {}
 
 const SITE = 'https://mfcalc.getabundance.in';
-const INDEXNOW_KEY = process.env.BING_WEBMASTER_API_KEY || 'a3e39a7bf9d8469a815ccdeb6f167d48';
+// 63d50a3361c1f2289eeb84fb2104b366 is the verified IndexNow key for mfcalc.getabundance.in
+// (distinct from BING_WEBMASTER_API_KEY which powers the Bing Webmaster Tools REST API)
+const INDEXNOW_KEY = process.env.INDEXNOW_KEY || '63d50a3361c1f2289eeb84fb2104b366';
 const ENDPOINTS = [
   'https://api.indexnow.org/indexnow',
   'https://www.bing.com/indexnow',
@@ -74,15 +76,7 @@ function chunk(arr, size) {
 }
 
 async function resolveActiveKey() {
-  const preferred = process.env.BING_WEBMASTER_API_KEY || 'a3e39a7bf9d8469a815ccdeb6f167d48';
-  try {
-    const res = await fetch(`${SITE}/${preferred}.txt`, { signal: AbortSignal.timeout(5000) });
-    if (res.ok) {
-      const text = (await res.text()).trim();
-      if (text === preferred) return preferred;
-    }
-  } catch (_) {}
-  return '63d50a3361c1f2289eeb84fb2104b366';
+  return INDEXNOW_KEY;
 }
 
 async function submitBatchToEndpoint(endpoint, urls, key) {

@@ -1,12 +1,12 @@
 {
-  "updatedAt": "2026-10-16T16:54:12.573Z",
+  "updatedAt": "2026-10-18T06:02:47.432Z",
   "siteUrl": "https://mfcalc.getabundance.in/",
   "crawl": {
-    "date": "2026-10-13",
-    "crawledPages": 138,
-    "inIndex": 1145,
-    "code2xx": 1179,
-    "code4xx": 1,
+    "date": "2026-10-14",
+    "crawledPages": 104,
+    "inIndex": 1143,
+    "code2xx": 1187,
+    "code4xx": 0,
     "code5xx": 0,
     "blockedByRobotsTxt": 2,
     "dnsFailures": 0,
@@ -14,37 +14,37 @@
     "crawlErrors": 1
   },
   "totals": {
-    "impressions": 344,
+    "impressions": 380,
     "clicks": 5
   },
   "topQueries": [
     {
       "query": "sif nav amfi",
-      "impressions": 114,
+      "impressions": 127,
       "clicks": 1,
       "avgPosition": 8
     },
     {
       "query": "amfi sif nav",
-      "impressions": 89,
+      "impressions": 101,
       "clicks": 0,
       "avgPosition": 10
     },
     {
       "query": "sif amfi nav",
-      "impressions": 17,
+      "impressions": 20,
       "clicks": 0,
       "avgPosition": 9
     },
     {
       "query": "sif performance tracker",
-      "impressions": 16,
+      "impressions": 17,
       "clicks": 0,
       "avgPosition": 8
     },
     {
       "query": "sif screener",
-      "impressions": 10,
+      "impressions": 12,
       "clicks": 0,
       "avgPosition": 4
     },
@@ -61,16 +61,22 @@
       "avgPosition": 5
     },
     {
-      "query": "active asset allocator sifs list",
-      "impressions": 4,
+      "query": "sebi sif nav",
+      "impressions": 5,
       "clicks": 0,
-      "avgPosition": 4
+      "avgPosition": 5
     },
     {
       "query": "sif india list 2026 titanium qsif isif magnum",
       "impressions": 4,
       "clicks": 0,
       "avgPosition": 5
+    },
+    {
+      "query": "active asset allocator sifs list",
+      "impressions": 4,
+      "clicks": 0,
+      "avgPosition": 4
     },
     {
       "query": "sif performance in india",
@@ -101,12 +107,6 @@
       "impressions": 3,
       "clicks": 0,
       "avgPosition": 10
-    },
-    {
-      "query": "sifinixv ssecisagtmlma",
-      "impressions": 2,
-      "clicks": 0,
-      "avgPosition": 9
     }
   ]
 }
