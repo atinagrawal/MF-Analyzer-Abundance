@@ -5,7 +5,13 @@
 Following up on the Carnelian MF direct-invest-link work (`lib/nfoInvestLinks.js`,
 `scripts/carnelian-invest-link.mjs`, `scripts/sync_invest_links.js`): the user asked
 whether any other AMC provides a similar self-service "direct invest" link for MFDs.
-This documents what was found, verified live, and *not yet automated*.
+This documents what was found and verified live.
+
+**Update (same day):** now automated -- `scripts/lib/camsLinkGenerator.js`
+(Puppeteer) + a `hdfc` provider in `scripts/sync_invest_links.js`, scheduled
+daily in `.github/workflows/invest-links-sync.yml`. See "Automating it:
+what it took" below for what the earlier "not yet automated" section
+originally got wrong before it worked.
 
 ## What's out there (surveyed, not exhaustive)
 
@@ -117,12 +123,58 @@ behaves. A fund generated this way surfaces automatically on the MF screener
 once wired in -- no code change needed there, `lib/screenerData.js` already
 attaches `investLink` to every row by ISIN.
 
-## Next step, if wanted
+## Automating it: what it took
 
-Decide Puppeteer-in-CI vs. raw-postback-scripting for a `cams` entry in
-`scripts/sync_invest_links.js`'s `PROVIDERS` array (same shape as the
-existing `carnelian` provider, same "every scheme, not just NFOs" scope),
-*and* find `amc=` ids for other CAMS-serviced AMCs (Axis, ICICI Prudential,
-Kotak Mahindra, Motilal Oswal, quant, SBI, Zerodha, Jio BlackRock among
-currently-open NFOs -- RTA not yet confirmed for any of these) before
-building it, so the engineering effort covers more than just HDFC.
+Went with Puppeteer, not raw-postback-scripting -- confirmed live, selecting
+a scheme resets the ARN/EUIN/sub-broker fields, so each scheme genuinely
+needs its own full "search ARN -> fill broker details -> Generate" round
+trip in that order; replaying real page interactions was far more tractable
+than reverse-engineering the ASP.NET UpdatePanel wire format for that.
+`scripts/lib/camsLinkGenerator.js` is the result; `scripts/sync_invest_links.js`'s
+`fetchHdfcViaCams()` wraps it and resolves each result's ISIN against
+`mf_screener` afterward (CAMS never exposes ISIN anywhere -- the scheme
+`<select>`'s own values are internal CAMS codes like `ZEQU`).
+
+Three non-obvious things broke the first pass, all confirmed by direct
+inspection rather than guessed:
+- **Custom-styled radio inputs aren't Puppeteer-clickable.** `page.click()`
+  threw "Node is either not clickable" on `#rdoNONNFO`/`#rbbrok` -- this
+  page hides them behind their `<label>`. Fixed by calling `.click()`
+  programmatically via `page.evaluate` instead (bypasses Puppeteer's
+  visibility check, which is fine for a genuinely interactive control that's
+  just styled unconventionally).
+- **A disabled field's value is never submitted.** The broker-search-by-Name
+  flow's `#txtbrok` starts `disabled`; a synthetic `.click()` on `#rbbrok`
+  fired its `onclick` but didn't reliably run the page's own
+  `brkcheckedChanged()` (the function that un-disables it) through that
+  path -- so the typed search name was silently dropped from the postback,
+  and the search returned nothing. Fixed by calling `brkcheckedChanged()`
+  directly after setting `.checked = true`.
+- **Postback timing is genuinely inconsistent, not flaky in a fixable way.**
+  Fixed `sleep()`s after each postback were the real source of intermittent
+  failures, not the click/fill steps themselves -- replaced with
+  `page.waitForFunction` polling for the actual expected DOM state (grid
+  populated, ARN field containing the selected code, etc.), plus a 3-attempt
+  retry per scheme. Even with that, CAMS's response time under automation
+  varies enough that a single sync run won't always succeed on every scheme
+  the first time -- the per-scheme reuse check (by base scheme name, checked
+  *before* touching the scheme dropdown at all) means a scheme that fails
+  this run just gets picked up on the next one, without re-doing any
+  already-succeeded work.
+
+Verified live end-to-end multiple times, including a real production R2
+write and the MF screener actually showing the "Invest" badge + drawer CTA
+for HDFC Short Term Fund (ISIN INF179K01CU6) -- not just a generated link,
+the whole pipeline through to the UI.
+
+## Extending to other CAMS AMCs
+
+Same tool, different `?amc=<id>` page per fund house -- add an entry to
+`scripts/lib/camsLinkGenerator.js`'s `CAMS_AMCS` map and a matching
+`fetch...ViaCams` provider in `scripts/sync_invest_links.js` (near-identical
+to `fetchHdfcViaCams()`, just a different `amcLikePattern` for the
+`mf_screener` ISIN lookup). `amc=` ids aren't yet confirmed for any other
+AMC -- worth checking Axis, ICICI Prudential, Kotak Mahindra, Motilal
+Oswal, quant, SBI, Zerodha, and Jio BlackRock (all have open NFOs as of
+this writing), since RTA isn't publicly obvious per AMC without checking
+each one's own distributor page the way HDFC's was found.

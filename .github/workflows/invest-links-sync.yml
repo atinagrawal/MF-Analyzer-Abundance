@@ -17,6 +17,12 @@ on:
 jobs:
   sync-invest-links:
     runs-on: ubuntu-latest
+    # The HDFC/CAMS provider (scripts/lib/camsLinkGenerator.js) drives a
+    # real headless browser through ~95 schemes, each its own ARN-search
+    # round trip -- comfortably over the other sync workflows' usual
+    # couple of minutes, but new/already-linked schemes are cheap (reused
+    # without touching the browser at all -- see that file's header).
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repository
@@ -28,7 +34,7 @@ jobs:
           node-version: 24
 
       - name: Install deps
-        run: npm install aws4fetch --no-save
+        run: npm install aws4fetch puppeteer --no-save
 
       - name: Run invest-link sync
         env:
@@ -36,6 +42,7 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: node scripts/sync_invest_links.js
 
       - name: Revalidate live site cache

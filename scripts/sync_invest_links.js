@@ -17,13 +17,14 @@
  * fallback for AMCs with no such API).
  *
  * Provider contract: each entry in PROVIDERS exposes
- *   fetch(existingByIsin) -> Promise<{ byIsin, bySchemeName }>
- * where byIsin/bySchemeName are plain { key: url } maps. `existingByIsin`
- * (this AMC's own byIsin map from the PREVIOUS sync) lets a provider reuse
- * an already-generated link for a scheme it's seen before instead of
- * calling the AMC's "create link" endpoint again on every run -- see
- * fetchCarnelianLinks()'s own comment for why that matters here
- * specifically.
+ *   fetch(existingByIsin, existingBySchemeName) -> Promise<{ byIsin, bySchemeName }>
+ * where byIsin/bySchemeName are plain { key: url } maps, and the two
+ * `existing*` args are this AMC's own maps from the PREVIOUS sync -- so a
+ * provider can reuse an already-generated link for a scheme it's seen
+ * before instead of calling the AMC's "create link" endpoint again on
+ * every run (see fetchCarnelianLinks()'s and fetchHdfcViaCams()'s own
+ * comments for why that matters, and which of the two existing-maps each
+ * one actually needs).
  *
  * Carnelian Mutual Fund (verified live, 2026-10): their "create ARN
  * transaction link" portal (partners.carnelianmf.com) is a plain
@@ -37,6 +38,20 @@
  * scripts/carnelian-invest-link.mjs for the original one-off CLI version
  * of this same logic (kept for ad hoc manual lookups); this file is the
  * scheduled, bulk, cache-writing version of it.
+ *
+ * HDFC Mutual Fund, via CAMS (verified live, 2026-10): CAMS (the RTA) runs
+ * a shared "AMCLinkGenerate" tool at mycams.camsonline.com, one `?amc=<id>`
+ * page per AMC they service -- see
+ * docs/superpowers/specs/2026-10-18-cams-invest-link-feasibility.md for how
+ * this was found. Unlike Carnelian, it's classic ASP.NET WebForms with AJAX
+ * UpdatePanel postbacks and no embedded ISIN anywhere, so
+ * scripts/lib/camsLinkGenerator.js drives it with a real (Puppeteer)
+ * browser and this file resolves each generated scheme's ISIN afterward
+ * via an mf_screener name lookup (see fetchHdfcViaCams()). Needs
+ * POSTGRES_URL in the environment for that lookup, and `puppeteer`
+ * installed (not a committed dependency -- see
+ * .github/workflows/invest-links-sync.yml, installed the same ad hoc way
+ * aws4fetch is for every sync workflow in this repo).
  *
  * Usage:
  *   node scripts/sync_invest_links.js [--dry-run]
@@ -68,7 +83,7 @@ function normaliseSchemeName(name) {
 // class, so there's no other variant a stripped name could collide with.
 function stripShareClassSuffix(name) {
   return (name || '')
-    .replace(/\s*-?\s*regular\s*-?\s*plan\s*-?\s*growth(\s*option)?\s*$/i, '')
+    .replace(/\s*-?\s*regular\s*-?\s*(plan)?\s*-?\s*growth(\s*option)?\s*$/i, '')
     .trim();
 }
 
@@ -221,6 +236,71 @@ async function fetchCarnelianLinks(existingByIsin) {
   return { byIsin, bySchemeName };
 }
 
+// Resolves a CAMS-generated scheme's real ISIN by name-matching against
+// mf_screener (lib/screenerData.js's own data source) -- CAMS's tool never
+// exposes ISIN anywhere (confirmed live: the scheme <select>'s own
+// `value`s are internal CAMS codes like "ZEQU", not ISINs), but mf_screener
+// already has every live fund's ISIN+name+AMC from AMFI's NAVAll feed.
+// mf_screener's own `name` is ALREADY a cleaned, canonical, one-row-per-fund
+// display name (confirmed live: "HDFC Short Term Fund", no "Regular"/
+// "Growth" suffix at all -- scripts/build-screener.mjs's own dedup, not
+// AMFI's raw plan-qualified naming) -- the earlier version of this query
+// required "regular"+"growth" in the name and matched nothing. Exact match
+// first (avoids e.g. "HDFC Flexi Cap Fund" loosely matching "HDFC Flexi
+// Cap Fund - Series II" if that ever exists), falling back to substring.
+async function resolveIsinForScheme(pool, amcLikePattern, baseName) {
+  if (!baseName) return null;
+  try {
+    const exact = await pool.query(
+      `SELECT isin FROM mf_screener WHERE amc ILIKE $1 AND name ILIKE $2 AND isin IS NOT NULL LIMIT 1`,
+      [amcLikePattern, baseName]
+    );
+    if (exact.rows[0]?.isin) return exact.rows[0].isin;
+
+    const fuzzy = await pool.query(
+      `SELECT isin FROM mf_screener WHERE amc ILIKE $1 AND name ILIKE $2 AND isin IS NOT NULL ORDER BY length(name) ASC LIMIT 1`,
+      [amcLikePattern, `%${baseName}%`]
+    );
+    return fuzzy.rows[0]?.isin || null;
+  } catch (e) {
+    console.warn(`[sync_invest_links] cams: ISIN lookup failed for "${baseName}": ${e.message}`);
+    return null;
+  }
+}
+
+// HDFC via CAMS's shared AMCLinkGenerate tool (see this file's header).
+// Unlike fetchCarnelianLinks(), the heavy lifting (browser automation
+// against an ASP.NET WebForms app) lives in scripts/lib/camsLinkGenerator.js
+// -- this function's own job is just: run it, then resolve each result's
+// ISIN so byIsin (what the MF screener actually reads) gets populated too,
+// not just bySchemeName.
+async function fetchHdfcViaCams(existingByIsin, existingBySchemeName) {
+  const puppeteer = require('puppeteer');
+  const { fetchCamsLinksForAmc } = require('./lib/camsLinkGenerator');
+  const pool = (await import('../lib/db.js')).default;
+
+  const limit = process.env.CAMS_SCHEME_LIMIT ? Number(process.env.CAMS_SCHEME_LIMIT) : undefined;
+  const { bySchemeName: rawBySchemeName } = await fetchCamsLinksForAmc('hdfc', existingBySchemeName, puppeteer, { limit });
+
+  const byIsin = {};
+  const bySchemeName = {};
+
+  for (const [fullName, link] of Object.entries(rawBySchemeName)) {
+    bySchemeName[fullName] = link;
+    const baseName = stripShareClassSuffix(fullName);
+    if (baseName) bySchemeName[normaliseSchemeName(baseName)] = link;
+
+    const isin = await resolveIsinForScheme(pool, '%hdfc%', baseName || fullName);
+    if (isin) {
+      byIsin[isin] = link;
+    } else {
+      console.warn(`[sync_invest_links] cams: no mf_screener ISIN match for "${fullName}" -- link saved under scheme name only.`);
+    }
+  }
+
+  return { byIsin, bySchemeName };
+}
+
 // Providers are matched to the rest of this app by their AMC name --
 // matchFragments is currently unused by this script itself (each
 // provider's own fetch() already knows its own fund universe), but is
@@ -229,6 +309,7 @@ async function fetchCarnelianLinks(existingByIsin) {
 // file's network code just to find out.
 const PROVIDERS = [
   { key: 'carnelian', displayName: 'Carnelian Mutual Fund', matchFragments: ['carnelian'], fetch: fetchCarnelianLinks },
+  { key: 'hdfc', displayName: 'HDFC Mutual Fund', matchFragments: ['hdfc'], fetch: fetchHdfcViaCams },
 ];
 
 function selfTest() {
@@ -277,7 +358,8 @@ async function run() {
   for (const provider of PROVIDERS) {
     try {
       const existingByIsin = existing?.amcs?.[provider.key]?.byIsin || {};
-      const { byIsin, bySchemeName } = await provider.fetch(existingByIsin);
+      const existingBySchemeName = existing?.amcs?.[provider.key]?.bySchemeName || {};
+      const { byIsin, bySchemeName } = await provider.fetch(existingByIsin, existingBySchemeName);
       amcs[provider.key] = {
         displayName: provider.displayName,
         fetchedAt: new Date().toISOString(),
