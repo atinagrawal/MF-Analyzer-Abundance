@@ -57,6 +57,21 @@ function normaliseSchemeName(name) {
   return (name || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+// AMFI's NFO feed (lib/nfoData.js, via scripts/sync_amfi_nfo.js) carries
+// only the BASE scheme name ("Carnelian Small Cap Fund") -- an AMC's own
+// portal lists the specific share-class variant ("Carnelian Small Cap Fund
+// Regular Plan Growth"). Without stripping that suffix, an NFO page's
+// bySchemeName lookup against the full portal name always misses (verified
+// live: it silently fell through to the old hand-maintained fallback
+// instead of the freshly-synced link). Only strips a Regular-Growth-shaped
+// suffix -- this script already filters every provider to that one share
+// class, so there's no other variant a stripped name could collide with.
+function stripShareClassSuffix(name) {
+  return (name || '')
+    .replace(/\s*-?\s*regular\s*-?\s*plan\s*-?\s*growth(\s*option)?\s*$/i, '')
+    .trim();
+}
+
 // Pure, self-test-able: decides which funds already have a reusable link
 // (present in this AMC's previous byIsin map) vs which genuinely need a
 // fresh "create link" call. Kept separate from fetchCarnelianLinks()'s
@@ -177,16 +192,25 @@ async function fetchCarnelianLinks(existingByIsin) {
   const byIsin = {};
   const bySchemeName = {};
 
+  // Indexes under both the portal's full share-class name AND the bare
+  // base name (AMFI's NFO feed shape) -- see stripShareClassSuffix()'s
+  // comment for why the base-name key is the one that actually matters.
+  function indexSchemeName(rawName, link) {
+    bySchemeName[normaliseSchemeName(rawName)] = link;
+    const base = stripShareClassSuffix(rawName);
+    if (base) bySchemeName[normaliseSchemeName(base)] = link;
+  }
+
   for (const f of reuse) {
     byIsin[f.isin] = existingByIsin[f.isin];
-    bySchemeName[normaliseSchemeName(f.scheme_name)] = existingByIsin[f.isin];
+    indexSchemeName(f.scheme_name, existingByIsin[f.isin]);
   }
 
   for (const f of toCreate) {
     try {
       const link = await carnelianCreateLink({ cookies, version, isin: f.isin });
       byIsin[f.isin] = link;
-      bySchemeName[normaliseSchemeName(f.scheme_name)] = link;
+      indexSchemeName(f.scheme_name, link);
       console.log(`[sync_invest_links] carnelian: created link for ${f.scheme_name} (${f.isin})`);
     } catch (e) {
       console.warn(`[sync_invest_links] carnelian: ${e.message}`);
@@ -212,6 +236,15 @@ function selfTest() {
 
   assert.strictEqual(normaliseSchemeName('  Carnelian  Small Cap   Fund '), 'carnelian small cap fund');
   assert.strictEqual(normaliseSchemeName(''), '');
+
+  // The exact case that broke live: AMFI's NFO feed carries only the base
+  // name, the AMC portal carries the full share-class name.
+  assert.strictEqual(stripShareClassSuffix('Carnelian Small Cap Fund Regular Plan Growth'), 'Carnelian Small Cap Fund');
+  assert.strictEqual(stripShareClassSuffix('Carnelian Small Cap Fund - Regular Plan - Growth'), 'Carnelian Small Cap Fund');
+  assert.strictEqual(stripShareClassSuffix('Carnelian Small Cap Fund Regular Plan Growth Option'), 'Carnelian Small Cap Fund');
+  // No matching suffix -- returned unchanged, not mangled.
+  assert.strictEqual(stripShareClassSuffix('Carnelian Liquid Fund'), 'Carnelian Liquid Fund');
+  assert.strictEqual(stripShareClassSuffix(''), '');
 
   const funds = [{ isin: 'A1' }, { isin: 'A2' }, { isin: 'A3' }];
   const { reuse, toCreate } = partitionFundsNeedingLinks(funds, { A1: 'https://x/1', A3: 'https://x/3' });
@@ -270,6 +303,7 @@ async function run() {
 
 module.exports = {
   normaliseSchemeName,
+  stripShareClassSuffix,
   partitionFundsNeedingLinks,
   fetchCarnelianLinks,
   PROVIDERS,
