@@ -43,12 +43,18 @@ function isFresh(ts, ttlMs) {
 const seriesCache = new Map(); // symbol -> { data, ts }
 const inflight = new Map();
 
+// Returns the blob regardless of freshness -- the caller decides whether to
+// use it immediately (fresh) or only as a fallback if the live fetch fails
+// (stale). Collapsing "stale" into "missing" here was the bug: BSE's index
+// data genuinely doesn't change over a weekend (markets closed), but the
+// sync workflow only runs Mon-Fri (see .github/workflows/
+// bse-index-cache-sync.yml), so by Sunday the last-Friday blob is >24h old
+// and was being discarded entirely -- falling through to the live BSE
+// fetch, which 403s from Vercel's IPs (see this file's own header comment)
+// with no fallback, breaking every benchmark, every weekend.
 async function blobGet(slugName) {
     try {
-        const payload = await r2Get(`${CACHE_PRE}${slugName}.json`);
-        if (!payload) return null;
-        if (!isFresh(payload.ts, SERIES_TTL_MS)) return null;
-        return payload;
+        return await r2Get(`${CACHE_PRE}${slugName}.json`);
     } catch {
         return null;
     }
@@ -93,10 +99,14 @@ export default async function handler(req, res) {
             return res.status(200).json({ index: matchedName, source: 'bse-index/memory', count: mem.data.length, data: mem.data });
         }
 
-        const blob = await blobGet(slugName);
-        if (blob?.data?.length) {
-            seriesCache.set(symbol, { data: blob.data, ts: blob.ts });
-            return res.status(200).json({ index: matchedName, source: 'bse-index/blob', count: blob.data.length, data: blob.data });
+        // May be fresh (same-day sync) or stale (last sync was before the
+        // weekend) -- either way it's kept as `staleBlob` so a failed live
+        // fetch below still has real data to fall back to, instead of
+        // erroring just because BSE's Mon-Fri sync schedule left it >24h old.
+        const staleBlob = await blobGet(slugName);
+        if (staleBlob?.data?.length && isFresh(staleBlob.ts, SERIES_TTL_MS)) {
+            seriesCache.set(symbol, { data: staleBlob.data, ts: staleBlob.ts });
+            return res.status(200).json({ index: matchedName, source: 'bse-index/blob', count: staleBlob.data.length, data: staleBlob.data });
         }
 
         if (inflight.has(symbol)) {
@@ -115,7 +125,17 @@ export default async function handler(req, res) {
         inflight.set(symbol, fetchPromise);
         fetchPromise.catch(() => inflight.delete(symbol));
 
-        const data = await fetchPromise;
+        let data;
+        try {
+            data = await fetchPromise;
+        } catch (liveErr) {
+            if (staleBlob?.data?.length) {
+                console.warn(`[nifty-tri] Live fetch failed for ${symbol} (${liveErr.message}) -- serving stale cache from ${new Date(staleBlob.ts).toISOString()}`);
+                seriesCache.set(symbol, { data: staleBlob.data, ts: staleBlob.ts });
+                return res.status(200).json({ index: matchedName, source: 'bse-index/stale-blob', count: staleBlob.data.length, data: staleBlob.data });
+            }
+            throw liveErr;
+        }
         if (!data.length) {
             return res.status(404).json({ error: `No historical data returned for ${matchedName}` });
         }
