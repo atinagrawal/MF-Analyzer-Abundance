@@ -29,6 +29,26 @@ const CAMS_AMCS = {
     displayName: 'HDFC Mutual Fund',
     amcParam: 'LLU2rKXO6MxsgDl5CC1fAg%3D%3D',
   },
+  tata: {
+    displayName: 'Tata Mutual Fund',
+    amcParam: 'QEAxF7WU045lbv4axicBOQ%3D%3D',
+  },
+  hsbc: {
+    displayName: 'HSBC Mutual Fund',
+    amcParam: 'kI1cDzVhVxmAs5Sw9ULj0A%3D%3D',
+  },
+  dsp: {
+    displayName: 'DSP Mutual Fund',
+    amcParam: 'LMMRfFuittKgBY611m03LQ%3D%3D',
+  },
+  union: {
+    displayName: 'Union Mutual Fund',
+    amcParam: '1Mhr4uMyHuGMnHZyPHOeBw%3D%3D',
+  },
+  shriram: {
+    displayName: 'Shriram Mutual Fund',
+    amcParam: 'sAmnlDc7U9xHX7IZpu0khg%3D%3D',
+  },
 };
 
 // Public AMFI-issued distributor identifiers (ARN/EUIN), not secrets --
@@ -40,11 +60,24 @@ const EUIN = process.env.CAMS_EUIN || 'E468841';
 const SUB_BROKER_CODE = process.env.CAMS_SUB_BROKER_CODE || '22734';
 const SUB_BROKER_ARN = process.env.CAMS_SUB_BROKER_ARN || '251838';
 
-// CAMS's own plan/option text uses " - " as a separator, not just
-// whitespace (confirmed live: "HDFC Flexi Cap Fund - Regular Plan -
-// Growth") -- the original pattern assumed space-only separators (matching
-// AMFI's own naming convention) and silently matched nothing.
+// CAMS's own plan/option text varies across AMCs:
+// - Standard (HDFC, Tata, DSP): "HDFC Flexi Cap Fund - Regular Plan - Growth"
+// - Inverted (Union ELSS): "Union ELSS Tax Saver Fund Growth - Regular Plan"
+// - Unadorned Growth (Union Liquid): "Union Liquid Fund Growth" (where other plans are IDCW)
+// findRegularGrowthOption handles all these variants in priority order.
 const PLAN_OPTION_PATTERN = /regular\s*-?\s*(plan)?\s*-?\s*growth(\s*option)?\s*$/i;
+
+function findRegularGrowthOption(options) {
+  // Pass 1: explicit regular (or reg) + growth in either order, excluding direct / idcw
+  const p1 = options.find((o) => /(?=.*growth)(?=.*\breg(ular)?\b)(?!.*direct)(?!.*idcw)/i.test(o.text));
+  if (p1) return p1;
+  // Pass 2: standard regex pattern match
+  const p2 = options.find((o) => PLAN_OPTION_PATTERN.test(o.text));
+  if (p2) return p2;
+  // Pass 3: growth option with no direct / idcw / institutional / bonus / unclaimed
+  const p3 = options.find((o) => /(?=.*growth)(?!.*(direct|idcw|inst|bonus|unclaimed))/i.test(o.text));
+  return p3 || null;
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -269,7 +302,7 @@ async function fetchCamsLinksForAmc(amcKey, existingBySchemeName, puppeteer, { l
         try {
           await selectOption(page, 'ddsubfundcode', scheme.value, 'ddlschemetype');
           const planOptions = await waitForPlanOptions(page);
-          const regularGrowth = planOptions.find((o) => PLAN_OPTION_PATTERN.test(o.text));
+          const regularGrowth = findRegularGrowthOption(planOptions);
           if (!regularGrowth) {
             console.log(`[cams:${amcKey}] ${scheme.text}: no Regular-Growth plan option, skipping.`);
             break;
@@ -313,4 +346,4 @@ async function fetchCamsLinksForAmc(amcKey, existingBySchemeName, puppeteer, { l
   return { bySchemeName };
 }
 
-module.exports = { CAMS_AMCS, fetchCamsLinksForAmc, PLAN_OPTION_PATTERN };
+module.exports = { CAMS_AMCS, fetchCamsLinksForAmc, PLAN_OPTION_PATTERN, findRegularGrowthOption };

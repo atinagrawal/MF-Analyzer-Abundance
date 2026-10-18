@@ -83,7 +83,8 @@ function normaliseSchemeName(name) {
 // class, so there's no other variant a stripped name could collide with.
 function stripShareClassSuffix(name) {
   return (name || '')
-    .replace(/\s*-?\s*regular\s*-?\s*(plan)?\s*-?\s*growth(\s*option)?\s*$/i, '')
+    .replace(/\s*-?\s*(regular\s*-?\s*(plan)?\s*-?\s*growth(\s*option)?|growth\s*-?\s*regular\s*(plan)?|growth(\s*option)?)\s*$/i, '')
+    .replace(/\s*-\s*$/, '')
     .trim();
 }
 
@@ -236,7 +237,7 @@ async function fetchCarnelianLinks(existingByIsin) {
   return { byIsin, bySchemeName };
 }
 
-// Resolves a CAMS-generated scheme's real ISIN by name-matching against
+// Resolves CAMS-generated schemes' real ISINs by name-matching against
 // mf_screener (lib/screenerData.js's own data source) -- CAMS's tool never
 // exposes ISIN anywhere (confirmed live: the scheme <select>'s own
 // `value`s are internal CAMS codes like "ZEQU", not ISINs), but mf_screener
@@ -244,57 +245,279 @@ async function fetchCarnelianLinks(existingByIsin) {
 // mf_screener's own `name` is ALREADY a cleaned, canonical, one-row-per-fund
 // display name (confirmed live: "HDFC Short Term Fund", no "Regular"/
 // "Growth" suffix at all -- scripts/build-screener.mjs's own dedup, not
-// AMFI's raw plan-qualified naming) -- the earlier version of this query
-// required "regular"+"growth" in the name and matched nothing. Exact match
-// first (avoids e.g. "HDFC Flexi Cap Fund" loosely matching "HDFC Flexi
-// Cap Fund - Series II" if that ever exists), falling back to substring.
-async function resolveIsinForScheme(pool, amcLikePattern, baseName) {
-  if (!baseName) return null;
+// AMFI's raw plan-qualified naming).
+//
+// ONE query per AMC per run, not one (or two) per scheme: the original
+// version queried mf_screener inside the per-scheme loop -- for ~90 HDFC
+// schemes alone that's 100-180 round trips per run, repeated across every
+// test/debug/production run in a single session. That's almost certainly
+// what blew through this project's Prisma Postgres monthly operations
+// quota (confirmed live: usage paused mid-session). Fetching the whole
+// AMC's {isin, name} list once and matching in memory does the exact same
+// job for 1 query instead of ~150.
+async function fetchMfScreenerRowsForAmc(pool, amcLikePattern) {
   try {
-    const exact = await pool.query(
-      `SELECT isin FROM mf_screener WHERE amc ILIKE $1 AND name ILIKE $2 AND isin IS NOT NULL LIMIT 1`,
-      [amcLikePattern, baseName]
+    const { rows } = await pool.query(
+      `SELECT isin, name FROM mf_screener WHERE amc ILIKE $1 AND isin IS NOT NULL`,
+      [amcLikePattern]
     );
-    if (exact.rows[0]?.isin) return exact.rows[0].isin;
-
-    const fuzzy = await pool.query(
-      `SELECT isin FROM mf_screener WHERE amc ILIKE $1 AND name ILIKE $2 AND isin IS NOT NULL ORDER BY length(name) ASC LIMIT 1`,
-      [amcLikePattern, `%${baseName}%`]
-    );
-    return fuzzy.rows[0]?.isin || null;
+    return rows;
   } catch (e) {
-    console.warn(`[sync_invest_links] cams: ISIN lookup failed for "${baseName}": ${e.message}`);
-    return null;
+    console.warn(`[sync_invest_links] mf_screener row fetch failed for "${amcLikePattern}": ${e.message}`);
+    return [];
   }
 }
 
-// HDFC via CAMS's shared AMCLinkGenerate tool (see this file's header).
-// Unlike fetchCarnelianLinks(), the heavy lifting (browser automation
-// against an ASP.NET WebForms app) lives in scripts/lib/camsLinkGenerator.js
-// -- this function's own job is just: run it, then resolve each result's
-// ISIN so byIsin (what the MF screener actually reads) gets populated too,
-// not just bySchemeName.
-async function fetchHdfcViaCams(existingByIsin, existingBySchemeName) {
+// In-memory version of the old per-query lookup -- same exact-then-fuzzy
+// logic (exact avoids e.g. "HDFC Flexi Cap Fund" loosely matching "HDFC
+// Flexi Cap Fund - Series II" if that ever exists; fuzzy falls back to the
+// shortest containing name, i.e. the most specific real match), just
+// against the batch already fetched by fetchMfScreenerRowsForAmc().
+function resolveIsinFromRows(rows, baseName) {
+  if (!baseName) return null;
+  const target = baseName.trim().toLowerCase();
+  if (!target) return null;
+
+  const exact = rows.find((r) => r.name.trim().toLowerCase() === target);
+  if (exact) return exact.isin;
+
+  const fuzzy = rows
+    .filter((r) => r.name.toLowerCase().includes(target))
+    .sort((a, b) => a.name.length - b.name.length);
+  return fuzzy[0]?.isin || null;
+}
+
+// CAMS shared AMCLinkGenerate tool (see this file's header and scripts/lib/camsLinkGenerator.js).
+// Automates the ASP.NET WebForms flow via Puppeteer, then resolves each generated
+// scheme's ISIN via mf_screener name lookup.
+async function fetchCamsLinksGeneric(amcKey, amcLikePattern, existingByIsin, existingBySchemeName) {
   const puppeteer = require('puppeteer');
   const { fetchCamsLinksForAmc } = require('./lib/camsLinkGenerator');
   const pool = (await import('../lib/db.js')).default;
 
   const limit = process.env.CAMS_SCHEME_LIMIT ? Number(process.env.CAMS_SCHEME_LIMIT) : undefined;
-  const { bySchemeName: rawBySchemeName } = await fetchCamsLinksForAmc('hdfc', existingBySchemeName, puppeteer, { limit });
+  const { bySchemeName: rawBySchemeName } = await fetchCamsLinksForAmc(amcKey, existingBySchemeName, puppeteer, { limit });
 
   const byIsin = {};
   const bySchemeName = {};
+  const screenerRows = await fetchMfScreenerRowsForAmc(pool, amcLikePattern);
 
   for (const [fullName, link] of Object.entries(rawBySchemeName)) {
     bySchemeName[fullName] = link;
     const baseName = stripShareClassSuffix(fullName);
     if (baseName) bySchemeName[normaliseSchemeName(baseName)] = link;
 
-    const isin = await resolveIsinForScheme(pool, '%hdfc%', baseName || fullName);
+    const isin = resolveIsinFromRows(screenerRows, baseName || fullName);
     if (isin) {
       byIsin[isin] = link;
     } else {
-      console.warn(`[sync_invest_links] cams: no mf_screener ISIN match for "${fullName}" -- link saved under scheme name only.`);
+      console.warn(`[sync_invest_links] cams:${amcKey}: no mf_screener ISIN match for "${fullName}" -- link saved under scheme name only.`);
+    }
+  }
+
+  return { byIsin, bySchemeName };
+}
+
+async function fetchHdfcViaCams(existingByIsin, existingBySchemeName) {
+  return fetchCamsLinksGeneric('hdfc', '%hdfc%', existingByIsin, existingBySchemeName);
+}
+
+async function fetchTataViaCams(existingByIsin, existingBySchemeName) {
+  return fetchCamsLinksGeneric('tata', '%tata%', existingByIsin, existingBySchemeName);
+}
+
+async function fetchHsbcViaCams(existingByIsin, existingBySchemeName) {
+  return fetchCamsLinksGeneric('hsbc', '%hsbc%', existingByIsin, existingBySchemeName);
+}
+
+async function fetchDspViaCams(existingByIsin, existingBySchemeName) {
+  return fetchCamsLinksGeneric('dsp', '%dsp%', existingByIsin, existingBySchemeName);
+}
+
+async function fetchUnionViaCams(existingByIsin, existingBySchemeName) {
+  return fetchCamsLinksGeneric('union', '%union%', existingByIsin, existingBySchemeName);
+}
+
+async function fetchShriramViaCams(existingByIsin, existingBySchemeName) {
+  return fetchCamsLinksGeneric('shriram', '%shriram%', existingByIsin, existingBySchemeName);
+}
+
+// ─── PPFAS Mutual Fund ──────────────────────────────────────────────────
+
+const PPFAS_ARN = process.env.PPFAS_ARN || '0155';
+const PPFAS_EUIN = process.env.PPFAS_EUIN || 'E468841';
+
+async function fetchPpfasLinks(existingByIsin, existingBySchemeName) {
+  const pool = (await import('../lib/db.js')).default;
+  const link = `https://selfinvest.ppfas.com/investor/regular/ARN-${PPFAS_ARN}/${PPFAS_EUIN}`;
+
+  const res = await pool.query(
+    "SELECT isin, name FROM mf_screener WHERE (amc ILIKE '%parag%' OR amc ILIKE '%ppfas%') AND isin IS NOT NULL"
+  );
+
+  const byIsin = {};
+  const bySchemeName = {};
+
+  for (const f of res.rows) {
+    byIsin[f.isin] = link;
+    bySchemeName[normaliseSchemeName(f.name)] = link;
+    const base = stripShareClassSuffix(f.name);
+    if (base) bySchemeName[normaliseSchemeName(base)] = link;
+  }
+
+  console.log(`[sync_invest_links] ppfas: mapped ${res.rows.length} scheme(s) to ARN-${PPFAS_ARN}/${PPFAS_EUIN}.`);
+  return { byIsin, bySchemeName };
+}
+
+// ─── Motilal Oswal Mutual Fund ──────────────────────────────────────────
+
+const MOTILAL_ARN = process.env.MOTILAL_ARN || '0155';
+const MOTILAL_SUB_ARN = process.env.MOTILAL_SUB_ARN || '251838';
+const MOTILAL_SUB_BROKER_CODE = process.env.MOTILAL_SUB_BROKER_CODE || '22734';
+const MOTILAL_EUIN = process.env.MOTILAL_EUIN || 'E468841';
+
+async function fetchMotilalLinks(existingByIsin, existingBySchemeName) {
+  const pool = (await import('../lib/db.js')).default;
+
+  const SCHEME_API_URL = 'https://digital.motilaloswalmf.com/ncms/api/FundCategorisationMF/get-fund-details?isETF=false';
+  const CART_API_URL = 'https://digital.motilaloswalmf.com/oms/api/Cart/prelogin-add-to-cart/';
+  const DEEPLINK_API_URL = 'https://digital.motilaloswalmf.com/deeplinkapi/dit-purchase-link';
+
+  const res = await fetch(SCHEME_API_URL, {
+    headers: {
+      accept: 'application/json, text/plain, */*',
+      appid: '654971C7M684BA4A54M9C48CBBD237E0AA34',
+      'x-encrypted': 'N',
+      'X-API-Key': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiSSBhbSBDaGFuZHJhYSJ9.sFQoVHrvLf7noktxYkdhy8YPmSCwiOsQpoHCXI-gLu8',
+    },
+  });
+  if (!res.ok) throw new Error(`Motilal get-fund-details failed: HTTP ${res.status}`);
+
+  const data = await res.json();
+  const mfData = data?.response?.data?.MF || {};
+
+  const regularGrowthFunds = [];
+  for (const schCode of Object.keys(mfData)) {
+    const list = mfData[schCode];
+    if (!Array.isArray(list)) continue;
+    for (const item of list) {
+      const { schDetail, plan, option, amcPlancode } = item;
+      if (!schDetail || !plan || !option) continue;
+      if (schDetail.schname?.toUpperCase().includes('ETF')) continue;
+
+      for (const pKey of Object.keys(plan)) {
+        if (!/regular/i.test(plan[pKey])) continue;
+        for (const oKey of Object.keys(option)) {
+          if (!/growth/i.test(option[oKey])) continue;
+          const prodCode = `${schCode}${pKey}${oKey}`;
+          regularGrowthFunds.push({
+            schemeName: schDetail.schname,
+            schemeCode: schDetail.schcode,
+            schemePlanCode: amcPlancode?.[prodCode] || '',
+            schemePlanName: plan[pKey],
+            schemeOptionCode: oKey,
+            schemeOptionName: option[oKey],
+          });
+        }
+      }
+    }
+  }
+
+  const byIsin = {};
+  const bySchemeName = {};
+  const screenerRows = await fetchMfScreenerRowsForAmc(pool, '%motilal%');
+
+  function indexSchemeName(rawName, link) {
+    bySchemeName[normaliseSchemeName(rawName)] = link;
+    const base = stripShareClassSuffix(rawName);
+    if (base) bySchemeName[normaliseSchemeName(base)] = link;
+  }
+
+  for (const f of regularGrowthFunds) {
+    const baseName = stripShareClassSuffix(f.schemeName);
+    const isin = resolveIsinFromRows(screenerRows, baseName || f.schemeName);
+
+    // Reuse check: if already in existingByIsin or existingBySchemeName
+    const norm = normaliseSchemeName(baseName || f.schemeName);
+    if (isin && existingByIsin?.[isin]) {
+      byIsin[isin] = existingByIsin[isin];
+      indexSchemeName(f.schemeName, existingByIsin[isin]);
+      continue;
+    }
+    if (existingBySchemeName?.[norm]) {
+      if (isin) byIsin[isin] = existingBySchemeName[norm];
+      indexSchemeName(f.schemeName, existingBySchemeName[norm]);
+      continue;
+    }
+
+    try {
+      const payload = {
+        prelogin: true,
+        cartId: '',
+        totalAmount: '500',
+        utrParams: '',
+        campaign: '',
+        branchCode: 'WB99',
+        subBranchCode: 'AMCMO',
+        isAllFunds: false,
+        items: [
+          {
+            schemeName: f.schemeName,
+            schemeCode: f.schemeCode,
+            schemePlanCode: f.schemePlanCode,
+            schemePlanName: f.schemePlanName,
+            schemeOptionCode: f.schemeOptionCode,
+            schemeOptionName: f.schemeOptionName,
+            amount: '500',
+            transactionType: 1,
+            transactionSubType: 1,
+            brokerDetails: {
+              distributorCodeType: 'ARN',
+              distributorCode: MOTILAL_ARN,
+              subBrokerCode: MOTILAL_SUB_ARN,
+              empCode: MOTILAL_SUB_BROKER_CODE,
+              euinNo: MOTILAL_EUIN,
+            },
+          },
+        ],
+      };
+
+      const cartRes = await fetch(CART_API_URL, {
+        method: 'POST',
+        headers: {
+          'X-Encrypted': 'N',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      const cartData = await cartRes.json();
+      const cartId = cartData?.response?.cartId;
+      if (!cartId) {
+        console.warn(`[sync_invest_links] motilal: cart creation failed for "${f.schemeName}"`);
+        continue;
+      }
+
+      const longUrl = `https://invest.motilaloswalmf.com/mutualfund/login?returnURL=/sso&cartId=${cartId}&journeyType=POLP&quickLink=true`;
+      const dlRes = await fetch(DEEPLINK_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/plain, */*',
+          Origin: 'https://www.motilaloswalmf.com',
+          Referer: 'https://www.motilaloswalmf.com/quick-purchase',
+          DITProduct: 'MF',
+        },
+        body: JSON.stringify({ longUrl }),
+      });
+      const dlData = await dlRes.json();
+      const link = dlData?.shortUrl || longUrl;
+
+      if (isin) byIsin[isin] = link;
+      indexSchemeName(f.schemeName, link);
+      console.log(`[sync_invest_links] motilal: created link for ${f.schemeName} (${isin || 'no ISIN'})`);
+      await sleep(PACING_MS);
+    } catch (e) {
+      console.warn(`[sync_invest_links] motilal: ${f.schemeName}: ${e.message}`);
     }
   }
 
@@ -310,6 +533,13 @@ async function fetchHdfcViaCams(existingByIsin, existingBySchemeName) {
 const PROVIDERS = [
   { key: 'carnelian', displayName: 'Carnelian Mutual Fund', matchFragments: ['carnelian'], fetch: fetchCarnelianLinks },
   { key: 'hdfc', displayName: 'HDFC Mutual Fund', matchFragments: ['hdfc'], fetch: fetchHdfcViaCams },
+  { key: 'tata', displayName: 'Tata Mutual Fund', matchFragments: ['tata'], fetch: fetchTataViaCams },
+  { key: 'hsbc', displayName: 'HSBC Mutual Fund', matchFragments: ['hsbc'], fetch: fetchHsbcViaCams },
+  { key: 'dsp', displayName: 'DSP Mutual Fund', matchFragments: ['dsp'], fetch: fetchDspViaCams },
+  { key: 'union', displayName: 'Union Mutual Fund', matchFragments: ['union'], fetch: fetchUnionViaCams },
+  { key: 'shriram', displayName: 'Shriram Mutual Fund', matchFragments: ['shriram'], fetch: fetchShriramViaCams },
+  { key: 'ppfas', displayName: 'PPFAS Mutual Fund', matchFragments: ['ppfas', 'parag parikh'], fetch: fetchPpfasLinks },
+  { key: 'motilal', displayName: 'Motilal Oswal Mutual Fund', matchFragments: ['motilal'], fetch: fetchMotilalLinks },
 ];
 
 function selfTest() {
@@ -323,6 +553,8 @@ function selfTest() {
   assert.strictEqual(stripShareClassSuffix('Carnelian Small Cap Fund Regular Plan Growth'), 'Carnelian Small Cap Fund');
   assert.strictEqual(stripShareClassSuffix('Carnelian Small Cap Fund - Regular Plan - Growth'), 'Carnelian Small Cap Fund');
   assert.strictEqual(stripShareClassSuffix('Carnelian Small Cap Fund Regular Plan Growth Option'), 'Carnelian Small Cap Fund');
+  assert.strictEqual(stripShareClassSuffix('Union ELSS Tax Saver Fund Growth - Regular Plan'), 'Union ELSS Tax Saver Fund');
+  assert.strictEqual(stripShareClassSuffix('Union Liquid Fund Growth'), 'Union Liquid Fund');
   // No matching suffix -- returned unchanged, not mangled.
   assert.strictEqual(stripShareClassSuffix('Carnelian Liquid Fund'), 'Carnelian Liquid Fund');
   assert.strictEqual(stripShareClassSuffix(''), '');
