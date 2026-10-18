@@ -1,22 +1,35 @@
 import { getPageMeta } from '@/lib/metadata';
 import { getNfoData } from '@/lib/nfoData';
 import { getPromotableOpenNfos } from '@/lib/investLinksCache';
+import { getNfoPromoConfig } from '@/lib/nfoPromoConfig';
 import { getProviderLogo } from '@/lib/providerLogos';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import HomeScripts from './HomeScripts';
 import NfoPromoBanner from '@/components/NfoPromoBanner';
 
-// Picks the single most urgent open NFO that has a resolvable direct-invest
-// link (soonest-closing first) -- see lib/investLinksCache.js for how that
-// link is resolved (automated per-AMC sync, falling back to the hand
-// maintained map). Returns null when nothing currently qualifies, which is
-// the common case and simply renders no banner.
+// Admin-controlled (app/admin -> NFO Promo tab, app/api/admin/nfo-promo) --
+// see lib/nfoPromoConfig.js for the config shape. 'manual' features exactly
+// the admin-picked slug; 'off' always returns null; 'auto' (and the
+// fallback when the admin's pick is no longer open/linked) picks the
+// soonest-closing open NFO that has a resolvable direct-invest link (see
+// lib/investLinksCache.js for how that link is resolved).
 async function getFeaturedNfoPromo() {
+  const config = await getNfoPromoConfig();
+  if (config.mode === 'off') return null;
+
   const data = await getNfoData();
   const open = [...(data.mf || []), ...(data.sif || [])].filter((e) => e.status === 'open');
   const promotable = await getPromotableOpenNfos(open);
   if (promotable.length === 0) return null;
+
+  if (config.mode === 'manual' && config.slug) {
+    const picked = promotable.find((e) => e.slug === config.slug);
+    if (picked) return { ...picked, logo: getProviderLogo(picked.type, picked.amcName) };
+    // Admin's pick isn't open / lost its invest link -- fall through to auto
+    // rather than showing nothing or a stale/broken entry.
+  }
+
   promotable.sort((a, b) => (a.closeDate || '9999').localeCompare(b.closeDate || '9999'));
   const picked = promotable[0];
   return { ...picked, logo: getProviderLogo(picked.type, picked.amcName) };

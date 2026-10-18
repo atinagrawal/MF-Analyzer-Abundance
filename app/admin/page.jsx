@@ -23,6 +23,7 @@ import Footer from '@/components/Footer';
 import UsersTab from './UsersTab';
 import AddClientTab from './AddClientTab';
 import ManualHoldingsTab from './ManualHoldingsTab';
+import NfoPromoTab from './NfoPromoTab';
 import './admin.css';
 
 const ALLOWED_ROLES = ['admin', 'distributor'];
@@ -57,6 +58,7 @@ export default function AdminPage() {
     { key: 'users',     label: '👥 Users' },
     { key: 'addclient', label: '➕ Add Client' },
     ...(isAdmin ? [{ key: 'holdings', label: '📋 Manual Holdings' }] : []),
+    ...(isAdmin ? [{ key: 'nfopromo', label: '🎯 NFO Promo' }] : []),
   ];
 
   return (
@@ -87,6 +89,7 @@ export default function AdminPage() {
         {tab === 'users'     && <UsersTab session={session} />}
         {tab === 'addclient' && <AddClientTab />}
         {tab === 'holdings'  && isAdmin && <ManualHoldingsTab />}
+        {tab === 'nfopromo'  && isAdmin && <NfoPromoTab />}
       </div>
       <Footer />
     </>
