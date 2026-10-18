@@ -36,7 +36,7 @@ try {
 } catch (_) {}
 
 const SITE_URL = 'https://mfcalc.getabundance.in/';
-const API_KEY = process.env.BING_WEBMASTER_API_KEY || 'a3e39a7bf9d8469a815ccdeb6f167d48';
+const API_KEY = process.env.BING_WEBMASTER_API_KEY;
 const BASE_API = 'https://ssl.bing.com/webmaster/api.svc/json';
 
 function parseDotNetDate(dateStr) {
