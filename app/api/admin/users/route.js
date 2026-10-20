@@ -63,9 +63,13 @@ export async function GET() {
 
 /**
  * PATCH /api/admin/users
- * Body: { userId, role?, plan?, trialDays?, distributorId? }
+ * Body: { userId, role?, plan?, trialDays?, distributorId?, name? }
  * Updates a user's role, plan (trialDays required and must be an integer
- * 1-30 when plan === 'trial'), and/or assigned distributor.
+ * 1-30 when plan === 'trial'), assigned distributor, and/or display name --
+ * the last one exists mainly to correct names entered wrong when a user
+ * was added manually (e.g. an admin typing a login password into the name
+ * field by mistake), since nothing else in the app currently lets that be
+ * fixed without a direct DB edit.
  */
 export async function PATCH(req) {
   try {
@@ -73,12 +77,20 @@ export async function PATCH(req) {
     if (!session?.user?.id)            return Response.json({ error: 'Unauthorised' }, { status: 401 });
     if (session.user.role !== 'admin') return Response.json({ error: 'Forbidden' },     { status: 403 });
 
-    const { userId, role, plan, trialDays, distributorId } = await req.json();
+    const { userId, role, plan, trialDays, distributorId, name } = await req.json();
     const VALID_ROLES = ['client', 'distributor', 'admin'];
     const VALID_PLANS = ['free', 'pro', 'pro_lifetime', 'lifetime', 'trial'];
 
     if (!userId) {
       return Response.json({ error: 'userId is required' }, { status: 400 });
+    }
+
+    if (name !== undefined) {
+      const trimmed = String(name).trim();
+      if (!trimmed) {
+        return Response.json({ error: 'Name cannot be empty' }, { status: 400 });
+      }
+      await pool.query('UPDATE users SET name = $1 WHERE id = $2', [trimmed, userId]);
     }
 
     if (role) {
@@ -124,7 +136,7 @@ export async function PATCH(req) {
     }
 
     return Response.json({
-      ok: true, userId, role, plan, distributorId,
+      ok: true, userId, role, plan, distributorId, name,
       planExpiresAt: plan !== undefined ? planExpiresAt : undefined,
     });
 

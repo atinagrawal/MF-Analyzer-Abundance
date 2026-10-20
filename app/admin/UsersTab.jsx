@@ -138,6 +138,60 @@ function ActivityDot({ lastActiveAt }) {
   );
 }
 
+/** Click-to-edit display name — reused in desktop side panel and mobile drill-down.
+ *  Mainly for correcting names entered wrong when a user was added manually (the only
+ *  way to fix one before this existed was a direct DB edit). Admin-only, same as the
+ *  role/plan controls below: the PATCH endpoint 403s a distributor regardless. */
+function EditableName({ user, nameChanging, onNameChange, isAdmin = true }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(user.name || '');
+
+  if (!isAdmin) {
+    return <>{user.name || user.email}</>;
+  }
+
+  if (!editing) {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        {user.name || user.email}
+        <button
+          type="button"
+          onClick={() => { setDraft(user.name || ''); setEditing(true); }}
+          title="Edit name"
+          style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '.72rem', color: 'var(--muted)', padding: 0 }}
+        >
+          ✎
+        </button>
+      </span>
+    );
+  }
+
+  const save = () => {
+    const trimmed = draft.trim();
+    if (!trimmed || trimmed === user.name) { setEditing(false); return; }
+    onNameChange(user.id, trimmed);
+    setEditing(false);
+  };
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <input
+        autoFocus
+        value={draft}
+        disabled={nameChanging === user.id}
+        onChange={e => setDraft(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter') save();
+          if (e.key === 'Escape') setEditing(false);
+        }}
+        style={{ fontSize: 'inherit', fontWeight: 'inherit', fontFamily: 'inherit', padding: '2px 6px', border: '1.5px solid var(--g-light)', borderRadius: 5, width: 160 }}
+      />
+      <button type="button" onClick={save} disabled={nameChanging === user.id} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '.78rem' }}>✓</button>
+      <button type="button" onClick={() => setEditing(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '.78rem' }}>✕</button>
+    </span>
+  );
+}
+
 /** Role, Plan, & Distributor dropdowns — reused in desktop side panel and mobile drill-down.
  *  Distributors see read-only badges instead of the selects: reassigning a distributor,
  *  granting Pro, or changing someone's role are admin-only actions (server-enforced —
@@ -633,6 +687,7 @@ export default function UsersTab({ session }) {
   const [roleChanging, setRoleChanging] = useState('');
   const [planChanging, setPlanChanging] = useState('');
   const [distributorChanging, setDistributorChanging] = useState('');
+  const [nameChanging, setNameChanging] = useState('');
   const [notifyMsg,    setNotifyMsg]    = useState({ id: '', type: '', text: '' });
   const [composePortfolio, setComposePortfolio] = useState(null); // the CAS upload being emailed about, or null when the modal is closed
   const [composeMode,      setComposeMode]      = useState('template');
@@ -733,6 +788,22 @@ export default function UsersTab({ session }) {
       setSelectedUser(prev => prev && prev.id === userId ? { ...prev, plan: newPlan, plan_expires_at: d.planExpiresAt ?? null } : prev);
     } catch (e) { alert(e.message); }
     finally { setPlanChanging(''); }
+  }
+
+  async function changeName(userId, newName) {
+    setNameChanging(userId);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, name: newName }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, name: newName } : u));
+      setSelectedUser(prev => prev && prev.id === userId ? { ...prev, name: newName } : prev);
+    } catch (e) { alert(e.message); }
+    finally { setNameChanging(''); }
   }
 
   async function changeDistributor(userId, distributorId) {
@@ -836,7 +907,7 @@ export default function UsersTab({ session }) {
             <div className="table-card">
               <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ fontSize: '.85rem', fontWeight: 800, color: 'var(--text)' }}>
-                  {selectedUser.name || selectedUser.email}
+                  <EditableName user={selectedUser} nameChanging={nameChanging} onNameChange={changeName} isAdmin={isAdmin} />
                 </div>
                 <div style={{ fontSize: '.62rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
                   {selectedUser.email}
@@ -1039,7 +1110,7 @@ export default function UsersTab({ session }) {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ fontSize: '.78rem', fontWeight: 800, color: 'var(--text)' }}>
-                    {selectedUser.name || selectedUser.email}
+                    <EditableName user={selectedUser} nameChanging={nameChanging} onNameChange={changeName} isAdmin={isAdmin} />
                   </div>
                   <div style={{ fontSize: '.6rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace" }}>
                     {selectedUser.email}
