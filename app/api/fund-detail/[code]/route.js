@@ -8,6 +8,98 @@ import { getTickertapeRatios } from '@/lib/tickertapeMfRatios';
 
 export const dynamic = 'force-dynamic';
 
+// This route is hit on every single /fund/[code] page view and screener
+// drawer open, with no caching of any kind -- unlike every other
+// Postgres-backed data route in this codebase (getScreenerDataset(),
+// lib/holdingsLookup.js, lib/tickertapeMfRatios.js all cache). The fund
+// row and stress-test row below were doing 1-2 fresh pool.query() calls
+// per request regardless of how recently the same fund was looked up.
+// Can't fix this with an HTTP Cache-Control header -- the response
+// content below is plan-gated (Pro vs free get different fields) on the
+// SAME URL, so a shared/CDN cache would risk serving one plan's response
+// to the other. Instead, cache just the Postgres-sourced data in-process,
+// keyed by fund code; the isPro gating still happens fresh every request,
+// after the cache lookup. 15 min TTL: NAV/stress data only changes once a
+// day (EOD), so this is purely about absorbing repeat views within a
+// browsing session, not a freshness tradeoff anyone would notice.
+const FUND_CACHE_TTL_MS = 15 * 60 * 1000;
+const fundRowCache = new Map();   // code -> { data: { fundRows, siblingResolved }, ts }
+const stressRowCache = new Map(); // code -> { data: stressRows, ts }
+const fundInflight = new Map();   // code -> Promise, dedupes concurrent requests for the same uncached code
+const stressInflight = new Map();
+
+function isFresh(ts) {
+  return ts && Date.now() - ts < FUND_CACHE_TTL_MS;
+}
+
+async function getCachedFundRow(code, selectCols) {
+  const cached = fundRowCache.get(code);
+  if (isFresh(cached?.ts)) return cached.data;
+  if (fundInflight.has(code)) return fundInflight.get(code);
+
+  const promise = (async () => {
+    const { rows: fundRows } = await pool.query(
+      `SELECT ${selectCols} FROM mf_screener WHERE code = $1`,
+      [Number(code)]
+    );
+
+    let siblingResolved = false;
+    if (!fundRows.length) {
+      try {
+        const { rows: idxRows } = await pool.query(
+          `SELECT name, amc FROM mf_code_index WHERE code = $1`,
+          [String(code)]
+        );
+        if (idxRows.length) {
+          const { name, amc } = idxRows[0];
+          const { rows: siblingRows } = await pool.query(
+            `SELECT ${selectCols} FROM mf_screener WHERE name = $1 AND amc = $2 LIMIT 1`,
+            [name, amc]
+          );
+          if (siblingRows.length) {
+            fundRows.push(siblingRows[0]);
+            siblingResolved = true;
+          }
+        }
+      } catch (err) {
+        console.error('[api/fund-detail] sibling-plan lookup failed:', err.message);
+      }
+    }
+
+    const data = { fundRows, siblingResolved };
+    fundRowCache.set(code, { data, ts: Date.now() });
+    return data;
+  })();
+
+  fundInflight.set(code, promise);
+  promise.finally(() => fundInflight.delete(code));
+  return promise;
+}
+
+async function getCachedStressRow(code) {
+  const cached = stressRowCache.get(code);
+  if (isFresh(cached?.ts)) return cached.data;
+  if (stressInflight.has(code)) return stressInflight.get(code);
+
+  const promise = (async () => {
+    const { rows: stressRows } = await pool.query(
+      `SELECT scheme_code, month, aum_cr, days_50pct, days_25pct,
+              top10_investors_pct, large_cap_pct, mid_cap_pct, small_cap_pct, cash_pct,
+              std_dev_portfolio, std_dev_benchmark, beta,
+              pe_portfolio, pe_benchmark, pe_benchmark_1ya, pe_benchmark_2ya,
+              turnover_ratio
+       FROM mf_stress_test WHERE scheme_code = $1 ORDER BY month DESC LIMIT 1`,
+      [Number(code)]
+    );
+    stressRowCache.set(code, { data: stressRows, ts: Date.now() });
+    return stressRows;
+  })();
+
+  stressInflight.set(code, promise);
+  promise.finally(() => stressInflight.delete(code));
+  return promise;
+}
+
 export async function GET(req, { params }) {
   try {
     const { code } = await params;
@@ -30,44 +122,7 @@ export async function GET(req, { params }) {
               ret_1m, ret_3m, ret_6m, ret_1y, ret_3y, ret_5y, ret_7y, ret_10y,
               ret_inception, vol, max_dd, ret_per_risk, vol_1y, vol_3y, vol_5y`;
 
-    const { rows: fundRows } = await pool.query(
-      `SELECT ${SELECT_FUND_COLS} FROM mf_screener WHERE code = $1`,
-      [Number(code)]
-    );
-
-    let siblingResolved = false;
-    if (!fundRows.length) {
-      // mf_screener only carries Regular Plan + Growth Option rows
-      // (scripts/build-screener.mjs). A code that misses here is almost
-      // always a Direct-plan (or non-Growth-option) holding from a user's
-      // CAS -- resolve it to the same fund's Regular Growth Plan sibling
-      // via mf_code_index (built from the full, unfiltered AMFI universe),
-      // since AMFI's current feed gives both variants the identical
-      // (name, amc) pair. The client labels this clearly rather than
-      // presenting it as the holding's own plan.
-      try {
-        const { rows: idxRows } = await pool.query(
-          `SELECT name, amc FROM mf_code_index WHERE code = $1`,
-          [String(code)]
-        );
-        if (idxRows.length) {
-          const { name, amc } = idxRows[0];
-          const { rows: siblingRows } = await pool.query(
-            `SELECT ${SELECT_FUND_COLS} FROM mf_screener WHERE name = $1 AND amc = $2 LIMIT 1`,
-            [name, amc]
-          );
-          if (siblingRows.length) {
-            fundRows.push(siblingRows[0]);
-            siblingResolved = true;
-          }
-        }
-      } catch (err) {
-        // mf_code_index may not exist yet on a deploy that lands before the
-        // next nightly build-screener.mjs run -- degrade to today's 404
-        // rather than a 500.
-        console.error('[api/fund-detail] sibling-plan lookup failed:', err.message);
-      }
-    }
+    const { fundRows, siblingResolved } = await getCachedFundRow(code, SELECT_FUND_COLS);
 
     if (!fundRows.length) {
       return Response.json({ error: 'Fund not found' }, { status: 404 });
@@ -157,15 +212,7 @@ export async function GET(req, { params }) {
       console.error('[api/fund-detail] holdings lookup failed:', err.message);
     }
 
-    const { rows: stressRows } = await pool.query(
-      `SELECT scheme_code, month, aum_cr, days_50pct, days_25pct,
-              top10_investors_pct, large_cap_pct, mid_cap_pct, small_cap_pct, cash_pct,
-              std_dev_portfolio, std_dev_benchmark, beta,
-              pe_portfolio, pe_benchmark, pe_benchmark_1ya, pe_benchmark_2ya,
-              turnover_ratio
-       FROM mf_stress_test WHERE scheme_code = $1 ORDER BY month DESC LIMIT 1`,
-      [Number(code)]
-    );
+    const stressRows = await getCachedStressRow(code);
 
     const stress = stressRows.length ? Object.fromEntries(
       Object.entries(stressRows[0]).map(([k, v]) =>
