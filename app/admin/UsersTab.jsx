@@ -466,6 +466,14 @@ function PortfolioList({ selectedUser, portfolios, portsLoading, deletingId, set
                         ✉ CAS email differs: {p.cas_email}
                       </div>
                     )}
+                    {p.cas_mobile && (
+                      <div
+                        title="Mobile number registered on the CAS statement itself"
+                        style={{ fontSize: '.58rem', color: 'var(--g2)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}
+                      >
+                        📱 CAS mobile: {p.cas_mobile}
+                      </div>
+                    )}
                   </div>
 
                   <div style={{

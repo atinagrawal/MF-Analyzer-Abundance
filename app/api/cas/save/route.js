@@ -62,6 +62,14 @@ export async function POST(req) {
     // statement -- that's expected, not an extraction failure.
     const casEmail = (parsedData.investor_info?.email || '').trim().toLowerCase() || null;
 
+    // Same source, same reasoning, same NSDL/CDSL caveat as cas_email
+    // above -- InvestorInfo.mobile, confirmed by reading casparser's own
+    // source (casparser/parsers/_investor.py). Admin-visible reference
+    // only; there's no account-level phone number to flag a mismatch
+    // against (unlike cas_email vs the login email), so this is just
+    // shown plainly when present.
+    const casMobile = (parsedData.investor_info?.mobile || '').trim() || null;
+
     // Write to R2: cas/{userId}/{timestamp}-{sanitisedName}.json
     const ts       = Date.now();
     const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 60);
@@ -72,10 +80,10 @@ export async function POST(req) {
     // Log to database
     const effectivePanCount = pans.length || (parsedData.folios?.length ? 1 : 0);
     const result = await pool.query(
-      `INSERT INTO cas_portfolios (user_id, file_name, blob_key, pan_count, pans, cas_email)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO cas_portfolios (user_id, file_name, blob_key, pan_count, pans, cas_email, cas_mobile)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, uploaded_at`,
-      [userId, fileName, blobKey, panCount ?? effectivePanCount, pans, casEmail]
+      [userId, fileName, blobKey, panCount ?? effectivePanCount, pans, casEmail, casMobile]
     );
 
     const row = result.rows[0];

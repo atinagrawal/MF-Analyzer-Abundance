@@ -5,12 +5,12 @@
  * GET /api/cas/list?userId=xxx   → admin only: another user's portfolios
  *
  * Returns: [{ id, file_name, pan_count, uploaded_at, blob_key }]
- * sorted newest first. cas_email (the investor email casparser extracted
- * from the CAS PDF itself, distinct from the account's signup email) is
- * included only for admin callers -- it's a reference field for admin
- * outreach, not something a user needs about their own upload, so it's
- * kept out of the non-admin response shape entirely rather than sent and
- * ignored client-side.
+ * sorted newest first. cas_email/cas_mobile (the investor email and
+ * mobile number casparser extracted from the CAS PDF itself, distinct
+ * from the account's signup email) are included only for admin callers
+ * -- reference fields for admin outreach, not something a user needs
+ * about their own upload, so they're kept out of the non-admin response
+ * shape entirely rather than sent and ignored client-side.
  */
 
 import { auth } from '@/auth';
@@ -39,7 +39,7 @@ export async function GET(req) {
 
     const isAdmin = session.user.role === 'admin';
     const result = await pool.query(
-      `SELECT id, file_name, pan_count, uploaded_at, blob_key${isAdmin ? ', cas_email' : ''}
+      `SELECT id, file_name, pan_count, uploaded_at, blob_key${isAdmin ? ', cas_email, cas_mobile' : ''}
        FROM cas_portfolios
        WHERE user_id = $1
        ORDER BY uploaded_at DESC
