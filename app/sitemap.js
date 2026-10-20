@@ -1,7 +1,8 @@
-import { getSitemapEntries, getHomeSitemapEntries, getScreenerCategorySitemapEntries, getArticlesSitemapEntries, getSifReportsCategorySitemapEntries } from '@/lib/metadata';
+import { getSitemapEntries, getHomeSitemapEntries, getScreenerCategorySitemapEntries, getArticlesSitemapEntries, getSifReportsCategorySitemapEntries, getCompareSitemapEntries } from '@/lib/metadata';
 import { CURATED_CATEGORIES } from './screener/screenerContent';
 import { ARTICLES } from '@/lib/articles';
 import { listSifCategories } from '@/lib/sifReports';
+import { POPULAR_COMPARISONS } from '@/lib/compareSlug';
 
 /**
  * app/sitemap.js — Dynamic sitemap generation
@@ -28,5 +29,6 @@ export default async function sitemap() {
     ...getScreenerCategorySitemapEntries(CURATED_CATEGORIES),
     ...getArticlesSitemapEntries(ARTICLES),
     ...getSifReportsCategorySitemapEntries(sifCategories),
+    ...getCompareSitemapEntries(POPULAR_COMPARISONS),
   ];
 }
