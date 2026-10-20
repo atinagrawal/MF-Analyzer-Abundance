@@ -9,10 +9,12 @@
  * hidden, and the Manual Holdings tab — which operates on ANY user with no
  * distributor-scoping of its own — is admin-only.
  *
- * Three tabs (each its own file):
+ * Tabs (each its own file):
  *   1. UsersTab           — list, role management (admin only), view/delete CAS uploads
- *   2. AddClientTab        — create pending user by email, upload CAS on their behalf
- *   3. ManualHoldingsTab   — add/edit manual MF or SIF holdings for any user (admin only)
+ *   2. LeadsTab            — every CAS-uploading user in one list, for personal outreach
+ *   3. AddClientTab        — create pending user by email, upload CAS on their behalf
+ *   4. ManualHoldingsTab   — add/edit manual MF or SIF holdings for any user (admin only)
+ *   5. NfoPromoTab         — homepage NFO promo banner control (admin only)
  */
 
 import { useSession } from 'next-auth/react';
@@ -24,6 +26,7 @@ import UsersTab from './UsersTab';
 import AddClientTab from './AddClientTab';
 import ManualHoldingsTab from './ManualHoldingsTab';
 import NfoPromoTab from './NfoPromoTab';
+import LeadsTab from './LeadsTab';
 import './admin.css';
 
 const ALLOWED_ROLES = ['admin', 'distributor'];
@@ -56,6 +59,7 @@ export default function AdminPage() {
 
   const tabs = [
     { key: 'users',     label: '👥 Users' },
+    { key: 'leads',     label: '📇 Leads' },
     { key: 'addclient', label: '➕ Add Client' },
     ...(isAdmin ? [{ key: 'holdings', label: '📋 Manual Holdings' }] : []),
     ...(isAdmin ? [{ key: 'nfopromo', label: '🎯 NFO Promo' }] : []),
@@ -87,6 +91,7 @@ export default function AdminPage() {
         </div>
 
         {tab === 'users'     && <UsersTab session={session} />}
+        {tab === 'leads'     && <LeadsTab />}
         {tab === 'addclient' && <AddClientTab />}
         {tab === 'holdings'  && isAdmin && <ManualHoldingsTab />}
         {tab === 'nfopromo'  && isAdmin && <NfoPromoTab />}
