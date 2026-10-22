@@ -260,9 +260,7 @@ export default function BookConsultationPage() {
               <>
                 <div style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderTop: '4px solid var(--g1)', borderRadius: 'var(--r)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
                   <Cal
-                    calLink={`abundance/consultation?name=${encodeURIComponent(name.trim())}&email=${encodeURIComponent(email.trim().toLowerCase())}`}
-                    calOrigin="https://cal.eu"
-                    embedJsUrl="https://cal.eu/embed/embed.js"
+                    calLink={`abundancefinserv/consultation?name=${encodeURIComponent(name.trim())}&email=${encodeURIComponent(email.trim().toLowerCase())}`}
                     config={{ theme: 'light' }}
                     style={{ width: '100%', height: '100%', minHeight: '700px' }}
                   />
