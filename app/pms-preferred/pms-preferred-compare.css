@@ -49,6 +49,23 @@
 .pmspref-cmp-clear-btn { background: none; border: none; color: rgba(255,255,255,.7); font-size: .68rem; cursor: pointer; text-decoration: underline; }
 .pmspref-cmp-clear-btn:hover { color: #fff; }
 
+/* ── Card-corner quick toggle ──
+   A flex child of .pmspref-card-head (not absolutely positioned), pushed
+   to the row's end -- stays clear of the provider logo on the left and
+   the diagonal quartile ribbon (.pmspref-card-ribbon, top-right, rotated
+   out past the card's padded content) without any overlap math. */
+.pmspref-card-cmp-btn {
+  margin-left: auto; flex-shrink: 0;
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--pmsp-surface); border: 1.5px solid var(--pmsp-border);
+  color: var(--pmsp-muted); font-size: .72rem; line-height: 1;
+  cursor: pointer; transition: border-color .15s, color .15s, background .15s;
+}
+.pmspref-card-cmp-btn:hover { border-color: var(--g1); color: var(--g1); }
+.pmspref-card-cmp-btn.active { background: var(--g1); border-color: var(--g1); color: #fff; }
+.pmspref-card-cmp-btn:disabled { opacity: .4; cursor: not-allowed; }
+
 /* ── Modal ──
    z-index 10010+, deliberately above the quick-info drawer's 10000/10001
    (pms-preferred.css) -- the drawer is closed programmatically when the

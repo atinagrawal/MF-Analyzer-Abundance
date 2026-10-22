@@ -528,6 +528,7 @@ export default function PmsPreferredInteractive({ strategies, insights, spotligh
             const sharpe = fmtRatio(e.portfolioAttributes?.sharpeRatio?.strategy);
             const holdings = (e.topHoldings || []).filter((h) => h?.name);
             const dna = buildSectorDna(e.sectorAllocation);
+            const inCompare = compareList.some((c) => c.iaid === s.iaid);
             return (
               <a
                 key={s.iaid}
@@ -541,6 +542,24 @@ export default function PmsPreferredInteractive({ strategies, insights, spotligh
                     ? <img src={logo} alt="" className="pmspref-card-logo" />
                     : <span className="pmspref-card-logo pmspref-card-logo-fallback">{s.providerName.charAt(0)}</span>}
                   <span className="pmspref-card-provider">{s.providerName}</span>
+                  {/* Quick toggle right on the card -- matches /pms-screener's
+                      one-click row checkbox, so adding a strategy to compare
+                      doesn't require opening the drawer first (see
+                      PmsPreferredDrawer's own CompareToggleButton below,
+                      which stays as the drawer-side way to do the same
+                      thing). Sits in the head row (not absolutely
+                      positioned) so it never overlaps the provider logo or
+                      the diagonal quartile ribbon. */}
+                  <button
+                    type="button"
+                    className={`pmspref-card-cmp-btn${inCompare ? ' active' : ''}`}
+                    onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); toggleCompare(s); }}
+                    disabled={!inCompare && compareList.length >= MAX_COMPARE}
+                    title={inCompare ? 'Remove from compare' : compareList.length >= MAX_COMPARE ? `Max ${MAX_COMPARE} selected` : 'Add to compare'}
+                    aria-label={`${inCompare ? 'Remove' : 'Add'} ${s.strategyName} ${inCompare ? 'from' : 'to'} compare`}
+                  >
+                    {inCompare ? '✓' : '⚖'}
+                  </button>
                 </div>
                 <div className="pmspref-card-name">{s.strategyName}</div>
                 {s.compliance && (
