@@ -11,6 +11,13 @@
  * scripts/migrate-cas-mobile.mjs) were only ever visible by clicking into
  * one user at a time in the Users tab -- this is a single scannable list
  * for personal outreach, not a new data source.
+ *
+ * PATCH /api/admin/leads
+ * Body: { userId, contacted } -- toggles users.lead_contacted_at (see
+ * scripts/migrate-lead-contacted.mjs) to NOW() or NULL. A distributor may
+ * only toggle their own clients, same ownership rule as the GET above;
+ * enforced with an UPDATE ... WHERE clause rather than a separate SELECT,
+ * so there's no window between checking ownership and applying it.
  */
 
 import { auth } from '@/auth';
@@ -28,7 +35,7 @@ export async function GET() {
 
     const result = await pool.query(`
       SELECT
-        u.id, u.name, u.email,
+        u.id, u.name, u.email, u.lead_contacted_at,
         latest.cas_email, latest.cas_mobile,
         latest.uploaded_at AS last_upload,
         COUNT(cp.id)::int AS upload_count
@@ -42,7 +49,7 @@ export async function GET() {
         LIMIT 1
       ) latest ON true
       ${isAdmin ? '' : 'WHERE u.distributor_id = $1 OR u.created_by = $1'}
-      GROUP BY u.id, u.name, u.email, latest.cas_email, latest.cas_mobile, latest.uploaded_at
+      GROUP BY u.id, u.name, u.email, u.lead_contacted_at, latest.cas_email, latest.cas_mobile, latest.uploaded_at
       ORDER BY latest.uploaded_at DESC
     `, isAdmin ? [] : [session.user.id]);
 
@@ -50,6 +57,40 @@ export async function GET() {
 
   } catch (err) {
     console.error('[admin/leads]', err.name, err.message);
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(req) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return Response.json({ error: 'Unauthorised' }, { status: 401 });
+    const role = session.user.role;
+    if (role !== 'admin' && role !== 'distributor') {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    const isAdmin = role === 'admin';
+
+    const { userId, contacted } = await req.json();
+    if (!userId) return Response.json({ error: 'userId is required' }, { status: 400 });
+
+    const result = await pool.query(
+      `UPDATE users SET lead_contacted_at = $1
+       WHERE id = $2 ${isAdmin ? '' : 'AND (distributor_id = $3 OR created_by = $3)'}
+       RETURNING lead_contacted_at`,
+      contacted
+        ? (isAdmin ? [new Date(), userId] : [new Date(), userId, session.user.id])
+        : (isAdmin ? [null, userId] : [null, userId, session.user.id])
+    );
+
+    if (!result.rows.length) {
+      return Response.json({ error: 'Lead not found' }, { status: 404 });
+    }
+
+    return Response.json({ ok: true, userId, leadContactedAt: result.rows[0].lead_contacted_at });
+
+  } catch (err) {
+    console.error('[admin/leads PATCH]', err.name, err.message);
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
