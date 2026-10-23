@@ -21,10 +21,15 @@ import pg from "pg";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// Parse DATE columns as plain strings to avoid node-postgres timezone shift
+// (without this, midnight-local dates shift to the previous day's UTC string).
+pg.types.setTypeParser(1082, (val) => val);
+
 const arg = (n) => { const a = process.argv.find((x) => x.startsWith(`--${n}`)); return a ? (a.includes("=") ? a.split("=")[1] : true) : null; };
 const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
 const DMAS = [20, 50, 100, 150, 200];
 const WIN52 = 252;
+const toDateStr = (d) => (typeof d === "string" ? d.slice(0, 10) : d.toISOString().slice(0, 10));
 
 async function ensureTable(c) {
   await c.query(`CREATE TABLE IF NOT EXISTS market_breadth (
@@ -108,7 +113,7 @@ async function loadWindow(c, endDate, days = 400) {
   );
   const byIsin = new Map();
   for (const r of rows) {
-    const t = r.trade_date.toISOString().slice(0, 10);
+    const t = toDateStr(r.trade_date);
     if (!byIsin.has(r.isin)) byIsin.set(r.isin, []);
     byIsin.get(r.isin).push({ t, close: +r.close, high: r.high == null ? null : +r.high, low: r.low == null ? null : +r.low, prev: r.prev_close == null ? null : +r.prev_close, tov: r.turnover == null ? 0 : +r.turnover });
   }
@@ -136,7 +141,7 @@ async function runAll(c) {
   const { rows } = await c.query(`SELECT isin, trade_date, close, high, low, prev_close, turnover FROM stock_eod ORDER BY isin, trade_date`);
   const full = new Map(); const dateSet = new Set();
   for (const r of rows) {
-    const t = r.trade_date.toISOString().slice(0, 10); dateSet.add(t);
+    const t = toDateStr(r.trade_date); dateSet.add(t);
     if (!full.has(r.isin)) full.set(r.isin, []);
     full.get(r.isin).push({ t, close: +r.close, high: r.high == null ? null : +r.high, low: r.low == null ? null : +r.low, prev: r.prev_close == null ? null : +r.prev_close, tov: r.turnover == null ? 0 : +r.turnover });
   }
@@ -164,6 +169,9 @@ async function main() {
   const c = await pool.connect();
   await ensureTable(c);
 
+  const fromDate = arg("from");
+  const toDate = arg("to");
+
   if (arg("all")) {
     await runAll(c);
   } else if (arg("date")) {
@@ -171,12 +179,24 @@ async function main() {
     const s = computeSnapshot(await loadWindow(c, D), D);
     await upsert(c, D, s);
     console.log(`[breadth] ${D}: universe ${s.universe} | >200DMA ${s.a200}/${s.t200} (${s.regime_pct}%) | GC ${s.golden_cross} DC ${s.death_cross} bull ${s.bull_stacked} bear ${s.bear_stacked}`);
+  } else if (fromDate) {
+    const { rows: er } = await c.query(`SELECT DISTINCT trade_date FROM stock_eod ORDER BY trade_date`);
+    const eodDates = er.map((r) => toDateStr(r.trade_date));
+    const targetDates = eodDates.filter((d) => d >= fromDate && (!toDate || d <= toDate));
+    if (!targetDates.length) {
+      console.log(`[breadth] no trading days found in range ${fromDate} to ${toDate || "now"}`);
+    }
+    for (const D of targetDates) {
+      const s = computeSnapshot(await loadWindow(c, D), D);
+      await upsert(c, D, s);
+      console.log(`[breadth] ${D}: universe ${s.universe} | >200DMA ${s.regime_pct}% | GC ${s.golden_cross} DC ${s.death_cross} bull ${s.bull_stacked} bear ${s.bear_stacked} | adv ${s.advancing} dec ${s.declining}`);
+    }
   } else {
     // self-heal: compute every eod date that doesn't yet have a snapshot (and has >=200 prior days)
     const { rows: er } = await c.query(`SELECT DISTINCT trade_date FROM stock_eod ORDER BY trade_date`);
-    const eodDates = er.map((r) => r.trade_date.toISOString().slice(0, 10));
+    const eodDates = er.map((r) => toDateStr(r.trade_date));
     const { rows: sr } = await c.query(`SELECT snap_date FROM market_breadth`);
-    const have = new Set(sr.map((r) => r.snap_date.toISOString().slice(0, 10)));
+    const have = new Set(sr.map((r) => toDateStr(r.snap_date)));
     const eligible = eodDates.slice(199);
     const missing = eligible.filter((d) => !have.has(d));
     if (!missing.length) { console.log(`[breadth] up to date — latest eod ${eodDates[eodDates.length - 1]}, latest snapshot already present`); }

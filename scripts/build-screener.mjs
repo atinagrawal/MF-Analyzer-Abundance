@@ -37,6 +37,8 @@ const fmt = (t) => { const d = new Date(t); return `${String(d.getUTCDate()).pad
 const parseISO = (s) => { if (!s) return null; const [y, m, d] = s.split('-'); return Date.UTC(+y, +m - 1, +d); };
 // mfapi.in date DD-MM-YYYY -> YYYY-MM-DD
 const toISO = (s) => { if (!s) return null; const [dd, mm, yy] = s.split('-'); return `${yy}-${mm}-${dd}`; };
+const pad = (n) => String(n).padStart(2, "0");
+const msToISO = (ms) => { const d = new Date(ms); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
 
 // Manual inception date overrides for pre-AMFI-records funds (keyed by AMFI scheme code).
 // After a first run, check data/mf-inception-needs-review.json for funds needing entries here.
@@ -58,7 +60,12 @@ async function fetchText(url, tries = 3) {
   for (let i = 0; i < tries; i++) {
     try {
       const r = await fetch(url, { headers: { Accept: "text/plain" }, signal: AbortSignal.timeout(45000) });
-      if (r.ok) { const t = await r.text(); if (t && t.length > 500) return t; }
+      if (r.ok) {
+        const t = await r.text();
+        if (t && t.length > 500 && !t.trim().startsWith("<") && !r.headers.get("content-type")?.includes("text/html")) {
+          return t;
+        }
+      }
     } catch (e) { /* retry */ }
     await new Promise((s) => setTimeout(s, 1500));
   }
@@ -134,23 +141,56 @@ function parseUniverse(txt) {
 }
 
 /* ---- 2. all-fund NAV as-of a date (last NAV <= anchor within a small window) ---- */
-async function navAsOf(anchorMs) {
-  const to = anchorMs, from = anchorMs - 8 * 864e5;
-  const txt = await fetchText(`https://portal.amfiindia.com/DownloadNAVHistoryReport_Po.aspx?frmdt=${fmt(from)}&todt=${fmt(to)}`);
-  const lines = txt.split("\n");
-  // This endpoint's column order differs from NAVAll.txt's (confirmed live
-  // Aug 2026) -- resolved by name independently, same as parseUniverse.
-  const H = headerIndex(lines[0].replace(/\r$/, ""), ["Scheme Code", "Net Asset Value", "Date"]);
-  const maxIdx = Math.max(...Object.values(H));
-  const map = {};
-  for (const raw of lines) {
-    const line = raw.replace(/\r$/, ""); if (!line.includes(";")) continue;
-    const p = line.split(";"); if (p.length <= maxIdx) continue;
-    const code = p[H["Scheme Code"]], nav = +p[H["Net Asset Value"]], d = pd(p[H.Date]);
-    if (!isFinite(nav) || nav <= 0 || !d || d > anchorMs) continue;
-    if (!map[code] || d > map[code].d) map[code] = { nav, d };
+async function navAsOf(anchorMs, c = null) {
+  // If Postgres client is available, try DB first (covers full history from 2006 to present)
+  if (c) {
+    try {
+      const toStr = msToISO(anchorMs);
+      const fromStr = msToISO(anchorMs - 8 * 864e5);
+      const res = await c.query(
+        `SELECT code, nav::float as nav, nav_date::text as d
+         FROM (
+           SELECT code, nav, nav_date,
+                  ROW_NUMBER() OVER (PARTITION BY code ORDER BY nav_date DESC) as rn
+           FROM mf_nav_history
+           WHERE nav_date >= $1 AND nav_date <= $2
+         ) t
+         WHERE rn = 1`,
+        [fromStr, toStr]
+      );
+      if (res.rows.length > 100) {
+        const map = {};
+        for (const r of res.rows) {
+          map[r.code] = { nav: r.nav, d: Date.parse(r.d) };
+        }
+        return map;
+      }
+    } catch (e) {
+      console.warn(`[screener] DB anchor lookup failed for ${msToISO(anchorMs)}, falling back to AMFI: ${e.message}`);
+    }
   }
-  return map;
+
+  // Fallback to AMFI portal
+  const to = anchorMs, from = anchorMs - 8 * 864e5;
+  try {
+    const txt = await fetchText(`https://portal.amfiindia.com/DownloadNAVHistoryReport_Po.aspx?frmdt=${fmt(from)}&todt=${fmt(to)}`);
+    const lines = txt.split("\n");
+    if (!lines[0] || !lines[0].includes(";")) return {};
+    const H = headerIndex(lines[0].replace(/\r$/, ""), ["Scheme Code", "Net Asset Value", "Date"]);
+    const maxIdx = Math.max(...Object.values(H));
+    const map = {};
+    for (const raw of lines) {
+      const line = raw.replace(/\r$/, ""); if (!line.includes(";")) continue;
+      const p = line.split(";"); if (p.length <= maxIdx) continue;
+      const code = p[H["Scheme Code"]], nav = +p[H["Net Asset Value"]], d = pd(p[H.Date]);
+      if (!isFinite(nav) || nav <= 0 || !d || d > anchorMs) continue;
+      if (!map[code] || d > map[code].d) map[code] = { nav, d };
+    }
+    return map;
+  } catch (err) {
+    console.warn(`[screener] AMFI NAV history unavailable for ${fmt(from)}..${fmt(to)}: ${err.message}`);
+    return {};
+  }
 }
 
 const lastOfMonth = (y, m) => Date.UTC(y, m + 1, 0);
@@ -338,19 +378,62 @@ async function main() {
     { key: "ret_10y", t: now - 10 * Y, yrs: 10 },
   ];
   const aMap = {};
-  for (const a of ANCHORS) { aMap[a.key] = await navAsOf(a.t); process.stdout.write("."); }
+  for (const a of ANCHORS) { aMap[a.key] = await navAsOf(a.t, c); process.stdout.write("."); }
   process.stdout.write("\n");
 
   // ---- 3. monthly risk snapshots ----
   console.log(`[screener] fetching ${MONTHS} month-end snapshots for risk…`);
   const anchors = monthEndAnchors(now, MONTHS);
   const monthly = {}; // code -> [{t,nav}]
-  for (const t of anchors) {
-    const m = await navAsOf(Math.min(t, now));
-    for (const code of Object.keys(m)) (monthly[code] ||= []).push({ t, nav: m[code].nav });
-    process.stdout.write(".");
+
+  let dbMonthlyLoaded = false;
+  if (c && anchors.length > 0) {
+    try {
+      const anchorMap = new Map(); // "YYYY-MM" -> anchor timestamp t
+      for (const t of anchors) {
+        const d = new Date(Math.min(t, now));
+        const ym = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}`;
+        anchorMap.set(ym, Math.min(t, now));
+      }
+      const oldestAnchor = anchors[0];
+      const fromDate = msToISO(oldestAnchor - 35 * 864e5);
+      const toDate = msToISO(now);
+      const res = await c.query(
+        `SELECT code, nav::float as nav,
+                to_char(date_trunc('month', nav_date), 'YYYY-MM') as ym
+         FROM (
+           SELECT code, nav_date, nav,
+                  ROW_NUMBER() OVER (PARTITION BY code, date_trunc('month', nav_date) ORDER BY nav_date DESC) as rn
+           FROM mf_nav_history
+           WHERE nav_date >= $1 AND nav_date <= $2
+         ) t
+         WHERE rn = 1
+         ORDER BY code, nav_date ASC`,
+        [fromDate, toDate]
+      );
+      if (res.rows.length > 0) {
+        for (const r of res.rows) {
+          const t = anchorMap.get(r.ym);
+          if (t != null && r.nav > 0) {
+            (monthly[r.code] ||= []).push({ t, nav: r.nav });
+          }
+        }
+        dbMonthlyLoaded = true;
+        console.log(`[screener] loaded ${res.rows.length} month-end records from DB for ${Object.keys(monthly).length} funds`);
+      }
+    } catch (e) {
+      console.warn(`[screener] could not batch-load monthly history from DB: ${e.message}`);
+    }
   }
-  process.stdout.write("\n");
+
+  if (!dbMonthlyLoaded) {
+    for (const t of anchors) {
+      const m = await navAsOf(Math.min(t, now), c);
+      for (const code of Object.keys(m)) (monthly[code] ||= []).push({ t, nav: m[code].nav });
+      process.stdout.write(".");
+    }
+    process.stdout.write("\n");
+  }
 
   // ---- 3b. lineage database history fallback ----
   const dbHistoryMap = {};

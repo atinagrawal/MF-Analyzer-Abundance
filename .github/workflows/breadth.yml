@@ -32,35 +32,47 @@ jobs:
         env:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: |
+          ARGS=""
           if [ -n "${{ github.event.inputs.from }}" ]; then
-            node scripts/ingest-eod.mjs --from=${{ github.event.inputs.from }} --to=${{ github.event.inputs.to }}
-          else
-            node scripts/ingest-eod.mjs
+            ARGS="$ARGS --from=${{ github.event.inputs.from }}"
           fi
+          if [ -n "${{ github.event.inputs.to }}" ]; then
+            ARGS="$ARGS --to=${{ github.event.inputs.to }}"
+          fi
+          node scripts/ingest-eod.mjs $ARGS
       - name: Compute breadth snapshot
         env:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: |
+          ARGS=""
           if [ -n "${{ github.event.inputs.from }}" ]; then
-            node scripts/build-breadth.mjs --all
-          else
-            node scripts/build-breadth.mjs
+            ARGS="$ARGS --from=${{ github.event.inputs.from }}"
           fi
+          if [ -n "${{ github.event.inputs.to }}" ]; then
+            ARGS="$ARGS --to=${{ github.event.inputs.to }}"
+          fi
+          node scripts/build-breadth.mjs $ARGS
       - name: Compute per-stock signals
         env:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: |
+          ARGS=""
           if [ -n "${{ github.event.inputs.from }}" ]; then
-            node scripts/build-signals.mjs --all
-          else
-            node scripts/build-signals.mjs
+            ARGS="$ARGS --from=${{ github.event.inputs.from }}"
           fi
+          if [ -n "${{ github.event.inputs.to }}" ]; then
+            ARGS="$ARGS --to=${{ github.event.inputs.to }}"
+          fi
+          node scripts/build-signals.mjs $ARGS
       - name: Compute sector breadth
         env:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: |
+          ARGS=""
           if [ -n "${{ github.event.inputs.from }}" ]; then
-            node scripts/build-sector-breadth.mjs --all
-          else
-            node scripts/build-sector-breadth.mjs
+            ARGS="$ARGS --from=${{ github.event.inputs.from }}"
           fi
+          if [ -n "${{ github.event.inputs.to }}" ]; then
+            ARGS="$ARGS --to=${{ github.event.inputs.to }}"
+          fi
+          node scripts/build-sector-breadth.mjs $ARGS

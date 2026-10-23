@@ -20,6 +20,9 @@ import pg from "pg";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// Parse DATE columns as plain strings to avoid node-postgres timezone shift
+pg.types.setTypeParser(1082, (val) => val);
+
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36";
 const DAY = 864e5;
 const pad = (n) => String(n).padStart(2, "0");
@@ -38,7 +41,10 @@ async function fetchBhav(d) {
         signal: AbortSignal.timeout(45000),
       });
       if (r.status === 404) return null;           // not a trading day
-      if (r.ok) { const t = await r.text(); if (t && t.length > 2000) return t; }
+      if (r.ok) {
+        const t = await r.text();
+        if (t && t.length > 2000 && !t.trim().startsWith("<") && t.includes("TradDt")) return t;
+      }
     } catch (e) { /* retry */ }
     await new Promise((s) => setTimeout(s, 1500));
   }
@@ -125,8 +131,9 @@ async function main() {
   // resolve target dates
   let dates = [];
   const from = arg("from"), to = arg("to"), one = arg("date");
-  if (from && to) {
-    for (let t = Date.parse(from); t <= Date.parse(to); t += DAY) {
+  if (from) {
+    const end = to || iso(new Date());
+    for (let t = Date.parse(from); t <= Date.parse(end); t += DAY) {
       const d = new Date(t); const wd = d.getUTCDay();
       if (wd !== 0 && wd !== 6) dates.push(d);       // skip weekends (holidays handled by 404)
     }
@@ -147,7 +154,7 @@ async function main() {
   let okDays = 0, totalRows = 0;
   for (const d of dates) {
     const txt = await fetchBhav(d);
-    if (!txt) { if (!from) console.log(`[eod] ${iso(d)}: no file (holiday/weekend)`); continue; }
+    if (!txt) { console.log(`[eod] ${iso(d)}: no file (holiday/weekend/not yet published)`); continue; }
     const rows = parseBhav(txt).filter((r) => EQUITY_GROUPS.has(r.series));
     if (!rows.length) { console.log(`[eod] ${iso(d)}: 0 equity rows?!`); continue; }
     if (c) await upsertDay(c, iso(d), rows);

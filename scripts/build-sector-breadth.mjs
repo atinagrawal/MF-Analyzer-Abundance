@@ -153,9 +153,14 @@ async function main() {
 
   let dates = [];
   const oneDate = arg("date");
+  const fromDate = arg("from");
+  const toDate = arg("to");
 
   if (oneDate) {
     dates = [oneDate];
+  } else if (fromDate) {
+    const { rows } = await c.query(`SELECT snap_date FROM market_breadth ORDER BY snap_date`);
+    dates = rows.map((r) => r.snap_date).filter((d) => d >= fromDate && (!toDate || d <= toDate));
   } else if (arg("all")) {
     const { rows } = await c.query(`SELECT snap_date FROM market_breadth ORDER BY snap_date`);
     dates = rows.map((r) => r.snap_date);
