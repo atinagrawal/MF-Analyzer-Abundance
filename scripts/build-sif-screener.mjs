@@ -181,20 +181,38 @@ async function fetchSifHistory(schemeId, daysBack, toStr) {
   const series = parseSifHistoryResponse(json);
   return series.length >= 2 ? series : null;
 }
+
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+// Live-confirmed: AMFI's sif-nav-history endpoint returns a transient
+// failure (non-2xx or a dropped/slow connection under this script's 8-way
+// concurrent load) for a handful of DIFFERENT, otherwise-healthy scheme_ids
+// on any given run -- e.g. Altiva Hybrid Long-Short Fund (SIF-11, ~1Y old,
+// AMFI has 247 real NAV records for it) came back completely empty on one
+// run, then returned a normal 200 with full history moments later when
+// fetched directly by hand. One retry per window, after a short pause, is
+// usually enough to ride out that kind of hiccup without hammering AMFI.
+async function fetchSifHistoryWithRetry(schemeId, daysBack, toStr, attempts = 2) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const series = await fetchSifHistory(schemeId, daysBack, toStr);
+      if (series) return series;
+    } catch { /* network error/timeout -- fall through to retry below */ }
+    if (i < attempts - 1) await sleep(500);
+  }
+  return null;
+}
 async function fetchSifHistoryWithFallback(schemeId) {
   const toStr = new Date().toISOString().slice(0, 10);
-  try {
-    // AMFI rejects a `from`..`to` span of exactly 5*365=1825 days ("range
-    // must be less than 5 years") -- confirmed live: 1825 -> 400, 1824 ->
-    // 200. So the "wide" request was ALWAYS failing and silently falling
-    // through to the 400-day narrow window below, which is nowhere near
-    // enough once a scheme is old enough to need 2Y/3Y+ (and leaves barely
-    // a month of margin for 1Y). 1820 days gives real headroom under the
-    // confirmed 1824-day ceiling.
-    return (await fetchSifHistory(schemeId, 1820, toStr)) || (await fetchSifHistory(schemeId, 400, toStr));
-  } catch {
-    try { return await fetchSifHistory(schemeId, 400, toStr); } catch { return null; }
-  }
+  // AMFI rejects a `from`..`to` span of exactly 5*365=1825 days ("range
+  // must be less than 5 years") -- confirmed live: 1825 -> 400, 1824 -> 200.
+  // So the "wide" request was ALWAYS failing and silently falling through to
+  // the 400-day narrow window below, which is nowhere near enough once a
+  // scheme is old enough to need 2Y/3Y+ (and leaves barely a month of
+  // margin for 1Y). 1820 days gives real headroom under the confirmed
+  // 1824-day ceiling. Each window gets its own retry (see
+  // fetchSifHistoryWithRetry) before falling through to the next.
+  return (await fetchSifHistoryWithRetry(schemeId, 1820, toStr)) || (await fetchSifHistoryWithRetry(schemeId, 400, toStr));
 }
 
 // Bounded concurrency -- same helper style as build-screener.mjs, keeps this
