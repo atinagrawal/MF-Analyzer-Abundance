@@ -360,7 +360,7 @@ export function MFCompareView({
                   />
                   <div>
                     <div className="cmp-strat-name">{f.name}</div>
-                    <div className="cmp-strat-mgr">{f.house}</div>
+                    <div className="cmp-strat-mgr">{f.houseDisplay || f.house}</div>
                   </div>
                 </div>
                 <span className={`cmp-type-badge ${f.type}`}>{f.type === 'mf' ? 'Mutual Fund' : 'SIF'}</span>
@@ -753,7 +753,7 @@ export function MFCompareView({
                 <div>
                   <div className="cmp-verdict-title">Overall Leader: {winner.fund.name}</div>
                   <div className="cmp-verdict-body">
-                    <strong>{winner.fund.name}</strong> by <strong>{winner.fund.house}</strong> ranks highest across the
+                    <strong>{winner.fund.name}</strong> by <strong>{winner.fund.houseDisplay || winner.fund.house}</strong> ranks highest across the
                     metrics compared — weighted toward long-term consistency (5Y/7Y/10Y and Return/Risk count most,
                     1M/3M count least), averaged only over the periods each fund actually has data for so a newer
                     fund isn't penalized for not existing that long.

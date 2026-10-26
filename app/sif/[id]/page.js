@@ -56,7 +56,11 @@ export async function generateMetadata({ params }) {
         '@type': 'FinancialProduct',
         name: cleanName,
         description,
-        provider: { '@type': 'Organization', name: parent ? `${s.sif_name} (${parent.amc})` : s.sif_name },
+        // Organization.name stays the bare SIF brand -- cramming "(parent
+        // AMC)" into it isn't a real org name and risks Google flagging
+        // the rich result. The parent-AMC context is already in
+        // `description` above.
+        provider: { '@type': 'Organization', name: s.sif_name },
         url: canonicalUrl,
         category: `Specialised Investment Fund - ${s.category}`,
         identifier: s.scheme_id,

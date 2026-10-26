@@ -240,7 +240,12 @@ export function normalizeFund(entry) {
     id: 'sif-' + entry.scheme_id,
     type: 'sif',
     name: entry.nav_name,
-    house: formatSifBrandWithAmc(entry.sif_name),
+    // Raw brand name -- getSIFLogo (lib/providerLogos.js) matches against
+    // this exactly (its SIF_OVERRIDES keys are bare brand names like
+    // "isif", with no "(parent AMC)" suffix); the AMC-annotated version
+    // for display only lives in houseDisplay below.
+    house: entry.sif_name,
+    houseDisplay: formatSifBrandWithAmc(entry.sif_name),
     category: entry.category,
     navFetchKey: entry.scheme_id,
     ret_1m: null, ret_3m: null, ret_6m: null, ret_1y: null, ret_3y: null,
