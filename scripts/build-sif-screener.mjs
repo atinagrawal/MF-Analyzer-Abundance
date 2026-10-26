@@ -184,7 +184,14 @@ async function fetchSifHistory(schemeId, daysBack, toStr) {
 async function fetchSifHistoryWithFallback(schemeId) {
   const toStr = new Date().toISOString().slice(0, 10);
   try {
-    return (await fetchSifHistory(schemeId, 5 * 365, toStr)) || (await fetchSifHistory(schemeId, 400, toStr));
+    // AMFI rejects a `from`..`to` span of exactly 5*365=1825 days ("range
+    // must be less than 5 years") -- confirmed live: 1825 -> 400, 1824 ->
+    // 200. So the "wide" request was ALWAYS failing and silently falling
+    // through to the 400-day narrow window below, which is nowhere near
+    // enough once a scheme is old enough to need 2Y/3Y+ (and leaves barely
+    // a month of margin for 1Y). 1820 days gives real headroom under the
+    // confirmed 1824-day ceiling.
+    return (await fetchSifHistory(schemeId, 1820, toStr)) || (await fetchSifHistory(schemeId, 400, toStr));
   } catch {
     try { return await fetchSifHistory(schemeId, 400, toStr); } catch { return null; }
   }
@@ -232,6 +239,11 @@ async function main() {
       ret_inception: returns.ret_inception ?? null,
       ret_inception_annualized: returns.ret_inception_annualized ?? null,
       asof: new Date(asOfMs).toISOString().slice(0, 10),
+      // Not a DB column -- marks whether THIS run's own history fetch came
+      // back empty (AMFI flake, not a real "scheme has no history yet"),
+      // so the carry-forward step below knows which rows are candidates for
+      // reusing yesterday's values instead of overwriting them with nulls.
+      _historyFetchFailed: !series,
     };
   });
 
@@ -264,6 +276,35 @@ async function main() {
     asof TEXT
   )`);
   await c.query(`CREATE INDEX IF NOT EXISTS idx_sif_screener_category ON sif_screener (category)`);
+
+  // Carry-forward guard: the MIN_EXPECTED_ROWS check above only catches a
+  // whole-table collapse, not a handful of individual schemes whose history
+  // fetch happened to fail THIS run (AMFI's SIF endpoint is flaky under
+  // concurrent load -- confirmed live, scattered failures across unrelated
+  // scheme_ids on the same run, not an age/brand pattern). Without this, one
+  // bad fetch for the single oldest SIF scheme silently wipes its ret_1y
+  // back to null and flips the whole site's "1Y" column to disabled
+  // (app/screener/ScreenerClient.jsx's sifAvailableKeys requires at least
+  // one scheme with a non-null value) -- exactly the "1Y disabled again"
+  // regression this guard exists to prevent. Reuses yesterday's return/risk
+  // figures for a scheme whose fetch failed today, same stale-over-wrong
+  // principle as fix(benchmarks)'s BSE index cache fallback; nav/nav_date
+  // always come from today's separate (and separately reliable)
+  // fetchSchemeList() call, never carried forward.
+  const RETURN_COLS = ['ret_1m','ret_3m','ret_6m','ret_1y','ret_3y','ret_5y','ret_7y','ret_10y','vol','max_dd','ret_per_risk','age_years','inception_date','ret_inception','ret_inception_annualized'];
+  const { rows: existingRows } = await c.query(`SELECT scheme_id, ${RETURN_COLS.join(',')} FROM sif_screener`);
+  const existingById = new Map(existingRows.map((r) => [r.scheme_id, r]));
+  let carriedForward = 0;
+  for (const row of rows) {
+    if (!row._historyFetchFailed) continue;
+    const prev = existingById.get(row.scheme_id);
+    if (!prev || RETURN_COLS.every((k) => prev[k] == null)) continue; // nothing usable to carry forward
+    RETURN_COLS.forEach((k) => { row[k] = prev[k]; });
+    carriedForward++;
+  }
+  if (carriedForward > 0) {
+    console.log(`[sif-screener] carried forward yesterday's returns for ${carriedForward} scheme(s) whose history fetch failed this run`);
+  }
 
   const COLS = ['scheme_id','nav_name','sif_name','category','nav','nav_date','ret_1m','ret_3m','ret_6m','ret_1y','ret_3y','ret_5y','ret_7y','ret_10y','vol','max_dd','ret_per_risk','age_years','inception_date','ret_inception','ret_inception_annualized','asof'];
   const N = COLS.length;
