@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getSifParentAmc, formatSifBrandWithAmc } from '@/lib/sifParentAmc';
 
 const FUND_TYPES = ['Equity MF', 'Debt MF', 'Hybrid MF', 'Index Fund / ETF', 'SIF', 'Other'];
 
@@ -376,7 +377,17 @@ export default function ManualHoldingsTab() {
   // SIF scheme filtered list
   const sifFiltered = sifSchemes.filter(s => {
     const q = sifSearch.toLowerCase();
-    return !q || s.nav_name.toLowerCase().includes(q) || s.sif_name.toLowerCase().includes(q) || s.scheme_id.toLowerCase().includes(q);
+    if (!q) return true;
+    const parent = getSifParentAmc(s.sif_name);
+    return (
+      s.nav_name.toLowerCase().includes(q) ||
+      s.sif_name.toLowerCase().includes(q) ||
+      s.scheme_id.toLowerCase().includes(q) ||
+      (parent && (
+        parent.short.toLowerCase().includes(q) ||
+        parent.amc.toLowerCase().includes(q)
+      ))
+    );
   }).slice(0, 12);
 
   return (
@@ -504,7 +515,7 @@ export default function ManualHoldingsTab() {
                             {s.nav_name}
                           </div>
                           <div style={{ fontSize: '.58rem', color: 'var(--muted)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>
-                            {s.scheme_id} · {s.sif_name} · NAV ₹{s.nav} ({s.nav_date})
+                            {s.scheme_id} · {formatSifBrandWithAmc(s.sif_name)} · NAV ₹{s.nav} ({s.nav_date})
                           </div>
                         </button>
                       ))}

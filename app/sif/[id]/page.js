@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import pool from '@/lib/db';
 import SifDetailClient from './SifDetailClient';
 import { getSchemeFaq } from '@/lib/sifFaq';
+import { getSifParentAmc } from '@/lib/sifParentAmc';
 
 // ISR, not force-dynamic -- see app/fund/[code]/page.js's matching change
 // and lib/caching-pattern.md. SIF NAV/category data doesn't need a fresh
@@ -35,9 +36,11 @@ export async function generateMetadata({ params }) {
 
   const s = rows[0];
   const cleanName = (s.nav_name || '').replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim();
+  const parent = getSifParentAmc(s.sif_name);
+  const parentText = parent ? ` (${parent.amc})` : '';
   const title = `${cleanName} (${s.scheme_id}) — SIF Performance, Strategy & Analytics | Abundance`;
   const description =
-    `${cleanName} is a SEBI-regulated Specialised Investment Fund (${s.category}) managed by ${s.sif_name}. ` +
+    `${cleanName} is a SEBI-regulated Specialised Investment Fund (${s.category}) managed by ${s.sif_name}${parentText}. ` +
     `Scheme ID: ${s.scheme_id}. Latest NAV: ₹${Number(s.nav).toFixed(4)} as of ${s.nav_date || s.asof}. ` +
     `View complete portfolio holdings, strategy facts, risk metrics & backtest on Abundance — ARN-251838.`;
 
@@ -53,7 +56,7 @@ export async function generateMetadata({ params }) {
         '@type': 'FinancialProduct',
         name: cleanName,
         description,
-        provider: { '@type': 'Organization', name: s.sif_name },
+        provider: { '@type': 'Organization', name: parent ? `${s.sif_name} (${parent.amc})` : s.sif_name },
         url: canonicalUrl,
         category: `Specialised Investment Fund - ${s.category}`,
         identifier: s.scheme_id,
@@ -75,7 +78,7 @@ export async function generateMetadata({ params }) {
   return {
     title,
     description,
-    keywords: `${cleanName}, ${s.sif_name}, ${s.category}, SIF India, Specialised Investment Fund, Scheme ID ${s.scheme_id}, SIF NAV, SIF holdings, SIF backtest`,
+    keywords: `${cleanName}, ${s.sif_name}, ${parent ? parent.amc + ', ' + parent.short + ', ' : ''}${s.category}, SIF India, Specialised Investment Fund, Scheme ID ${s.scheme_id}, SIF NAV, SIF holdings, SIF backtest`,
     alternates: { canonical: canonicalUrl },
     openGraph: {
       title,

@@ -26,6 +26,7 @@ import { normalizeSchemeName } from '@/lib/normalizeSchemeName';
 import { shortCat } from '@/app/screener/screenerContent';
 import CompareGrowthChart from '@/app/screener/CompareGrowthChart';
 import HoldingsSection from '@/app/screener/HoldingsSection';
+import { formatSifBrandWithAmc } from '@/lib/sifParentAmc';
 import '@/app/screener/mf-compare.css';
 
 // ---------- shared small helpers (copied from ScreenerClient.jsx) ----------
@@ -324,7 +325,7 @@ export function SifDetailPanel({ s, holdings, holdingsLoading = false, pts, hist
         <div>
           <div className="scr-drawer-name">{s.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim()}</div>
           <div className="scr-drawer-tags">
-            <span className="scr-tag">{s.sif_name}</span>
+            <span className="scr-tag">{formatSifBrandWithAmc(s.sif_name)}</span>
             <span className={`scr-sif-badge scr-sif-badge-${fam.toLowerCase()}`} style={{ fontSize: '10px', padding: '3px 8px' }}>{SIF_STRATEGY_LABELS[s.category] || sifStratShort(s.category)}</span>
             <span className="scr-tag alt">{s.scheme_id}</span>
           </div>

@@ -8,6 +8,7 @@ import { getSIFLogo } from '@/lib/providerLogos';
 import CompareGrowthChart from '@/app/screener/CompareGrowthChart';
 import HoldingsSection from '@/app/screener/HoldingsSection';
 import { getSchemeFaq } from '@/lib/sifFaq';
+import { getSifParentAmc } from '@/lib/sifParentAmc';
 import './sif-detail.css';
 
 const SIF_STRATEGY_LABELS = {
@@ -182,6 +183,7 @@ export default function SifDetailClient({ id }) {
   // Derived: clean name
   const cleanName = sif ? sif.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim() : '';
   const fam = sif?.category?.startsWith('Equity') ? 'equity' : 'hybrid';
+  const parentAmc = useMemo(() => getSifParentAmc(sif?.sif_name), [sif?.sif_name]);
   const schemeFaqs = getSchemeFaq(sif, holdingsData?.totalHoldingsCount ?? holdingsData?.holdings?.length ?? 0);
 
   // Period-filtered nav/bench
@@ -253,7 +255,7 @@ export default function SifDetailClient({ id }) {
             <div className="sif-hero-content">
               <h1 className="sif-hero-title">{cleanName}</h1>
               <div className="sif-hero-tags">
-                <span className="sif-tag house">{sif.sif_name}</span>
+                <span className="sif-tag house">{sif.sif_name}{parentAmc ? ` · ${parentAmc.short}` : ''}</span>
                 <span className={`sif-strat-badge sif-strat-badge-${fam}`}>{sifStratShort(sif.category)}</span>
                 <span className="sif-tag sebi">SEBI SIF</span>
                 <span className="sif-tag code">{sif.scheme_id}</span>
@@ -350,7 +352,8 @@ export default function SifDetailClient({ id }) {
           <div className="sif-card-h">🏢 Strategy &amp; Fund Facts</div>
           <div className="sif-facts-grid">
             {[
-              { lbl: 'Fund House / AMC',    val: sif.sif_name },
+              { lbl: 'SIF Brand',           val: sif.sif_name },
+              { lbl: 'Parent Fund House / AMC', val: parentAmc ? parentAmc.amc : sif.sif_name },
               { lbl: 'Strategy Category',   val: sif.category },
               { lbl: 'Scheme ID',           val: sif.scheme_id },
               { lbl: 'Min. Investment',     val: '₹10 Lakhs (SEBI mandated)' },

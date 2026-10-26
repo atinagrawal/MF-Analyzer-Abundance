@@ -8,6 +8,7 @@
 import Script from 'next/script';
 import SifScreener from './SifScreener';
 import { getSifFaq } from '@/lib/sifFaq';
+import { formatSifBrandWithAmc } from '@/lib/sifParentAmc';
 
 export const revalidate = 14400; // 4 hours — matches sif-nav Blob TTL
 
@@ -115,7 +116,7 @@ function buildJsonLd(data) {
       item: {
         '@type': 'FinancialProduct',
         name: s.nav_name,
-        description: `${s.sif_name} — ${s.category.split(' - ').pop()} — NAV ₹${s.nav} as of ${navDate}`,
+        description: `${formatSifBrandWithAmc(s.sif_name)} — ${s.category.split(' - ').pop()} — NAV ₹${s.nav} as of ${navDate}`,
         identifier: s.scheme_id,
         additionalProperty: [
           { '@type': 'PropertyValue', name: 'ISIN', value: s.isin_po },

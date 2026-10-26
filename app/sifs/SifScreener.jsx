@@ -15,6 +15,7 @@ import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getSIFLogo } from '@/lib/providerLogos';
 import { getSifFaq } from '@/lib/sifFaq';
+import { getSifParentAmc, formatSifBrandWithAmc } from '@/lib/sifParentAmc';
 
 // ── Category label map — short names for the long AMFI strings ──────────────
 const STRATEGY_LABELS = {
@@ -128,7 +129,7 @@ function SifCard({ scheme, watched, onToggleWatch, onViewHistory }) {
             size={28}
             radius={7}
           />
-          <span className="sif-house-badge" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{scheme.sif_name}</span>
+          <span className="sif-house-badge" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatSifBrandWithAmc(scheme.sif_name)}</span>
         </div>
         <button
           className={`sif-star${watched ? ' active' : ''}`}
@@ -208,7 +209,7 @@ function SifRow({ scheme, watched, onToggleWatch, idx, onViewHistory }) {
           />
           <div>
             <div className="sif-row-name">{scheme.nav_name}</div>
-            <div className="sif-row-house">{scheme.sif_name} · {scheme.scheme_id}</div>
+            <div className="sif-row-house">{formatSifBrandWithAmc(scheme.sif_name)} · {scheme.scheme_id}</div>
           </div>
         </div>
       </td>
@@ -433,7 +434,7 @@ function NavHistoryModal({ scheme, onClose }) {
           <div className="sif-hist-header-left">
             <div className="sif-hist-eyebrow">NAV History</div>
             <div className="sif-hist-title">{scheme.nav_name}</div>
-            <div className="sif-hist-sub">{scheme.sif_name} · {scheme.scheme_id}</div>
+            <div className="sif-hist-sub">{formatSifBrandWithAmc(scheme.sif_name)} · {scheme.scheme_id}</div>
             {isInSifScreener(scheme.nav_name) && (
               <a
                 href={`/sif/${scheme.scheme_id}`}
@@ -712,11 +713,21 @@ export default function SifScreener({ initialData }) {
     let list = schemes;
     if (growthOnly)            list = list.filter(s => !isIdcwPlan(s.nav_name));
     if (showWatchOnly)         list = list.filter(s => watchlist.has(s.scheme_id));
-    if (query.trim())          list = list.filter(s =>
-      s.nav_name.toLowerCase().includes(query.toLowerCase()) ||
-      s.sif_name.toLowerCase().includes(query.toLowerCase()) ||
-      s.scheme_id.toLowerCase().includes(query.toLowerCase())
-    );
+    if (query.trim()) {
+      const qLower = query.toLowerCase();
+      list = list.filter(s => {
+        const parent = getSifParentAmc(s.sif_name);
+        return (
+          s.nav_name.toLowerCase().includes(qLower) ||
+          s.sif_name.toLowerCase().includes(qLower) ||
+          s.scheme_id.toLowerCase().includes(qLower) ||
+          (parent && (
+            parent.short.toLowerCase().includes(qLower) ||
+            parent.amc.toLowerCase().includes(qLower)
+          ))
+        );
+      });
+    }
     if (filterType !== 'all')  list = list.filter(s => s.type === filterType);
     if (filterFam  !== 'all')  list = list.filter(s => STRATEGY_FAMILY(s.category) === filterFam);
     if (filterSif  !== 'all')  list = list.filter(s => s.sif_name === filterSif);
@@ -843,9 +854,11 @@ export default function SifScreener({ initialData }) {
             {/* SIF company filter */}
             <select className="sif-select" value={filterSif} onChange={e => { setFilterSif(e.target.value); setFilterCat('all'); }} aria-label="Filter by SIF company">
               <option value="all">All Companies</option>
-              {sifNames.filter(n => n !== 'all').map(n => (
-                <option key={n} value={n}>{n.replace(' SIF', '')}</option>
-              ))}
+              {sifNames.filter(n => n !== 'all').map(n => {
+                const p = getSifParentAmc(n);
+                const label = p ? `${n.replace(' SIF', '')} (${p.short})` : n.replace(' SIF', '');
+                return <option key={n} value={n}>{label}</option>;
+              })}
             </select>
 
             {/* Strategy category filter (full, dynamic) */}

@@ -12,6 +12,7 @@
 
 import { xirr } from '@/lib/xirr';
 import { matchCategory } from './screenerContent';
+import { formatSifBrandWithAmc } from '@/lib/sifParentAmc';
 
 const DAY_MS = 86400000;
 
@@ -239,7 +240,7 @@ export function normalizeFund(entry) {
     id: 'sif-' + entry.scheme_id,
     type: 'sif',
     name: entry.nav_name,
-    house: entry.sif_name,
+    house: formatSifBrandWithAmc(entry.sif_name),
     category: entry.category,
     navFetchKey: entry.scheme_id,
     ret_1m: null, ret_3m: null, ret_6m: null, ret_1y: null, ret_3y: null,

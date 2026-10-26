@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProviderAvatar from '@/components/ProviderAvatar';
 import { getMFLogo, getSIFLogo } from '@/lib/providerLogos';
+import { getSifParentAmc, formatSifBrandWithAmc } from '@/lib/sifParentAmc';
 import { MFCompareBar, MFCompareModal } from './MFCompare';
 import { FundDetailPanel, SifDetailPanel } from '@/components/HoldingDetailDrawer';
 import { useRouter } from 'next/navigation';
@@ -413,7 +414,14 @@ export default function ScreenerClient({ initialCategory, initialData }) {
     if (sifFamily !== 'all') r = r.filter((s) => (s.category?.startsWith('Equity') ? 'Equity' : 'Hybrid') === sifFamily);
     if (sifCat !== 'all') r = r.filter((s) => s.category === sifCat);
     if (sifHouse !== 'all') r = r.filter((s) => s.sif_name === sifHouse);
-    if (sifQ.trim()) { const t = sifQ.toLowerCase().split(/\s+/); r = r.filter((s) => { const str = (s.nav_name + ' ' + s.sif_name).toLowerCase(); return t.every((w) => str.includes(w)); }); }
+    if (sifQ.trim()) {
+      const t = sifQ.toLowerCase().split(/\s+/);
+      r = r.filter((s) => {
+        const parent = getSifParentAmc(s.sif_name);
+        const str = (s.nav_name + ' ' + s.sif_name + ' ' + (parent ? parent.short + ' ' + parent.amc : '')).toLowerCase();
+        return t.every((w) => str.includes(w));
+      });
+    }
     const { key, dir } = sifSort;
     return [...r].sort((a, b) => {
       const av = a[key], bv = b[key];
@@ -605,7 +613,10 @@ export default function ScreenerClient({ initialCategory, initialData }) {
               </select>
               <select className="scr-select" value={sifHouse} onChange={(e) => setSifHouse(e.target.value)}>
                 <option value="all">All fund houses</option>
-                {sifHouses.map((h) => <option key={h} value={h}>{h}</option>)}
+                {sifHouses.map((h) => {
+                  const p = getSifParentAmc(h);
+                  return <option key={h} value={h}>{p ? `${h.replace(' SIF', '')} (${p.short})` : h}</option>;
+                })}
               </select>
             </>
           )}
@@ -681,7 +692,7 @@ export default function ScreenerClient({ initialCategory, initialData }) {
                           />
                           <button className="scr-fundlink" onClick={(e) => { e.stopPropagation(); setSifSel(s); }}>
                             <span className="scr-fund-n">{s.nav_name.replace(/\s*-\s*(Regular Plan|Regular).*/i, '').trim()}</span>
-                            <span className="scr-fund-sub">{s.scheme_id}</span>
+                            <span className="scr-fund-sub">{formatSifBrandWithAmc(s.sif_name)} · {s.scheme_id}</span>
                           </button>
                         </div>
                       </td>
@@ -725,7 +736,7 @@ export default function ScreenerClient({ initialCategory, initialData }) {
                       {c.top.map((s, i) => (
                         <button className="scr-lead-row" key={s.scheme_id} onClick={() => setSifSel(s)}>
                           <span className="scr-lead-rank">{i + 1}</span>
-                          <span className="scr-lead-name">{s.sif_name}</span>
+                          <span className="scr-lead-name">{formatSifBrandWithAmc(s.sif_name)}</span>
                           {c.period ? (
                             <span className="scr-lead-ret scr-pos">{s[c.period.key] > 0 ? '+' : ''}{s[c.period.key].toFixed(1)}% ({c.period.label})</span>
                           ) : (
