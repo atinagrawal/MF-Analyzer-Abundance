@@ -6,7 +6,6 @@
  * Comprehensive Live Precious Metals Hub & Investment Analytics:
  *  - Indicative Live Rates for Gold (24K, 22K, 18K), Silver, Platinum & USD/INR
  *  - Interactive Jewellery Cost & 3% GST Calculator with BIS Hallmarking fees
- *  - City-wise indicative rate benchmarks across 16 major Indian metros
  *  - Investment comparison: Physical Gold vs. Gold ETFs vs. Sovereign Gold Bonds (SGB) vs. Digital Gold
  *  - BIS HUID Hallmarking verification guide & consumer protection
  *  - Gold-to-Silver Ratio tracker and historical valuation context
@@ -90,7 +89,7 @@ function buildJsonLd(initialData) {
       {
         '@type': 'ItemPage',
         name: "Today's Gold Rate & Silver Rate in India",
-        description: 'Live indicative 24K, 22K, 18K gold rates per gram and 10g, silver price per kg, jewellery GST calculator, and city-wise rates in India.',
+        description: 'Live indicative 24K, 22K, 18K gold rates per gram and 10g, silver price per kg, and jewellery GST calculator for India.',
         url: CANONICAL_URL,
         mainEntity: {
           '@type': 'FinancialProduct',
@@ -201,14 +200,13 @@ export default async function GoldSilverRatesPage() {
             Gold Rate Today, Silver Rate &amp; Platinum Price in India
           </h1>
           <p className="gsr-page-subtitle">
-            Live indicative bullion rates for 24K (999), 22K (916) &amp; 18K (750) gold per gram, 8g Pavan, 10g, 1 Tola &amp; 100g, Silver per kg, and USD/INR. Features interactive jewellery GST calculator, city rates, and investment comparison.
+            Live indicative bullion rates for 24K (999), 22K (916) &amp; 18K (750) gold per gram, 8g Pavan, 10g, 1 Tola &amp; 100g, Silver per kg, and USD/INR. Features an interactive jewellery GST calculator and investment comparison.
           </p>
 
           {/* Quick-Jump Section Navigation */}
           <div className="gsr-jump-nav" aria-label="Page navigation">
             <a href="#live-ticker" className="jump-chip">📊 Live Ticker</a>
             <a href="#jewellery-calculator" className="jump-chip">🧮 Jewellery Calculator</a>
-            <a href="#city-rates" className="jump-chip">🏙️ City Rates</a>
             <a href="#gold-vs-funds" className="jump-chip">⚖️ Gold vs ETFs vs SGB</a>
             <a href="#hallmarking-guide" className="jump-chip">🔍 BIS HUID Guide</a>
             <a href="#gold-silver-ratio" className="jump-chip">📈 Gold/Silver Ratio</a>
@@ -216,7 +214,7 @@ export default async function GoldSilverRatesPage() {
           </div>
         </header>
 
-        {/* ── Client Component: Live Tables, Calculator, City Rates ── */}
+        {/* ── Client Component: Live Tables, Calculator ── */}
         <section id="live-ticker">
           <GoldSilverRatesClient initialData={initialData} />
         </section>

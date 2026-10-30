@@ -629,31 +629,6 @@
   border-left: 3px solid var(--g1);
 }
 
-/* ── City-wise Table ── */
-.gsr-city-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 16px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-}
-.gsr-city-search {
-  padding: 8px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  font-size: 0.82rem;
-  min-width: 260px;
-  outline: none;
-  transition: border-color 0.15s ease;
-}
-.gsr-city-search:focus {
-  border-color: var(--g1);
-}
-.gsr-city-table td {
-  padding: 10px 12px;
-}
-
 /* ── Decision Matrix Table ── */
 .gsr-matrix-table th {
   text-align: center;

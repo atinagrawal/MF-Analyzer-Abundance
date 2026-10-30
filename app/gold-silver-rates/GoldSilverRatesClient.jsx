@@ -249,84 +249,6 @@ function JewelleryCalculator({ conversions }) {
   );
 }
 
-// ── City-wise Indicative Rates Table ─────────────────────────────────────────
-function CityRatesSection({ cityRates }) {
-  const [search, setSearch] = useState('');
-
-  const filtered = useMemo(() => {
-    if (!cityRates || !cityRates.length) return [];
-    if (!search.trim()) return cityRates;
-    const q = search.toLowerCase();
-    return cityRates.filter(
-      (c) => c.city.toLowerCase().includes(q) || c.state.toLowerCase().includes(q)
-    );
-  }, [cityRates, search]);
-
-  if (!cityRates || !cityRates.length) return null;
-
-  return (
-    <div className="gsr-guide-section" id="city-rates">
-      <div className="gsr-city-header">
-        <div>
-          <span className="gsr-badge-pill">🏙️ Regional Benchmarks</span>
-          <h2 className="gsr-section-heading" style={{ margin: '6px 0 4px' }}>
-            City-Wise Gold &amp; Silver Rates Today in India
-          </h2>
-          <p className="gsr-guide-p" style={{ marginBottom: 12 }}>
-            Indicative retail bullion rates per 10 grams (24K, 22K, 18K) and per 1 kg for Silver across major Indian cities.
-          </p>
-        </div>
-        <input
-          type="text"
-          className="gsr-city-search"
-          placeholder="Filter by city or state (e.g. Mumbai, Delhi, Kerala)..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label="Filter city rates"
-        />
-      </div>
-
-      <div className="gsr-table-wrap">
-        <table className="gsr-table gsr-city-table">
-          <thead>
-            <tr>
-              <th>City / Region</th>
-              <th>State</th>
-              <th className="gsr-num">24K Gold (10g)</th>
-              <th className="gsr-num">22K Gold (10g)</th>
-              <th className="gsr-num">18K Gold (10g)</th>
-              <th className="gsr-num">Silver (1 kg)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((c) => (
-              <tr key={c.city}>
-                <td className="gsr-weight-label">{c.city}</td>
-                <td style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{c.state}</td>
-                <td className="mono gsr-num gsr-buy">{fmtInr(c.gold24k10g, 0)}</td>
-                <td className="mono gsr-num">{fmtInr(c.gold22k10g, 0)}</td>
-                <td className="mono gsr-num" style={{ color: 'var(--text2)' }}>{fmtInr(c.gold18k10g, 0)}</td>
-                <td className="mono gsr-num gsr-buy">{fmtInr(c.silver1kg, 0)}</td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--muted)' }}>
-                  No matching city found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <p className="gsr-affiliate-disclosure" style={{ marginTop: 8 }}>
-        * City rates are indicative benchmarks reflecting state transportation differentials and local bullion association rates (such as IBJA, Madras Jewellers Association, etc.). Exact showroom prices will vary with jeweller-specific making charges and 3% GST.
-      </p>
-    </div>
-  );
-}
-
 // ── Main Client Component ───────────────────────────────────────────────────
 export default function GoldSilverRatesClient({ initialData }) {
   const [data, setData] = useState(initialData || null);
@@ -459,9 +381,6 @@ export default function GoldSilverRatesClient({ initialData }) {
 
       {/* ── Interactive Jewellery & GST Calculator ── */}
       <JewelleryCalculator conversions={conversions} />
-
-      {/* ── City-Wise Indicative Rates Table ── */}
-      <CityRatesSection cityRates={conversions.cityRates} />
     </>
   );
 }

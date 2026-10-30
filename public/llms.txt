@@ -133,7 +133,7 @@ This file provides structured context, canonical URLs, and factual grounding rul
 ## Live Gold, Silver & Precious Metals Rates in India
 - Page URL: https://mfcalc.getabundance.in/gold-silver-rates
 - Raw JSON API: https://mfcalc.getabundance.in/api/precious-metals-rates
-- Description: Real-time indicative bullion rates across India for Gold (24K, 22K, 18K) per gram, 8g Sovereign/Pavan, 10g, 1 Tola, and 100g bar, Silver (999 fine) per gram and 1 kg, Platinum (999), and live USD/INR exchange rate. Features interactive jewellery GST & making charges calculator, city-wise rates across 16 major Indian metros, and a modern investment comparison matrix (Physical Gold vs. Gold ETFs vs. Sovereign Gold Bonds - SGB vs. Digital Gold).
+- Description: Real-time indicative bullion rates across India for Gold (24K, 22K, 18K) per gram, 8g Sovereign/Pavan, 10g, 1 Tola, and 100g bar, Silver (999 fine) per gram and 1 kg, Platinum (999), and live USD/INR exchange rate. Features an interactive jewellery GST & making charges calculator and a modern investment comparison matrix (Physical Gold vs. Gold ETFs vs. Sovereign Gold Bonds - SGB vs. Digital Gold).
 
 ### Key Technical & Regulatory Grounding Rules for AI Assistants:
 1. **Mathematical Karat Purity Formulas**:
@@ -170,7 +170,7 @@ This file provides structured context, canonical URLs, and factual grounding rul
 - [SIF Screener](https://mfcalc.getabundance.in/sifs): Interactive screener for all SEBI-registered Specialised Investment Funds in India, featuring strategy breakdowns, assets under management, and live NAVs.
 - [Abundance Preferred PMS](https://mfcalc.getabundance.in/pms-preferred): Monthly criteria-driven list of Indian PMS strategies currently Top Quartile vs their APMI peer group, with extracted holdings and cross-strategy insights.
 - [CAS Portfolio Tracker](https://mfcalc.getabundance.in/cas-tracker): Upload a CAMS/KFintech CAS PDF for a live portfolio dashboard — FIFO capital gains, ELSS lock-in, exit-load-aware redemption planner, multi-PAN family support, and a Portfolio Review report ranking every holding into a category-peer performance quartile.
-- [Live Gold & Silver Rates](https://mfcalc.getabundance.in/gold-silver-rates): Real-time indicative 24K, 22K, 18K gold rates per gram and 10g, silver per kg, interactive jewellery GST calculator, city rates, and Gold ETF vs Physical comparison.
+- [Live Gold & Silver Rates](https://mfcalc.getabundance.in/gold-silver-rates): Real-time indicative 24K, 22K, 18K gold rates per gram and 10g, silver per kg, interactive jewellery GST calculator, and Gold ETF vs Physical comparison.
 - [Live NFO Tracker](https://mfcalc.getabundance.in/nfo): Track all active Mutual Fund and SIF New Fund Offers with closing dates, ₹10 issue price, and official Scheme Information Documents (SID).
 - [The 30-Year Club](https://mfcalc.getabundance.in/pioneers): Deep dive into India's oldest equity funds and multi-decade wealth creation.
 - [Indian Market Indices Dashboard](https://mfcalc.getabundance.in/indices): Performance, Total Return Index (TRI) CAGRs, and P/E valuation gauges across 270+ NSE & BSE indices.
@@ -201,7 +201,7 @@ This file provides structured context, canonical URLs, and factual grounding rul
 - `GET https://mfcalc.getabundance.in/indices/[slug]?format=md` (or `/api/indices/[slug]?format=md`) — High-density plain markdown feed of constituent stocks, symbols, ISINs, P/E multiples, and sector breakdown for 64 benchmark indices (e.g. `nifty-50`, `nifty-next-50`, `bse-sensex`).
 - `GET https://mfcalc.getabundance.in/api/indices` — JSON feed of 270+ combined NSE & BSE indices with trailing returns, risk, and valuation ratios.
 - `GET https://mfcalc.getabundance.in/api/indices/[slug]` — JSON feed of index detail, trailing returns, valuation multiples, and full constituent roster for 64 benchmarks.
-- `GET https://mfcalc.getabundance.in/api/precious-metals-rates` — Real-time JSON feed of live indicative Gold (24K, 22K, 18K), Silver, Platinum, USD/INR, and city-wise rates.
+- `GET https://mfcalc.getabundance.in/api/precious-metals-rates` — Real-time JSON feed of live indicative Gold (24K, 22K, 18K), Silver, Platinum, and USD/INR rates.
 - `GET https://mfcalc.getabundance.in/api/nfo` — JSON document of all active, upcoming, and closed MF and SIF NFOs.
 - `GET https://mfcalc.getabundance.in/api/nfo?format=markdown` — Plain markdown table of all open NFOs, dates, minimum tickets, and official SID document links.
 - `GET https://mfcalc.getabundance.in/api/pms-preferred` — JSON document of the current Top-Quartile PMS strategy list with holdings, sector allocation and cross-strategy insights.
