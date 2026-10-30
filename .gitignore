@@ -55,6 +55,7 @@ data/reverse-holdings-needs-review.json
 # aren't meant to be tracked -- only the fetchers/registry source is.
 scripts/portfolio_aggregator/data/
 scripts/portfolio_aggregator/logs/
+scripts/bse-sync-logs/
 __pycache__/
 *.pyc
 

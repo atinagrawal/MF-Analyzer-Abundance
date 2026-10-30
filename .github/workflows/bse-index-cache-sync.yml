@@ -6,9 +6,15 @@ name: BSE Index Cache Sync
 # writing it to R2, since api.bseindia.com now blocks Vercel's production
 # IPs (see lib/bseIndex.js's header comment for the full story) -- the
 # live routes read this cache instead of calling BSE directly.
+#
+# Scheduled trigger disabled 2026-10-30: BSE's Akamai WAF started blocking
+# GitHub Actions' runner IPs too (403 on every run since 2026-10-28), the
+# same block it already applied to Vercel's IPs earlier in October. The
+# daily sync now runs from a Windows Scheduled Task on a normal
+# office/home network instead -- see scripts/run-bse-sync-local.ps1. This
+# workflow is kept, manual-trigger-only, as a fallback for whenever BSE's
+# block criteria changes again.
 on:
-  schedule:
-    - cron: '30 13 * * 1-5'   # 13:30 UTC = 19:00 IST, weekdays -- after BSE's own index data for the day settles (also after market-breadth's 13:00 UTC bhavcopy run, so the two don't contend)
   workflow_dispatch:
     inputs:
       limit:
