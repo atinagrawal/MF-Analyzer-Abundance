@@ -68,6 +68,7 @@ const TIER_1_CORE_URLS = [
   'https://mfcalc.getabundance.in/industry',
   'https://mfcalc.getabundance.in/rolling',
   'https://mfcalc.getabundance.in/indices',
+  'https://mfcalc.getabundance.in/gold-silver-rates',
   'https://mfcalc.getabundance.in/sip-calculator',
   'https://mfcalc.getabundance.in/swp-calculator',
   'https://mfcalc.getabundance.in/compare',
