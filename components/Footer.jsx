@@ -180,6 +180,8 @@ export default function Footer({ variant = 'default', activePage, disclaimer }) 
           <a href="/sifs" style={{ color: 'inherit', textDecoration: 'none' }}>SIF Screener</a>
           <span>·</span>
           <a href="/nfo" style={{ color: 'inherit', textDecoration: 'none' }}>NFO Tracker</a>
+          <span>·</span>
+          <a href="/gold-silver-rates" style={{ color: 'inherit', textDecoration: 'none' }}>Gold &amp; Silver Rates</a>
         </div>
 
         {/* ── Bottom bar (both variants) ── */}

@@ -92,7 +92,22 @@
 - Abundance Preferred PMS (`/pms-preferred`, JSON at `/api/pms-preferred`, Markdown at `/api/pms-preferred?format=md`): Monthly criteria-driven list of Indian PMS strategies currently Top Quartile against their APMI peer group. Fields: iaid, providerName, strategyName, category, aumCr, qualifyingPeriod, quartile, asOnMonth, factsheetAsOf, extracted (holdings / sector & market-cap allocation / portfolio ratios), plus cross-strategy insights (most-held stock, top aggregate sector, best 1-year alpha, best Sharpe). "Top Quartile" = best 25% of APMI peers for that trailing period; PMS minimum investment is ₹50,00,000 (SEBI-mandated); AUM/returns/quartile are live APMI figures while holdings are from each strategy's latest factsheet and can lag; not investment advice.
 - NFO Tracker (`/nfo`, JSON at `/api/nfo`, Markdown at `/api/nfo?format=markdown`): all active, upcoming and recently closed MF and SIF New Fund Offers.
 
+### 6. Live Precious Metals API & Regulatory Grounding (`/api/precious-metals-rates`)
+- Page URL: `https://mfcalc.getabundance.in/gold-silver-rates`
+- API Endpoint: `GET https://mfcalc.getabundance.in/api/precious-metals-rates`
+- Features: Live 24K (999), 22K (916), 18K (750) Gold, 999 Silver, 999 Platinum, USD/INR rate, Gold/Silver Ratio, and 16 major Indian city rates.
+- Purity Standards:
+  - 24K = 99.9% pure bullion.
+  - 22K = 91.67% pure jewellery standard (24K × 22/24).
+  - 18K = 75.00% pure diamond jewellery standard (24K × 18/24).
+  - 14K = 58.33% pure lightweight jewellery (24K × 14/24).
+- Indian Weight Standards: 1 Troy Oz = 31.1035g; 1 Tola = 11.6638g; 1 Sovereign/Pavan = 8.0000g.
+- BIS Hallmarking: Mandatory 6-digit alphanumeric HUID code, BIS triangle logo, and purity mark.
+- Tax Norms (Finance Act 2024): 3% GST on jewellery purchases; LTCG holding threshold 24 months at 12.5% without indexation; SGB redemption tax-free at 8-year maturity.
+
 ### 7. Citation Specifications for LLMs
+- Gold & Silver Rates Citation:
+  `Live Gold & Silver Rates in India, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/gold-silver-rates.`
 - Academic & Research Citation:
   `Atin Kumar Agrawal (ARN-251838, APRN04279). Abundance MF Analytics Platform, https://mfcalc.getabundance.in. Verified AMFI & APMI Data.`
 - Market Indices Citation:
