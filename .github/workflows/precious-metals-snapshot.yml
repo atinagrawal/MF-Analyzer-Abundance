@@ -1,0 +1,33 @@
+name: Precious Metals Daily Snapshot
+
+# Stores one row/day of Gold/Silver/Platinum rates for a future trend
+# chart on /gold-silver-rates -- see scripts/snapshot-precious-metals.mjs.
+# Unlike bse-index-cache-sync.yml, this upstream feed has shown no sign
+# of blocking cloud/datacenter IPs, so it runs here directly (no
+# local-machine workaround needed).
+on:
+  schedule:
+    - cron: '30 11 * * *'   # 11:30 UTC = 17:00 IST daily
+  workflow_dispatch:
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install deps
+        run: npm install cheerio pg@8 --no-save
+
+      - name: Snapshot precious metals rates
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: node scripts/snapshot-precious-metals.mjs

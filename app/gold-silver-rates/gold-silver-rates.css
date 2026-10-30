@@ -1,0 +1,325 @@
+/* app/gold-silver-rates/gold-silver-rates.css */
+.gsr-page-wrap {
+  min-height: 100vh;
+  background: var(--bg);
+}
+.gsr-main-content {
+  padding-top: 10px;
+  padding-bottom: 60px;
+  max-width: 1040px;
+}
+.gsr-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+.gsr-breadcrumbs .sep { color: var(--border2); }
+.gsr-breadcrumbs .cur { color: var(--g1); font-weight: 700; }
+
+.gsr-hero-header { margin-bottom: 24px; }
+.gsr-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--g1);
+  background: var(--g-xlight);
+  padding: 3px 10px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+.gsr-page-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--g1);
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+.gsr-page-subtitle {
+  font-size: 0.92rem;
+  color: var(--text2);
+  line-height: 1.5;
+  max-width: 820px;
+}
+
+/* ── Live ticker ── */
+.gsr-ticker {
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(46, 125, 50, 0.04);
+}
+.gsr-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--g1);
+  margin-bottom: 16px;
+}
+.gsr-status-bar.stale { color: #e65100; }
+.gsr-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--g3);
+  box-shadow: 0 0 6px var(--g3);
+}
+.gsr-status-bar.stale .gsr-status-dot {
+  background: #f9a825;
+  box-shadow: 0 0 6px #f9a825;
+}
+.gsr-updated {
+  color: var(--muted);
+  font-weight: 500;
+}
+.gsr-unavailable {
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  text-align: center;
+  color: var(--text2);
+  font-size: 0.9rem;
+}
+
+.gsr-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 18px;
+}
+.gsr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.gsr-table caption {
+  text-align: left;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--g1);
+  padding-bottom: 8px;
+}
+.gsr-table th {
+  background: var(--g-xlight);
+  color: var(--g1);
+  padding: 10px 12px;
+  text-align: right;
+  font-weight: 800;
+  border-bottom: 2px solid var(--border);
+}
+.gsr-table th:first-child { text-align: left; }
+.gsr-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.gsr-weight-label { color: var(--text); font-weight: 600; }
+.gsr-num { text-align: right; }
+.gsr-sell { color: var(--text2); }
+.gsr-buy { color: var(--g1); font-weight: 700; }
+.gsr-subhead td {
+  background: var(--s2);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  padding: 6px 12px;
+}
+
+.gsr-global-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 4px;
+}
+@media (max-width: 640px) {
+  .gsr-global-grid { grid-template-columns: 1fr; }
+}
+.gsr-global-card {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.gsr-global-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.gsr-global-val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--g1);
+}
+.gsr-poll-note {
+  margin-top: 12px;
+  font-size: 0.78rem;
+  color: #e65100;
+}
+
+/* ── Shared section styles (mirrors sip-calculator.css) ── */
+.gsr-section-heading {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--g1);
+  margin-bottom: 12px;
+}
+.gsr-guide-section {
+  margin-top: 40px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 2px 12px rgba(46, 125, 50, 0.04);
+}
+.gsr-guide-p {
+  font-size: 0.88rem;
+  color: var(--text2);
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+
+/* ── Buy CTA ── */
+.gsr-buy-section {
+  margin-top: 32px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 2px 12px rgba(46, 125, 50, 0.04);
+}
+.gsr-cta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+@media (max-width: 768px) {
+  .gsr-cta-grid { grid-template-columns: 1fr; }
+}
+.gsr-cta-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  text-decoration: none;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.gsr-cta-card:hover {
+  border-color: var(--g1);
+  transform: translateY(-2px);
+}
+.gsr-cta-icon { font-size: 1.8rem; margin-bottom: 4px; }
+.gsr-cta-title { font-size: 1rem; font-weight: 800; color: var(--text); }
+.gsr-cta-desc { font-size: 0.78rem; color: var(--text2); margin-bottom: 8px; }
+.gsr-cta-link { font-size: 0.82rem; font-weight: 700; color: var(--g1); }
+.gsr-affiliate-disclosure {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ── Funnel (mirrors sip-cas-funnel) ── */
+.gsr-funnel {
+  margin-top: 8px;
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #fff;
+  border-radius: 14px;
+  padding: 28px;
+}
+.gsr-funnel-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 3px 10px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+.gsr-funnel-title { font-size: 1.3rem; font-weight: 800; margin-bottom: 10px; }
+.gsr-funnel-desc {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 760px;
+  margin-bottom: 18px;
+}
+.gsr-funnel-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.gsr-funnel-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.gsr-funnel-btn.primary { background: #fff; color: var(--g1); }
+.gsr-funnel-btn.primary:hover { background: var(--s2); }
+.gsr-funnel-btn.secondary {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.gsr-funnel-btn.secondary:hover { background: rgba(255, 255, 255, 0.25); }
+
+/* ── FAQ ── */
+.gsr-faq-list { display: flex; flex-direction: column; gap: 12px; }
+.gsr-faq-item {
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--s2);
+}
+.gsr-faq-item .faq-q {
+  padding: 14px 18px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--g1);
+  cursor: pointer;
+  user-select: none;
+}
+.gsr-faq-item .faq-a {
+  padding: 0 18px 16px;
+  font-size: 0.85rem;
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+/* ── Disclosure ── */
+.gsr-disclosure-box {
+  margin-top: 32px;
+  padding: 16px 20px;
+  background: #fffde7;
+  border-left: 4px solid #f9a825;
+  border-radius: 8px;
+}
+.gsr-disclosure-box .disc-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #e65100;
+  margin-bottom: 4px;
+}
+.gsr-disclosure-box .disc-text {
+  font-size: 0.75rem;
+  color: #5d4037;
+  line-height: 1.5;
+  margin: 0;
+}
