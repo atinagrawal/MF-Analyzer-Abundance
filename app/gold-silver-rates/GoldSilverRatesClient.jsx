@@ -153,7 +153,7 @@ function JewelleryCalculator({ conversions }) {
                 aria-label="Weight unit"
               >
                 <option value="gram">Grams (g)</option>
-                <option value="pavan">Sovereign / Pavan (8g)</option>
+                <option value="pavan">Pavan (8g)</option>
                 <option value="tola">Tola (11.66g)</option>
               </select>
             </div>
@@ -315,7 +315,7 @@ export default function GoldSilverRatesClient({ initialData }) {
         </div>
 
         {/* 24K, 22K, 18K Gold Rate Table */}
-        <div className="gsr-table-wrap" style={{ marginTop: 20 }}>
+        <div className="gsr-table-wrap gsr-first-table-wrap">
           <table className="gsr-table">
             <caption>Gold Rate Today in India (24K, 22K &amp; 18K, Indicative)</caption>
             <thead>

@@ -231,6 +231,10 @@ export default async function GoldSilverRatesPage() {
             Buying physical jewellery carries substantial making charges and storage overhead. If your objective is wealth preservation and long-term portfolio returns, see how modern bullion investment options compare side-by-side:
           </p>
 
+          <div className="gsr-scroll-hint" aria-hidden="true">
+            <span>⇄ Swipe horizontally to compare all options</span>
+          </div>
+
           <div className="gsr-table-wrap">
             <table className="gsr-table gsr-matrix-table">
               <thead>
