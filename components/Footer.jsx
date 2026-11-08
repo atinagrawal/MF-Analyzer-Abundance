@@ -182,6 +182,8 @@ export default function Footer({ variant = 'default', activePage, disclaimer }) 
           <a href="/nfo" style={{ color: 'inherit', textDecoration: 'none' }}>NFO Tracker</a>
           <span>·</span>
           <a href="/gold-silver-rates" style={{ color: 'inherit', textDecoration: 'none' }}>Gold &amp; Silver Rates</a>
+          <span>·</span>
+          <a href="/laxmi-aarti" style={{ color: 'inherit', textDecoration: 'none' }}>🌸 लक्ष्मी आरती</a>
         </div>
 
         {/* ── Bottom bar (both variants) ── */}

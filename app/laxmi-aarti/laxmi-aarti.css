@@ -1,0 +1,904 @@
+/* app/laxmi-aarti/laxmi-aarti.css */
+
+/* ── Global Page Theme ── */
+.la-page-wrap {
+  min-height: 100vh;
+  background: #fdfbf7;
+  color: #2b211e;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.la-main-content {
+  padding-top: 12px;
+  padding-bottom: 70px;
+  max-width: 960px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* ── Breadcrumbs ── */
+.la-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: #795548;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.la-breadcrumbs a {
+  color: #795548;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.la-breadcrumbs a:hover {
+  color: #b71c1c;
+}
+.la-breadcrumbs .sep { color: #d7ccc8; }
+.la-breadcrumbs .cur { color: #b71c1c; font-weight: 700; }
+
+/* ── Hero / Header ── */
+.la-hero {
+  text-align: center;
+  padding: 34px 24px 28px;
+  background: radial-gradient(circle at 50% 0%, #fff6d6 0%, #fffdfa 75%);
+  border: 1.5px solid #ebd9a4;
+  border-radius: 22px;
+  box-shadow: 0 6px 24px rgba(212, 175, 55, 0.12), 0 1px 3px rgba(0, 0, 0, 0.02);
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.la-hero::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 5px;
+  background: linear-gradient(90deg, #b71c1c 0%, #e5b839 25%, #1b5e20 50%, #e5b839 75%, #b71c1c 100%);
+}
+
+.la-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #b71c1c;
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+  padding: 4px 14px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+}
+
+.la-title {
+  font-size: 2.3rem;
+  font-weight: 900;
+  color: #880e4f;
+  margin: 6px 0 8px;
+  line-height: 1.25;
+  letter-spacing: -0.5px;
+  text-shadow: 0 1px 2px rgba(136, 14, 79, 0.06);
+}
+.la-subtitle {
+  font-size: 1.08rem;
+  color: #5d4037;
+  font-weight: 600;
+  margin: 0 auto 12px;
+  max-width: 720px;
+  line-height: 1.5;
+}
+.la-desc {
+  font-size: 0.86rem;
+  color: #6d4c41;
+  max-width: 680px;
+  margin: 0 auto 16px;
+  line-height: 1.55;
+}
+
+/* Quick Jump Pill Navigation */
+.la-jump-nav {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.la-jump-chip {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #5d4037;
+  background: #ffffff;
+  border: 1px solid #e0d4be;
+  padding: 5px 13px;
+  border-radius: 18px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  white-space: nowrap;
+}
+.la-jump-chip:hover {
+  background: #fff8e1;
+  border-color: #ffd54f;
+  color: #b71c1c;
+  transform: translateY(-1px);
+}
+
+/* ── Interactive Puja Toolbar ── */
+.la-toolbar {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1.5px solid #ecd899;
+  border-radius: 16px;
+  padding: 12px 18px;
+  box-shadow: 0 4px 18px rgba(212, 175, 55, 0.15);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 10px;
+  z-index: 50;
+  backdrop-filter: blur(10px);
+}
+.la-toolbar-left,
+.la-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Bell button with animation */
+.la-bell-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #ffd54f 0%, #ffb300 100%);
+  border: 1px solid #ffa000;
+  color: #3e2723;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 7px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(255, 179, 0, 0.35);
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+.la-bell-btn:active,
+.la-bell-btn.ringing {
+  transform: scale(0.95);
+  box-shadow: 0 0 14px rgba(255, 179, 0, 0.7);
+}
+.la-bell-btn .bell-icon {
+  font-size: 1.1rem;
+  display: inline-block;
+  transform-origin: top center;
+}
+.la-bell-btn.ringing .bell-icon {
+  animation: bell-ring 0.6s ease infinite alternate;
+}
+@keyframes bell-ring {
+  0% { transform: rotate(-20deg); }
+  100% { transform: rotate(20deg); }
+}
+
+/* Shankh / Conch button */
+.la-shankh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1.5px solid #d4af37;
+  color: #880e4f;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 6px 13px;
+  border-radius: 20px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(212, 175, 55, 0.2);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.la-shankh-btn:hover {
+  background: #fff9e6;
+}
+.la-shankh-btn:active,
+.la-shankh-btn.blowing {
+  transform: scale(0.95);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.6);
+  background: #fff8e1;
+}
+
+/* Script / View switcher */
+.la-view-tabs {
+  display: inline-flex;
+  background: #f5f0e6;
+  border: 1px solid #e0d4be;
+  border-radius: 20px;
+  padding: 3px;
+  gap: 2px;
+}
+.la-tab-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #5d4037;
+  padding: 5px 13px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.la-tab-btn.active {
+  background: #ffffff;
+  color: #b71c1c;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Font size changer */
+.la-font-controls {
+  display: inline-flex;
+  align-items: center;
+  background: #f5f0e6;
+  border: 1px solid #e0d4be;
+  border-radius: 20px;
+  padding: 3px 5px;
+}
+.la-font-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #5d4037;
+  padding: 4px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.la-font-btn.active {
+  background: #ffffff;
+  color: #b71c1c;
+}
+
+/* Action buttons */
+.la-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  border: 1px solid #d7ccc8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #4e342e;
+  padding: 6px 13px;
+  border-radius: 18px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.la-tool-btn:hover {
+  background: #fff8e1;
+  border-color: #ffd54f;
+  color: #b71c1c;
+}
+.la-tool-btn.auto-scroll.active {
+  background: #e8f5e9;
+  border-color: #81c784;
+  color: #1b5e20;
+}
+
+/* ── Aarti Content Container ── */
+.la-aarti-sheet {
+  background: #ffffff;
+  border: 2px solid #ecd899;
+  border-radius: 22px;
+  padding: 38px 36px;
+  box-shadow: 0 6px 28px rgba(212, 175, 55, 0.1);
+  position: relative;
+  margin-bottom: 32px;
+}
+.la-aarti-sheet::before {
+  content: "";
+  position: absolute;
+  top: 8px; left: 8px; right: 8px; bottom: 8px;
+  border: 1px dashed #e8d088;
+  border-radius: 16px;
+  pointer-events: none;
+}
+
+.la-sheet-header {
+  text-align: center;
+  margin-bottom: 30px;
+  position: relative;
+}
+.la-om-badge {
+  font-size: 2.5rem;
+  color: #d4af37;
+  line-height: 1;
+  margin-bottom: 6px;
+  display: block;
+}
+.la-sheet-title {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: #b71c1c;
+  margin: 0 0 6px;
+}
+.la-sheet-meta {
+  font-size: 0.82rem;
+  color: #795548;
+}
+
+/* ── Stanzas Grid / List ── */
+.la-stanzas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.la-stanza-card {
+  background: #fffefb;
+  border: 1.5px solid #f2e7cd;
+  border-radius: 16px;
+  padding: 22px 24px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.la-stanza-card:hover {
+  border-color: #e5b839;
+  background: #fffcf2;
+  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.08);
+  transform: translateY(-1px);
+}
+
+.la-stanza-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.la-stanza-num {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #b71c1c;
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+  padding: 2px 10px;
+  border-radius: 10px;
+}
+.la-stanza-flower {
+  font-size: 0.9rem;
+  color: #d4af37;
+  letter-spacing: 2px;
+}
+
+/* Text styles */
+.la-verse-text {
+  color: #2b211e;
+  line-height: 1.85;
+  text-align: center;
+  font-family: inherit;
+  font-weight: 600;
+  margin-bottom: 8px;
+  letter-spacing: 0.2px;
+}
+.la-verse-line {
+  display: block;
+  margin-bottom: 4px;
+}
+.la-refrain-line {
+  color: #b71c1c;
+  font-weight: 800;
+  display: block;
+  margin-top: 8px;
+  letter-spacing: 0.3px;
+}
+
+/* Transliteration */
+.la-translit-text {
+  color: #5d4037;
+  font-style: italic;
+  font-size: 0.92em;
+  line-height: 1.7;
+  text-align: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #ebd9b0;
+}
+
+/* Meaning */
+.la-meaning-box {
+  background: #fdf7e7;
+  border-left: 3px solid #d4af37;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 14px;
+  font-size: 0.84rem;
+  color: #4e342e;
+  line-height: 1.6;
+}
+.la-meaning-box strong {
+  color: #b71c1c;
+}
+
+/* Font size variants controlled via client state */
+.la-font-sm .la-verse-text { font-size: 1.02rem; line-height: 1.75; }
+.la-font-md .la-verse-text { font-size: 1.18rem; line-height: 1.88; }
+.la-font-lg .la-verse-text { font-size: 1.36rem; line-height: 1.98; }
+.la-font-xl .la-verse-text { font-size: 1.6rem; line-height: 2.1; }
+
+/* ── Mantra Card ── */
+.la-mantra-section {
+  background: linear-gradient(135deg, #fff9e6 0%, #fffdf7 100%);
+  border: 1.5px solid #ecd899;
+  border-radius: 18px;
+  padding: 26px 28px;
+  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.08);
+  margin-bottom: 32px;
+}
+.la-mantra-box {
+  background: #ffffff;
+  border: 1px solid #ebd9b0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-top: 14px;
+  text-align: center;
+}
+.la-mantra-shloka {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #880e4f;
+  line-height: 1.7;
+  margin: 0 0 8px;
+}
+.la-mantra-meaning {
+  font-size: 0.82rem;
+  color: #5d4037;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ── Original Image Preview Section ── */
+.la-image-section {
+  background: #ffffff;
+  border: 1.5px solid #ecd899;
+  border-radius: 18px;
+  padding: 26px 28px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  margin-bottom: 32px;
+}
+.la-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.la-head-icon { font-size: 1.4rem; }
+.la-section-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #880e4f;
+  margin: 0;
+}
+.la-image-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: #fffcf2;
+  border: 1px solid #ebd9b0;
+  border-radius: 14px;
+  padding: 18px;
+}
+.la-preview-img {
+  max-width: 100%;
+  max-height: 540px;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+.la-preview-img:hover {
+  transform: scale(1.01);
+}
+.la-img-caption {
+  font-size: 0.82rem;
+  color: #795548;
+  text-align: center;
+}
+
+/* ── Puja Vidhi (How to perform aarti) ── */
+.la-vidhi-section {
+  background: #ffffff;
+  border: 1.5px solid #ecd899;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  margin-bottom: 32px;
+}
+.la-vidhi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+.la-vidhi-card {
+  background: #fffefb;
+  border: 1px solid #f0e4c8;
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.la-vidhi-step-num {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #b71c1c;
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+  padding: 2px 8px;
+  border-radius: 8px;
+  align-self: flex-start;
+}
+.la-vidhi-step-title {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #3e2723;
+  margin: 2px 0;
+}
+.la-vidhi-step-desc {
+  font-size: 0.83rem;
+  color: #5d4037;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Thali 14-movement sacred insight */
+.la-thali-insight {
+  margin-top: 18px;
+  background: #fff9e6;
+  border-left: 4px solid #d4af37;
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-size: 0.84rem;
+  color: #4e342e;
+  line-height: 1.6;
+}
+
+/* ── Ashta Lakshmi (8 Forms) ── */
+.la-ashta-section {
+  background: #ffffff;
+  border: 1.5px solid #ecd899;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  margin-bottom: 32px;
+}
+.la-ashta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+.la-ashta-card {
+  background: #fffefb;
+  border: 1px solid #f0e4c8;
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.la-ashta-card:hover {
+  transform: translateY(-2px);
+  border-color: #d4af37;
+  background: #fffcf2;
+}
+.la-ashta-icon {
+  font-size: 1.8rem;
+  margin-bottom: 4px;
+}
+.la-ashta-name {
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: #880e4f;
+}
+.la-ashta-desc {
+  font-size: 0.76rem;
+  color: #5d4037;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* ── Abundance & Lakshmi Connection Banner ── */
+.la-abundance-banner {
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #ffffff;
+  border-radius: 20px;
+  padding: 30px 34px;
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  box-shadow: 0 6px 20px rgba(27, 94, 32, 0.18);
+}
+.la-banner-content h3 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0 0 6px;
+  color: #ffffff;
+}
+.la-banner-content p {
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.94);
+  margin: 0;
+  max-width: 620px;
+}
+.la-banner-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffd54f;
+  color: #1b5e20;
+  font-weight: 800;
+  font-size: 0.88rem;
+  padding: 12px 24px;
+  border-radius: 24px;
+  text-decoration: none;
+  transition: transform 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.la-banner-btn:hover {
+  background: #ffecb3;
+  transform: translateY(-2px);
+}
+
+/* ── Devotional FAQs ── */
+.la-faq-section {
+  background: #ffffff;
+  border: 1.5px solid #ecd899;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  margin-bottom: 32px;
+}
+.la-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+.la-faq-item {
+  border: 1px solid #ebd9b0;
+  border-radius: 12px;
+  background: #fffdf9;
+  overflow: hidden;
+}
+.la-faq-item .faq-q {
+  padding: 14px 18px;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: #880e4f;
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.45;
+}
+.la-faq-item .faq-a {
+  padding: 0 18px 16px;
+  font-size: 0.85rem;
+  color: #5d4037;
+  line-height: 1.6;
+}
+
+/* Toast alert */
+.la-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #2e7d32;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 24px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+  z-index: 99999;
+  animation: toast-in 0.25s ease-out;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE DESIGN BREAKPOINTS
+   ══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .la-ashta-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .la-vidhi-grid {
+    grid-template-columns: 1fr;
+  }
+  .la-abundance-banner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 22px 20px;
+  }
+  .la-banner-btn {
+    text-align: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .la-main-content {
+    padding-top: 6px;
+    padding-bottom: 50px;
+  }
+  .la-hero {
+    padding: 20px 14px 18px;
+    border-radius: 16px;
+  }
+  .la-title {
+    font-size: 1.65rem;
+  }
+  .la-subtitle {
+    font-size: 0.92rem;
+  }
+  .la-desc {
+    font-size: 0.8rem;
+  }
+
+  /* Horizontal swipeable chip bar on mobile */
+  .la-jump-nav {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 2px 0 4px;
+    margin: 8px 0 0;
+    gap: 6px;
+  }
+  .la-jump-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .la-jump-chip {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    padding: 5px 11px;
+  }
+
+  .la-toolbar {
+    padding: 10px 12px;
+    gap: 8px;
+    border-radius: 12px;
+  }
+  .la-toolbar-left,
+  .la-toolbar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .la-aarti-sheet {
+    padding: 22px 14px;
+    border-radius: 16px;
+  }
+  .la-om-badge {
+    font-size: 1.9rem;
+  }
+  .la-sheet-title {
+    font-size: 1.35rem;
+  }
+  .la-stanza-card {
+    padding: 15px 12px;
+    border-radius: 12px;
+  }
+
+  .la-font-sm .la-verse-text { font-size: 0.94rem; }
+  .la-font-md .la-verse-text { font-size: 1.06rem; }
+  .la-font-lg .la-verse-text { font-size: 1.2rem; }
+  .la-font-xl .la-verse-text { font-size: 1.38rem; }
+
+  .la-image-section,
+  .la-vidhi-section,
+  .la-ashta-section,
+  .la-faq-section,
+  .la-mantra-section {
+    padding: 18px 14px;
+    border-radius: 14px;
+  }
+  .la-section-title {
+    font-size: 1.12rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .la-title {
+    font-size: 1.4rem;
+  }
+  .la-tab-btn {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+  .la-tool-btn {
+    padding: 5px 9px;
+    font-size: 0.7rem;
+  }
+  .la-ashta-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   PRINT STYLES FOR PUJA BOOKLET
+   ══════════════════════════════════════════════════════════ */
+@media print {
+  .navbar,
+  footer,
+  .la-breadcrumbs,
+  .la-toolbar,
+  .la-jump-nav,
+  .la-image-section,
+  .la-abundance-banner,
+  .la-faq-section,
+  .la-toast {
+    display: none !important;
+  }
+
+  body, .la-page-wrap, .la-main-content {
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .la-hero {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 10px 0 !important;
+  }
+
+  .la-title {
+    color: #900C3F !important;
+    font-size: 2rem !important;
+  }
+
+  .la-aarti-sheet {
+    box-shadow: none !important;
+    border: 2px solid #900C3F !important;
+    page-break-after: always;
+  }
+
+  .la-stanza-card {
+    border: 1px solid #ccc !important;
+    page-break-inside: avoid;
+  }
+
+  .la-refrain-line {
+    color: #900C3F !important;
+    font-weight: bold !important;
+  }
+}

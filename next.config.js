@@ -80,6 +80,10 @@ const nextConfig = {
       { source: '/portfolio.html', destination: '/portfolio', permanent: true },
       { source: '/xls-pdf-extractor.html', destination: '/xls-pdf-extractor', permanent: true },
       { source: '/pms-pulse', destination: '/pms-directory', permanent: true },
+      { source: '/lakshmi-aarti', destination: '/laxmi-aarti', permanent: true },
+      { source: '/laxmi-ji-ki-aarti', destination: '/laxmi-aarti', permanent: true },
+      { source: '/om-jai-laxmi-mata', destination: '/laxmi-aarti', permanent: true },
+      { source: '/shri-laxmi-aarti', destination: '/laxmi-aarti', permanent: true },
     ];
   },
 };
