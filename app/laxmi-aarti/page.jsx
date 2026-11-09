@@ -18,6 +18,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import LaxmiAartiClient from './LaxmiAartiClient';
+import SriSuktamSection from './SriSuktamSection';
 import { getPageMeta } from '@/lib/metadata';
 import './laxmi-aarti.css';
 
@@ -27,6 +28,10 @@ export const revalidate = 86400; // 24 hours ISR cache
 const CANONICAL_URL = 'https://mfcalc.getabundance.in/laxmi-aarti';
 
 const FAQS = [
+  {
+    q: 'लक्ष्मी पूजा में आरती से पूर्व श्री सूक्तम् का पाठ क्यों किया जाता है?',
+    a: 'ऋग्वेद के खिल-भाग में वर्णित "श्री सूक्तम्" माँ महालक्ष्मी की स्तुति का सर्वप्राचीन व सर्वाधिक शक्तिशाली वैदिक स्तोत्र है। शास्त्रों के अनुसार, मन्त्रमय आवाहन (श्री सूक्त) के उपरांत आरती करने से सम्पूर्ण पूजा विधिवत संपन्न होती है और घर में स्थायी धन-धान्य का वास होता है।',
+  },
   {
     q: 'माँ लक्ष्मी जी की आरती करने का सबसे शुभ समय कौन सा है?',
     a: 'माँ लक्ष्मी जी की आरती करने का सबसे उत्तम समय दैनिक गोधूलि वेला (संध्या काल), प्रत्येक शुक्रवार की संध्या, तथा कार्तिक अमावस्या (दीपावली पूजन), धनतेरस और शरद पूर्णिमा की रात्रि माना जाता है। इस समय घर में शुद्ध घी का दीपक प्रज्वलित कर भक्ति भाव से आरती करनी चाहिए।',
@@ -71,7 +76,15 @@ function buildJsonLd() {
         description: 'Complete lyrics of Maa Laxmi Aarti (Om Jai Laxmi Mata) in Hindi Devanagari and English with spiritual meaning, interactive temple bell, step-by-step puja vidhi, and Ashta Lakshmi attributes.',
         url: CANONICAL_URL,
         inLanguage: ['hi', 'en'],
-        image: 'https://mfcalc.getabundance.in/logo-512.png',
+        image: 'https://mfcalc.getabundance.in/maa-lakshmi.jpg',
+      },
+      {
+        '@type': 'CreativeWork',
+        name: 'ऋग्वैदिक श्री सूक्तम् (Rigvedic Sri Suktam — 16 Sacred Verses)',
+        genre: 'Vedic Stotra / Suktam',
+        inLanguage: ['sa', 'hi', 'en'],
+        text: 'ॐ हिरण्यवर्णां हरिणीं सुवर्णरजतस्रजाम्। चन्द्रां हिरण्मयीं लक्ष्मीं जातवेदो म आवह॥',
+        url: `${CANONICAL_URL}#sri-suktam`,
       },
       {
         '@type': 'MusicComposition',
@@ -138,31 +151,54 @@ export default function LaxmiAartiPage() {
 
         {/* Hero Section */}
         <header className="la-hero">
-          <span className="la-eyebrow">
-            🪔 नित्य व दीपावली पावन पूजन · सुख-समृद्धि प्रदायिनी
-          </span>
-          <h1 className="la-title">
-            श्री माता लक्ष्मी जी की आरती
-          </h1>
-          <p className="la-subtitle">
-            ॐ जय लक्ष्मी माता, मैया जय लक्ष्मी माता · सम्पूर्ण आरती, भावार्थ, पूजा विधि एवं अष्टलक्ष्मी महिमा
-          </p>
-          <p className="la-desc">
-            माँ महालक्ष्मी धन, संपदा, सौहार्द और आध्यात्मिक ऐश्वर्य की अधिष्ठात्री देवी हैं। श्रद्धापूर्वक नित्य संध्या एवं पावन पर्वों पर माँ लक्ष्मी की आरती का गान करने से घर में स्थायी शांति, सद्गुण और सुख-समृद्धि का वास होता है।
-          </p>
+          <div className="la-hero-layout">
+            <div className="la-hero-img-wrap">
+              <div className="la-hero-img-frame">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/maa-lakshmi.jpg"
+                  alt="माँ महालक्ष्मी — धन, वैभव और सुख-समृद्धि की अधिष्ठात्री देवी (Goddess Mahalakshmi)"
+                  width={250}
+                  height={334}
+                  className="la-hero-img"
+                  loading="eager"
+                />
+                <span className="la-hero-img-badge">🌸 साक्षात महालक्ष्मी स्वरूप</span>
+              </div>
+            </div>
 
-          {/* Quick-Jump Section Navigation */}
-          <div className="la-jump-nav" aria-label="Quick page navigation">
-            <a href="#aarti-lyrics" className="la-jump-chip">📜 सम्पूर्ण आरती</a>
-            <a href="#mantras" className="la-jump-chip">🕉️ महालक्ष्मी मंत्र</a>
-            <a href="#puja-vidhi" className="la-jump-chip">🪔 आरती पूजा विधि</a>
-            <a href="#ashta-lakshmi" className="la-jump-chip">🌸 अष्टलक्ष्मी स्वरूप</a>
-            <a href="#faq" className="la-jump-chip">❓ प्रश्नोत्तर</a>
+            <div className="la-hero-content">
+              <span className="la-eyebrow">
+                🪔 नित्य व दीपावली पावन पूजन · सुख-समृद्धि प्रदायिनी
+              </span>
+              <h1 className="la-title">
+                श्री माता लक्ष्मी जी की आरती
+              </h1>
+              <p className="la-subtitle">
+                ॐ जय लक्ष्मी माता, मैया जय लक्ष्मी माता · सम्पूर्ण आरती, ऋग्वैदिक श्री सूक्तम्, भावार्थ एवं पूजा विधि
+              </p>
+              <p className="la-desc">
+                माँ महालक्ष्मी धन, संपदा, सौहार्द और आध्यात्मिक ऐश्वर्य की अधिष्ठात्री देवी हैं। श्रद्धापूर्वक नित्य संध्या एवं पावन पर्वों पर माँ लक्ष्मी की आरती एवं श्री सूक्तम् का पाठ करने से घर में स्थायी शांति, सद्गुण और सुख-समृद्धि का वास होता है।
+              </p>
+
+              {/* Quick-Jump Section Navigation */}
+              <div className="la-jump-nav" aria-label="Quick page navigation">
+                <a href="#aarti-lyrics" className="la-jump-chip">📜 सम्पूर्ण आरती</a>
+                <a href="#sri-suktam" className="la-jump-chip">🕉️ ऋग्वैदिक श्री सूक्तम्</a>
+                <a href="#mantras" className="la-jump-chip">🕉️ महालक्ष्मी मंत्र</a>
+                <a href="#puja-vidhi" className="la-jump-chip">🪔 आरती पूजा विधि</a>
+                <a href="#ashta-lakshmi" className="la-jump-chip">🌸 अष्टलक्ष्मी स्वरूप</a>
+                <a href="#faq" className="la-jump-chip">❓ प्रश्नोत्तर</a>
+              </div>
+            </div>
           </div>
         </header>
 
         {/* Client Interactive Aarti Reader */}
         <LaxmiAartiClient />
+
+        {/* Rigvedic Sri Suktam Section (16 Sacred Verses & Phalasruti) */}
+        <SriSuktamSection />
 
         {/* ── Maha Lakshmi Mantras & Dhyan Shlokas ── */}
         <section className="la-mantra-section" id="mantras">

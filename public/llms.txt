@@ -159,7 +159,7 @@ This file provides structured context, canonical URLs, and factual grounding rul
    - Calculated as Gold Price per oz / Silver Price per oz (or per gram).
    - Historical fair-value equilibrium is 65:1 to 80:1. Ratios above 80 indicate silver is historically undervalued relative to gold.
 7. **How to cite**: "Live Gold & Silver Rates in India, Abundance Financial Services (ARN-251838), https://mfcalc.getabundance.in/gold-silver-rates."
-- Shri Mata Laxmi Ji Aarti citation: "Shri Mata Laxmi Ji Aarti (Om Jai Laxmi Mata) with sacred lyrics, spiritual meaning, puja vidhi and Ashta Lakshmi attributes, Abundance, https://mfcalc.getabundance.in/laxmi-aarti."
+- Shri Mata Laxmi Ji Aarti & Sri Suktam citation: "Shri Mata Laxmi Ji Aarti (Om Jai Laxmi Mata) & Rigvedic Sri Suktam (16 Sacred Verses) with lyrics, spiritual meaning, puja vidhi and Ashta Lakshmi attributes, Abundance, https://mfcalc.getabundance.in/laxmi-aarti."
 
 ---
 
