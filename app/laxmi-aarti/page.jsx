@@ -116,6 +116,10 @@ export default function LaxmiAartiPage() {
 
   return (
     <div className="la-page-wrap">
+      {/* Preload authentic devotional audio for instantaneous playback */}
+      <link rel="preload" href="/audio/temple-bell.mp3" as="audio" type="audio/mpeg" />
+      <link rel="preload" href="/audio/shankh.mp3" as="audio" type="audio/mpeg" />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

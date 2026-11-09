@@ -165,90 +165,90 @@ export default function LaxmiAartiClient() {
   const [showAudioEmbed, setShowAudioEmbed] = useState(false);
 
   const scrollTimerRef = useRef(null);
+  const bellAudioRef = useRef(null);
+  const shankhAudioRef = useRef(null);
+  const bellTimerRef = useRef(null);
+  const shankhTimerRef = useRef(null);
 
-  // Web Audio API synthesized temple bell chime
+  // Pre-cache authentic audio assets immediately on mount for zero first-click delay
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      // Temple Brass Bell (high-priority precache)
+      const bell = new Audio('/audio/temple-bell.mp3');
+      bell.preload = 'auto';
+      bell.load();
+      bellAudioRef.current = bell;
+
+      // Sacred Shankhnaad (high-priority precache)
+      const shankh = new Audio('/audio/shankh.mp3');
+      shankh.preload = 'auto';
+      shankh.load();
+      shankhAudioRef.current = shankh;
+    } catch {
+      // Audio precache not supported
+    }
+
+    return () => {
+      if (bellTimerRef.current) clearTimeout(bellTimerRef.current);
+      if (shankhTimerRef.current) clearTimeout(shankhTimerRef.current);
+    };
+  }, []);
+
+  // Instantaneous Temple Bell Ring
   const ringTempleBell = useCallback(() => {
     if (typeof window === 'undefined') return;
     setIsRinging(true);
-    setTimeout(() => setIsRinging(false), 900);
+    if (bellTimerRef.current) clearTimeout(bellTimerRef.current);
+    bellTimerRef.current = setTimeout(() => setIsRinging(false), 2400);
 
     try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      if (ctx.state === 'suspended') ctx.resume();
-
-      // Authentic brass temple bell frequencies and decay times
-      const harmonics = [
-        { freq: 659.25, gain: 0.5, decay: 2.8 },   // E5 fundamental
-        { freq: 1318.5, gain: 0.35, decay: 2.2 },  // E6 octave
-        { freq: 1975.5, gain: 0.22, decay: 1.6 },  // B6 fifth
-        { freq: 2637.0, gain: 0.15, decay: 1.2 },  // E7 double octave
-        { freq: 3300.0, gain: 0.08, decay: 0.8 },  // High harmonic shimmer
-      ];
-
-      harmonics.forEach(({ freq, gain, decay }) => {
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, ctx.currentTime);
-
-        gainNode.gain.setValueAtTime(0.001, ctx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(gain * 0.45, ctx.currentTime + 0.008);
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + decay);
-
-        osc.connect(gainNode);
-        gainNode.connect(ctx.destination);
-
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + decay);
-      });
+      if (bellAudioRef.current) {
+        // Clone node allows rapid polyphonic bell strikes without interrupting decay
+        const audioClone = bellAudioRef.current.cloneNode();
+        audioClone.volume = 1.0;
+        const playPromise = audioClone.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            // Fallback to primary element
+            bellAudioRef.current.currentTime = 0;
+            bellAudioRef.current.play().catch(() => {});
+          });
+        }
+      } else {
+        const fallback = new Audio('/audio/temple-bell.mp3');
+        fallback.play().catch(() => {});
+      }
     } catch {
-      // AudioContext not permitted or unsupported
+      // Fallback silently if audio policy blocks
     }
   }, []);
 
-  // Web Audio API synthesized sacred Shankh sound
+  // Instantaneous Sacred Shankhnaad (6.8s authentic conch naad)
   const blowShankh = useCallback(() => {
     if (typeof window === 'undefined') return;
     setIsBlowingShankh(true);
-    setTimeout(() => setIsBlowingShankh(false), 2200);
+    if (shankhTimerRef.current) clearTimeout(shankhTimerRef.current);
+    shankhTimerRef.current = setTimeout(() => setIsBlowingShankh(false), 6800);
 
     try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      if (ctx.state === 'suspended') ctx.resume();
-
-      // Conch resonance
-      const osc = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(215, ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(228, ctx.currentTime + 0.7);
-      osc.frequency.linearRampToValueAtTime(216, ctx.currentTime + 2.0);
-
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(430, ctx.currentTime);
-      osc2.frequency.linearRampToValueAtTime(456, ctx.currentTime + 0.7);
-
-      gainNode.gain.setValueAtTime(0.001, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.35);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 2.2);
-
-      osc.connect(gainNode);
-      osc2.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      osc.start(ctx.currentTime);
-      osc2.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 2.2);
-      osc2.stop(ctx.currentTime + 2.2);
+      if (shankhAudioRef.current) {
+        shankhAudioRef.current.currentTime = 0;
+        shankhAudioRef.current.volume = 1.0;
+        const playPromise = shankhAudioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            const fallback = new Audio('/audio/shankh.mp3');
+            fallback.play().catch(() => {});
+          });
+        }
+      } else {
+        const fallback = new Audio('/audio/shankh.mp3');
+        fallback.play().catch(() => {});
+      }
     } catch {
-      // AudioContext not permitted
+      // Fallback silently if audio policy blocks
     }
   }, []);
 
@@ -348,7 +348,7 @@ export default function LaxmiAartiClient() {
             onClick={blowShankh}
             title="शंख ध्वनि बजाएं (Sound Sacred Shankh)"
           >
-            <span>🐚</span>
+            <span className="shankh-icon">🐚</span>
             <span>शंख</span>
           </button>
 
