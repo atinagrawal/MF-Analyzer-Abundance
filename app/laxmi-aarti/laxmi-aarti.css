@@ -437,6 +437,21 @@
 .la-font-lg .la-verse-text { font-size: 1.36rem; line-height: 1.98; }
 .la-font-xl .la-verse-text { font-size: 1.6rem; line-height: 2.1; }
 
+/* ── Section Headers ── */
+.la-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.la-head-icon { font-size: 1.4rem; }
+.la-section-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #880e4f;
+  margin: 0;
+}
+
 /* ── Mantra Card ── */
 .la-mantra-section {
   background: linear-gradient(135deg, #fff9e6 0%, #fffdf7 100%);
@@ -466,55 +481,6 @@
   color: #5d4037;
   line-height: 1.55;
   margin: 0;
-}
-
-/* ── Original Image Preview Section ── */
-.la-image-section {
-  background: #ffffff;
-  border: 1.5px solid #ecd899;
-  border-radius: 18px;
-  padding: 26px 28px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-  margin-bottom: 32px;
-}
-.la-section-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.la-head-icon { font-size: 1.4rem; }
-.la-section-title {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #880e4f;
-  margin: 0;
-}
-.la-image-preview-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  background: #fffcf2;
-  border: 1px solid #ebd9b0;
-  border-radius: 14px;
-  padding: 18px;
-}
-.la-preview-img {
-  max-width: 100%;
-  max-height: 540px;
-  object-fit: contain;
-  border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease;
-}
-.la-preview-img:hover {
-  transform: scale(1.01);
-}
-.la-img-caption {
-  font-size: 0.82rem;
-  color: #795548;
-  text-align: center;
 }
 
 /* ── Puja Vidhi (How to perform aarti) ── */
@@ -821,7 +787,6 @@
   .la-font-lg .la-verse-text { font-size: 1.2rem; }
   .la-font-xl .la-verse-text { font-size: 1.38rem; }
 
-  .la-image-section,
   .la-vidhi-section,
   .la-ashta-section,
   .la-faq-section,
@@ -860,7 +825,6 @@
   .la-breadcrumbs,
   .la-toolbar,
   .la-jump-nav,
-  .la-image-section,
   .la-abundance-banner,
   .la-faq-section,
   .la-toast {

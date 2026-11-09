@@ -162,7 +162,6 @@ export default function LaxmiAartiClient() {
   const [isBlowingShankh, setIsBlowingShankh] = useState(false);
   const [autoScroll, setAutoScroll] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [showImagePreview, setShowImagePreview] = useState(false);
   const [showAudioEmbed, setShowAudioEmbed] = useState(false);
 
   const scrollTimerRef = useRef(null);
@@ -545,70 +544,6 @@ export default function LaxmiAartiClient() {
           ))}
         </div>
       </section>
-
-      {/* ── Original Image Preview Section ── */}
-      <section className="la-image-section" id="original-image">
-        <div className="la-section-head">
-          <span className="la-head-icon">🖼️</span>
-          <h3 className="la-section-title">मूल आरती पत्र (Original Sacred Sheet)</h3>
-        </div>
-        <p style={{ fontSize: '0.85rem', color: '#5d4037', margin: '0 0 14px', lineHeight: 1.55 }}>
-          यह पृष्ठ श्री माता लक्ष्मी जी की मूल आरती पत्रक के आधार पर संकलित किया गया है। आप नीचे मूल पत्र का दर्शन कर सकते हैं:
-        </p>
-        <div className="la-image-preview-wrap">
-          <button
-            type="button"
-            onClick={() => setShowImagePreview(!showImagePreview)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/shri-mata-laxmi-ji-aarti.jpg"
-              alt="श्री माँ लक्ष्मी जी की मूल आरती पत्रक"
-              className="la-preview-img"
-              loading="lazy"
-            />
-            <span style={{ marginTop: 8, fontSize: '0.82rem', fontWeight: 700, color: '#b71c1c' }}>
-              {showImagePreview ? 'पत्रक सामान्य आकार में देखें' : '🔍 बड़े आकार में देखने हेतु टैप करें'}
-            </span>
-          </button>
-          <span className="la-img-caption">
-            🌸 श्री महालक्ष्मी आरती पत्रक · &quot;ॐ जय लक्ष्मी माता, मैया जय लक्ष्मी माता&quot; 🌸
-          </span>
-        </div>
-      </section>
-
-      {/* Full screen modal for image preview */}
-      {showImagePreview && (
-        <div
-          onClick={() => setShowImagePreview(false)}
-          style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0, 0, 0, 0.88)',
-            zIndex: 99999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 20,
-            cursor: 'zoom-out',
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/shri-mata-laxmi-ji-aarti.jpg"
-            alt="श्री माँ लक्ष्मी जी की मूल आरती पत्रक (Full)"
-            style={{ maxHeight: '92vh', maxWidth: '92vw', objectFit: 'contain', borderRadius: 8, boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}
-          />
-        </div>
-      )}
 
       {/* ── Toast notification ── */}
       {toastMessage && (

@@ -71,7 +71,7 @@ function buildJsonLd() {
         description: 'Complete lyrics of Maa Laxmi Aarti (Om Jai Laxmi Mata) in Hindi Devanagari and English with spiritual meaning, interactive temple bell, step-by-step puja vidhi, and Ashta Lakshmi attributes.',
         url: CANONICAL_URL,
         inLanguage: ['hi', 'en'],
-        image: 'https://mfcalc.getabundance.in/shri-mata-laxmi-ji-aarti.jpg',
+        image: 'https://mfcalc.getabundance.in/logo-512.png',
       },
       {
         '@type': 'MusicComposition',
@@ -153,7 +153,6 @@ export default function LaxmiAartiPage() {
             <a href="#mantras" className="la-jump-chip">🕉️ महालक्ष्मी मंत्र</a>
             <a href="#puja-vidhi" className="la-jump-chip">🪔 आरती पूजा विधि</a>
             <a href="#ashta-lakshmi" className="la-jump-chip">🌸 अष्टलक्ष्मी स्वरूप</a>
-            <a href="#original-image" className="la-jump-chip">🖼️ मूल आरती पत्रक</a>
             <a href="#faq" className="la-jump-chip">❓ प्रश्नोत्तर</a>
           </div>
         </header>
