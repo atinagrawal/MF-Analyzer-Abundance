@@ -230,6 +230,13 @@ export default function IndicesClient({ initialData }) {
                     <span className="val-metric-val">{dy != null ? dy + '%' : '—'}</span>
                   </div>
                 </div>
+
+                {row.nseValuation?.pe?.percentile != null && (
+                  <div className="val-nse-note">
+                    NSE live: P/E at the <strong>{Math.round(row.nseValuation.pe.percentile)}th percentile</strong> of the last 2 years
+                    ({row.nseValuation.window_from} → {row.nseValuation.window_to})
+                  </div>
+                )}
               </div>
             );
           })}
@@ -237,6 +244,7 @@ export default function IndicesClient({ initialData }) {
         <div className="val-disclaimer">
           PE valuation zones: Green = historically undervalued · Yellow = fair value range · Red = stretched valuations.
           Thresholds based on multi-decade historical averages. Sourced from NSE Indices Limited & BSE Ltd.
+          Percentile line (where shown) is computed live from NSE's official MCP server.
         </div>
       </div>
     );

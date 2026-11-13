@@ -8769,6 +8769,19 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   line-height: 1.5;
 }
 
+.val-nse-note {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+  font-size: .62rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.val-nse-note strong {
+  color: var(--text);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .val-cards { grid-template-columns: 1fr; gap: 10px; }
