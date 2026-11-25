@@ -1626,7 +1626,7 @@ async function extractFactsheetData(pdfUrl) {
 
   const cleaned = validateAndCleanExtraction(raw);
   if (!cleaned) throw new Error('Extraction produced no usable fields after validation');
-  return { ...cleaned, extractedAt: new Date().toISOString() };
+  return { ...cleaned, extractedAt: new Date().toISOString(), extractedForUrl: pdfUrl };
 }
 
 // Same schema as EXTRACTION_SCHEMA_PROMPT, but for a PDF that covers
@@ -1696,7 +1696,7 @@ async function extractMultiStrategyFactsheetData(pdfUrl, strategyNames) {
     for (const entry of raw.strategies) {
       if (!entry || typeof entry.strategyName !== 'string') continue;
       const cleaned = validateAndCleanExtraction(entry);
-      if (cleaned) result.set(entry.strategyName, { ...cleaned, extractedAt: new Date().toISOString() });
+      if (cleaned) result.set(entry.strategyName, { ...cleaned, extractedAt: new Date().toISOString(), extractedForUrl: pdfUrl });
     }
   }
   if (result.size === 0) throw new Error('Multi-strategy extraction produced no usable fields for any strategy');
@@ -1753,9 +1753,18 @@ async function enrichWithExtraction(documents, previousDocs, quotaState) {
   }
 
   for (const group of byUrl.values()) {
+    // Only treat a document as "already extracted, skip" when its stored
+    // extraction was genuinely PERFORMED against this exact URL
+    // (extractedForUrl) -- not merely carried-forward data that happens to
+    // now sit on a document whose url/period were updated while a prior
+    // run's real extraction attempt failed (quota exhaustion or API
+    // error). Without this check, a single bad run permanently freezes
+    // that strategy's extracted data: the fallback's stale blob gets
+    // treated as "already extracted for the new URL" on every future run
+    // too, since the URL never changes again until the next month's PDF.
     const allCached = group.every((doc) => {
       const prev = prevFor(doc);
-      return prev && prev.url === doc.url && prev.extracted;
+      return prev && prev.url === doc.url && prev.extracted?.extractedForUrl === doc.url;
     });
     if (allCached) {
       for (const doc of group) doc.extracted = prevFor(doc).extracted;
