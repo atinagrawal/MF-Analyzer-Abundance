@@ -46,15 +46,25 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchJson(url) {
-  try {
-    const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(15000) });
-    if (!res.ok) return { ok: false, status: res.status, data: null };
-    const data = await res.json();
-    return { ok: true, status: res.status, data };
-  } catch (e) {
-    return { ok: false, status: 0, data: null };
+// Retries a transient blip (one bad moment on AMFI's end) up to 2 extra
+// times before giving up -- previously a single failed fetch here aborted
+// the whole day's run (see fetchOpenNfos()'s ok:false handling).
+async function fetchJson(url, attempts = 3) {
+  let lastStatus = 0;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(15000) });
+      if (res.ok) return { ok: true, status: res.status, data: await res.json() };
+      lastStatus = res.status;
+    } catch (e) {
+      lastStatus = 0;
+    }
+    if (i < attempts) {
+      console.warn(`[NFO Sync] fetch failed for ${url} (attempt ${i}/${attempts}, status ${lastStatus}) -- retrying in ${i * 2000}ms`);
+      await sleep(i * 2000);
+    }
   }
+  return { ok: false, status: lastStatus, data: null };
 }
 
 // "BANK OF INDIA VALUE FUND" -> "Bank Of India Value Fund". Deliberately

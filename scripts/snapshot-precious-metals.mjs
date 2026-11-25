@@ -36,8 +36,26 @@ async function ensureTable(c) {
   )`);
 }
 
+// Retries a transient blip (one bad moment on the upstream ticker) up to
+// 2 extra times before giving up -- previously a single failed fetch
+// here failed the whole day's cron run outright.
+async function fetchLiveRatesWithRetry(attempts = 3, delayMs = 5000) {
+  let lastErr;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      return await fetchLiveRates();
+    } catch (err) {
+      lastErr = err;
+      if (i === attempts) break;
+      console.warn(`[snapshot-precious-metals] fetchLiveRates failed (attempt ${i}/${attempts}): ${err.message} -- retrying in ${delayMs}ms`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw lastErr;
+}
+
 async function main() {
-  const rates = await fetchLiveRates();
+  const rates = await fetchLiveRatesWithRetry();
   const row = {
     date: istDateString(),
     gold_usd_oz: rates.goldUsdOz.ask,
